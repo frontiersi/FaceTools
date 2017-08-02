@@ -50,6 +50,6 @@ set( SRC_FILES
 
 add_library( ${PROJECT_NAME} ${SRC_FILES} ${INCLUDE_FILES})
 include( "cmake/LibInstall.cmake")
-install( DIRECTORY "${PROJECT_SOURCE_DIR}/haarcascades" DESTINATION "${LOCALLIBS}/${PROJECT_NAME}")
-install( FILES "${PROJECT_SOURCE_DIR}/shape_predictor_68_face_landmarks.dat" DESTINATION "${LOCALLIBS}/${PROJECT_NAME}")
+install( DIRECTORY "${PROJECT_SOURCE_DIR}/haarcascades" DESTINATION "${LIB_PRE_REQS}/${PROJECT_NAME}")
+install( FILES "${PROJECT_SOURCE_DIR}/shape_predictor_68_face_landmarks.dat" DESTINATION "${LIB_PRE_REQS}/${PROJECT_NAME}")
 
