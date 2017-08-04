@@ -247,3 +247,16 @@ if(WITH_VCG)    # VCGLib (Visual and Computer Graphics Library)
     set( VCG_DIR "${LIB_PRE_REQS}/vcglib" CACHE PATH "Location of VCG header only library.")
     include_directories( ${VCG_DIR})    # Header only library
 endif()
+
+if(WITH_LIBICP) # The ICP source library (Andreas Geiger) (https://github.com/symao/libicp)
+    set( LIBICP_DIR "${LIB_PRE_REQS}/libICP" CACHE PATH "Location of libICP source files.")
+    set( LIBICP_SRC "${LIBICP_DIR}/src")
+    include_directories( "${LIBICP_SRC}")
+    set( LIBICP_SRC_FILES
+        "${LIBICP_SRC}/icp.cpp"
+        "${LIBICP_SRC}/icpPointToPlane.cpp"
+        "${LIBICP_SRC}/icpPointToPoint.cpp"
+        "${LIBICP_SRC}/kdtree.cpp"
+        "${LIBICP_SRC}/matrix.cpp"
+        )
+endif()
