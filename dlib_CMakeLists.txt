@@ -11,6 +11,13 @@ project(dlib)
 include(cmake_utils/release_build_by_default)
 include(cmake_utils/use_cpp_11.cmake)
 
+# Target Windows 7 and above
+if(WIN32)
+    add_definitions( -DWINVER=0x0601)
+    add_definitions( -D_WIN32_WINNT=0x0601)
+    set( CMAKE_SYSTEM_VERSION 8.1)
+endif()
+
 
 set(CPACK_PACKAGE_VERSION_MAJOR "19")
 set(CPACK_PACKAGE_VERSION_MINOR "4")

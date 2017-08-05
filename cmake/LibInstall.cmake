@@ -7,8 +7,6 @@ generate_export_header( ${PROJECT_NAME}
                         STATIC_DEFINE ${PROJECT_NAME}_BUILT_AS_STATIC)
 include_directories( ${PROJECT_BINARY_DIR}) # Include because generated header files sit here.
 
-set( CMAKE_INSTALL_PREFIX "${LIB_PRE_REQS}/${PROJECT_NAME}")
-
 # Rename the library if compiled using MSVC to append the MSVC version so as to avoid DLL HELL.
 if(WIN32)
     include("cmake/Macros.cmake")
