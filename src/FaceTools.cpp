@@ -67,7 +67,7 @@ cv::Matx44d FaceTools::orient( ObjMetaData::Ptr omd)
     const cv::Vec3d cnvec = cv::Vec3d(0,0,2) - nvec;
     const cv::Vec3d cuvec = cv::Vec3d(0,2,0) - uvec;
 
-    RFeatures::ObjModelMover rmat( cnvec, cuvec);
+    const RFeatures::ObjModelMover rmat( cnvec, cuvec);
     omd->transform( rmat());
     return rmat();  // Return the matrix used to do the rotation
 }   // end orient
@@ -91,7 +91,8 @@ ObjModel::Ptr FaceTools::getComponent( const ObjModel::Ptr model, int svid, cons
     const std::list<int>& blist = boundaryFinder.getBoundary(0);
     boundaryFinder.reset( &blist);   // Reset with boundary of the component we want (max number of edges)
 
-    ObjModelCopier modelCopier( model, ObjModelMover( coffset));
+    const ObjModelMover mover( coffset);
+    ObjModelCopier modelCopier( model, &mover);
     parser.reset();
     parser.setBoundaryParser( &boundaryFinder);
     parser.addTriangleParser( &modelCopier);
@@ -110,7 +111,8 @@ ObjModel::Ptr FaceTools::getComponent( const ObjModel::Ptr model, int svid, cons
 ObjModel::Ptr FaceTools::crop( const ObjModel::Ptr m, const cv::Vec3f& v, double radius, const cv::Vec3d& offset)
 {
     RFeatures::ObjModelCropper cropper( m, v, radius);
-    RFeatures::ObjModelCopier copier(m, RFeatures::ObjModelMover( offset));
+    const RFeatures::ObjModelMover mover( offset);
+    RFeatures::ObjModelCopier copier(m, &mover);
 
     RFeatures::ObjModelTriangleMeshParser parser(m);
     parser.setBoundaryParser( &cropper);

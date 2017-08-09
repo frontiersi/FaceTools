@@ -101,7 +101,7 @@ public:
     cv::Vec3f project( const cv::Point&) const;     // Project to world coords.
 
     void resetDefaultCamera( float camRng=650.0f);    // Default range is 65 cm from origin directly along +Z.
-    void fitCamera( double radius); // Adjust FoV to fit an object of given radius at current distance.
+    void fitCamera( double radius); // Adjust FoV to fit an object of given radius AT CURRENT DISTANCE
     void setCamera( const RFeatures::CameraParams&);
     // Set the camera using vectors (normal is towards the camera).
     void setCamera( const cv::Vec3f& focus, const cv::Vec3f& normal, const cv::Vec3f& upvector, float camRng=650.0f);
