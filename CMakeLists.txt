@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 2.8.11 FATAL_ERROR)
 project( FaceTools)
 
-set(WITH_RMODELIO TRUE)
 set(WITH_CGAL TRUE)
 set(WITH_DLIB TRUE)
+set(WITH_RMODELIO TRUE)
+set(WITH_QTOOLS TRUE)
 include( "cmake/LibCommon.cmake")
 
 set( INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")

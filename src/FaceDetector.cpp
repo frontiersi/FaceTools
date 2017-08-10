@@ -105,8 +105,9 @@ struct FaceDetector::Impl
 // public
 FaceDetector::FaceDetector( const std::string& faceShapeLandmarksDat)
     : _impl( new Impl(faceShapeLandmarksDat)),
-    _viewer( new ModelViewer(cv::Size(512,512), true/*floodlights*/, true/*offscreen rendering*/))
+    _viewer( new ModelViewer(cv::Size(512,512), true/*floodlights*/, false/*offscreen rendering*/))
 {
+    _viewer->show();
 }   // end ctor
 
 
