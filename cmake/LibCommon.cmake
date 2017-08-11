@@ -107,25 +107,35 @@ if(WITH_RMODELIO)
     set(WITH_PDFLATEX_PROCESSOR TRUE)
 endif()
 
+# RModelIO::U3DExporter requires IDTFConverter
 if(WITH_IDTF_CONVERTER)
-    # Set the location of the IDTFConverter
-    set( rModelIO_IDTF_CONVERTER "${LIB_PRE_REQS}/u3dIntel/bin/IDTFConverter" CACHE PATH "Location of the IDTFConverter executable.")
+    set( idtfconv_exe "$ENV{IDTF_CONVERTER_EXE}")   # Set location of IDTFConverter from env var if set
+    if( "${idtfconv_exe}" STREQUAL "")     # If not set, try to guess based on platform
+        set( idtfconv_exe "${LIB_PRE_REQS}/u3dIntel/bin/IDTFConverter")
+    endif()
+    set( rModelIO_IDTF_CONVERTER "${idtfconv_exe}" CACHE PATH "Location of the IDTFConverter executable.")
     if ( NOT EXISTS ${rModelIO_IDTF_CONVERTER})
-        message( STATUS "[rModelIO] Cannot find IDTFConverter! U3D export functionality will be disabled.")
+        message( STATUS "[rModelIO] IDTFConverter not found; RModelIO::U3DExporter disabled.")
     else()
+        message( STATUS "[rModelIO] RModelIO::U3DExporter using IDTFConverter at ${rModelIO_IDTF_CONVERTER}")
         add_definitions( -DIDTF_CONVERTER=\"${rModelIO_IDTF_CONVERTER}\")
     endif()
 endif()
 
+# RModelIO::LaTeXExporter
 if(WITH_PDFLATEX_PROCESSOR)
-    set(_pdflatex "/usr/bin/pdflatex")
-    if(WIN32)
-        set(_pdflatex "")
+    set( pdflatex_exe $ENV{PDFLATEX_EXE})  # Set location of pdflatex from env var if set
+    if( "${pdflatex_exe}" STREQUAL "")     # If not set, try to guess based on platform
+        set( pdflatex_exe "/usr/bin/pdflatex")  # Linux
+        if(WIN32)
+            set( pdflatex_exe "C:/Program\ Files/MiKTeX\ 2.9/miktex/bin/x64/pdflatex.exe")
+        endif()
     endif()
-    set( rModelIO_PDFLATEX_PROCESSOR "${_pdflatex}" CACHE PATH "Location of pdflatex (needed for embedding U3D models in PDFs).")
+    set( rModelIO_PDFLATEX_PROCESSOR "${pdflatex_exe}" CACHE PATH "Location of pdflatex (needed for embedding U3D models in PDFs).")
     if ( NOT EXISTS ${rModelIO_PDFLATEX_PROCESSOR})
-        message( STATUS "[rModelIO] Cannot find pdflatex! Embedding of models into PDFs will be disabled.")
+        message( STATUS "[rModelIO] pdflatex not found; RModelIO::PDFGenerator disabled.")
     else()
+        message( STATUS "[rModelIO] RModelIO::PDFGenerator using pdflatex at ${rModelIO_PDFLATEX_PROCESSOR}")
         add_definitions( -DPDFLATEX_PROCESSOR=\"${rModelIO_PDFLATEX_PROCESSOR}\")
     endif()
 endif()
