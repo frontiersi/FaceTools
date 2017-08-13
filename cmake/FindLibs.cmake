@@ -2,6 +2,9 @@ set( CMAKE_COLOR_MAKEFILE TRUE)
 set( CMAKE_VERBOSE_MAKEFILE FALSE)
 
 #set( CMAKE_CXX_FLAGS "-Wno-deprecated -Wno-deprecated-declarations -Wno-error=unknown-pragmas")
+if(UNIX)
+    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wno-deprecated -Wno-deprecated-declarations -Wno-error=unknown-pragmas")
+endif()
 
 set( LIB_PRE_REQS "$ENV{INSTALL_PARENT_DIR}" CACHE PATH
     "Where library prerequisites are installed (if not in the standard system library locations).")
@@ -10,7 +13,6 @@ set( CMAKE_PREFIX_PATH "${LIB_PRE_REQS}")
 
 set( BUILD_SHARED_LIBS TRUE)
 set( BUILD_USING_SHARED_LIBS TRUE)
-
 
 # Set IS_DEBUG and _dsuffix
 set( IS_DEBUG FALSE)
@@ -22,6 +24,32 @@ if( CMAKE_BUILD_TYPE_LOWER STREQUAL "debug")
 endif()
 unset( CMAKE_BUILD_TYPE_LOWER)
 set( CMAKE_DEBUG_POSTFIX ${_dsuffix})
+
+
+macro( get_msvc_version _ver)
+    set( ${_ver} "")
+    if(MSVC)
+        if( MSVC70 OR MSVC71 )
+            set(_msvcv "7")
+        elseif( MSVC80 )
+            set(_msvcv "8")
+        elseif( MSVC90 )
+            set(_msvcv "9")
+        elseif( MSVC10 )
+            set(_msvcv "10")
+        elseif( MSVC11 )
+            set(_msvcv "11")
+        elseif( MSVC12 )
+            set(_msvcv "12")
+        elseif( MSVC14 )
+            set(_msvcv "14")
+        else()
+            set(_msvcv "15")
+        endif()
+        set( ${_ver} "${_msvcv}")
+    endif(MSVC)
+endmacro( get_msvc_version)
+
 
 # Add definitions for Windows 7 build target (SDK 8.1 support Win 7 and up)
 add_definitions( -DWINVER=0x0601)
@@ -38,7 +66,6 @@ if(WITH_TESTUTILS)
     find_package( TestUtils REQUIRED)
     include_directories( ${TestUtils_INCLUDE_DIRS})
     link_directories( ${TestUtils_LIBRARY_DIR})
-    link_libraries( ${TestUtils_LIBRARIES})
     set(WITH_FACETOOLS TRUE)
 endif()
 
@@ -47,7 +74,6 @@ if(WITH_FACETOOLS)
     find_package( FaceTools REQUIRED)
     include_directories( ${FaceTools_INCLUDE_DIRS})
     link_directories( ${FaceTools_LIBRARY_DIR})
-    link_libraries( ${FaceTools_LIBRARIES})
     set(WITH_CGAL TRUE)
     set(WITH_DLIB TRUE)
     set(WITH_QTOOLS TRUE)
@@ -59,7 +85,6 @@ if(WITH_QTOOLS)
     find_package( QTools REQUIRED)
     include_directories( ${QTools_INCLUDE_DIRS})
     link_directories( ${QTools_LIBRARY_DIR})
-    link_libraries( ${QTools_LIBRARIES})
     set(WITH_QT TRUE)
     set(WITH_RVTK TRUE)
 endif()
@@ -69,7 +94,6 @@ if(WITH_RVTK)
     find_package( rVTK REQUIRED)
     include_directories( ${rVTK_INCLUDE_DIRS})
     link_directories( ${rVTK_LIBRARY_DIR})
-    link_libraries( ${rVTK_LIBRARIES})
     set(WITH_VTK TRUE)
     set(WITH_RFEATURES TRUE)
 endif()
@@ -79,7 +103,6 @@ if(WITH_RPASCALVOC)
     find_package( rPascalVOC REQUIRED)
     include_directories( ${rPascalVOC_INCLUDE_DIRS})
     link_directories( ${rPascalVOC_LIBRARY_DIR})
-    link_libraries( ${rPascalVOC_LIBRARIES})
     set(WITH_TINYXML TRUE)
     set(WITH_RLEARNING TRUE)
 endif()
@@ -89,7 +112,6 @@ if(WITH_RLEARNING)
     find_package( rLearning REQUIRED)
     include_directories( ${rLearning_INCLUDE_DIRS})
     link_directories( ${rLearning_LIBRARY_DIR})
-    link_libraries( ${rLearning_LIBRARIES})
     set(WITH_RFEATURES TRUE)
 endif()
 
@@ -98,45 +120,29 @@ if(WITH_RMODELIO)
     find_package( rModelIO REQUIRED)
     include_directories( ${rModelIO_INCLUDE_DIRS})
     link_directories( ${rModelIO_LIBRARY_DIR})
-    link_libraries( ${rModelIO_LIBRARIES})
     #set(WITH_VCG TRUE)  
     set(WITH_ASSIMP TRUE)
     set(WITH_LIBLAS FALSE)
     set(WITH_RFEATURES TRUE)
-    set(WITH_IDTF_CONVERTER TRUE)
-    set(WITH_PDFLATEX_PROCESSOR TRUE)
 endif()
 
 # RModelIO::U3DExporter requires IDTFConverter
 if(WITH_IDTF_CONVERTER)
     set( idtfconv_exe "$ENV{IDTF_CONVERTER_EXE}")   # Set location of IDTFConverter from env var if set
-    if( "${idtfconv_exe}" STREQUAL "")     # If not set, try to guess based on platform
+    if( "${idtfconv_exe}" STREQUAL "")              # If not set, try to guess based on platform
         set( idtfconv_exe "${LIB_PRE_REQS}/u3dIntel/bin/IDTFConverter")
     endif()
-    set( rModelIO_IDTF_CONVERTER "${idtfconv_exe}" CACHE PATH "Location of the IDTFConverter executable.")
-    if ( NOT EXISTS ${rModelIO_IDTF_CONVERTER})
-        message( STATUS "[rModelIO] IDTFConverter not found; RModelIO::U3DExporter disabled.")
-    else()
+
+    if ( NOT EXISTS ${idtfconv_exe})
+        set( idtfconv_exe "rModelIO_IDTF_CONVERTER-NOTFOUND")
+    endif()
+
+    set( rModelIO_IDTF_CONVERTER ${idtfconv_exe} CACHE FILEPATH "Location of the IDTFConverter executable.")
+    if ( EXISTS ${rModelIO_IDTF_CONVERTER})
         message( STATUS "[rModelIO] RModelIO::U3DExporter using IDTFConverter at ${rModelIO_IDTF_CONVERTER}")
         add_definitions( -DIDTF_CONVERTER=\"${rModelIO_IDTF_CONVERTER}\")
-    endif()
-endif()
-
-# RModelIO::LaTeXExporter
-if(WITH_PDFLATEX_PROCESSOR)
-    set( pdflatex_exe $ENV{PDFLATEX_EXE})  # Set location of pdflatex from env var if set
-    if( "${pdflatex_exe}" STREQUAL "")     # If not set, try to guess based on platform
-        set( pdflatex_exe "/usr/bin/pdflatex")  # Linux
-        if(WIN32)
-            set( pdflatex_exe "C:/Program\ Files/MiKTeX\ 2.9/miktex/bin/x64/pdflatex.exe")
-        endif()
-    endif()
-    set( rModelIO_PDFLATEX_PROCESSOR "${pdflatex_exe}" CACHE PATH "Location of pdflatex (needed for embedding U3D models in PDFs).")
-    if ( NOT EXISTS ${rModelIO_PDFLATEX_PROCESSOR})
-        message( STATUS "[rModelIO] pdflatex not found; RModelIO::PDFGenerator disabled.")
     else()
-        message( STATUS "[rModelIO] RModelIO::PDFGenerator using pdflatex at ${rModelIO_PDFLATEX_PROCESSOR}")
-        add_definitions( -DPDFLATEX_PROCESSOR=\"${rModelIO_PDFLATEX_PROCESSOR}\")
+        message( STATUS "[rModelIO] IDTFConverter not found; RModelIO::U3DExporter disabled.")
     endif()
 endif()
 
@@ -145,7 +151,6 @@ if(WITH_RFEATURES)
     find_package( rFeatures REQUIRED)
     include_directories( ${rFeatures_INCLUDE_DIRS})
     link_directories( ${rFeatures_LIBRARY_DIR})
-    link_libraries( ${rFeatures_LIBRARIES})
     set(WITH_OPENCV TRUE)
     set(WITH_RLIB TRUE)
 endif()
@@ -155,7 +160,6 @@ if(WITH_RLIB)
     find_package( rlib REQUIRED)
     include_directories( ${rlib_INCLUDE_DIRS})
     link_directories( ${rlib_LIBRARY_DIR})
-    link_libraries( ${rlib_LIBRARIES})
     set(WITH_BOOST TRUE)
     set(WITH_EIGEN TRUE)
 endif()
@@ -167,7 +171,6 @@ if(WITH_ASSIMP)     # AssImp
     find_package( ASSIMP REQUIRED)
     include_directories( ${ASSIMP_INCLUDE_DIRS})
     link_directories( ${ASSIMP_LIBRARY_DIRS})
-    link_libraries( ${ASSIMP_LIBRARIES})
 endif()
 
 #if(WITH_LIBLAS)     # libLAS
@@ -181,43 +184,36 @@ if(WITH_TINYXML)    # tinyxml
     find_package( tinyxml REQUIRED)
     include_directories( ${tinyxml_INCLUDE_DIR})
     link_directories( ${tinyxml_LIBRARY_DIR})
-    link_libraries( ${tinyxml_LIBRARY})
 endif()
-
-
-macro( get_boost_msvc_library libname)
-    set( ${libname} "lib64")
-    if(MSVC)
-        if( MSVC12)
-            set(MSVC_PREFIX "msvc-12.0")
-        elseif( MSVC14)
-            set(MSVC_PREFIX "msvc-14.0")
-        elseif( MSVC15)
-            set(MSVC_PREFIX "msvc-15.0")
-        endif()
-        set( ${libname} "lib64-${MSVC_PREFIX}")
-    endif(MSVC)
-endmacro( get_boost_msvc_library)
 
 
 if(WITH_BOOST)  # Boost
+    set( BOOST_ROOT "${LIB_PRE_REQS}/boost_1_64_0" CACHE PATH "Location of boost")
+    set( BOOST_LIBRARYDIR "${BOOST_ROOT}/lib")
+
     if(WIN32)
-        set( BOOST_ROOT "${LIB_PRE_REQS}/boost_1_59_0" CACHE PATH "Location of boost")
-        get_boost_msvc_library( _boostLibName)
-        set( BOOST_LIBRARYDIR "${BOOST_ROOT}/${_boostLibName}")
-        set( Boost_NO_SYSTEM_PATHS TRUE)  # Don't search for Boost anywhere other than the above hints
-        set( Boost_USE_STATIC_LIBS OFF CACHE BOOL "use static Boost libraries")
-        set( Boost_USE_MULTITHREADED ON)
-        set( Boost_USE_STATIC_RUNTIME OFF)
-        add_definitions( -DBOOST_ALL_NO_LIB)    # Disable autolinking
-        add_definitions( -DBOOST_ALL_DYN_LINK)  # Force dynamic linking (probably don't need this)
+        get_msvc_version( _msvcv)
+        set( BOOST_LIBRARYDIR "${BOOST_ROOT}/lib64-msvc-${_msvcv}.0")
+        add_definitions( ${Boost_LIB_DIAGNOSTIC_DEFINITIONS})   # Info about Boost's auto linking
     endif()
-    find_package( Boost 1.53 REQUIRED COMPONENTS system filesystem thread random regex)
+
+    set( Boost_NO_SYSTEM_PATHS TRUE)  # Don't search for Boost in system directories
+    set( Boost_USE_STATIC_LIBS OFF CACHE BOOL "use static Boost libraries")
+    set( Boost_USE_MULTITHREADED ON)
+    set( Boost_USE_STATIC_RUNTIME OFF)
+    add_definitions( -DBOOST_ALL_NO_LIB)    # Disable autolinking
+    add_definitions( -DBOOST_ALL_DYN_LINK)  # Force dynamic linking (probably don't need this)
+
+    find_package( Boost 1.64 REQUIRED COMPONENTS system filesystem thread random regex)
     include_directories( ${Boost_INCLUDE_DIRS})
-    add_definitions( ${Boost_LIB_DIAGNOSTIC_DEFINITIONS})
-    link_directories( ${Boost_LIBRARY_DIR})
-    link_libraries( ${Boost_LIBRARIES})
+
+    #message( STATUS "Boost_VERSION: ${Boost_VERSION}")
+    #message( STATUS "Boost_LIB_VERSION: ${Boost_LIB_VERSION}")
+    #message( STATUS "Boost_MAJOR_VERSION: ${Boost_MAJOR_VERSION}")
+    #message( STATUS "Boost_MINOR_VERSION: ${Boost_MINOR_VERSION}")
+    #message( STATUS "Boost_SUBMINOR_VERSION: ${Boost_SUBMINOR_VERSION}")
 endif()
+
 
 if(WITH_EIGEN) # Eigen3
     if(WIN32)
@@ -230,17 +226,21 @@ endif()
 
 if(WITH_OPENCV) # OpenCV
     if(WIN32)
-        set( OpenCV_DIR "${LIB_PRE_REQS}/opencv" CACHE PATH "Location of OpenCVConfig.cmake")
-        set( OpenCV_BIN "${OpenCV_DIR}/x64/vc14/bin" CACHE PATH "Location of OpenCV binary (dll) files")
+        if(IS_DEBUG)
+            set( OpenCV_DIR "${LIB_PRE_REQS}/opencv/debug" CACHE PATH "Location of OpenCVConfig.cmake")
+        else()
+            set( OpenCV_DIR "${LIB_PRE_REQS}/opencv/release" CACHE PATH "Location of OpenCVConfig.cmake")
+        endif()
+        get_msvc_version( _msvcv)
+        set( OpenCV_BIN "${OpenCV_DIR}/x64/vc${_msvcv}/bin" CACHE PATH "Location of OpenCV binary (dll) files")
     endif()
     find_package( OpenCV 2.4 REQUIRED)
     include_directories( ${OpenCV_INCLUDE_DIRS})
-    link_libraries( ${OpenCV_LIBS})
 endif()
 
 if(WITH_VTK)    # VTK
     set( VTK_VER 7.1)
-    if (IS_DEBUG)
+    if(IS_DEBUG)
         set( VTK_DIR "${LIB_PRE_REQS}/VTK/debug/lib/cmake/vtk-${VTK_VER}" CACHE PATH "Location of VTKConfig.cmake")
     else()
         set( VTK_DIR "${LIB_PRE_REQS}/VTK/release/lib/cmake/vtk-${VTK_VER}" CACHE PATH "Location of VTKConfig.cmake")
@@ -248,7 +248,6 @@ if(WITH_VTK)    # VTK
     set( VTK_BIN "${VTK_DIR}/../../../bin" CACHE PATH "Location of VTK binary (dll) files")
     find_package( VTK REQUIRED)
     include( ${VTK_USE_FILE})
-    link_libraries( ${VTK_LIBRARIES})
 endif()
 
 if(WITH_QT)     # Qt5
@@ -263,18 +262,18 @@ if(WITH_QT)     # Qt5
     add_definitions( ${Qt5Widgets_DEFINITIONS})
     add_definitions( ${Qt5Sql_DEFINITIONS})
     set( QT_LIBRARIES Qt5::Widgets Qt5::Sql)
-    link_libraries( ${QT_LIBRARIES})
 endif()
 
 if(WITH_CGAL)   # CGAL
-    if(WIN32)
-        set( CGAL_DIR "${LIB_PRE_REQS}/CGAL/lib/CGAL" CACHE PATH "Location of CGALConfig.cmake")
-        set( CGAL_BIN "${CGAL_DIR}/../../bin" CACHE PATH "Location of CGAL binary (dll) files")
+    if(IS_DEBUG)
+        set( CGAL_DIR "${LIB_PRE_REQS}/CGAL/debug/lib/CGAL" CACHE PATH "Location of CGALConfig.cmake")
+    else()
+        set( CGAL_DIR "${LIB_PRE_REQS}/CGAL/release/lib/CGAL" CACHE PATH "Location of CGALConfig.cmake")
     endif()
+    set( CGAL_BIN "${CGAL_DIR}/../../bin" CACHE PATH "Location of CGAL binary (dll) files")
     find_package( CGAL COMPONENTS Core)
     set( CGAL_DONT_OVERRIDE_CMAKE_FLAGS TRUE CACHE BOOL "Prevent CGAL from overwritting CMake flags.")
     include( ${CGAL_USE_FILE})
-    link_libraries( ${CGAL_LIBRARIES})
 endif()
 
 if(WITH_DLIB)   # dlib
@@ -286,7 +285,6 @@ if(WITH_DLIB)   # dlib
     endif()
     find_package( dlib REQUIRED)
     include_directories( ${dlib_INCLUDE_DIRS})
-    link_libraries( ${dlib_LIBRARIES})
 endif()
 
 #if(WITH_VCG)    # VCGLib (Visual and Computer Graphics Library)
@@ -306,5 +304,6 @@ if(WITH_LIBICP) # The ICP source library (Andreas Geiger) (https://github.com/sy
         "${LIBICP_SRC}/matrix.cpp"
         )
 endif()
+
 
 
