@@ -15,44 +15,47 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_FACE_DETECTOR_H
-#define FACE_TOOLS_FACE_DETECTOR_H
+#ifndef FACE_TOOLS_MODEL_VIEWER_ANNOTATOR_H
+#define FACE_TOOLS_MODEL_VIEWER_ANNOTATOR_H
 
-#include <string>
-#include <vector>
-#include <opencv2/opencv.hpp>
-#include "Landmarks.h"
-#include "ObjMetaData.h"
-#include "ModelViewer.h"
 #include "FaceTools_Export.h"
-
+#include <string>
+#include <boost/unordered_map.hpp>
+#include <vtkRenderer.h>
+#include <vtkSmartPointer.h>
+#include <vtkTextActor.h>
+#include <QObject>
 
 namespace FaceTools
 {
 
-class FaceTools_EXPORT FaceDetector
-{
+class FaceTools_EXPORT ModelViewerAnnotator : public QObject
+{ Q_OBJECT
 public:
-    FaceDetector( const std::string& faceShapeLandmarksModel);
-    ~FaceDetector();
+    explicit ModelViewerAnnotator( vtkSmartPointer<vtkRenderer>);
+    virtual ~ModelViewerAnnotator();
 
-    // Detect and set the NASAL_TIP, L_EYE_CENTRE, and R_EYE_CENTRE landmarks,
-    // and set the orientation vectors (normal and up vector) given these points.
-    // Return false iff the orientation points can't be found.
-    bool findOrientation( ObjMetaData::Ptr);
+    enum TextJustification
+    {
+        LeftJustify,
+        CentreJustify,
+        RightJustify
+    };  // end enum
 
-    // Find remaining landmarks. Only call AFTER orientation discovered.
-    bool findLandmarks( ObjMetaData::Ptr);
+    // Show message text at given screen proportional position returning its ID.
+    int showMessage( float colPos, float rowPos, TextJustification justification, const std::string& msg);
+    bool removeMessage( int msgID);
+
+public slots:
+    void doOnUpdateMessagePositions();
 
 private:
-    class Impl;
-    Impl* _impl;
-    ModelViewer *_viewer;   // Offscreen scene rendering
-    FaceDetector( const FaceDetector&);     // NO COPY
-    void operator=( const FaceDetector&);   // NO COPY
+    vtkSmartPointer<vtkRenderer> _renderer;
+    struct Message;
+    boost::unordered_map<int, Message*> _messages;
 };  // end class
-
 
 }   // end namespace
 
 #endif
+

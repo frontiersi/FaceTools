@@ -32,6 +32,7 @@
 #include "FaceTools_Export.h"
 #include "FeaturesDetector.h"
 #include "FaceDetector.h"
+#include "FaceModelManager.h"
 #include "FaceOrienter.h"
 #include "MiscFunctions.h"
 #include "ObjMetaData.h"
@@ -41,15 +42,10 @@
 #include "CurvatureVariableSpeedFunctor.h"
 #include "SurfaceMesher.h"
 #include "ModelViewer.h"
+#include "Landmarks.h"
 
 namespace FaceTools
 {
-
-// Do basic orientation according to estimates of up and normal vectors calculated from the eye centres and the nosetip.
-// Given object must have landmarks: nasal_tip, l_eye_centre, r_eye_centre.
-// Use this function to perform an initial orientation before using more detailed 2D feature detection.
-// Returns the rotation matrix used.
-FaceTools_EXPORT cv::Matx44d orient( ObjMetaData::Ptr omd);
 
 // Find the boundaries of the given model and create and return a new model being
 // the single component that is contiguously connected by polygons to vidx.
@@ -62,13 +58,13 @@ FaceTools_EXPORT RFeatures::ObjModel::Ptr getComponent( const RFeatures::ObjMode
 FaceTools_EXPORT RFeatures::ObjModel::Ptr crop( const RFeatures::ObjModel::Ptr, const cv::Vec3f& v,
                                                 double radius, const cv::Vec3d& copyOffset=cv::Vec3d(0,0,0));
 
-// Calculate the centre of the face as the point directly behind the nose tip in the plane of the front of the eyes.
+// Calculate and return the centre of the face as the point directly behind the nose tip in the plane of the front of the eyes.
+// Requires the left and right eye centre landmarks, the nose tip landmark, and orientation vectors for calculation.
 FaceTools_EXPORT cv::Vec3f calcFaceCentre( const ObjMetaData::Ptr);
-FaceTools_EXPORT cv::Vec3f calcFaceCentre( const cv::Vec3f& v0, const cv::Vec3f& v1, const cv::Vec3f& ntip);
 
 // Return the cropped subregion from around the face centre by G times the distance
 // from the face centre to the eye centre (average of both eyes used).
-FaceTools_EXPORT RFeatures::ObjModel::Ptr cropAroundFaceCentre( const ObjMetaData::Ptr, double G);
+FaceTools_EXPORT RFeatures::ObjModel::Ptr cropAroundFaceCentre( const ObjMetaData::Ptr, double G=2.3);
 
 // Create a vertices only ObjModel from the given row of points.
 FaceTools_EXPORT RFeatures::ObjModel::Ptr createFromVertices( const cv::Mat_<cv::Vec3f>& row);
@@ -98,7 +94,17 @@ FaceTools_EXPORT int fillHoles( RFeatures::ObjModel::Ptr);
 // Collapse polygons in the given model that have area less than A. Returns # polygons collapsed.
 FaceTools_EXPORT int collapseSmallPolygons( RFeatures::ObjModel::Ptr, double A);
 
+// Returns NULL if cannot load or if can't clean (if doClean true).
+FaceTools_EXPORT RFeatures::ObjModel::Ptr loadModel( const std::string& fname,
+                                                     bool loadTexture=false, bool doClean=false);
+
+// Returns false if unable to load any
+FaceTools_EXPORT bool loadModels( const std::vector<std::string>& fnames,
+                                  std::vector<RFeatures::ObjModel::Ptr>& models,
+                                  bool loadTexture=false, bool doClean=false);
+
 }   // end namespace
 
 #endif
+
 

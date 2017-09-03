@@ -1,0 +1,6 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource prefix="/icons">
+    <file alias="CAMERA">res/icons/camera_64x64.png</file>
+    <file alias="REORIENTATION">res/icons/axes_reorient_64x64.png</file>
+</qresource>
+</RCC>

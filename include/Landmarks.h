@@ -18,11 +18,27 @@
 #ifndef FACE_TOOLS_LANDMARKS_H
 #define FACE_TOOLS_LANDMARKS_H
 
-namespace FaceTools
-{
+#include <string>
+#include <opencv2/opencv.hpp>
+#include "FaceTools_Export.h"
 
-namespace Landmarks
+namespace FaceTools {
+namespace Landmarks {
+
+struct FaceTools_EXPORT Landmark
 {
+    Landmark( const std::string& nm, const cv::Vec3f& v, bool vis=true, bool mov=true, bool del=true)
+        : name(nm), pos(v), visible(vis), movable(mov), deletable(del) {}
+
+    std::string name;
+    cv::Vec3f pos;
+    bool visible;
+    bool movable;
+    bool deletable;
+
+    Landmark() {}   // Requires default instantiation (immediately overwrite with name/pos constructed Landmark)
+};  // end struct
+
 
 // Left eyebrow
 const std::string L_EYEBROW_0( "l_eyebrow_0");
@@ -89,8 +105,10 @@ const std::string MOUTH_OPEN_5( "mouth_open_5");
 const std::string MOUTH_OPEN_6( "mouth_open_6");
 const std::string MOUTH_OPEN_7( "mouth_open_7");
 
-}   // end namespace
+// Facial boundary prefix
+const std::string BOUNDARY_PRFX( "boundary_");
 
+}   // end namespace
 }   // end namespace
 
 #endif

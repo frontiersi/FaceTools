@@ -12,6 +12,7 @@ set( CMAKE_LIBRARY_PATH "${LIB_PRE_REQS}")
 set( CMAKE_PREFIX_PATH "${LIB_PRE_REQS}")
 
 set( BUILD_SHARED_LIBS TRUE)
+set( CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 set( BUILD_USING_SHARED_LIBS TRUE)
 
 # Set IS_DEBUG and _dsuffix
@@ -251,11 +252,9 @@ if(WITH_VTK)    # VTK
 endif()
 
 if(WITH_QT)     # Qt5
-    if(WIN32)
-        set( Qt5_DIR "$ENV{QT5_CMAKE_PATH}" CACHE PATH "Location of Qt5Config.cmake")
-        if(NOT IS_DIRECTORY ${Qt5_DIR})
-            message( FATAL_ERROR "Can't find Qt5! Set environment variable QT5_CMAKE_PATH to the location of Qt5Config.cmake")
-        endif()
+    set( Qt5_DIR "$ENV{QT5_CMAKE_PATH}" CACHE PATH "Location of Qt5Config.cmake")
+    if(NOT IS_DIRECTORY ${Qt5_DIR})
+        message( FATAL_ERROR "Can't find Qt5! Set environment variable QT5_CMAKE_PATH to the location of Qt5Config.cmake")
     endif()
     find_package( Qt5 REQUIRED Widgets Sql)
     include_directories( ${Qt5Widgets_INCLUDE_DIRS})

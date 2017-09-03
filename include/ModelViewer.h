@@ -26,9 +26,10 @@
 #include <ObjModel.h>       // RFeatures
 #include <CameraParams.h>   // RFeatures
 #include <VtkActorViewer.h> // QTools
-#include <MetricMapper.h>   // RVTK
+#include <SurfaceMapper.h>  // RVTK
 #include <ScalarLegend.h>   // RVTK
 #include <Axes.h>           // RVTK
+#include <QColor>
 
 namespace FaceTools
 {
@@ -38,11 +39,13 @@ class FaceTools_EXPORT ModelViewer
 public:
     ModelViewer( const cv::Size& viewerDims=cv::Size(512,512), bool useFloodLights=true, bool offscreenRendering=false);
     explicit ModelViewer( QTools::VtkActorViewer*);
-    ~ModelViewer();
+    virtual ~ModelViewer();
 
-    void enableAxes( bool);
     void show();
     void hide();
+
+    void showLegend( bool);
+    void showAxes( bool);
 
     void enableFloodLights( bool);  // Set true for textured objects, false for surface.
 
@@ -85,20 +88,38 @@ public:
 
     int add( const RFeatures::ObjModel::Ptr, const VisOptions& vo=VisOptions());
 
-    // Add custom surface actor metric mappings with metric value colour mapping range.
-    int add( RVTK::MetricInterface*,
-            float minv, const cv::Vec3b& minColourMapping,
-            float maxv, const cv::Vec3b& maxColourMapping,
-            int ncolours=100,   // Number of discrete colours to use
-            bool showLegend=true);
+    // Add custom surface actor. Set metric value colour mapping with setLegendColours.
+    int add( RVTK::SurfaceMapper*, float minv, float maxv);
+    int add( vtkSmartPointer<vtkActor>, const std::string& legendTitle, float minv, float maxv);
 
-    bool remove( int id);
-    void removeAll();   // Remove all models
+    // Number of discrete colours to use
+    void setLegendColours( const cv::Vec3b& minColourMapping, const cv::Vec3b& maxColourMapping, int ncolours=100);
+    void setLegendColours( const QColor& minColourMapping, const QColor& maxColourMapping, int ncolours=100);
+
+    bool remove( int id);   // Remove a prop using an ID returned from a successful add.
+    void removeAll();       // Remove all props that were added using one of the add functions that returns an ID.
+
+    // Add or remove an arbitrary prop - these props are NOT removed upon removeAll() and
+    // must be removed manually (external references to these props must be retained).
+    void add( const vtkProp*);
+    void remove( const vtkProp*);
 
     cv::Point2f projectProp( const cv::Vec3f&) const;   // Project to viewport proportion.
-    cv::Point project( const cv::Vec3f&) const;     // Project to pixel coords.
-    cv::Vec3f project( const cv::Point2f&) const;   // Project to world coords.
-    cv::Vec3f project( const cv::Point&) const;     // Project to world coords.
+    cv::Point project( const cv::Vec3f&) const;         // Project to pixel coords.
+    cv::Vec3f project( const cv::Point2f&) const;       // Project to world coords.
+    cv::Vec3f project( const cv::Point&) const;         // Project to world coords.
+
+    // Return the prop under the given coords or NULL.
+    const vtkProp* getPointedAt( const cv::Point2f&) const;
+    const vtkProp* getPointedAt( const cv::Point&) const;
+    const vtkProp* getPointedAt( const QPoint&) const;
+
+    // Project the given point to a world position on the given prop, returning true.
+    // Return false if the point doesn't project onto the given prop. Out param wpos
+    // is set only if the function returns true.
+    bool calcSurfacePosition( const vtkProp*, const cv::Point2f&, cv::Vec3f& wpos) const;
+    bool calcSurfacePosition( const vtkProp*, const cv::Point&, cv::Vec3f& worldPos) const;
+    bool calcSurfacePosition( const vtkProp*, const QPoint&, cv::Vec3f& worldPos) const;
 
     void resetDefaultCamera( float camRng=650.0f);    // Default range is 65 cm from origin directly along +Z.
     void fitCamera( double radius); // Adjust FoV to fit an object of given radius AT CURRENT DISTANCE
@@ -107,24 +128,33 @@ public:
     void setCamera( const cv::Vec3f& focus, const cv::Vec3f& normal, const cv::Vec3f& upvector, float camRng=650.0f);
     RFeatures::CameraParams getCamera() const;
 
-    cv::Size_<int> getViewportSize() const; // Pixel width and height of viewport (image plane).
+    size_t getWidth() const;    // Return the width of the viewport in pixels
+    size_t getHeight() const;   // Return the height of the viewport in pixels
 
-    QTools::VtkActorViewer& raw() { return *_viewer;}
+    const vtkSmartPointer<vtkRenderer> getRenderer() const { return _qviewer->getRenderer();}
+    const vtkSmartPointer<vtkRenderWindow> getRenderWindow() const { return _qviewer->getRenderWindow();}
+
+    void setCursor( QCursor);
 
     // Updates the render and shows what's currently in the display as an OpenCV snapshot.
     void showSnapshot( bool waitForInput=false);
 
+    // Allows user to save snapshot to file.
+    bool saveSnapshot() const;
+
+protected:
+    QTools::VtkActorViewer* _qviewer;
+
 private:
-    QTools::VtkActorViewer* _viewer;
     RVTK::ScalarLegend* _scalarLegend;
     RVTK::Axes* _axes;
     bool _dodel;
     int _addedModelID;
-    boost::unordered_map<int, std::vector<vtkSmartPointer<vtkActor> > > _actors;
+    boost::unordered_map<int, std::vector<vtkProp*> > _props;
     int addPointsActor( vtkSmartPointer<vtkActor>, const VisOptions&);
     void init();
-    ModelViewer( const ModelViewer&);   // NO COPY
-    void operator=( const ModelViewer&);// NO COPY
+    ModelViewer( const ModelViewer&);       // NO COPY
+    void operator=( const ModelViewer&);    // NO COPY
 };  // end class
 
 }   // end namespace

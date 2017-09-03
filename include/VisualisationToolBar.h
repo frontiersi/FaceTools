@@ -15,44 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_FACE_DETECTOR_H
-#define FACE_TOOLS_FACE_DETECTOR_H
+#ifndef FACE_TOOLS_VISUALISATION_TOOL_BAR_H
+#define FACE_TOOLS_VISUALISATION_TOOL_BAR_H
 
-#include <string>
-#include <vector>
-#include <opencv2/opencv.hpp>
-#include "Landmarks.h"
-#include "ObjMetaData.h"
-#include "ModelViewer.h"
 #include "FaceTools_Export.h"
-
+#include <QActionGroup>
+#include <QToolBar>
 
 namespace FaceTools
 {
 
-class FaceTools_EXPORT FaceDetector
-{
+class FaceTools_EXPORT VisualisationToolBar : public QToolBar
+{ Q_OBJECT
 public:
-    FaceDetector( const std::string& faceShapeLandmarksModel);
-    ~FaceDetector();
-
-    // Detect and set the NASAL_TIP, L_EYE_CENTRE, and R_EYE_CENTRE landmarks,
-    // and set the orientation vectors (normal and up vector) given these points.
-    // Return false iff the orientation points can't be found.
-    bool findOrientation( ObjMetaData::Ptr);
-
-    // Find remaining landmarks. Only call AFTER orientation discovered.
-    bool findLandmarks( ObjMetaData::Ptr);
-
-private:
-    class Impl;
-    Impl* _impl;
-    ModelViewer *_viewer;   // Offscreen scene rendering
-    FaceDetector( const FaceDetector&);     // NO COPY
-    void operator=( const FaceDetector&);   // NO COPY
+    explicit VisualisationToolBar( const QActionGroup*)
+    virtual ~VisualisationToolBar();
 };  // end class
-
 
 }   // end namespace
 
 #endif
+
+

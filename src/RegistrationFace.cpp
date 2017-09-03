@@ -29,7 +29,7 @@ RegistrationFace::RegistrationFace( const ObjModelCurvatureMap::Ptr cm) : _curvm
     const ObjModel::Ptr model = cm->getObject();
     // Create the per polygon internal angles
     ObjModelTriangleMeshParser parser( model);
-    ObjModelFaceAngleCalculator faceAngleCalculator( model);
+    ObjModelFaceAngleCalculator faceAngleCalculator;
     parser.addTriangleParser( &faceAngleCalculator);
     parser.parse();
     _faceAngles = faceAngleCalculator.getFaceAngles();

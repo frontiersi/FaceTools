@@ -18,7 +18,7 @@
 #include <FaceTools.h>
 using RFeatures::ObjModel;
 using RFeatures::CameraParams;
-#include <Landmarks.h>
+#include <AssetImporter.h>             // RModelIO
 
 
 void checkBoundaries( const RFeatures::ObjModelBoundaryFinder& boundaryFinder)
@@ -46,40 +46,12 @@ void checkBoundaries( const RFeatures::ObjModelBoundaryFinder& boundaryFinder)
 
 
 
-cv::Matx44d FaceTools::orient( ObjMetaData::Ptr omd)
-{
-    using namespace FaceTools;
-    if ( omd->getKDTree() == NULL)
-        omd->rebuildKDTree();
-    if ( omd->getCurvatureMap() == NULL)
-    {
-        const cv::Vec3f& ntip = omd->getLandmark( Landmarks::NASAL_TIP);
-        omd->rebuildCurvatureMap( omd->getKDTree()->find( ntip));
-    }   // end if
-
-    const cv::Vec3f v0 = omd->getLandmark( Landmarks::L_EYE_CENTRE);
-    const cv::Vec3f v1 = omd->getLandmark( Landmarks::R_EYE_CENTRE);
-
-    FaceTools::FaceOrienter orienter( omd->getCurvatureMap(), omd->getKDTree());
-    cv::Vec3d nvec, uvec;
-    orienter( v0, v1, nvec, uvec);
-    // Get the complementary axes for rotation
-    const cv::Vec3d cnvec = cv::Vec3d(0,0,2) - nvec;
-    const cv::Vec3d cuvec = cv::Vec3d(0,2,0) - uvec;
-
-    const RFeatures::ObjModelMover rmat( cnvec, cuvec);
-    omd->transform( rmat());
-    return rmat();  // Return the matrix used to do the rotation
-}   // end orient
-
-
-
 ObjModel::Ptr FaceTools::getComponent( const ObjModel::Ptr model, int svid, const cv::Vec3d& coffset)
 {
     using namespace RFeatures;
 
     ObjModelTriangleMeshParser parser( model);
-    ObjModelBoundaryFinder boundaryFinder( model);
+    ObjModelBoundaryFinder boundaryFinder;
     parser.setBoundaryParser( &boundaryFinder);
 
     const IntSet& sfids = model->getFaceIds( svid);
@@ -92,7 +64,7 @@ ObjModel::Ptr FaceTools::getComponent( const ObjModel::Ptr model, int svid, cons
     boundaryFinder.reset( &blist);   // Reset with boundary of the component we want (max number of edges)
 
     const ObjModelMover mover( coffset);
-    ObjModelCopier modelCopier( model, &mover);
+    ObjModelCopier modelCopier( &mover);
     parser.reset();
     parser.setBoundaryParser( &boundaryFinder);
     parser.addTriangleParser( &modelCopier);
@@ -110,11 +82,12 @@ ObjModel::Ptr FaceTools::getComponent( const ObjModel::Ptr model, int svid, cons
 
 ObjModel::Ptr FaceTools::crop( const ObjModel::Ptr m, const cv::Vec3f& v, double radius, const cv::Vec3d& offset)
 {
-    RFeatures::ObjModelCropper cropper( m, v, radius);
-    const RFeatures::ObjModelMover mover( offset);
-    RFeatures::ObjModelCopier copier(m, &mover);
+    using namespace RFeatures;
+    ObjModelCropper cropper( v, radius);
+    const ObjModelMover mover( offset);
+    ObjModelCopier copier( &mover);
 
-    RFeatures::ObjModelTriangleMeshParser parser(m);
+    ObjModelTriangleMeshParser parser(m);
     parser.setBoundaryParser( &cropper);
     parser.addTriangleParser( &copier);
 
@@ -153,26 +126,35 @@ ObjModel::Ptr FaceTools::crop( const ObjModel::Ptr m, const cv::Vec3f& v, double
 }   // end crop
 
 
-cv::Vec3f FaceTools::calcFaceCentre( const cv::Vec3f& v0, const cv::Vec3f& v1, const cv::Vec3f& nt)
-{
-    return cv::Vec3f( (v0[0] + v1[0] + nt[0])/3, nt[1], (v0[2] + v1[2])/2);
-}   // end calcFaceCentre
-
-
 cv::Vec3f FaceTools::calcFaceCentre( const ObjMetaData::Ptr omd)
 {
-    const cv::Vec3f& nt = omd->getLandmark("nasal_tip");
-    const cv::Vec3f& v0 = omd->getLandmark("l_eye_centre");
-    const cv::Vec3f& v1 = omd->getLandmark("r_eye_centre");
-    return calcFaceCentre( v0, v1, nt);
+    if ( !omd->hasLandmark( Landmarks::L_EYE_CENTRE) ||
+         !omd->hasLandmark( Landmarks::R_EYE_CENTRE) ||
+         !omd->hasLandmark( Landmarks::NASAL_TIP))
+        return cv::Vec3f(0,0,0);
+
+    cv::Vec3f nvec, uvec;
+    if ( !omd->getOrientation( nvec, uvec))
+        return cv::Vec3f(0,0,0);
+
+    const cv::Vec3f& v0 = omd->getLandmark( Landmarks::L_EYE_CENTRE);
+    const cv::Vec3f& v1 = omd->getLandmark( Landmarks::R_EYE_CENTRE);
+    const cv::Vec3f& nt = omd->getLandmark( Landmarks::NASAL_TIP);
+
+    const cv::Vec3f midEye = (v0 + v1) * 0.5;
+    const cv::Vec3f dvec = nt - midEye;
+
+    cv::Vec3f downVec;
+    cv::normalize( -uvec, downVec);
+    return midEye + (downVec.dot(dvec) * downVec);
 }   // end calcFaceCentre
 
 
 ObjModel::Ptr FaceTools::cropAroundFaceCentre( const ObjMetaData::Ptr omd, double G)
 {
-    const cv::Vec3f& v0 = omd->getLandmark("l_eye_centre");
-    const cv::Vec3f& v1 = omd->getLandmark("r_eye_centre");
-    const cv::Vec3f fcentre = calcFaceCentre(omd);
+    const cv::Vec3f& v0 = omd->getLandmark( Landmarks::L_EYE_CENTRE);
+    const cv::Vec3f& v1 = omd->getLandmark( Landmarks::R_EYE_CENTRE);
+    const cv::Vec3f fcentre = calcFaceCentre( omd);
     const double cropRadius = G * (cv::norm( fcentre - v0) + cv::norm( fcentre - v1))/2;
     return crop( omd->getObject(), fcentre, cropRadius);
 }   // end cropAroundFaceCentre
@@ -260,7 +242,7 @@ int FaceTools::fillHoles( ObjModel::Ptr model)
     using namespace RFeatures;
 
     ObjModelTriangleMeshParser parser( model);
-    ObjModelBoundaryFinder boundaryFinder( model);
+    ObjModelBoundaryFinder boundaryFinder;
     parser.setBoundaryParser( &boundaryFinder);
 
     parser.parse();
@@ -297,7 +279,7 @@ int FaceTools::fillHoles( ObjModel::Ptr model)
     const IntSet& sfids = model->getFaceIds( *bverts.begin());  // All face IDs connected to the first boundary vertex
     const int sfid = *model->getFaceIds( *bverts.begin()).begin();    // Start face on external boundary (save here since resetting).
     boundaryFinder.reset( &bverts); // bverts is "hanging" alias after this!
-    ObjModelCopier copier( model);
+    ObjModelCopier copier;
     parser.addTriangleParser(&copier);
     parser.parse( sfid);
     model = copier.getCopiedModel();
@@ -312,7 +294,7 @@ int FaceTools::collapseSmallPolygons( ObjModel::Ptr model, double minArea)
 {
     using namespace RFeatures;
     ObjModelTriangleMeshParser parser( model);
-    ObjModelPolygonAreaCalculator polyAreaCalculator( model);
+    ObjModelPolygonAreaCalculator polyAreaCalculator;
     parser.addTriangleParser( &polyAreaCalculator);
     parser.parse();
 
@@ -350,3 +332,62 @@ int FaceTools::collapseSmallPolygons( ObjModel::Ptr model, double minArea)
 
     return totCount;
 }   // end collapseSmallPolygons
+
+
+
+ObjModel::Ptr FaceTools::loadModel( const std::string& fname, bool useTexture, bool doClean)
+{
+    std::cerr << " =====[ Loading Model '" << fname << "' ]=====" << std::endl;
+    RModelIO::AssetImporter assetImporter( useTexture);  // Load textures if selected
+    ObjModel::Ptr model = assetImporter.load( fname);
+    if ( !model)
+        std::cerr << "Unable to read in object from '" << fname << "'!" << std::endl;
+    else
+    {
+        // Merge materials if more than one - don't want multiple textures (or meshes)
+        if ( model->getNumMaterials() > 1)
+        {
+            std::cerr << " =====[ Combining Textures ]====="<< std::endl;
+            model->mergeMaterials();
+        }   // end if
+
+        if ( doClean)
+        {
+            RFeatures::ObjModelIntegrityChecker ic( model);
+            ic.checkIntegrity();
+            if ( !ic.is2DManifold())
+            {
+                std::cerr << " =====[ Cleaning Model ]====="<< std::endl;
+                FaceTools::clean(model);
+                ic.checkIntegrity();
+                assert( ic.is2DManifold());
+                if ( !ic.is2DManifold())
+                {
+                    std::cerr << "ERROR - model clean failed! Unable to manufacture a 2D triangulated mesh from input model '" << fname << "'" << std::endl;
+                    model.reset();
+                }   // end if
+            }   // end if
+        }   // end if
+    }   // end if
+
+    return model;
+}   // end loadModel
+
+
+bool FaceTools::loadModels( const std::vector<std::string>& fnames, std::vector<RFeatures::ObjModel::Ptr>& models, bool loadTexture, bool doClean)
+{
+    bool failed = false;
+    const int n = (int)fnames.size();
+    models.resize(n);
+    for ( int i = 0; i < n; ++i)
+    {
+        models[i] = loadModel( fnames[i], loadTexture, doClean);
+        if ( !models[i])
+        {
+            failed = true;
+            break;
+        }   // end if
+    }   // end for
+
+    return !failed;
+}   // end loadModels

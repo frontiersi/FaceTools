@@ -17,6 +17,7 @@
 
 #include <ObjMetaData.h>
 using FaceTools::ObjMetaData;
+using FaceTools::Landmarks::Landmark;
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/foreach.hpp>
 #include <cassert>
@@ -45,7 +46,7 @@ ObjMetaData::Ptr ObjMetaData::create( const std::string& mfile, const ObjModel::
 
 // private
 ObjMetaData::ObjMetaData( const std::string mfile)
-    : _mfile(mfile)
+    : _mfile(mfile), _nvec(0,0,0), _uvec(0,0,0)
 {
 }   // end ctor
 
@@ -107,10 +108,156 @@ const RFeatures::ObjModelCurvatureMap::Ptr ObjMetaData::getCurvatureMap() const
 }   // end getCurvatureMap
 
 
+void ObjMetaData::setOrientation( const cv::Vec3f& nvec, const cv::Vec3f& uvec)
+{
+    _nvec = nvec;
+    _uvec = uvec;
+}   // end setOrientation
+
+
+bool ObjMetaData::getOrientation( cv::Vec3f& nvec, cv::Vec3f& uvec) const
+{
+    bool hasOrientation = false;
+    if ( cv::norm(_nvec) > 0)
+    {
+        nvec = _nvec;
+        uvec = _uvec;
+        hasOrientation = true;
+    }   // end if
+    return hasOrientation;
+}   // end getOrientation
+
+
 void ObjMetaData::setLandmark( const std::string& name, const cv::Vec3f& v)
 {
-    _landmarks[name] = v;
+    if ( _landmarks.count(name) > 0)
+        _landmarks.at(name).pos = v;   // Retains existing meta data (visible, movable, deletable)
+    else
+        _landmarks[name] = Landmark(name,v);        // Add a new landmark
 }   // end setLandmark
+
+
+void ObjMetaData::setBoundary( const std::vector<cv::Vec3f>& bs)
+{
+    _boundary = bs;
+}   // end setBoundary
+
+
+const std::vector<cv::Vec3f>* ObjMetaData::getBoundary() const
+{
+    if ( _boundary.empty())
+        return NULL;
+    return &_boundary;
+}   // end getBoundary
+
+
+ObjModel::Ptr ObjMetaData::cropToBoundary( const cv::Vec3f& sv) const
+{
+    const size_t nb = _boundary.size();
+    if ( nb < 3)
+    {
+        std::cerr << "[ERROR] FaceTools::ObjMetaData::cropToBoundary: Boundary has too few vertices!" << std::endl;
+        return ObjModel::Ptr();
+    }   // end if
+
+    if ( !_kdtree)
+    {
+        std::cerr << "[ERROR] FaceTools::ObjMetaData::cropToBoundary: Can't crop to boundary without KD tree!" << std::endl;
+        return ObjModel::Ptr();
+    }   // end if
+
+    // Get the nearest vertex indices
+    std::list<int> bverts;
+    for ( size_t i = 0; i < nb; ++i)
+        bverts.push_back( _kdtree->find( _boundary[i]));
+
+    RFeatures::ObjModelBoundaryFinder bparser( &bverts);
+    RFeatures::ObjModelTriangleMeshParser tparser( _model);
+    tparser.setBoundaryParser( &bparser);
+    RFeatures::ObjModelCopier copier;
+    tparser.addTriangleParser( &copier);
+
+    // Get the nearest point on the model to sv to begin parsing
+    const int svidx = _kdtree->find(sv);
+    const int sfid = *_model->getFaceIds(svidx).begin();    // Starting face index
+    tparser.parse(sfid);
+    return copier.getCopiedModel();
+}   // end cropToBoundary
+
+
+bool ObjMetaData::makeBoundaryHandles( std::vector<cv::Vec3f>& bhandles) const
+{
+    if ( _boundary.empty())
+        return false;
+
+    cv::Vec3f nvec, uvec;
+    if ( !getOrientation( nvec, uvec))
+        return false;
+
+    cv::Vec3f mp(0,0,0);
+    BOOST_FOREACH ( const cv::Vec3f& v, _boundary)
+        mp += v;
+    mp *= 1.0f/_boundary.size();    // Middle of boundary
+
+    // Go round the loop again checking to see which vertices are at 12 extremes
+    const cv::Vec3f rvec = uvec.cross(nvec);
+    std::vector<cv::Vec3f> vvs(12);
+    static const double THRD = 1./3;
+    vvs[0] = uvec;
+    cv::normalize(  2*THRD*uvec +   THRD*rvec, vvs[1]);
+    cv::normalize(    THRD*uvec + 2*THRD*rvec, vvs[2]);
+    vvs[3] = rvec;
+    cv::normalize(  2*THRD*rvec -   THRD*uvec, vvs[4]);
+    cv::normalize(    THRD*rvec - 2*THRD*uvec, vvs[5]);
+    vvs[6] = -uvec;
+    cv::normalize( -2*THRD*uvec -   THRD*rvec, vvs[7]);
+    cv::normalize(   -THRD*uvec - 2*THRD*rvec, vvs[8]);
+    vvs[9] = -rvec;
+    cv::normalize(    THRD*uvec - 2*THRD*rvec, vvs[10]);
+    cv::normalize(  2*THRD*uvec -   THRD*rvec, vvs[11]);
+
+    bhandles.resize(12);
+    std::vector<double> vdps(12);   // Max dot-products in the corresponding directions
+    BOOST_FOREACH ( const cv::Vec3f& v, _boundary)
+    {
+        const cv::Vec3d dv = v-mp;
+        for ( int i = 0; i < 12; ++i)
+        {
+            const double dp = dv.dot(vvs[i]);
+            if ( dp > vdps[i])
+            {
+                vdps[i] = dp;
+                bhandles[i] = v;
+            }   // end if
+        }   // end for
+    }   // end foreach
+}   // makeBoundaryHandles
+
+
+const cv::Vec3f& ObjMetaData::getLandmark( const std::string& name, bool snapToVertex) const
+{
+    assert( hasLandmark(name));
+    const cv::Vec3f* lv = &_landmarks.at(name).pos;
+    if ( snapToVertex)
+    {
+        const RFeatures::ObjModelKDTree::Ptr kdt = getKDTree();
+        assert( kdt != NULL);
+        lv = &getObject()->vtx( kdt->find( *lv));
+    }   // end if
+    return *lv;
+}   // end getLandmark
+
+
+Landmark* ObjMetaData::getLandmarkMeta( const std::string& name)
+{
+    return _landmarks.count(name) == 0 ? NULL : &_landmarks.at(name);
+}   // end getLandmarkMeta
+
+
+const Landmark* ObjMetaData::getLandmarkMeta( const std::string& name) const
+{
+    return _landmarks.count(name) == 0 ? NULL : &_landmarks.at(name);
+}   // end getLandmarkMeta
 
 
 bool ObjMetaData::hasLandmark( const std::string& name) const
@@ -119,19 +266,43 @@ bool ObjMetaData::hasLandmark( const std::string& name) const
 }   // end hasLandmark
 
 
-const cv::Vec3f& ObjMetaData::getLandmark( const std::string& name) const
+bool ObjMetaData::deleteLandmark( const std::string& name)
 {
-    assert( hasLandmark(name));
-    return _landmarks.at(name);
-}   // end getLandmark
+    if (!hasLandmark(name))
+        return false;
+    _landmarks.erase(name);
+    return true;
+}   // end deleteLandmark
+
+
+bool ObjMetaData::changeLandmarkName( const std::string& oldname, const std::string& newname)
+{
+    if (!hasLandmark(oldname))
+        return false;
+    if (hasLandmark(newname))
+        return false;
+
+    const Landmark& oldlm = _landmarks.at(oldname);
+    _landmarks[newname] = Landmark( newname, oldlm.pos, oldlm.visible, oldlm.movable, oldlm.deletable);
+    return deleteLandmark(oldname);
+}   // end changeLandmarkName
+
+
+bool ObjMetaData::shiftLandmark( const std::string& name, const cv::Vec3f& t)
+{
+    if (!hasLandmark(name))
+        return false;
+    _landmarks[name].pos = _landmarks[name].pos + t;
+    return true;
+}   // end shiftLandmark
 
 
 void ObjMetaData::shiftLandmarks( const cv::Vec3f& t)
 {
-    std::vector<std::string> lmnames;
-    getLandmarks( lmnames);
-    BOOST_FOREACH ( const std::string& lmname, lmnames)
-        _landmarks[lmname] = _landmarks[lmname] + t;
+    boost::unordered_set<std::string> names;
+    getLandmarks( names);
+    BOOST_FOREACH ( const std::string& name, names)
+        _landmarks[name].pos = _landmarks[name].pos + t;
 }   // end shiftLandmarks
 
 
@@ -147,7 +318,7 @@ double ObjMetaData::shiftLandmarksToSurface()
     assert( kdt != NULL);
 
     int notused;
-    std::vector<std::string> lmnames;
+    boost::unordered_set<std::string> lmnames;
     getLandmarks( lmnames);
     BOOST_FOREACH ( const std::string& lmname, lmnames)
     {
@@ -167,14 +338,14 @@ double ObjMetaData::shiftLandmarksToSurface()
 
 void ObjMetaData::transformLandmarks( const cv::Matx44d& T)
 {
-    std::vector<std::string> lmnames;
+    boost::unordered_set<std::string> lmnames;
     getLandmarks( lmnames);
     BOOST_FOREACH ( const std::string& lmname, lmnames)
     {
-        const cv::Vec3f& v = _landmarks[lmname];
+        const cv::Vec3f& v = getLandmark(lmname);
         const cv::Vec4d hv( v[0], v[1], v[2], 1);
         const cv::Vec4d nv = T * hv;
-        _landmarks[lmname] = cv::Vec3f( float(nv[0]), float(nv[1]), float(nv[2]));
+        _landmarks[lmname].pos = cv::Vec3f( float(nv[0]), float(nv[1]), float(nv[2]));
     }   // end foreach
 }   // end transformLandmarks
 
@@ -187,14 +358,16 @@ void ObjMetaData::transform( const cv::Matx44d& T)
 }   // end transform
 
 
-size_t ObjMetaData::getLandmarks( std::vector<std::string>& lmks) const
+size_t ObjMetaData::getLandmarks( boost::unordered_set<std::string>& lmks) const
 {
-    lmks.resize(_landmarks.size());
-    size_t i = 0;
-    typedef std::pair<std::string, cv::Vec3f> LMPair;
+    size_t count = 0;
+    typedef std::pair<std::string, Landmark> LMPair;
     BOOST_FOREACH ( const LMPair& lmpair, _landmarks)
-        lmks[i++] = lmpair.first;
-    return i;
+    {
+        lmks.insert(lmpair.first);
+        count++;
+    }   // end foreach
+    return count;
 }   // end getLandmarks
 
 
@@ -207,11 +380,11 @@ void ObjMetaData::writeTo( PT::ptree& tree) const
     PT::ptree& topNode = tree.add("record","");
     topNode.put( "filename", _mfile);
     PT::ptree& landmarks = topNode.put( "landmarks", ""); // Landmarks node
-    typedef std::pair<std::string, cv::Vec3f> LMPair;
+    typedef std::pair<std::string, Landmark> LMPair;
     BOOST_FOREACH ( const LMPair& lmpair, _landmarks)
     {
         const std::string& lmname = lmpair.first;
-        const cv::Vec3f& v = lmpair.second;
+        const cv::Vec3f& v = lmpair.second.pos;
         PT::ptree& landmark = landmarks.add( "landmark","");
         landmark.put( "<xmlattr>.name", lmname);    // Landmark identifier
         landmark.put( "x", v[0]);
@@ -240,7 +413,7 @@ void ObjMetaData::readFrom( const PT::ptree& record, ObjMetaData& fd)
 
 std::ostream& operator<<( std::ostream& os, const ObjMetaData& fd)
 {
-    std::vector<std::string> landmarks;
+    boost::unordered_set<std::string> landmarks;
     fd.getLandmarks( landmarks);
     int maxNameLen = 0;
     BOOST_FOREACH ( const std::string& lmname, landmarks)
