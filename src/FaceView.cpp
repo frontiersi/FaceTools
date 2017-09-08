@@ -94,7 +94,7 @@ bool FaceView::canVisualise( VisualisationAction* visint) const
 bool FaceView::isPointedAt( const QPoint &p) const
 {
     const vtkProp* prop = _viewer->getPointedAt(p);
-    return ( prop == getActor()) || !_lview.pointedAt(p).empty();
+    return ( prop != NULL && (prop == getActor())) || !_lview.pointedAt(p).empty();
 }   // end isPointedAt
 
 
@@ -122,7 +122,8 @@ RFeatures::CameraParams FaceView::getCamera() const
 // public
 const vtkActor* FaceView::getActor() const
 {
-    assert( _curvis);
+    if ( _curvis)
+        return NULL;
     return _allvis.at(_curvis);
 }   // end getActor
 

@@ -22,17 +22,21 @@ using FaceTools::FaceModel;
 using FaceTools::FaceModelWidget;
 
 // public
-FaceModelWidget::FaceModelWidget( FaceTools::InteractiveModelViewer* viewer, QActionGroup* xactions, QWidget *parent)
-    : QWidget(parent), _xactions(xactions), _combo( new FaceTools::FaceViewComboBox( viewer, this))
+FaceModelWidget::FaceModelWidget( FaceTools::InteractiveModelViewer* viewer, const QList<QAction*>* xactions, QWidget *parent)
+    : QWidget(parent), _viewer(viewer), _xactions(xactions), _combo( new FaceTools::FaceViewComboBox( viewer, this))
 {
     QVBoxLayout* layout = new QVBoxLayout(this);
-    layout->addWidget( viewer);
+    setLayout( layout);
+    _viewer->addToLayout(layout);
     layout->addWidget( _combo);
     connect( _combo, &FaceTools::FaceViewComboBox::onViewSelected, this, &FaceModelWidget::onViewSelected);
 }   // end ctor
 
 // public
-FaceModelWidget::~FaceModelWidget() { delete _combo;}
+FaceModelWidget::~FaceModelWidget()
+{
+    _viewer->removeFromLayout( layout()); // Remove the viewer from the layout's ownership so it's not deleted
+}   // end dtor
 
 // public
 size_t FaceModelWidget::getModels( boost::unordered_set<FaceModel*>& fmodels) const { return _combo->getModels( fmodels);}

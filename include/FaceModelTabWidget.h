@@ -60,7 +60,7 @@ private slots:
 
 private:
     InteractiveModelViewer *_viewer; // Viewer shared between models in tab group
-    QActionGroup _xactions;
+    QList<QAction*> _xactions;
     QMenu _cmenu;
 
     FaceModelTabWidget( const FaceModelTabWidget&); // No copy

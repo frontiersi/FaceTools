@@ -26,12 +26,12 @@ using FaceTools::FaceModel;
 // public
 FaceModelTabWidget::FaceModelTabWidget( QWidget *parent)
     : QTabWidget(parent),
-     _viewer( new FaceTools::InteractiveModelViewer( QSize(512,512), true, this)),
-     _xactions(this)
+     _viewer( new FaceTools::InteractiveModelViewer( true))
 {
     setUsesScrollButtons(true);
     setDocumentMode(true);
-    connect( _viewer, &FaceTools::InteractiveModelViewer::requestContextMenu, this, &FaceModelTabWidget::showContextMenu);
+    connect( _viewer, &FaceTools::InteractiveModelViewer::requestContextMenu,
+                this, &FaceModelTabWidget::showContextMenu);
 }   // end ctor
 
 
@@ -54,7 +54,7 @@ bool FaceModelTabWidget::addAction( QAction* action)
         std::cerr << "[ERROR] FaceTools::FaceModelTabWidget::addAction: QAction is not parented by a FaceAction!" << std::endl;
         return false;
     }   // end if
-    _xactions.addAction(action);
+    _xactions << action;
     return true;
 }   // end addAction
 
@@ -114,8 +114,7 @@ size_t FaceModelTabWidget::removeTabWidget( int tabIdx)
     const size_t nmodels = fmwidget->getNumModels();
     setUpdatesEnabled(false);  // Disable painting (prevent flicker)
     fmwidget->disconnect(this);
-    delete fmwidget;
-    removeTab(tabIdx);
+    removeTab(tabIdx);         // Causes the widget to be deleted
     setUpdatesEnabled(true);   // Enable painting again
     return nmodels;
 }   // end removeTabWidget

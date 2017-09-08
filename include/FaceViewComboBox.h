@@ -34,7 +34,7 @@ public:
     virtual ~FaceViewComboBox();
 
     size_t getModels( boost::unordered_set<FaceModel*>&) const;
-    const std::string& addView( FaceModel*, QActionGroup*); // Insert new view in the combo box, returning view name.
+    const std::string& addView( FaceModel*, const QList<QAction*>*); // Insert new view in the combo box, returning view name.
     void removeView( const std::string&);       // Remove a single view with given name.
     size_t removeModel( FaceModel*);            // Remove all views for the given model, returning the number removed.
     CMint* getSelectedView() const;             // Returns the currently selected view or NULL if none selected.

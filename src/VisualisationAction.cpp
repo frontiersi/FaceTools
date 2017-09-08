@@ -22,11 +22,10 @@
 #include <cassert>
 using FaceTools::VisualisationAction;
 using FaceTools::ModelInteractor;
-using FaceTools::FaceModel;
-using FaceTools::FaceView;
 
 
-VisualisationAction::VisualisationAction() : FaceAction(), _fview(NULL), _fmodel(NULL)
+VisualisationAction::VisualisationAction()
+    : FaceAction()
 {
     setEnabled(false);
 }   // end ctor
@@ -35,50 +34,48 @@ VisualisationAction::VisualisationAction() : FaceAction(), _fview(NULL), _fmodel
 // protected slot
 bool VisualisationAction::doAction()
 {
-    assert(_fview);
-    _fview->visualise(this);
+    foreach ( ModelInteractor* mint, _interactors)
+        mint->getView()->visualise(this);
     return true;
 }   // end doAction
-
-
-// public
-void VisualisationAction::connectInteractor( ModelInteractor* interactor)
-{
-    assert( interactor);
-    connect( interactor, SIGNAL( enableActionable(bool)), this, SLOT(checkAllow(bool)));
-}   // end connectInteractor
-
-
-// public
-void VisualisationAction::disconnectInteractors()
-{
-    if ( _fmodel)
-        _fmodel->disconnect(this);
-    _fview = NULL;
-    _fmodel = NULL;
-}   // end disconnectInteractor
 
 
 // private slot
 void VisualisationAction::doOnMeshUpdated()
 {
-    setEnabled( _fview && _fview->canVisualise(this));
+    bool enable = !_interactors.empty();
+    // Only enable if ALL of the interactors allow for this visualisation
+    foreach ( ModelInteractor* mint, _interactors)
+    {
+        if ( mint->getView()->canVisualise(this))
+        {
+            enable = false;
+            break;
+        }   // end if
+    }   // end foreach
+    setEnabled( enable);
 }   // end doOnMeshUpdated
 
 
-// private slot
-void VisualisationAction::checkAllow( bool enable)
+// public
+void VisualisationAction::removeInteractor( ModelInteractor *mint)
+{
+    _interactors.erase(mint);
+    mint->getModel()->disconnect(this);
+}   // end removeInteractor
+
+
+// public slot
+void VisualisationAction::setInteractive( bool enable)
 {
     ModelInteractor* mint = qobject_cast<ModelInteractor*>( sender());
     assert(mint);
-    if ( !enable && (mint->getView() == _fview))
-        disconnectInteractors();
-    else if ( enable && !_fview)
+    if ( !enable)
+        removeInteractor(mint);
+    else
     {
-        _fview = mint->getView();
-        _fmodel = mint->getModel();
-        connect( _fmodel, SIGNAL( onMeshUpdated()), this, SLOT(doOnMeshUpdated()));
+        _interactors.insert(mint);
+        connect( mint->getModel(), &FaceModel::onMeshUpdated, this, &VisualisationAction::doOnMeshUpdated);
     }   // end else if
     doOnMeshUpdated();
 }   // end checkAllow
-

@@ -37,8 +37,8 @@ namespace FaceTools
 class FaceTools_EXPORT ModelViewer
 {
 public:
-    ModelViewer( const cv::Size& viewerDims=cv::Size(512,512), bool useFloodLights=true, bool offscreenRendering=false);
     explicit ModelViewer( QTools::VtkActorViewer*);
+    ModelViewer( bool useFloodLights=true, bool offscreenRendering=false);
     virtual ~ModelViewer();
 
     void show();

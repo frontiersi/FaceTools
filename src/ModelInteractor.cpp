@@ -19,16 +19,17 @@
 using FaceTools::ModelInteractor;
 using FaceTools::InteractiveModelViewer;
 using FaceTools::InteractionInterface;
+using FaceTools::FaceAction;
 using FaceTools::FaceView;
 
 
 // public
-ModelInteractor::ModelInteractor( InteractiveModelViewer* viewer, FaceModel* fmodel, QActionGroup* agroup)
+ModelInteractor::ModelInteractor( InteractiveModelViewer* viewer, FaceModel* fmodel, const QList<QAction*> *actions)
     : InteractionInterface(), _viewer(viewer),
-     _fmodel(fmodel), _fview(NULL),
+     _fmodel(fmodel), _fview(NULL), _actions(actions),
      _isDrawingPath(false), _isMovingLandmark(false),
      _modelHoverOld(false), _lmHoverOld(""),
-     _pickedLandmark(""), _actionable(false)
+     _pickedLandmark(""), _interactive(false)
 {
     _viewer->connectInterface(this);
 
@@ -37,11 +38,11 @@ ModelInteractor::ModelInteractor( InteractiveModelViewer* viewer, FaceModel* fmo
     connect( &_bobserver, &FaceTools::BoundaryViewEventObserver::updatedBoundary, _fmodel, &FaceTools::FaceModel::updateBoundary);
 
     // Make this interactor available to all of the passed in actions.
-    foreach ( QAction* action, agroup->actions())
+    foreach ( QAction* action, *_actions)
     {
-        FaceActionInterface* faction = qobject_cast<FaceActionInterface*>(action->parent());
+        FaceAction* faction = qobject_cast<FaceAction*>(action->parent());
         assert(faction);
-        faction->connectInteractor(this);
+        faction->addInteractor(this);
     }   // end foreach
 }   // end ctor
 
@@ -49,19 +50,31 @@ ModelInteractor::ModelInteractor( InteractiveModelViewer* viewer, FaceModel* fmo
 // public
 ModelInteractor::~ModelInteractor()
 {
+    // Remove this interactor from all available actions.
+    foreach ( QAction* action, *_actions)
+    {
+        FaceAction* faction = qobject_cast<FaceAction*>(action->parent());
+        faction->removeInteractor(this);
+    }   // end foreach
+
     delete _fview;
 }   // end dtor
 
 
 // public
-void ModelInteractor::setActionable( bool enable)
+void ModelInteractor::setInteractive( bool enable)
 {
-    if ( enable != _actionable)
+    if ( enable != _interactive)
     {
-        _actionable = enable;
-        emit enableActionable( enable);
+        _interactive = enable;
+        // Tell all actions that this interactor is switching interactivity.
+        foreach ( QAction* action, *_actions)
+        {
+            FaceAction* faction = qobject_cast<FaceAction*>(action->parent());
+            faction->setInteractive(enable);
+        }   // end foreach
     }   // end if
-}   // end setActionable
+}   // end setInteractive
 
 
 // public

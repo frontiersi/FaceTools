@@ -229,7 +229,7 @@ FaceDetector::Ptr FaceDetector::create( const std::string& haarCascadesModelDir,
 FaceDetector::FaceDetector( FaceTools::FeaturesDetector::Ptr fd, Impl* impl)
     : _featuresDetector(fd),
       _impl( impl),
-      _viewer( new ModelViewer(cv::Size(512,512), true/*floodlights*/, true/*offscreen rendering*/))
+      _viewer( new ModelViewer( true/*floodlights*/, true/*offscreen rendering*/))
 {
     //_viewer->show();
 }   // end ctor

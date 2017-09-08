@@ -48,13 +48,18 @@ public:
     // the slots that are connected to the ModelInteractor signals.
     virtual QAction* qaction() = 0;
 
-    // Connect interactors so action knows when to enable/disable self based on
-    // context, or even when to fire automatically (if not being driven by the user).
-    virtual void connectInteractor( ModelInteractor*) = 0;
+    // Add/remove interactors so action knows what to apply itself
+    // to and/or what conditions to respond to (e.g. to enable/disable
+    // self, or automatically trigger when certain conditions are met).
+    virtual void addInteractor( ModelInteractor*) = 0;
+    virtual void removeInteractor( ModelInteractor*) = 0;
 
-    // Disconnect signals from the interactor when they should no longer be used to
-    // determine this action's state of readiness or whether it should trigger.
-    virtual void disconnectInteractors() = 0;
+    // Allow an already added interactor to inform this action (via sender()) of
+    // when it starts or stops being interacted on by the user. One or more
+    // interactors of the full set of added interactors may be set interactive.
+    // Actions may want to reimplement this function to allow them to
+    // enable/disable themselves in response to these events.
+    virtual void setInteractive() = 0;
 };  // end class
 
 
@@ -66,8 +71,19 @@ public:
 
     // Triggering the action calls this action's process function.
     virtual QAction* qaction() { return &_action;}
-    virtual void connectInteractor( ModelInteractor*){}
-    virtual void disconnectInteractors(){}
+
+    // Connect interactors to this action. Several interactors may
+    // be attached to an action, or each newly connected interactor
+    // may replace the existing one (up to the implementing action).
+    // Whether or not an interactor is currently being acted upon is
+    // communicated via setInteractive. In this way, an action can be
+    // aware of a larger set of interactors than are telling it that
+    // they are ready to be acted upon. Some actions may not care about
+    // which interactors are currently available to it, and only want
+    // to work on the interactive set (e.g. visualisation actions). In
+    // this case, it is only necessary to reimplement setInteractive.
+    virtual void addInteractor( ModelInteractor*){}
+    virtual void removeInteractor( ModelInteractor*){}
 
     // Set whether this action will be undertaken asynchronously or not
     // on the next call to process. Default is synchronous (blocking calls).
@@ -89,6 +105,13 @@ public slots:
     // return value of doAction. If asynchronous, function returns
     // immediately and caller should listen for signal finished.
     bool process();
+
+    // Allow an already added interactor to inform this action (via sender()) of
+    // when it starts or stops being interacted on by the user. One or more
+    // interactors of the full set of added interactors may be set interactive.
+    // Actions may want to reimplement this function to allow them to
+    // enable/disable themselves in response to these events.
+    virtual void setInteractive(bool){}
 
 protected:
     // Derived types must call initAction() from within their constructor to initialise
@@ -144,8 +167,7 @@ public:
     virtual ~FaceActionGroup(); // Deletes all actions added by addAction
 
     virtual QAction* qaction() { return NULL;}
-    virtual void connectInteractor( ModelInteractor*){}
-    virtual void disconnectInteractors(){}
+    virtual void addInteractor( ModelInteractor*){}
 
     // Whether this group of actions should be available as a main
     // menu, on its own toolbar, or added to the context menu.

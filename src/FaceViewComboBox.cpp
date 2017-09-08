@@ -65,9 +65,9 @@ FaceViewComboBox::FaceViewComboBox( InteractiveModelViewer* viewer, QWidget* par
 // public
 FaceViewComboBox::~FaceViewComboBox()
 {
-    typedef std::pair<int, std::string> VPair;
-    foreach ( const VPair& vpair, _vnameLookup)
-        removeView( vpair.second);
+    typedef std::pair<int, Mint*> MPair;
+    foreach ( const MPair& mpair, _mintLookup)
+        delete mpair.second;
 }   // end dtor
 
 
@@ -82,9 +82,9 @@ size_t FaceViewComboBox::getModels( boost::unordered_set<FaceModel*>& fmodels) c
 
 
 // public
-const std::string& FaceViewComboBox::addView( FaceModel* fmodel, QActionGroup* agroup)
+const std::string& FaceViewComboBox::addView( FaceModel* fmodel, const QList<QAction*> *agroup)
 {
-    const int vkey = s_mintKey++;     // key for this view
+    int vkey = s_mintKey++;     // key for this view
     _viewKeys[fmodel].insert(vkey);   // Map model to view key
     _mintLookup[vkey] = new Mint( _viewer, fmodel, agroup);
 
@@ -98,7 +98,11 @@ const std::string& FaceViewComboBox::addView( FaceModel* fmodel, QActionGroup* a
     connect( fmodel, SIGNAL( onClearedUndos( FaceModel*)), this, SLOT( changeViewNames( FaceModel*)));
 
     setEnabled(true);
-    return _vnameLookup.at(vkey);
+
+    // Set this newly added view as the current one for interaction.
+    const int rowi = getRowFromName( mname, vkey);
+    onSelectedRow(rowi);
+    return mname;
 }   // end addView
 
 
@@ -166,9 +170,9 @@ void FaceViewComboBox::onSelectedRow( int rowi)
 {
     const int vkey = getMintKeyFromRow( this, rowi);
     if ( _curView >= 0)
-        _mintLookup.at(_curView)->setActionable(false);
+        _mintLookup.at(_curView)->setInteractive(false);
     _curView = vkey;
-    _mintLookup.at(_curView)->setActionable(true);
+    _mintLookup.at(_curView)->setInteractive(true);
     emit onViewSelected( _vnameLookup.at(vkey));
 }   // end onSelectedRow
 
@@ -218,8 +222,8 @@ int FaceViewComboBox::getRowFromName( const std::string& vname, int& vkey) const
 std::string FaceViewComboBox::createViewName( FaceModel* fmodel) const
 {
     const std::string& fname = fmodel->getSaveFilepath();   // May not actually be saved yet if has been edited
-    std::string mname;
-    if ( !boost::filesystem::exists( boost::filesystem::path(fname)))
+    std::string mname = fname;
+    if ( boost::filesystem::exists( boost::filesystem::path(fname)))
         mname = boost::filesystem::path(fname).filename().string();
     std::ostringstream oss;
     oss << mname << " : " << _viewKeys.at(fmodel).size();

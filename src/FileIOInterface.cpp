@@ -23,7 +23,7 @@ using FaceTools::FaceModel;
 FileIOInterface::FileIOInterface()
 {
     setAsync(true);
-    connect( this, SIGNAL( finished(bool)), this, SLOT( doFinished(bool)));
+    connect( this, &FileIOInterface::finished, this, &FileIOInterface::doFinished);
     doFinished(false);  // Initialise
 }   // end ctor
 

@@ -33,21 +33,36 @@ void InteractiveModelViewer::init()
 }   // end init
 
 // public
-InteractiveModelViewer::InteractiveModelViewer( const QSize& vdims, bool useFloodLights, QWidget* parent)
-    : QWidget(parent), FaceTools::ModelViewer( cv::Size( vdims.width(), vdims.height()), useFloodLights, false)
+InteractiveModelViewer::InteractiveModelViewer( bool useFloodLights)
+    : FaceTools::ModelViewer( useFloodLights, false)
 {
     init();
 }   // end ctor
 
 // public
-InteractiveModelViewer::InteractiveModelViewer( QTools::VtkActorViewer* qviewer, QWidget* parent)
-    : QWidget(parent), FaceTools::ModelViewer(qviewer), _qinterface(NULL)
+InteractiveModelViewer::InteractiveModelViewer( QTools::VtkActorViewer* qviewer)
+    : FaceTools::ModelViewer(qviewer), _qinterface(NULL)
 {
     init();
 }   // end ctor
 
 // public
 InteractiveModelViewer::~InteractiveModelViewer() {}    // end dtor
+
+
+// public
+void InteractiveModelViewer::addToLayout( QLayout *layout)
+{
+    layout->addWidget(_qviewer);
+}   // end addToLayout
+
+
+// public
+void InteractiveModelViewer::removeFromLayout( QLayout *layout)
+{
+   layout->removeWidget(_qviewer);
+}   // end removeFromLayout
+
 
 // public
 void InteractiveModelViewer::connectInterface( FaceTools::InteractionInterface* iint) const

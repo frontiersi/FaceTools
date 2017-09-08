@@ -27,7 +27,7 @@ namespace FaceTools
 class FaceTools_EXPORT FaceModelWidget : public QWidget
 { Q_OBJECT
 public:
-    FaceModelWidget( InteractiveModelViewer*, QActionGroup*, QWidget *parent=NULL);
+    FaceModelWidget( InteractiveModelViewer*, const QList<QAction*>*, QWidget *parent=NULL);
     virtual ~FaceModelWidget();
 
     // Get the models from this widget into the given set returning the number
@@ -40,15 +40,16 @@ public:
     const FaceView* getActiveView() const;
 
 public slots:
-    const std::string& addView( FaceModel*);     // Also sets the view as active and returns the view name.
-    size_t removeModel( FaceModel*);      // Remove all views of the given model returning the number of views removed.
-    void removeView( const std::string&); // Remove single view
+    const std::string& addView( FaceModel*);  // Also sets the view as active and returns the view name.
+    size_t removeModel( FaceModel*);          // Remove all views of the given model returning the number of views removed.
+    void removeView( const std::string&);     // Remove single view
 
 signals:
     void onViewSelected( const std::string&);   // Signal the newly active view title
 
 private:
-    QActionGroup* _xactions;
+    InteractiveModelViewer* _viewer;
+    const QList<QAction*> *_xactions;
     FaceViewComboBox* _combo;
 
     FaceModelWidget( const FaceModelWidget&); // No copy

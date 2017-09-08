@@ -90,7 +90,7 @@ void ModelViewer::init()
 
 
 // public
-ModelViewer::ModelViewer( const cv::Size& vsz, bool floodFill, bool offscreen)
+ModelViewer::ModelViewer( bool floodFill, bool offscreen)
     : _qviewer( new QTools::VtkActorViewer( NULL, offscreen)), _scalarLegend(NULL), _axes(NULL), _dodel(true), _addedModelID(0)
 {
     vtkObject::GlobalWarningDisplayOff();   // Prevent GUI error warning pop-ups
@@ -98,7 +98,6 @@ ModelViewer::ModelViewer( const cv::Size& vsz, bool floodFill, bool offscreen)
     renderer->SetGradientBackground(false);
     renderer->SetBackground(0,0,0);
     _qviewer->setInteractor( vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New());
-    _qviewer->setSize( vsz.width, vsz.height);
     enableFloodLights( floodFill);
     init();
 }   // end ctor
@@ -198,6 +197,8 @@ bool ModelViewer::calcSurfacePosition( const vtkProp *prop, const QPoint& q, cv:
 // public
 bool ModelViewer::calcSurfacePosition( const vtkProp *prop, const cv::Point& p, cv::Vec3f& worldPos) const
 {
+    if ( !prop)
+        return false;
     RVTK::PointPlacer::Ptr pplacer = RVTK::PointPlacer::create( _qviewer->getRenderer());
     pplacer->set(prop);
     return pplacer->calcSurfacePosition( p.x, p.y, &worldPos[0], RVTK::TOP_LEFT_DISPLAY_ORIGIN);

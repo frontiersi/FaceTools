@@ -21,6 +21,7 @@
 #include "FaceActionInterface.h"
 #include <vtkSmartPointer.h>
 #include <vtkActor.h>
+#include <boost/unordered_set.hpp>
 
 namespace FaceTools
 {
@@ -35,10 +36,7 @@ public:
     VisualisationAction();
     virtual ~VisualisationAction(){}
 
-    virtual void connectInteractor( ModelInteractor*);
-    virtual void disconnectInteractors();
-
-    // If this visualisation is currently available.
+    // If this visualisation is available for the given model.
     virtual bool isAvailable( const FaceModel*) const = 0;
 
     // Make the actor for the given model.
@@ -52,16 +50,19 @@ public:
     virtual bool allowSetColour() const = 0;
     virtual bool allowScalarVisualisation( float& minv, float& maxv) const = 0;
 
+    virtual void removeInteractor( ModelInteractor*);
+
+public slots:
+    virtual void setInteractive(bool);
+
 protected:
     virtual bool doAction();
 
 private slots:
-    void checkAllow(bool);
     void doOnMeshUpdated();
 
 private:
-    FaceView *_fview;
-    const FaceModel *_fmodel;
+    boost::unordered_set<ModelInteractor*> _interactors;
 };  // end class
 
 }   // end namespace

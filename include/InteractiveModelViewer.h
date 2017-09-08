@@ -24,17 +24,20 @@
 
 #include "ModelViewer.h"
 #include "InteractionInterface.h"
+#include <QLayout>
 
 namespace FaceTools
 {
 
-class FaceTools_EXPORT InteractiveModelViewer : public QWidget, public ModelViewer
+class FaceTools_EXPORT InteractiveModelViewer : public QObject, public ModelViewer
 { Q_OBJECT
 public:
-    InteractiveModelViewer( const QSize& viewerDims=QSize(512,512), bool useFloodLights=true, QWidget* parent=NULL);
-    InteractiveModelViewer( QTools::VtkActorViewer*, QWidget* parent=NULL);
+    explicit InteractiveModelViewer( bool useFloodLights=true);
+    explicit InteractiveModelViewer( QTools::VtkActorViewer*);
     virtual ~InteractiveModelViewer();
 
+    void addToLayout( QLayout*);
+    void removeFromLayout( QLayout*);
     void connectInterface( InteractionInterface*) const;
 
     // The most recent mouse coords with top-left origin.
