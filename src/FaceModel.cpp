@@ -27,7 +27,7 @@ using RFeatures::ObjModel;
 
 // public
 FaceModel::FaceModel( ObjMetaData::Ptr md)
-    : _objmeta()
+    : _objmeta(md)
 {
     updateMesh( md->getObject());
 }   // end ctor
