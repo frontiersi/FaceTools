@@ -16,24 +16,19 @@
  ************************************************************************/
 
 #include <FaceModel.h>
-#include <FaceDetector.h>
 #include <CurvatureSpeedFunctor.h>
 #include <FaceTools.h>
 using FaceTools::FaceModel;
+using FaceTools::FaceDetector;
 using FaceTools::ObjMetaData;
 using RFeatures::ObjModel;
 #include <QFile>
-
-
-FaceTools::FaceDetector* FaceModel::s_faceDetector(NULL);   // private static
 
 
 // public
 FaceModel::FaceModel( ObjMetaData::Ptr md)
     : _objmeta()
 {
-    if ( s_faceDetector == NULL)
-        s_faceDetector = new FaceTools::FaceDetector( QFile( ":/ml/face_shape_model").fileName().toStdString());
     updateMesh( md->getObject());
 }   // end ctor
 
@@ -151,16 +146,16 @@ bool FaceModel::updateDistanceMaps( const cv::Vec3f& v)
 
 
 // public slot
-bool FaceModel::detectFace()
+bool FaceModel::detectFace( FaceDetector::Ptr faceDetector)
 {
     _err = "";
-    if ( !s_faceDetector->findOrientation( _objmeta))
+    if ( !faceDetector->findOrientation( _objmeta))
     {
         _err = "Unable to determine facial orientation!";
         return false;
     }   // end if
 
-    if ( !s_faceDetector->findLandmarks( _objmeta))
+    if ( !faceDetector->findLandmarks( _objmeta))
     {
         _err = "Complete set of landmarks not found!";
         return false;

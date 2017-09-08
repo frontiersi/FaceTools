@@ -16,7 +16,6 @@
  ************************************************************************/
 
 #include <FaceModelManager.h>
-#include <FileIOInterface.h>
 #include <FaceTools.h>
 #include <FaceModel.h>
 #include <boost/algorithm/string.hpp>
@@ -50,38 +49,23 @@ QStringList createFilters( const boost::unordered_map<std::string, std::string>&
 }   // end createFilters
 
 
-class FaceModelManager::Deleter
-{ public:
-    void operator()( const FaceModelManager* fmm) { delete fmm;}
-};  // end class
-
-FaceModelManager::Ptr FaceModelManager::s_fmm;
-
-// private static
-FaceModelManager::Ptr FaceModelManager::get()
-{
-    if ( !s_fmm)
-        s_fmm = Ptr( new FaceModelManager, Deleter());
-    return s_fmm;
-}   // end get
-
+FaceModelManager FaceModelManager::s_fmm;
 
 // private
-FaceModelManager::FaceModelManager()
-{
-    std::cerr << "=====[ FaceModelManager Initialising ]=====" << std::endl;
-}   // end ctor
-
+FaceModelManager::FaceModelManager() {}
 
 // private
 FaceModelManager::~FaceModelManager()
 {
-    closeAll(); // Ensure all models closed
+    closeAll();
 }   // end dtor
+
+// public static
+FaceModelManager& FaceModelManager::get() { return s_fmm;}
 
 
 // public
-std::string FaceModelManager::load( const std::string& fname)
+bool FaceModelManager::load( const std::string& fname)
 {
     std::string err;
     if ( !boost::filesystem::exists( fname))
@@ -96,16 +80,26 @@ std::string FaceModelManager::load( const std::string& fname)
         fileio->setFileOp( fname);
         fileio->process();
     }   // end else
-    return err;
+
+    bool success = true;
+    if ( !err.empty())
+    {
+        emit finishedImport( NULL, err.c_str());
+        success = false;
+    }   // end if
+    return success;
 }   // end load
 
 
 // public
-std::string FaceModelManager::save( FaceModel* fmodel, const std::string& fname)
+bool FaceModelManager::save( FaceModel* fmodel, const std::string& fname)
 {
-    std::string err;
+    bool success = false;
     if ( !isValidExportFilename( fname))
-        err = fname + " has unsupported extension!";
+    {
+        std::string err = fname + " has unsupported extension!";
+        emit finishedExport( false, err.c_str());
+    }   // end if
     else
     {
         const std::string fext = FaceTools::getExtension(fname);
@@ -113,26 +107,23 @@ std::string FaceModelManager::save( FaceModel* fmodel, const std::string& fname)
         assert( fileio->canExport());
         fileio->setFileOp( fname, fmodel);
         fileio->process();
+        success = true;
     }   // end else
-    return err;
+    return success;
 }   // end save
 
 
 // private slot
-void FaceModelManager::postProcessIO( FaceModel* fmodel, const std::string& errmsg)
+void FaceModelManager::postProcessImport( FaceModel* fmodel, const QString& errmsg)
 {
-    const std::string filename = qobject_cast<FileIOInterface*>( sender())->getFilepath();
-
-    if ( !fmodel)   // Either a save or fail
+    if ( !fmodel)
     {
-        if ( errmsg.empty())
-            std::cerr << "Saved " << filename << std::endl;
-        else
-            std::cerr << "[ERROR] FaceTools::FaceModelManager::postProcessIO: " << errmsg << std::endl;
-        emit finishedIO( fmodel, errmsg);
+        std::cerr << "[ERROR] FaceTools::FaceModelManager::postProcessImport: " << errmsg.toStdString() << std::endl;
+        emit finishedImport( NULL, errmsg);
         return;
     }   // end if
 
+    const std::string filename = qobject_cast<FileIOInterface*>( sender())->getFilepath();
     fmodel->setSaveFilepath( filename);
 
     RFeatures::ObjModel::Ptr model = fmodel->getObjectMeta()->getObject();
@@ -152,7 +143,7 @@ void FaceModelManager::postProcessIO( FaceModel* fmodel, const std::string& errm
         oss << "Model integrity error on load : CODE " << int(ierror);
         delete fmodel;
         fmodel = NULL;
-        emit finishedIO( fmodel, oss.str());
+        emit finishedImport( fmodel, oss.str().c_str());
         return;
     }   // end if
 
@@ -164,14 +155,14 @@ void FaceModelManager::postProcessIO( FaceModel* fmodel, const std::string& errm
         if ( !ic.is2DManifold())
         {
             delete fmodel;
-            emit finishedIO( NULL, "Failed to make model into a triangulated manifold!");
+            emit finishedImport( NULL, "Failed to make model into a triangulated manifold!");
             return;
         }   // end if
     }   // end if
 
     fmodel->updateMesh(model);
-    emit finishedIO( fmodel, errmsg);
-}   // end postProcessIO
+    emit finishedImport( fmodel, errmsg);
+}   // end postProcessImport
 
 
 // public
@@ -238,54 +229,25 @@ QString FaceModelManager::getFilter( const std::string& ext)
 
 
 // public
-void FaceModelManager::setPluginsLoader( QTools::PluginsLoader *ploader)
+void FaceModelManager::addFileFormat( FileIOInterface* fileio)
 {
-    connect( ploader, SIGNAL( onLoadedPlugin( QTools::PluginInterface*)),
-                this, SLOT( doOnLoadedPlugin( QTools::PluginInterface*)));
-}   // end setPluginsLoader
-
-
-// private slot
-void FaceModelManager::doOnLoadedPlugin( QTools::PluginInterface *plugin)
-{
-    FileIOInterface* fileio = qobject_cast<FileIOInterface*>(plugin);
-    if ( fileio)
+    assert(fileio);
+    std::vector<std::string> exts;
+    fileio->getFileExtensions( exts);
+    foreach ( const std::string& ext, exts)
     {
-        populatePlugins( fileio);
-        _importFilters = createFilters( _importExtDescMap);
-        _exportFilters = createFilters( _exportExtDescMap);
-    }   // end if
-}   // end doOnLoadedPlugin
-
-
-// private
-void FaceModelManager::populatePlugins( FaceTools::FileIOInterface* fileios)
-{
-    const QStringList ids = fileios->getInterfaceIds();
-    foreach ( const QString& id, ids)
-    {
-        FileIOInterface* fileio = qobject_cast<FileIOInterface*>( fileios->getInterface( id));
-        if ( !fileio)
-        {
-            std::cerr << "[ERROR] FaceModelManager::populatePlugins: PluginInterface is not a FileIOInterface!" << std::endl;
-            continue;
-        }    // end if
-
-        std::vector<std::string> exts;
-        fileio->getFileExtensions( exts);
-        foreach ( const std::string& ext, exts)
-        {
-            _fileInterfaces[ext] = fileio;
-            if ( fileio->canImport())
-                _importExtDescMap[ext] = fileio->getFileDescription();
-            if ( fileio->canExport())
-                _exportExtDescMap[ext] = fileio->getFileDescription();
-            if ( _primaryExt.empty())
-                _primaryExt = ext;
-        }   // end foreach
-
-        connect( fileio, SIGNAL( finished( FaceModel*, const std::string&)),
-                   this, SLOT( postProcessIO( FaceModel*, const std::String&)));
+        _fileInterfaces[ext] = fileio;
+        if ( fileio->canImport())
+            _importExtDescMap[ext] = fileio->getFileDescription();
+        if ( fileio->canExport())
+            _exportExtDescMap[ext] = fileio->getFileDescription();
+        if ( _primaryExt.empty())
+            _primaryExt = ext;
     }   // end foreach
-}   // end populatePlugins
+
+    if ( fileio->canImport())
+        connect( fileio, &FileIOInterface::finishedImport, this, &FaceModelManager::postProcessImport);
+    if ( fileio->canExport())
+        connect( fileio, &FileIOInterface::finishedExport, this, &FaceModelManager::finishedExport);
+}   // end addFileFormat
 

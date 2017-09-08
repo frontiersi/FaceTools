@@ -31,7 +31,7 @@ FaceModelTabWidget::FaceModelTabWidget( QWidget *parent)
 {
     setUsesScrollButtons(true);
     setDocumentMode(true);
-    connect( _viewer, SIGNAL( requestContextMenu( const QPoint&)), this, SLOT( showContextMenu( const QPoint&)));
+    connect( _viewer, &FaceTools::InteractiveModelViewer::requestContextMenu, this, &FaceModelTabWidget::showContextMenu);
 }   // end ctor
 
 
@@ -80,6 +80,7 @@ int FaceModelTabWidget::addTabWidget( FaceModel* fmodel)
 {
     // Create the widget and add the actions
     FaceModelWidget* fmwidget = new FaceModelWidget( _viewer, &_xactions);
+    connect( fmwidget, &FaceModelWidget::onViewSelected, this, &FaceModelTabWidget::activated);
     const std::string& tname = fmwidget->addView( fmodel);
     setUpdatesEnabled(false);  // Disable painting (prevent flicker)
     const int tabIdx = addTab( fmwidget, tname.c_str());
@@ -112,6 +113,7 @@ size_t FaceModelTabWidget::removeTabWidget( int tabIdx)
     FaceModelWidget* fmwidget = qobject_cast<FaceModelWidget*>( widget(tabIdx));
     const size_t nmodels = fmwidget->getNumModels();
     setUpdatesEnabled(false);  // Disable painting (prevent flicker)
+    fmwidget->disconnect(this);
     delete fmwidget;
     removeTab(tabIdx);
     setUpdatesEnabled(true);   // Enable painting again

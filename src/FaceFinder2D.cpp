@@ -15,32 +15,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include "FaceFinder2D.h"
-#include "FeaturesDetector.h"
+#include <FaceFinder2D.h>
+#include <FeatureUtils.h>   // RFeatures
+#include <MiscFunctions.h>  // FaceTools
 #include <cassert>
 using FaceTools::FaceFinder2D;
 using FaceTools::FeaturesDetector;
 
+
 // public
-FaceFinder2D::FaceFinder2D( const cv::Mat_<byte> m) : _lightMap(m)
+FaceFinder2D::FaceFinder2D( FeaturesDetector::Ptr fd)
+    : _featuresDetector(fd)
 {
-    if ( !FeaturesDetector::init())
-    {
-        std::cerr << "[ERROR] FaceTools::FaceFinder2D::ctor: Unable to initialise HaarCascades face detection." << std::endl;
-        assert(false);
-    }   // end if
 }   // end ctor
 
 
 // public
-bool FaceFinder2D::find()
+bool FaceFinder2D::find( const cv::Mat_<byte> lightMap)
 {
     bool found = false;
     _faceBox = cv::RotatedRect();
-    FeaturesDetector* featuresDetector = new FeaturesDetector( _lightMap);
-    if (!featuresDetector->findFace())
-        std::cerr << "[WARNING] FaceFinder::findFace: Unable to find a face!" << std::endl;
-    else if ( findEyes( featuresDetector))
+    if (!_featuresDetector->find( lightMap))
+        std::cerr << "[WARNING] FaceTools::FaceFinder2D::find: Unable to find a face!" << std::endl;
+    else if ( findEyes( lightMap))
         found = true;
     return found;
 }   // end find
@@ -62,24 +59,17 @@ cv::Point2f calcFaceCentrePoint( const cv::Point& lc, const cv::Point& rc)
 
 
 // private
-bool FaceFinder2D::findEyes( FeaturesDetector *featuresDetector)
+bool FaceFinder2D::findEyes( const cv::Mat_<byte> lightMap)
 {
-    const cv::Size msz = _lightMap.size();
-    cv::Rect faceBox = featuresDetector->getFaceBox();
+    const cv::Size msz = lightMap.size();
+    cv::Rect faceBox = _featuresDetector->getFaceBox();
     assert( faceBox.area() > 0);
 
     // Reset
     _leye = cv::RotatedRect();
     _reye = cv::RotatedRect();
-
-    cv::Rect leye, reye;
-    if ( featuresDetector->findEyes())
-    {
-        leye = featuresDetector->getLeftEye();
-        reye = featuresDetector->getRightEye();
-    }   // end if
-    else
-        return false;
+    cv::Rect leye = _featuresDetector->getLeftEye();
+    cv::Rect reye = _featuresDetector->getRightEye();
 
     // Eye boxes are detected relative to the face, so add the position of the
     // face box to the eye boxes to get their absolute positions.
@@ -115,7 +105,7 @@ bool FaceFinder2D::findEyes( FeaturesDetector *featuresDetector)
 // public
 void FaceFinder2D::drawDebug( cv::Mat_<cv::Vec3b>& dimg) const
 {
-    const cv::Size msz = _lightMap.size();
+    const cv::Size msz = dimg.size();
     const cv::RotatedRect leye = FaceTools::fromProportion( _leye, msz);
     const cv::RotatedRect reye = FaceTools::fromProportion( _reye, msz);
     const cv::RotatedRect faceBox = FaceTools::fromProportion( _faceBox, msz);

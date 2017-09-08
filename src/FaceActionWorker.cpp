@@ -20,14 +20,15 @@
 using FaceTools::FaceActionWorker;
 using FaceTools::FaceAction;
 
-FaceActionWorker::FaceActionWorker( FaceAction* fma)
-    : QThread(fma), _processor(fma)
+FaceActionWorker::FaceActionWorker( FaceAction* worker)
+    : QThread(worker), _worker(worker)
 {
+    //_worker->moveToThread(this);
 }   // end ctor
 
 void FaceActionWorker::run()
 {
-    const bool rv = _processor->doAction();
-    emit finished(rv);
+    const bool rv = _worker->doAction();
+    emit workerFinished(rv);
 }   // end run
 

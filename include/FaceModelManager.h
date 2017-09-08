@@ -20,8 +20,6 @@
 
 #include <QObject>
 #include <QStringList>
-#include <PluginsLoader.h>   // QTools
-#include <PluginInterface.h> // QTools
 #include "FileIOInterface.h"
 #include "FaceModel.h"
 
@@ -31,17 +29,15 @@ namespace FaceTools
 class FaceTools_EXPORT FaceModelManager : public QObject
 { Q_OBJECT
 public:
-    typedef boost::shared_ptr<FaceModelManager> Ptr;
-    static FaceModelManager::Ptr get(); // Singleton
+    static FaceModelManager& get(); // Singleton
 
     // Loads a FaceModel depending on file extension asynchronously and fires finishedIO when done.
-    // Returns a non empty string containing error info if filename invalid (doesn't exist or not a valid file type).
-    std::string load( const std::string& fname);
+    // Returns success in starting asynchronous operation.
+    bool load( const std::string& fname);
 
     // Saves model asynchronously and fires finishedIO when done.
-    // Returns non empty string containing error info if fname invalid.
-    std::string save( FaceModel*, const std::string& fname);
-
+    // Returns success in starting asynchronous operation.
+    bool save( FaceModel*, const std::string& fname);
 
     bool close( const FaceModel*);  // Close, returning true
     void closeAll(); // Closes all currently opened models
@@ -57,14 +53,14 @@ public:
     QString getFilter( const std::string& ext);  // Gets file dialog filter for extension (empty if invalid ext)
     const std::string & getPrimaryExt() const { return _primaryExt;}
 
-    void setPluginsLoader( QTools::PluginsLoader*);
+    void addFileFormat( FileIOInterface*);
 
 signals:
-    void finishedIO( FaceModel*, const std::string&);
+    void finishedImport( FaceModel*, const QString&);
+    void finishedExport( bool, const QString&);
 
 private slots:
-    void doOnLoadedPlugin( QTools::PluginInterface*);
-    void postProcessIO( FaceModel*, const std::string&);
+    void postProcessImport( FaceModel*, const QString&);
 
 private:
     boost::unordered_map<std::string, FileIOInterface*> _fileInterfaces;
@@ -76,13 +72,12 @@ private:
     std::string _primaryExt;
     boost::unordered_set<const FaceModel*> _fmodels;   // Open models
 
-    static FaceModelManager::Ptr s_fmm;
+    static FaceModelManager s_fmm;
 
     FaceModelManager();
     ~FaceModelManager();
     FaceModelManager( const FaceModelManager&);
     FaceModelManager& operator=( const FaceModelManager&);
-    class Deleter;
 };  // end class
 
 }   // end namespace FaceApp

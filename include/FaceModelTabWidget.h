@@ -42,6 +42,9 @@ public:
     // ALL actions must be added before creating tabs (FaceModelWidgets) or
     // the actions will NOT be available to these widgets!
 
+signals:
+    void activated( const std::string&);    // Passes view title
+
 public slots:
     int addTabWidget( FaceModel*);   // Add model as new tab returning tab index and making it active.
     size_t removeTabWidget( int);    // Remove the tab and all models in it returning the number of models removed.

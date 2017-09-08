@@ -47,9 +47,10 @@ bool FileIOInterface::setFileOp( const std::string& fp, FaceModel* fmodel)
 void FileIOInterface::doFinished( bool status)
 {
     setEnabled(false);
-    if ( _doExport || !status)    // Don't pass through model on export operations or on fail
-        _fmodel = NULL;
-    emit finished( _fmodel, _err);
+    if ( _doExport)
+        emit finishedExport( status, _err.c_str());
+    else
+        emit finishedImport( _fmodel, _err.c_str());
     _fmodel = NULL;
     _filepath = "";
     _err = "";

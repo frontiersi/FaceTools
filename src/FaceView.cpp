@@ -79,6 +79,13 @@ bool FaceView::canAdjustBoundary() const
 
 
 // public
+bool FaceView::areLandmarksShown() const
+{
+    return _lview.isShown();
+}   // end areLandmarksShown
+
+
+// public
 bool FaceView::canVisualise( VisualisationAction* visint) const
 {
     return visint->isAvailable(_fmodel);
@@ -105,6 +112,13 @@ std::string FaceView::isLandmarkPointedAt( const QPoint &p) const
 {
     return _lview.pointedAt(p);
 }   // end isLandmarkPointedAt
+
+
+// public
+RFeatures::CameraParams FaceView::getCamera() const
+{
+    return _viewer->getCamera();
+}   // end getCamera
 
 
 // public

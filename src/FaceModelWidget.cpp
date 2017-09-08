@@ -28,7 +28,7 @@ FaceModelWidget::FaceModelWidget( FaceTools::InteractiveModelViewer* viewer, QAc
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->addWidget( viewer);
     layout->addWidget( _combo);
-    connect( _combo, SIGNAL( onViewSelected(const std::string&)), this, SIGNAL( onViewSelected(const std::string&)));
+    connect( _combo, &FaceTools::FaceViewComboBox::onViewSelected, this, &FaceModelWidget::onViewSelected);
 }   // end ctor
 
 // public

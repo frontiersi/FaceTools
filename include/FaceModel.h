@@ -18,7 +18,7 @@
 #ifndef FACE_TOOLS_FACE_MODEL_H
 #define FACE_TOOLS_FACE_MODEL_H
 
-#include "FaceTools_Export.h"
+#include "FaceDetector.h"
 #include <QObject>
 #include <ObjModelCurvatureMetrics.h>   // RFeatures
 #include <ObjModelFastMarcher.h>        // RFeatures
@@ -26,8 +26,6 @@
 
 namespace FaceTools
 {
-
-class FaceDetector;
 
 class FaceTools_EXPORT FaceModel : public QObject
 { Q_OBJECT
@@ -98,7 +96,7 @@ public slots:
     // Re-detects if landmarks already present. Returns true on successful
     // detection of landmarks and causes onFaceDetected to be emitted.
     // If not successful, user may need to adjust camera viewpoint.
-    bool detectFace();
+    bool detectFace( FaceDetector::Ptr);
 
     // Update the list of boundary vertices. Fires onBoundaryUpdated.
     void updateBoundary( const std::vector<cv::Vec3f>& loop);
@@ -124,7 +122,6 @@ private:
     bool _isAligned;
     bool _isDetected;
     void reset( RFeatures::ObjModel::Ptr);
-    static FaceTools::FaceDetector *s_faceDetector;
     FaceModel( const FaceModel&);               // No copy
     FaceModel& operator=( const FaceModel&);    // No copy
 };  // end class

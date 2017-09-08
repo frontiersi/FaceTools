@@ -20,11 +20,10 @@
 
 #include <string>
 #include <vector>
-#include <opencv2/opencv.hpp>
 #include "Landmarks.h"
 #include "ObjMetaData.h"
 #include "ModelViewer.h"
-#include "FaceTools_Export.h"
+#include "FeaturesDetector.h"
 
 
 namespace FaceTools
@@ -33,8 +32,9 @@ namespace FaceTools
 class FaceTools_EXPORT FaceDetector
 {
 public:
-    FaceDetector( const std::string& faceShapeLandmarksModel);
-    ~FaceDetector();
+    typedef boost::shared_ptr<FaceDetector> Ptr;
+    static Ptr create( const std::string& haarCascadesModelDir,
+                       const std::string& faceShapeLandmarksModel);
 
     // Detect and set the NASAL_TIP, L_EYE_CENTRE, and R_EYE_CENTRE landmarks,
     // and set the orientation vectors (normal and up vector) given these points.
@@ -45,11 +45,16 @@ public:
     bool findLandmarks( ObjMetaData::Ptr);
 
 private:
+    FeaturesDetector::Ptr _featuresDetector;
     class Impl;
     Impl* _impl;
     ModelViewer *_viewer;   // Offscreen scene rendering
+
+    FaceDetector( FeaturesDetector::Ptr, Impl*);
+    ~FaceDetector();
     FaceDetector( const FaceDetector&);     // NO COPY
     void operator=( const FaceDetector&);   // NO COPY
+    class Deleter;
 };  // end class
 
 

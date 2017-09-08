@@ -196,17 +196,46 @@ public:
 };  // end class
 
 
+class FaceDetector::Deleter
+{ public:
+    void operator()( FaceDetector* d) { delete d;}
+};  // end class
 
-// public
-FaceDetector::FaceDetector( const std::string& faceShapeLandmarksModel)
-    : _impl( new Impl(faceShapeLandmarksModel)),
+
+// public static
+FaceDetector::Ptr FaceDetector::create( const std::string& haarCascadesModelDir, const std::string& faceShapeLandmarksModel)
+{
+    FaceTools::FeaturesDetector::Ptr fd = FaceTools::FeaturesDetector::create( haarCascadesModelDir);
+    if ( fd == NULL)
+    {
+        std::cerr << "[ERROR] FaceTools::FaceDetector::create: Unable to create FeaturesDetector using directory " << haarCascadesModelDir << std::endl;
+        return Ptr();
+    }   // end if
+
+    Impl* impl = new Impl( faceShapeLandmarksModel);
+    // TODO make creation of Impl static so this test makes sense
+    if ( impl == NULL)
+    {
+        std::cerr << "[ERROR] FaceTools::FaceDetector::create: Unable to create detector using " << faceShapeLandmarksModel << std::endl;
+        return Ptr();
+    }   // end if
+
+    return Ptr( new FaceDetector( fd, impl), Deleter());
+}   // end create
+
+
+
+// private
+FaceDetector::FaceDetector( FaceTools::FeaturesDetector::Ptr fd, Impl* impl)
+    : _featuresDetector(fd),
+      _impl( impl),
       _viewer( new ModelViewer(cv::Size(512,512), true/*floodlights*/, true/*offscreen rendering*/))
 {
     //_viewer->show();
 }   // end ctor
 
 
-// public
+// private
 FaceDetector::~FaceDetector()
 {
     delete _viewer;
@@ -216,13 +245,14 @@ FaceDetector::~FaceDetector()
 
 namespace {
 // Detect the initial oriention points for the eyes and nosetip.
-bool findOrientationPoints( ModelViewer& viewer, const ObjModel::Ptr model, cv::Vec3f& v0, cv::Vec3f& v1, cv::Vec3f& ntip)
+bool findOrientationPoints( FaceTools::FeaturesDetector::Ptr fd, ModelViewer& viewer,
+                            const ObjModel::Ptr model, cv::Vec3f& v0, cv::Vec3f& v1, cv::Vec3f& ntip)
 {
     RVTK::ImageGrabber imgGrabber( viewer.getRenderWindow());
     imgGrabber.update();
+    FaceTools::FaceFinder2D faceFinder( fd);
     const cv::Mat_<byte> lightMap = imgGrabber.getLightMap();
-    FaceTools::FaceFinder2D faceFinder( lightMap);
-    if ( !faceFinder.find())
+    if ( !faceFinder.find( lightMap))
         return false;
 
     const cv::Mat_<float> dmap = imgGrabber.getDepthMap();
@@ -328,7 +358,7 @@ bool FaceDetector::findOrientation( ObjMetaData::Ptr omd)
     resetViewer( _viewer, model);
 
     cv::Vec3f v0, v1, ntip;
-    if ( !findOrientationPoints( *_viewer, model, v0, v1, ntip))
+    if ( !findOrientationPoints( _featuresDetector, *_viewer, model, v0, v1, ntip))
         return false;
 
     using namespace FaceTools;

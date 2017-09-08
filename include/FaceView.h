@@ -58,6 +58,8 @@ public:
     // are under the coordinates.
     std::string isLandmarkPointedAt( const QPoint&) const;
 
+    RFeatures::CameraParams getCamera() const;
+
     const vtkActor* getActor() const;
 
 public slots:

@@ -46,7 +46,7 @@ public:
     void setCursor( QCursor);
 
 signals:
-    void requestContexMenu( const QPoint&);
+    void requestContextMenu( const QPoint&);
 
 private:
     ModelViewerQtInterface *_qinterface;

@@ -51,10 +51,12 @@ public:
     const std::string getFilepath() const { return _filepath;}
 
 signals:
-    // On the result of an export operation, the FaceModel parameter will be NULL.
-    // Whether NULL or not, a non-empty string denotes an error of some sort.
+    // On the result of an import, the FaceModel is NULL on failure.
+    // On the result of an export, the boolean denotes success or failure.
+    // For both signals, a non-empty string contains error info.
     // After returning from the listening function, filepath (and model) are reset.
-    void finished( FaceModel*, const std::string&);
+    void finishedImport( FaceModel*, const QString&);
+    void finishedExport( bool, const QString&);
 
 protected:
     std::string _err;       // Set if error

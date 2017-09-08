@@ -33,13 +33,14 @@ public:
     explicit FaceActionWorker( FaceAction*);
     virtual ~FaceActionWorker(){}
 
-    void run();
-
 signals:
-    void finished(bool);
+    void workerFinished(bool);
+
+protected:
+    virtual void run();
 
 private:
-    FaceAction* _processor;
+    FaceAction* _worker;
 };  // end class
 
 }   // end namespace

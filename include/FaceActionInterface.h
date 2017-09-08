@@ -1,4 +1,3 @@
-
 /************************************************************************
  * Copyright (C) 2017 Richard Palmer
  *
@@ -63,13 +62,12 @@ class FaceTools_EXPORT FaceAction : public FaceActionInterface
 { Q_OBJECT
 public:
     FaceAction();
-    virtual ~FaceAction();
-
-    virtual void connectInteractor( ModelInteractor*){}
-    virtual void disconnectInteractors(){}
+    virtual ~FaceAction(){}
 
     // Triggering the action calls this action's process function.
     virtual QAction* qaction() { return &_action;}
+    virtual void connectInteractor( ModelInteractor*){}
+    virtual void disconnectInteractors(){}
 
     // Set whether this action will be undertaken asynchronously or not
     // on the next call to process. Default is synchronous (blocking calls).
@@ -93,6 +91,15 @@ public slots:
     bool process();
 
 protected:
+    // Derived types must call initAction() from within their constructor to initialise
+    // the FaceAction's member action. This can't be done from within the FaceAction
+    // constructor itself due to the use of polymorphic calls which, if used from the base
+    // class's constructor, will resolve to an incompletely instantiated object of the
+    // derived type resulting in all sorts of weird non-instantiated data issues
+    // (NULL pointers being returned for the icon and key sequence).
+    void init();
+
+    // Implement the action; process() decides whether it runs asynchronously or not.
     virtual bool doAction() = 0;
 
     // If interested in providing progress updates for long running
@@ -127,9 +134,6 @@ private:
 
     FaceAction( const FaceAction&);     // No copy
     void operator=( const FaceAction&); // No copy
-
-private slots:
-    void workerFinished(bool);
 };  // end class
 
 
@@ -175,6 +179,7 @@ private:
     QMenu *_menu;
     QToolBar *_toolbar;
     boost::unordered_map<std::string, FaceActionInterface*> _actions;
+    QList<FaceActionInterface*> _actionList;
     FaceActionGroup( const FaceActionGroup&);   // No copy
     void operator=( const FaceActionGroup&);    // No copy
 };  // end class

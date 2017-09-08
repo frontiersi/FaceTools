@@ -30,16 +30,13 @@ FaceActionGroup::FaceActionGroup() : _group(this), _menu(NULL), _toolbar(NULL) {
 // public
 FaceActionGroup::~FaceActionGroup()
 {
-    typedef std::pair<std::string, FaceActionInterface*> FAPair;
-    foreach ( const FAPair& fa, _actions)
-        delete fa.second;
-    _actions.clear();
+    foreach ( const FaceActionInterface* faction, _actionList)
+        delete faction;
     if ( _menu)
         delete _menu;
     _menu = NULL;
     if (_toolbar)
         delete _toolbar;
-    _toolbar = NULL;
 }   // end dtor
 
 
@@ -51,16 +48,16 @@ bool FaceActionGroup::addAction( FaceActionInterface* faction)
         return false;
 
     _actions[nm] = faction;
+    _actionList << faction;
     return true;
 }   // end addAction
 
 
 namespace {
-void addToWidget( const boost::unordered_map<std::string, FaceActionInterface*>& actions, QWidget* widget)
+void addToWidget( const QList<FaceActionInterface*>& actions, QWidget* widget)
 {
-    typedef std::pair<std::string, FaceActionInterface*> FAPair;
-    foreach ( const FAPair& fa, actions)
-        widget->addAction( fa.second->qaction());
+    foreach ( FaceActionInterface* fa, actions)
+        widget->addAction( fa->qaction());
 }   // end addToWidget
 }   // end namespace
 
@@ -70,7 +67,7 @@ const QMenu* FaceActionGroup::createMenu()
     if ( !_menu)
     {
         _menu = new QMenu( getDisplayName(), NULL);
-        addToWidget( _actions, _menu);
+        addToWidget( _actionList, _menu);
     }   // end if
     return _menu;
 }   // end createMenu
@@ -81,7 +78,7 @@ const QToolBar* FaceActionGroup::createToolBar()
     if ( !_toolbar)
     {
         _toolbar = new QToolBar( getDisplayName(), NULL);
-        addToWidget( _actions, _toolbar);
+        addToWidget( _actionList, _toolbar);
     }   // end if
     return _toolbar;
 }   // end createToolBar
@@ -91,7 +88,7 @@ void FaceActionGroup::addTo( QMenu* menu) const
 {
     if ( !menu->actions().empty())
         menu->addSeparator();
-    addToWidget( _actions, menu);
+    addToWidget( _actionList, menu);
 }   // end addTo
 
 
@@ -99,7 +96,7 @@ void FaceActionGroup::addTo( QToolBar* toolbar) const
 {
     if ( !toolbar->actions().empty())
         toolbar->addSeparator();
-    addToWidget( _actions, toolbar);
+    addToWidget( _actionList, toolbar);
 }   // end addTo
 
 
@@ -107,9 +104,8 @@ void FaceActionGroup::addTo( QToolBar* toolbar) const
 QStringList FaceActionGroup::getInterfaceIds() const
 {
     QStringList qlist;
-    typedef std::pair<std::string, FaceActionInterface*> FAPair;
-    foreach ( const FAPair& fa, _actions)
-        qlist << fa.first.c_str();
+    foreach ( const FaceActionInterface* fa, _actionList)
+        qlist << fa->getDisplayName();
     return qlist;
 }   // end getInterfaceIds
 
@@ -128,8 +124,15 @@ FaceActionInterface* FaceActionGroup::getInterface( const QString& iname) const
 
 
 // public
-FaceAction::FaceAction()
-    : _action(this), _doasync(false), _pupdater(NULL), _fmaw(NULL)
+FaceAction::FaceAction() : FaceActionInterface(),
+    _action(this), _doasync(false), _pupdater(NULL), _fmaw(NULL)
+{
+    connect( &_action, &QAction::triggered, this, &FaceAction::process);
+}   // end ctor
+
+
+// protected
+void FaceAction::init()
 {
     _action.setText( this->getDisplayName());
     const QIcon* icon = this->getIcon();
@@ -138,20 +141,7 @@ FaceAction::FaceAction()
     const QKeySequence* keys = this->getShortcut();
     if ( keys)
         _action.setShortcut(*keys);
-
-    connect( &_action, SIGNAL(triggered()), this, SLOT(process()));
-}   // end ctor
-
-
-// public
-FaceAction::~FaceAction()
-{
-    if ( _fmaw)
-    {
-        _fmaw->wait();
-        delete _fmaw;
-    }   // end if
-}   // end dtor
+}   // end init
 
 
 // public
@@ -172,7 +162,7 @@ void FaceAction::connectToolButton( QToolButton* tb)
     tb->setIconSize( QSize(20,20));
     tb->setMinimumSize( QSize(26,26));
     tb->setStyleSheet( "QToolButton::menu-indicator { image: none; }"); // Remove the menu-indicator
-    tb->connect( tb, SIGNAL(clicked()), &_action, SIGNAL(triggered()));
+    tb->connect( tb, &QToolButton::clicked, &_action, &QAction::triggered);
 }   // end connectToolButton
 
 
@@ -182,7 +172,7 @@ void FaceAction::connectButton( QPushButton* b)
     b->addAction( &_action);
     b->setIcon( _action.icon());
     b->setMinimumSize( QSize(26,26));
-    b->connect( b, SIGNAL(clicked()), &_action, SIGNAL(triggered()));
+    b->connect( b, &QPushButton::clicked, &_action, &QAction::triggered);
 }   // end connectButton
 
 
@@ -201,16 +191,8 @@ bool FaceAction::process()
         return doAction();  // Blocks
 
     _fmaw = new FaceActionWorker( this);
-    connect( _fmaw, SIGNAL(finished(bool)), this, SLOT( workerFinished(bool)));
-    _fmaw->run();   // Asynchronous; immediately return and listen for finished(bool)
+    connect( _fmaw, &FaceActionWorker::workerFinished, this, &FaceAction::finished);
+    connect( _fmaw, SIGNAL( finished()), _fmaw, SLOT(deleteLater()));
+    _fmaw->start();   // Asynchronous; immediately return and listen for finished(bool)
     return true;
 }   // end process
-
-
-// private slot
-void FaceAction::workerFinished(bool rv)
-{
-    delete _fmaw;
-    _fmaw = NULL;
-    emit finished(rv);
-}   // end workerFinished

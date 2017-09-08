@@ -15,68 +15,77 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include "FeaturesDetector.h"
+#include <FeaturesDetector.h>
 using FaceTools::FeaturesDetector;
-#include <cassert>
+#include <FeatureUtils.h>   // RFeatures
 #include <RectCluster.h>    // RFeatures
 #include <Random.h>         // rlib
 #include <boost/foreach.hpp>
+#include <boost/filesystem/path.hpp>
+#include <cassert>
 
 typedef RFeatures::HaarCascadeDetector HCD;
 typedef RFeatures::RectCluster::Ptr RC;
 
-// static member definitions
-std::vector<HCD::Ptr> FeaturesDetector::s_faceDetectors;
-std::vector<HCD::Ptr> FeaturesDetector::s_eyeDetectors;
-
-// static
-bool FeaturesDetector::init()
+std::string createPath( const std::string& pdir, const std::string& fname)
 {
-    if ( s_faceDetectors.empty())
-    {
-        s_faceDetectors.push_back( HCD::create( FACE0_MODEL_FILE));
-        s_faceDetectors.push_back( HCD::create( FACE1_MODEL_FILE));
-        s_faceDetectors.push_back( HCD::create( FACE2_MODEL_FILE));
-        s_faceDetectors.push_back( HCD::create( FACE3_MODEL_FILE));
-    }   // end if
+    boost::filesystem::path path(pdir);
+    path /= fname;
+    return path.string();
+}   // end createPath
 
-    if ( s_eyeDetectors.empty())
-    {
-        s_eyeDetectors.push_back( HCD::create( EYE0_MODEL_FILE));
-        s_eyeDetectors.push_back( HCD::create( EYE1_MODEL_FILE));
-        s_eyeDetectors.push_back( HCD::create( EYE2_MODEL_FILE));
-        s_eyeDetectors.push_back( HCD::create( EYE3_MODEL_FILE));
-        s_eyeDetectors.push_back( HCD::create( EYE4_MODEL_FILE));
-    }   // end if
+
+// static public
+FeaturesDetector::Ptr FeaturesDetector::create( const std::string& parentDir)
+{
+    FeaturesDetector* fd = new FeaturesDetector( parentDir);
 
     // Confirm loads
-    BOOST_FOREACH ( const HCD::Ptr& hcd, s_faceDetectors)
+    bool validLoads = true;
+    BOOST_FOREACH ( const HCD::Ptr& hcd, fd->_faceDetectors)
+    {
         if ( hcd == NULL)
-            return false;
+        {
+            validLoads = false;
+            break;
+        }   // end if
+    }   // end foreach
 
-    BOOST_FOREACH ( const HCD::Ptr& hcd, s_eyeDetectors)
-        if ( hcd == NULL)
-            return false;
+    if ( validLoads)
+    {
+        BOOST_FOREACH ( const HCD::Ptr& hcd, fd->_eyeDetectors)
+        {
+            if ( hcd == NULL)
+            {
+                validLoads = false;
+                break;
+            }   // end if
+        }   // end foreach
+    }   // end if
 
-    return true;
+    if ( !validLoads)
+    {
+        delete fd;
+        return Ptr();
+    }   // end if
+
+    return Ptr( fd);
 }   // end init
 
 
-FeaturesDetector::FeaturesDetector( const cv::Mat_<byte>& m)
-    : _dimg( RFeatures::contrastStretch( m))
+// private
+FeaturesDetector::FeaturesDetector( const std::string& parentDir)
 {
-    //cv::GaussianBlur( _dimg, _dimg, cv::Size(9,9), 0);
-    //cv::medianBlur( _dimg, _dimg, 9);
-    // Create member instances
-    BOOST_FOREACH ( const HCD::Ptr& hcd, s_faceDetectors)
-    {
-        HCD::Ptr nhcd = HCD::create( hcd);
-        nhcd->setImage(_dimg);
-        _faceDetectors.push_back( nhcd);
-    }   // end foreach
+    _faceDetectors.push_back( HCD::create( createPath( parentDir, FACE0_MODEL_FILE)));
+    _faceDetectors.push_back( HCD::create( createPath( parentDir, FACE1_MODEL_FILE)));
+    _faceDetectors.push_back( HCD::create( createPath( parentDir, FACE2_MODEL_FILE)));
+    _faceDetectors.push_back( HCD::create( createPath( parentDir, FACE3_MODEL_FILE)));
 
-    BOOST_FOREACH ( const HCD::Ptr& hcd, s_eyeDetectors)
-        _eyeDetectors.push_back( HCD::create( hcd));
+    _eyeDetectors.push_back( HCD::create( createPath( parentDir, EYE0_MODEL_FILE)));
+    _eyeDetectors.push_back( HCD::create( createPath( parentDir, EYE1_MODEL_FILE)));
+    _eyeDetectors.push_back( HCD::create( createPath( parentDir, EYE2_MODEL_FILE)));
+    _eyeDetectors.push_back( HCD::create( createPath( parentDir, EYE3_MODEL_FILE)));
+    _eyeDetectors.push_back( HCD::create( createPath( parentDir, EYE4_MODEL_FILE)));
 }   // end ctor
 
 
@@ -142,7 +151,7 @@ void printClusterInfo( const RC& rc, std::ostream& os)
 }   // end printClusterInfo
 
 
-// public
+// private
 bool FeaturesDetector::findEyes()
 {
     if ( !checkFaceBox( _faceBox))
@@ -205,22 +214,29 @@ bool FeaturesDetector::findEyes()
 
 
 // private
-void FeaturesDetector::setDetectorsFromFaceBox()
+void FeaturesDetector::setDetectorsFromFaceBox( const cv::Mat_<byte> dimg)
 {
     // Only use the top 3/5ths of the face box for the eyes
     cv::Rect topHalf = _faceBox;
     topHalf.height = cvRound(3*float(_faceBox.height)/5);
-    cv::Mat_<byte> thimg = RFeatures::contrastStretch( _dimg( topHalf));
+    cv::Mat_<byte> thimg = RFeatures::contrastStretch( dimg( topHalf));
     cv::medianBlur( thimg, thimg, 5);
-    _faceImg = _dimg(_faceBox);
+    _faceImg = dimg(_faceBox);
     BOOST_FOREACH ( HCD::Ptr& hcd, _eyeDetectors)
         hcd->setImage( thimg);
 }   // end setDetectorsFromFaceBox
 
 
 // public
-bool FeaturesDetector::findFace()
+bool FeaturesDetector::find( const cv::Mat_<byte> img)
 {
+    const cv::Mat_<byte> dimg = RFeatures::contrastStretch( img);
+    //cv::GaussianBlur( dimg, dimg, cv::Size(9,9), 0);
+    //cv::medianBlur( dimg, dimg, 9);
+    // Create member instances
+    BOOST_FOREACH ( HCD::Ptr& hcd, _faceDetectors)
+        hcd->setImage(dimg);
+
     _faceBox = cv::Rect(0,0,0,0);
     std::list<cv::Rect> faces;
     if ( !collectDetections( _faceDetectors, faces))
@@ -232,10 +248,9 @@ bool FeaturesDetector::findFace()
         return false;
 /*
 #ifndef NDEBUG
-    showDebug( _dimg, "FACES", clusters);
+    showDebug( dimg, "FACES", clusters);
 #endif
 */
-
     std::sort( clusters.begin(), clusters.end(), RectClusterComparator());
 
     const cv::Rect_<float> fb = clusters[0]->getMean();
@@ -244,6 +259,6 @@ bool FeaturesDetector::findFace()
     _faceBox.width = cvRound(fb.width);
     _faceBox.height = cvRound(fb.height);
 
-    setDetectorsFromFaceBox();
-    return true;
-}   // end findFace
+    setDetectorsFromFaceBox( dimg);
+    return findEyes();
+}   // end find
