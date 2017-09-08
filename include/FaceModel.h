@@ -75,10 +75,10 @@ public slots:
     bool updateDistanceMaps( const cv::Vec3f&);
 
     // Select/deselect a landmark. Causes onSelectedLandmark to fire.
-    void selectLandmark( const std::string& lm, bool enable);
+    void selectLandmark( const std::string&, bool);
 
     // Highlight/de-highlight a landmark. Causes onHighlightLandmark to fire.
-    void highlightLandmark( const std::string& lm, bool enable);
+    void highlightLandmark( const std::string&, bool);
 
     // Add, remove, or reposition a landmark.
     // Landmark is added if not present and pos != NULL.
@@ -86,11 +86,12 @@ public slots:
     // Landmark is removed if present and pos == NULL.
     // Returns true in above three cases and signals onLandmarkUpdated.
     // Returns false if landmark not present and pos == NULL.
-    bool updateLandmark( const std::string& lm, const cv::Vec3f* pos);
+    bool updateLandmark( const std::string&, const cv::Vec3f*);
 
     // Update the landmark's meta data, returning true iff landmark exists.
+    // Parameters in order are landmark name, visible, movable, deletable.
     // Fires onLandmarkMetaUpdated on success.
-    bool updateLandmarkMeta( const std::string& lm, bool visible=true, bool movable=true, bool deletable=true);
+    bool updateLandmarkMeta( const std::string&, bool, bool, bool);
 
     // Set the orientation of the face (its norm and up vector) and detect landmarks.
     // Re-detects if landmarks already present. Returns true on successful
@@ -99,7 +100,7 @@ public slots:
     bool detectFace( FaceDetector::Ptr);
 
     // Update the list of boundary vertices. Fires onBoundaryUpdated.
-    void updateBoundary( const std::vector<cv::Vec3f>& loop);
+    void updateBoundary( const std::vector<cv::Vec3f>&);
 
     // Update the mesh to exclude everything outside the currently defined boundary.
     // Causes both onMeshUpdated and onCropped to be emitted in that order.

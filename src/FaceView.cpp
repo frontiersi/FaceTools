@@ -37,13 +37,11 @@ FaceView::FaceView( ModelViewer* viewer, const FaceModel* fmodel, BoundaryViewEv
     // Designed like this because there can be multiple views for a model, all providing means
     // for the user to change the model's data - and we want changes to the model's data to
     // be propagated back to all of the views (not just the one that it was changed through).
-    connect( _fmodel, SIGNAL( onLandmarkUpdated( const std::string&, const cv::Vec3f*)),
-             &_lview, SLOT( updateLandmark( const std::string&, const cv::Vec3f*)));
-    connect( _fmodel, SIGNAL( onLandmarkSelected( const std::string&, bool)),
-             &_lview, SLOT( selectLandmark( const std::string&, bool)));
-    connect( _fmodel, SIGNAL( onMeshUpdated()), this, SLOT( forceRevisualise()));
-    connect( _fmodel, SIGNAL( onFaceDetected()), this, SLOT( showFaceDetection()));
-    connect( _fmodel, SIGNAL( onTransformedToOrigin()), this, SLOT( setCameraToOrigin()));
+    connect( _fmodel, &FaceModel::onLandmarkUpdated, &_lview, &FaceTools::LandmarkGroupView::updateLandmark);
+    connect( _fmodel, &FaceModel::onLandmarkSelected, &_lview, &FaceTools::LandmarkGroupView::selectLandmark);
+    connect( _fmodel, &FaceModel::onMeshUpdated, this, &FaceView::forceRevisualise);
+    connect( _fmodel, &FaceModel::onFaceDetected, this, &FaceView::showFaceDetection);
+    connect( _fmodel, &FaceModel::onTransformed, this, &FaceView::setCameraToOrigin);
 }   // end ctor
 
 

@@ -34,8 +34,7 @@ ModelInteractor::ModelInteractor( InteractiveModelViewer* viewer, FaceModel* fmo
 
     // Create the view and connect up listener to the boundary view observer
     _fview = new FaceView( viewer, fmodel, &_bobserver);
-    connect( &_bobserver, SIGNAL( updatedBoundary( const std::vector<cv::Vec3f>&)),
-                 _fmodel, SLOT( updateBoundary( const std::vector<cv::Vec3f>&)));
+    connect( &_bobserver, &FaceTools::BoundaryViewEventObserver::updatedBoundary, _fmodel, &FaceTools::FaceModel::updateBoundary);
 
     // Make this interactor available to all of the passed in actions.
     foreach ( QAction* action, agroup->actions())
