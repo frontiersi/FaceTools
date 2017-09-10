@@ -38,6 +38,7 @@ public:
     void removeView( const std::string&);       // Remove a single view with given name.
     size_t removeModel( FaceModel*);            // Remove all views for the given model, returning the number removed.
     CMint* getSelectedView() const;             // Returns the currently selected view or NULL if none selected.
+    std::string getSelectedViewName() const;    // Returns the currently selected view name or "" if none selected.
     size_t getNumModels() const;                // Return number of models (use count() for num views).
 
 signals:

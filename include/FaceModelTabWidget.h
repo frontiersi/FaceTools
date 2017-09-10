@@ -27,20 +27,8 @@ namespace FaceTools
 class FaceTools_EXPORT FaceModelTabWidget : public QTabWidget
 { Q_OBJECT
 public:
-    FaceModelTabWidget( QWidget *parent=NULL);
+    FaceModelTabWidget( QMenu* contextMenu, const QList<QAction*>* actions, QWidget *parent=NULL);
     virtual ~FaceModelTabWidget();
-
-    // All added QActions must have parents deriving from FaceAction.
-    // Returns true if added successfully. If desired that the action
-    // is available via the context menu, use addContextActionGroup.
-    bool addAction( QAction*);
-
-    // These actions may be accessed directly by the user via context menu.
-    // Adding multiple groups places separators between them on the menu.
-    bool addContextActionGroup( QActionGroup*);
-
-    // ALL actions must be added before creating tabs (FaceModelWidgets) or
-    // the actions will NOT be available to these widgets!
 
 signals:
     void activated( const std::string&);    // Passes view title
@@ -57,11 +45,13 @@ public slots:
 
 private slots:
     void showContextMenu( const QPoint&);
+    void onTabChanged(int);
 
 private:
-    InteractiveModelViewer *_viewer; // Viewer shared between models in tab group
-    QList<QAction*> _xactions;
-    QMenu _cmenu;
+    QMenu* _cmenu;
+    const QList<QAction*>* _actions;
+    InteractiveModelViewer *_viewer;
+    QVBoxLayout *_viewerLayout;
 
     FaceModelTabWidget( const FaceModelTabWidget&); // No copy
     void operator=( const FaceModelTabWidget&);     // No copy

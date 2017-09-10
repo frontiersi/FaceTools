@@ -38,6 +38,9 @@ public:
     size_t getNumViews() const;  // Get the number of views displayed in this widget (possibly > getNumModels())
 
     const FaceView* getActiveView() const;
+    std::string getActiveViewName() const;
+
+    void reparentViewer( QLayout*);
 
 public slots:
     const std::string& addView( FaceModel*);  // Also sets the view as active and returns the view name.
@@ -50,6 +53,7 @@ signals:
 private:
     InteractiveModelViewer* _viewer;
     const QList<QAction*> *_xactions;
+    QFrame *_viewerFrame;
     FaceViewComboBox* _combo;
 
     FaceModelWidget( const FaceModelWidget&); // No copy

@@ -54,12 +54,11 @@ public:
     virtual void addInteractor( ModelInteractor*) = 0;
     virtual void removeInteractor( ModelInteractor*) = 0;
 
-    // Allow an already added interactor to inform this action (via sender()) of
-    // when it starts or stops being interacted on by the user. One or more
-    // interactors of the full set of added interactors may be set interactive.
-    // Actions may want to reimplement this function to allow them to
-    // enable/disable themselves in response to these events.
-    virtual void setInteractive() = 0;
+    // Allow an already added interactor to inform this action of when it starts or stops
+    // being interacted on by the user. One or more interactors of the full set of added
+    // interactors may be set interactive. Actions may want to reimplement this function
+    // to allow them to enable/disable themselves in response to these events.
+    virtual void setInteractive( ModelInteractor*, bool) = 0;
 };  // end class
 
 
@@ -84,6 +83,7 @@ public:
     // this case, it is only necessary to reimplement setInteractive.
     virtual void addInteractor( ModelInteractor*){}
     virtual void removeInteractor( ModelInteractor*){}
+    virtual void setInteractive( ModelInteractor*, bool){}
 
     // Set whether this action will be undertaken asynchronously or not
     // on the next call to process. Default is synchronous (blocking calls).
@@ -105,13 +105,6 @@ public slots:
     // return value of doAction. If asynchronous, function returns
     // immediately and caller should listen for signal finished.
     bool process();
-
-    // Allow an already added interactor to inform this action (via sender()) of
-    // when it starts or stops being interacted on by the user. One or more
-    // interactors of the full set of added interactors may be set interactive.
-    // Actions may want to reimplement this function to allow them to
-    // enable/disable themselves in response to these events.
-    virtual void setInteractive(bool){}
 
 protected:
     // Derived types must call initAction() from within their constructor to initialise
@@ -166,9 +159,6 @@ public:
     FaceActionGroup();
     virtual ~FaceActionGroup(); // Deletes all actions added by addAction
 
-    virtual QAction* qaction() { return NULL;}
-    virtual void addInteractor( ModelInteractor*){}
-
     // Whether this group of actions should be available as a main
     // menu, on its own toolbar, or added to the context menu.
     const QMenu* createMenu();
@@ -184,7 +174,7 @@ public:
 
     // QTools::PluginInterface
     virtual QStringList getInterfaceIds() const;
-    virtual FaceActionInterface* getInterface( const QString&) const;
+    virtual FaceAction* getInterface( const QString&) const;
 
 protected slots:
     // Groups are exclusive by default
@@ -194,14 +184,19 @@ protected slots:
     // Add new FaceAction instances; the lifetimes of which will be managed
     // by this parent class. Returns true iff the action was successfully
     // added to the group. No actions with duplicate names allowed!
-    bool addAction( FaceActionInterface*);
+    bool addAction( FaceAction*);
 
 private:
     QActionGroup _group;
     QMenu *_menu;
     QToolBar *_toolbar;
-    boost::unordered_map<std::string, FaceActionInterface*> _actions;
-    QList<FaceActionInterface*> _actionList;
+    boost::unordered_map<std::string, FaceAction*> _actions;
+    QList<FaceAction*> _actionList;
+
+    virtual QAction* qaction() { return NULL;}
+    virtual void addInteractor( ModelInteractor*){}
+    virtual void removeInteractor( ModelInteractor*){}
+    virtual void setInteractive( ModelInteractor*, bool){}
     FaceActionGroup( const FaceActionGroup&);   // No copy
     void operator=( const FaceActionGroup&);    // No copy
 };  // end class

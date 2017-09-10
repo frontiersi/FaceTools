@@ -53,14 +53,20 @@ InteractiveModelViewer::~InteractiveModelViewer() {}    // end dtor
 // public
 void InteractiveModelViewer::addToLayout( QLayout *layout)
 {
+    //std::cerr << "Layout " << std::hex << layout << std::endl;
+    //std::cerr << "Add Layout " << std::hex <<  _qviewer->parent();
     layout->addWidget(_qviewer);
+    //std::cerr << " --> " << std::hex <<  _qviewer->parent() << std::endl;
 }   // end addToLayout
 
 
 // public
 void InteractiveModelViewer::removeFromLayout( QLayout *layout)
 {
-   layout->removeWidget(_qviewer);
+    //std::cerr << "Rem Layout " << std::hex <<  _qviewer->parent();
+    layout->removeWidget(_qviewer);
+    //_qviewer->setParent(NULL);
+    //std::cerr << " --> " << std::hex <<  _qviewer->parent() << std::endl;
 }   // end removeFromLayout
 
 

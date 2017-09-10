@@ -41,6 +41,28 @@ FaceModel::~FaceModel()
 
 
 // public
+const RFeatures::ObjModelCurvatureMetrics::Ptr FaceModel::getCurvatureMetrics() const { return _cmetrics;}
+
+
+// public
+const boost::unordered_map<int,double>* FaceModel::getUniformDistanceMap() const
+{
+    if ( _udist == NULL)
+        return NULL;
+    return &_udist->getCrossings();
+}   // end getUniformDistanceMap
+
+
+// public
+const boost::unordered_map<int,double>* FaceModel::getCurvDistanceMap() const
+{
+    if ( _cdist == NULL)
+        return NULL;
+    return &_cdist->getCrossings();
+}   // end getCurvDistanceMap
+
+
+// public
 void FaceModel::setSaveFilepath( const std::string& filepath)
 {
     _lastsave = filepath;

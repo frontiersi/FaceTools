@@ -16,10 +16,7 @@
  ************************************************************************/
 
 #include <FaceActionInterface.h>
-#include <FaceActionWorker.h>
-using FaceTools::FaceActionWorker;
 using FaceTools::FaceActionGroup;
-using FaceTools::FaceActionInterface;
 using FaceTools::FaceAction;
 
 
@@ -30,7 +27,7 @@ FaceActionGroup::FaceActionGroup() : _group(this), _menu(NULL), _toolbar(NULL) {
 // public
 FaceActionGroup::~FaceActionGroup()
 {
-    foreach ( const FaceActionInterface* faction, _actionList)
+    foreach ( const FaceAction* faction, _actionList)
         delete faction;
     if ( _menu)
         delete _menu;
@@ -41,7 +38,7 @@ FaceActionGroup::~FaceActionGroup()
 
 
 // protected
-bool FaceActionGroup::addAction( FaceActionInterface* faction)
+bool FaceActionGroup::addAction( FaceAction* faction)
 {
     const std::string nm = faction->getDisplayName().toStdString();
     if ( _actions.count(nm) > 0)
@@ -54,9 +51,9 @@ bool FaceActionGroup::addAction( FaceActionInterface* faction)
 
 
 namespace {
-void addToWidget( const QList<FaceActionInterface*>& actions, QWidget* widget)
+void addToWidget( const QList<FaceAction*>& actions, QWidget* widget)
 {
-    foreach ( FaceActionInterface* fa, actions)
+    foreach ( FaceAction* fa, actions)
         widget->addAction( fa->qaction());
 }   // end addToWidget
 }   // end namespace
@@ -104,14 +101,14 @@ void FaceActionGroup::addTo( QToolBar* toolbar) const
 QStringList FaceActionGroup::getInterfaceIds() const
 {
     QStringList qlist;
-    foreach ( const FaceActionInterface* fa, _actionList)
+    foreach ( const FaceAction* fa, _actionList)
         qlist << fa->getDisplayName();
     return qlist;
 }   // end getInterfaceIds
 
 
 // public virtual
-FaceActionInterface* FaceActionGroup::getInterface( const QString& iname) const
+FaceAction* FaceActionGroup::getInterface( const QString& iname) const
 {
     const std::string nm = iname.toStdString();
     if ( _actions.count(nm) == 0)
@@ -124,7 +121,7 @@ FaceActionInterface* FaceActionGroup::getInterface( const QString& iname) const
 
 
 // public
-FaceAction::FaceAction() : FaceActionInterface(),
+FaceAction::FaceAction() : FaceTools::FaceActionInterface(),
     _action(this), _doasync(false), _pupdater(NULL), _fmaw(NULL)
 {
     connect( &_action, &QAction::triggered, this, &FaceAction::process);
@@ -184,14 +181,16 @@ void FaceAction::progress( float propComplete)
 }   // end progress
 
 
+#include <FaceActionWorker.h>
+
 // private slot
 bool FaceAction::process()
 {
     if ( !_doasync)
         return doAction();  // Blocks
 
-    _fmaw = new FaceActionWorker( this);
-    connect( _fmaw, &FaceActionWorker::workerFinished, this, &FaceAction::finished);
+    _fmaw = new FaceTools::FaceActionWorker( this);
+    connect( _fmaw, &FaceTools::FaceActionWorker::workerFinished, this, &FaceAction::finished);
     connect( _fmaw, SIGNAL( finished()), _fmaw, SLOT(deleteLater()));
     _fmaw->start();   // Asynchronous; immediately return and listen for finished(bool)
     return true;

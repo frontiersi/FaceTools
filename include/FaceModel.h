@@ -34,7 +34,7 @@ public:
     virtual ~FaceModel();
 
     ObjMetaData::Ptr getObjectMeta() const { return _objmeta;}
-    const RFeatures::ObjModelCurvatureMetrics::Ptr getCurvatureMetrics() const { return _cmetrics;} // May be NULL
+    const RFeatures::ObjModelCurvatureMetrics::Ptr getCurvatureMetrics() const; // May be NULL
     const boost::unordered_map<int,double>* getUniformDistanceMap() const;  // May be NULL
     const boost::unordered_map<int,double>* getCurvDistanceMap() const;  // May be NULL
 

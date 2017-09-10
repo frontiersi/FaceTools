@@ -51,9 +51,7 @@ public:
     virtual bool allowScalarVisualisation( float& minv, float& maxv) const = 0;
 
     virtual void removeInteractor( ModelInteractor*);
-
-public slots:
-    virtual void setInteractive(bool);
+    virtual void setInteractive( ModelInteractor*, bool);
 
 protected:
     virtual bool doAction();

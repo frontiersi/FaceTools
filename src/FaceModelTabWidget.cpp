@@ -24,12 +24,21 @@ using FaceTools::FaceModel;
 
 
 // public
-FaceModelTabWidget::FaceModelTabWidget( QWidget *parent)
+FaceModelTabWidget::FaceModelTabWidget( QMenu* cmenu, const QList<QAction*>* actions, QWidget *parent)
     : QTabWidget(parent),
-     _viewer( new FaceTools::InteractiveModelViewer( true))
+      _cmenu(cmenu),
+      _actions(actions),
+     _viewer( new FaceTools::InteractiveModelViewer( true)),
+     _viewerLayout(NULL)
 {
+    _viewerLayout = new QVBoxLayout(this);
+    _viewer->addToLayout( _viewerLayout);
+    setLayout(_viewerLayout);   // Will be reparented on tab widgets
+
+    //std::cerr << "FaceModelTabWidget " << std::hex << this << std::endl;
     setUsesScrollButtons(true);
     setDocumentMode(true);
+    connect( this, &FaceModelTabWidget::currentChanged, this, &FaceModelTabWidget::onTabChanged);
     connect( _viewer, &FaceTools::InteractiveModelViewer::requestContextMenu,
                 this, &FaceModelTabWidget::showContextMenu);
 }   // end ctor
@@ -40,46 +49,14 @@ FaceModelTabWidget::~FaceModelTabWidget()
 {
     for ( int i = 0; i < count(); ++i)
         removeTabWidget( i);
-    delete _viewer;
 }   // end dtor
-
-
-// public
-bool FaceModelTabWidget::addAction( QAction* action)
-{
-    assert(action);
-    FaceAction* faction = qobject_cast<FaceAction*>(action->parent());
-    if ( !faction)
-    {
-        std::cerr << "[ERROR] FaceTools::FaceModelTabWidget::addAction: QAction is not parented by a FaceAction!" << std::endl;
-        return false;
-    }   // end if
-    _xactions << action;
-    return true;
-}   // end addAction
-
-
-// public
-bool FaceModelTabWidget::addContextActionGroup( QActionGroup* ag)
-{
-    foreach ( QAction* action, ag->actions())
-    {
-        if ( !addAction(action))
-            return false;
-    }   // end foreach
-
-    if ( !_cmenu.actions().empty())
-        _cmenu.addSeparator();
-    _cmenu.addActions( ag->actions());
-    return true;
-}   // end addContextActionGroup
 
 
 // public
 int FaceModelTabWidget::addTabWidget( FaceModel* fmodel)
 {
     // Create the widget and add the actions
-    FaceModelWidget* fmwidget = new FaceModelWidget( _viewer, &_xactions);
+    FaceModelWidget* fmwidget = new FaceModelWidget( _viewer, _actions);
     connect( fmwidget, &FaceModelWidget::onViewSelected, this, &FaceModelTabWidget::activated);
     const std::string& tname = fmwidget->addView( fmodel);
     setUpdatesEnabled(false);  // Disable painting (prevent flicker)
@@ -114,7 +91,8 @@ size_t FaceModelTabWidget::removeTabWidget( int tabIdx)
     const size_t nmodels = fmwidget->getNumModels();
     setUpdatesEnabled(false);  // Disable painting (prevent flicker)
     fmwidget->disconnect(this);
-    removeTab(tabIdx);         // Causes the widget to be deleted
+    removeTab(tabIdx);
+    delete fmwidget;
     setUpdatesEnabled(true);   // Enable painting again
     return nmodels;
 }   // end removeTabWidget
@@ -144,13 +122,30 @@ void FaceModelTabWidget::consolidateTabs()
 
 
 // private slot
+void FaceModelTabWidget::onTabChanged( int tabIdx)
+{
+    std::string vname;
+    if ( tabIdx < 0)
+        setLayout(_viewerLayout);
+    else
+    {
+        FaceModelWidget* fmwidget = qobject_cast<FaceModelWidget*>( widget(tabIdx));
+        vname = fmwidget->getActiveViewName();
+        std::cerr << "Tab changed " << vname << std::endl;
+        fmwidget->reparentViewer(_viewerLayout);
+    }   // end else
+    emit activated( vname);
+}   // end onTabChanged
+
+
+// private slot
 void FaceModelTabWidget::showContextMenu( const QPoint& p)
 {
-    if ( count() == 0 || _cmenu.actions().empty())
+    if ( !_cmenu || count() == 0 || _cmenu->actions().empty())
         return;
 
     const int tabIdx = currentIndex();
     const FaceView* fview = qobject_cast<FaceModelWidget*>( widget(tabIdx))->getActiveView();
     if ( fview && fview->isPointedAt(p))
-        _cmenu.exec(p);
+        _cmenu->exec(p);
 }   // end showContextMenu

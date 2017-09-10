@@ -65,11 +65,9 @@ void VisualisationAction::removeInteractor( ModelInteractor *mint)
 }   // end removeInteractor
 
 
-// public slot
-void VisualisationAction::setInteractive( bool enable)
+// public
+void VisualisationAction::setInteractive( ModelInteractor* mint, bool enable)
 {
-    ModelInteractor* mint = qobject_cast<ModelInteractor*>( sender());
-    assert(mint);
     if ( !enable)
         removeInteractor(mint);
     else

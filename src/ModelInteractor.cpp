@@ -54,8 +54,8 @@ ModelInteractor::~ModelInteractor()
     foreach ( QAction* action, *_actions)
     {
         FaceAction* faction = qobject_cast<FaceAction*>(action->parent());
-        faction->setInteractive(false);
-        faction->removeInteractor(this);
+        faction->setInteractive( this, false);
+        faction->removeInteractor( this);
     }   // end foreach
 
     delete _fview;
@@ -72,7 +72,7 @@ void ModelInteractor::setInteractive( bool enable)
         foreach ( QAction* action, *_actions)
         {
             FaceAction* faction = qobject_cast<FaceAction*>(action->parent());
-            faction->setInteractive(enable);
+            faction->setInteractive( this, enable);
         }   // end foreach
     }   // end if
 }   // end setInteractive

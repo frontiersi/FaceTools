@@ -100,9 +100,11 @@ const std::string& FaceViewComboBox::addView( FaceModel* fmodel, const QList<QAc
     setEnabled(true);
 
     // Set this newly added view as the current one for interaction.
-    const int rowi = getRowFromName( mname, vkey);
+    int notused;
+    const int rowi = getRowFromName( mname, notused);
+    assert(notused == vkey);
     onSelectedRow(rowi);
-    return mname;
+    return _vnameLookup.at(vkey);
 }   // end addView
 
 
@@ -156,6 +158,16 @@ CMint* FaceViewComboBox::getSelectedView() const
         return NULL;
     return _mintLookup.at( getMintKeyFromRow( this, rowi));
 }   // end getSelectedView
+
+
+// public
+std::string FaceViewComboBox::getSelectedViewName() const
+{
+    int rowi = currentIndex();
+    if ( rowi < 0)
+        return "";
+    return _vnameLookup.at( getMintKeyFromRow( this, rowi));
+}   // end getSelectedViewName
 
 
 // public
