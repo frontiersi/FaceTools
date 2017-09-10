@@ -131,7 +131,6 @@ void FaceModelTabWidget::onTabChanged( int tabIdx)
     {
         FaceModelWidget* fmwidget = qobject_cast<FaceModelWidget*>( widget(tabIdx));
         vname = fmwidget->getActiveViewName();
-        std::cerr << "Tab changed " << vname << std::endl;
         fmwidget->reparentViewer(_viewerLayout);
     }   // end else
     emit activated( vname);
