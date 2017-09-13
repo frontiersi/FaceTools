@@ -96,14 +96,15 @@ public:
     void connectButton( QPushButton*);
 
 signals:
-    // Notify of action completion passing boolean returned from
-    // doAction. Only fires if asynchronous processing enabled.
+    // Notify of action completion passing boolean returned from doAction.
     void finished( bool);
 
 public slots:
     // If synchronous, calls doAction and blocks, returning the
     // return value of doAction. If asynchronous, function returns
     // immediately and caller should listen for signal finished.
+    // Whether or not asynchronous processing is enabled, signal
+    // finished is always emitted.
     bool process();
 
 protected:

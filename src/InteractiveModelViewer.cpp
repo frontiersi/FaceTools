@@ -34,7 +34,7 @@ void InteractiveModelViewer::init()
 
 // public
 InteractiveModelViewer::InteractiveModelViewer( bool useFloodLights)
-    : FaceTools::ModelViewer( useFloodLights, false)
+    : FaceTools::ModelViewer( useFloodLights)
 {
     init();
 }   // end ctor

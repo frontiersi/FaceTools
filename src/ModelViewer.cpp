@@ -18,6 +18,7 @@
 #include <ModelViewer.h>
 #include <MiscFunctions.h>
 #include <FeatureUtils.h>                       // RFeatures
+#include <VtkTools.h>                           // RVTK
 #include <VtkActorCreator.h>                    // RVTK
 #include <ImageGrabber.h>                       // RVTK
 #include <PointPlacer.h>                        // RVTK
@@ -41,21 +42,12 @@ void ModelViewer::updateRender()
 // public
 void ModelViewer::enableFloodLights( bool enable)
 {
-    if ( !enable)
-        _qviewer->setHeadlight();
+    std::vector<RVTK::Light> lights;
+    if ( enable)
+        RVTK::createBoxLights( 600, lights);
     else
-    {
-        static const float slr = 600;
-        std::vector<cv::Vec3f> lpos(6);
-        std::vector<cv::Vec3f> lfoc( 6, cv::Vec3f(0,0,0));
-        lpos[0] = cv::Vec3f(    0,    0,  slr); // point at face from front
-        lpos[1] = cv::Vec3f( -slr,    0,    0); // 90 degrees to left of face
-        lpos[2] = cv::Vec3f(  slr,    0,    0); // 90 degrees to right of face
-        lpos[3] = cv::Vec3f(    0, -slr,    0); // 90 degrees below face
-        lpos[4] = cv::Vec3f(    0,  slr,    0); // 90 degrees above face
-        lpos[5] = cv::Vec3f(    0,    0, -slr); // point at face from behind
-        _qviewer->setSceneLights( lpos, lfoc);
-    }   // end if
+        lights.push_back( RVTK::Light()); // Default RVTK::Light is a bright white headlight
+    _qviewer->setLights( lights);
 }   // end enableFloodLights
 
 
@@ -90,8 +82,8 @@ void ModelViewer::init()
 
 
 // public
-ModelViewer::ModelViewer( bool floodFill, bool offscreen)
-    : _qviewer( new QTools::VtkActorViewer( NULL, offscreen)), _scalarLegend(NULL), _axes(NULL), _dodel(true), _addedModelID(0)
+ModelViewer::ModelViewer( bool floodFill)
+    : _qviewer( new QTools::VtkActorViewer( NULL)), _scalarLegend(NULL), _axes(NULL), _dodel(true), _addedModelID(0)
 {
     vtkObject::GlobalWarningDisplayOff();   // Prevent GUI error warning pop-ups
     vtkSmartPointer<vtkRenderer> renderer = _qviewer->getRenderer();
@@ -119,6 +111,13 @@ ModelViewer::~ModelViewer()
     if ( _dodel)
         delete _qviewer;
 }   // end dtor
+
+
+// public
+void ModelViewer::setSize( const cv::Size& sz)
+{
+    _qviewer->setSize( sz.width, sz.height);
+}   // end setSize
 
 
 // public

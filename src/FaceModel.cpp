@@ -171,15 +171,9 @@ bool FaceModel::updateDistanceMaps( const cv::Vec3f& v)
 bool FaceModel::detectFace( FaceDetector::Ptr faceDetector)
 {
     _err = "";
-    if ( !faceDetector->findOrientation( _objmeta))
+    if ( !faceDetector->detect( _objmeta))
     {
-        _err = "Unable to determine facial orientation!";
-        return false;
-    }   // end if
-
-    if ( !faceDetector->findLandmarks( _objmeta))
-    {
-        _err = "Complete set of landmarks not found!";
+        _err = faceDetector->err();
         return false;
     }   // end if
 

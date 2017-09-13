@@ -161,15 +161,18 @@ void FaceModelManager::postProcessImport( FaceModel* fmodel, const QString& errm
     }   // end if
 
     fmodel->updateMesh(model);
+    _fmodels.insert(fmodel);
     emit finishedImport( fmodel, errmsg);
 }   // end postProcessImport
 
 
 // public
-bool FaceModelManager::close( const FaceModel* fmodel)
+bool FaceModelManager::close( FaceModel* fmodel)
 {
     if ( _fmodels.count(fmodel) == 0)
         return false;
+
+    emit closingModel( fmodel);
     _fmodels.erase(fmodel);
     delete fmodel;
     return true;

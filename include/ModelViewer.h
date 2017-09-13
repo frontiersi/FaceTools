@@ -38,8 +38,10 @@ class FaceTools_EXPORT ModelViewer
 {
 public:
     explicit ModelViewer( QTools::VtkActorViewer*);
-    ModelViewer( bool useFloodLights=true, bool offscreenRendering=false);
+    explicit ModelViewer( bool useFloodLights=true);
     virtual ~ModelViewer();
+
+    void setSize( const cv::Size&);
 
     void show();
     void hide();

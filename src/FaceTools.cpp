@@ -48,6 +48,7 @@ void checkBoundaries( const RFeatures::ObjModelBoundaryFinder& boundaryFinder)
 
 ObjModel::Ptr FaceTools::getComponent( const ObjModel::Ptr model, int svid, const cv::Vec3d& coffset)
 {
+    assert(model);
     using namespace RFeatures;
 
     ObjModelTriangleMeshParser parser( model);
@@ -61,19 +62,20 @@ ObjModel::Ptr FaceTools::getComponent( const ObjModel::Ptr model, int svid, cons
     boundaryFinder.sortBoundaries();    // Sort the discovered boundaries (max length first)
     //checkBoundaries( boundaryFinder);
     const std::list<int>& blist = boundaryFinder.getBoundary(0);
-    boundaryFinder.reset( &blist);   // Reset with boundary of the component we want (max number of edges)
+    ObjModelBoundaryFinder boundaryFinder2( &blist);    // Boundary of component we want (max number of edges)
 
     const ObjModelMover mover( coffset);
     ObjModelCopier modelCopier( &mover);
-    parser.reset();
-    parser.setBoundaryParser( &boundaryFinder);
-    parser.addTriangleParser( &modelCopier);
+
+    ObjModelTriangleMeshParser parser2( model);
+    parser2.setBoundaryParser( &boundaryFinder2);
+    parser2.addTriangleParser( &modelCopier);
 
     // There can only be one polygon that shares and two consecutive vertices in blist.
     // Get a polygon ID in this manner to ensure that the starting polygon for parsing
     // is inside the blist boundary.
     const IntSet& sfids2 = model->getSharedFaces( *blist.begin(), *(++blist.begin()));
-    parser.parse( *sfids2.begin());
+    parser2.parse( *sfids2.begin());
 
     return modelCopier.getCopiedModel();
 }   // end getComponent
@@ -82,6 +84,7 @@ ObjModel::Ptr FaceTools::getComponent( const ObjModel::Ptr model, int svid, cons
 
 ObjModel::Ptr FaceTools::crop( const ObjModel::Ptr m, const cv::Vec3f& v, double radius, const cv::Vec3d& offset)
 {
+    assert(m);
     using namespace RFeatures;
     ObjModelCropper cropper( v, radius);
     const ObjModelMover mover( offset);
@@ -128,6 +131,7 @@ ObjModel::Ptr FaceTools::crop( const ObjModel::Ptr m, const cv::Vec3f& v, double
 
 cv::Vec3f FaceTools::calcFaceCentre( const ObjMetaData::Ptr omd)
 {
+    assert(omd);
     if ( !omd->hasLandmark( Landmarks::L_EYE_CENTRE) ||
          !omd->hasLandmark( Landmarks::R_EYE_CENTRE) ||
          !omd->hasLandmark( Landmarks::NASAL_TIP))
@@ -152,6 +156,7 @@ cv::Vec3f FaceTools::calcFaceCentre( const ObjMetaData::Ptr omd)
 
 ObjModel::Ptr FaceTools::cropAroundFaceCentre( const ObjMetaData::Ptr omd, double G)
 {
+    assert(omd);
     const cv::Vec3f& v0 = omd->getLandmark( Landmarks::L_EYE_CENTRE);
     const cv::Vec3f& v1 = omd->getLandmark( Landmarks::R_EYE_CENTRE);
     const cv::Vec3f fcentre = calcFaceCentre( omd);
@@ -173,6 +178,7 @@ ObjModel::Ptr FaceTools::createFromVertices( const cv::Mat_<cv::Vec3f>& vrow)
 
 ObjModel::Ptr FaceTools::createFromSubset( const ObjModel::Ptr smod, const IntSet& vidxs)
 {
+    assert(smod);
     ObjModel::Ptr omod = ObjModel::create( smod->getSpatialPrecision());
     BOOST_FOREACH ( int vidx, vidxs)
         omod->addVertex( smod->vtx(vidx));
@@ -183,6 +189,7 @@ ObjModel::Ptr FaceTools::createFromSubset( const ObjModel::Ptr smod, const IntSe
 ObjModel::Ptr FaceTools::createFromTransformedSubset( const ObjModel::Ptr smod, const IntSet& vidxs, const cv::Matx44d& T,
                                                       boost::unordered_map<int,int>* newVidxsToSource)
 {
+    assert(smod);
     const RFeatures::ObjModelMover transformer(T);
     ObjModel::Ptr omod = ObjModel::create( smod->getSpatialPrecision());
     BOOST_FOREACH ( int vidx, vidxs)
@@ -201,6 +208,7 @@ ObjModel::Ptr FaceTools::createFromTransformedSubset( const ObjModel::Ptr smod, 
 // vertex ID mapping from the returned flattened object to the original object m.
 ObjModel::Ptr FaceTools::makeFlattened( const ObjModel::Ptr m, boost::unordered_map<int,int>* fmap)
 {
+    assert(m);
     if ( fmap)
         fmap->clear();
     const IntSet& vidxs = m->getVertexIds();
@@ -221,6 +229,7 @@ ObjModel::Ptr FaceTools::makeFlattened( const ObjModel::Ptr m, boost::unordered_
 
 void FaceTools::clean( ObjModel::Ptr model)
 {
+    assert(model);
     RFeatures::ObjModelCleaner omc(model);
     const int rem3d = omc.remove3D();
     const int rem1d = omc.remove1D();
@@ -239,6 +248,7 @@ void FaceTools::clean( ObjModel::Ptr model)
 
 int FaceTools::fillHoles( ObjModel::Ptr model)
 {
+    assert(model);
     using namespace RFeatures;
 
     ObjModelTriangleMeshParser parser( model);
@@ -292,6 +302,7 @@ int FaceTools::fillHoles( ObjModel::Ptr model)
 
 int FaceTools::collapseSmallPolygons( ObjModel::Ptr model, double minArea)
 {
+    assert(model);
     using namespace RFeatures;
     ObjModelTriangleMeshParser parser( model);
     ObjModelPolygonAreaCalculator polyAreaCalculator;
@@ -337,8 +348,19 @@ int FaceTools::collapseSmallPolygons( ObjModel::Ptr model, double minArea)
 
 ObjModel::Ptr FaceTools::loadModel( const std::string& fname, bool useTexture, bool doClean)
 {
-    std::cerr << " =====[ Loading Model '" << fname << "' ]=====" << std::endl;
     RModelIO::AssetImporter assetImporter( useTexture);  // Load textures if selected
+    const std::string fext = getExtension(fname);
+    // If the file extension is not supported, return NULL.
+    if ( assetImporter.getAvailable().count(fext) == 0)
+        return ObjModel::Ptr();
+
+    if ( !assetImporter.enableFormat(fext))
+    {
+        std::cerr << "[ERROR] FaceTools::loadModel: Error enabling RModelIO::AssetImporter format!" << std::endl;
+        return ObjModel::Ptr();
+    }   // end if
+
+    std::cerr << " =====[ Loading Model '" << fname << "' ]=====" << std::endl;
     ObjModel::Ptr model = assetImporter.load( fname);
     if ( !model)
         std::cerr << "Unable to read in object from '" << fname << "'!" << std::endl;

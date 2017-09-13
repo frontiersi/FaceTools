@@ -27,7 +27,7 @@ using FaceTools::BoundaryViewEventObserver;
 
 
 // public
-FaceView::FaceView( ModelViewer* viewer, const FaceModel* fmodel, BoundaryViewEventObserver* bobserver)
+FaceView::FaceView( ModelViewer* viewer, FaceModel* fmodel, BoundaryViewEventObserver* bobserver)
     : _viewer(viewer), _fmodel(fmodel), _curvis(NULL), _inview(false),
       _bview( viewer, fmodel->getObjectMeta(), bobserver),
       _lview( viewer, fmodel->getObjectMeta()),
@@ -128,6 +128,13 @@ const vtkActor* FaceView::getActor() const
 }   // end getActor
 
 
+// public
+const VisualisationAction* FaceView::getCurrentVisualisation() const
+{
+    return _curvis;
+}   // end getCurrentVisualisation
+
+
 // public slot
 void FaceView::visualise( VisualisationAction* visint)
 {
@@ -183,8 +190,9 @@ void FaceView::showModel( bool enable)
 // public slot
 void FaceView::applyVisualisationOptions( const FaceTools::VisualisationOptions& visopts)
 {
-    assert( _curvis);
     _visopts = visopts;
+    if ( !_curvis)
+        return;
 
     // Modify the actor according to the visualisation options
     vtkSmartPointer<vtkActor> actor = _allvis[_curvis];

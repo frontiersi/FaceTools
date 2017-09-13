@@ -42,7 +42,7 @@ public:
     size_t getNumModels() const;                // Return number of models (use count() for num views).
 
 signals:
-    void onViewSelected( const std::string&);
+    void onViewSelected( FaceModel*, const std::string&);
 
 private slots:
     void onSelectedRow( int);

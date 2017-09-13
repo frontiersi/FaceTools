@@ -39,7 +39,7 @@ public:
     // Returns success in starting asynchronous operation.
     bool save( FaceModel*, const std::string& fname);
 
-    bool close( const FaceModel*);  // Close, returning true
+    bool close( FaceModel*);  // Close, returning true
     void closeAll(); // Closes all currently opened models
 
     bool isValidImportFilename( const std::string& fname);
@@ -58,6 +58,7 @@ public:
 signals:
     void finishedImport( FaceModel*, const QString&);
     void finishedExport( bool, const QString&);
+    void closingModel( FaceModel*);  // Fires just before FaceModel is deleted
 
 private slots:
     void postProcessImport( FaceModel*, const QString&);
@@ -70,7 +71,7 @@ private:
     void populatePlugins( FileIOInterface*);
 
     std::string _primaryExt;
-    boost::unordered_set<const FaceModel*> _fmodels;   // Open models
+    boost::unordered_set<FaceModel*> _fmodels;   // Open models
 
     static FaceModelManager s_fmm;
 

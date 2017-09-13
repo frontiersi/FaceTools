@@ -47,7 +47,7 @@ void VisualisationAction::doOnMeshUpdated()
     // Only enable if ALL of the interactors allow for this visualisation
     foreach ( ModelInteractor* mint, _interactors)
     {
-        if ( mint->getView()->canVisualise(this))
+        if ( !mint->getView()->canVisualise(this))
         {
             enable = false;
             break;

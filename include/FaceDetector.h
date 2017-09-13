@@ -20,6 +20,7 @@
 
 #include <string>
 #include <vector>
+#include <Viewer.h> // RVTK
 #include "Landmarks.h"
 #include "ObjMetaData.h"
 #include "ModelViewer.h"
@@ -36,19 +37,23 @@ public:
     static Ptr create( const std::string& haarCascadesModelDir,
                        const std::string& faceShapeLandmarksModel);
 
-    // Detect and set the NASAL_TIP, L_EYE_CENTRE, and R_EYE_CENTRE landmarks,
-    // and set the orientation vectors (normal and up vector) given these points.
-    // Return false iff the orientation points can't be found.
-    bool findOrientation( ObjMetaData::Ptr);
+    // Find orientation and landmarks. Builds kd-tree as part of the process.
+    // Returns false if any part of the process fails. Use err() to get the
+    // error message corresponding to the failure.
+    bool detect( ObjMetaData::Ptr);
 
-    // Find remaining landmarks. Only call AFTER orientation discovered.
-    bool findLandmarks( ObjMetaData::Ptr);
+    // Return error message relating to last detect() fail.
+    const std::string& err() const { return _err;}
 
 private:
     FeaturesDetector::Ptr _featuresDetector;
     class Impl;
     Impl* _impl;
-    ModelViewer *_viewer;   // Offscreen scene rendering
+    RVTK::Viewer::Ptr _viewer;  // Offscreen renderer
+    std::string _err;
+
+    bool findOrientation( ObjMetaData::Ptr);
+    bool findLandmarks( ObjMetaData::Ptr);
 
     FaceDetector( FeaturesDetector::Ptr, Impl*);
     ~FaceDetector();

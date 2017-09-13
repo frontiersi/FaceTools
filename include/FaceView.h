@@ -33,10 +33,10 @@ class ModelInteractor;  // For friend declaration
 class FaceTools_EXPORT FaceView : public QObject
 { Q_OBJECT
 public:
-    FaceView( ModelViewer*, const FaceModel*, BoundaryViewEventObserver*);
+    FaceView( ModelViewer*, FaceModel*, BoundaryViewEventObserver*);
     virtual ~FaceView();
 
-    const FaceModel* getModel() const { return _fmodel;}
+    FaceModel* getModel() const { return _fmodel;}
     bool isModelShown() const;
     bool isBoundaryShown() const;
     bool canAdjustBoundary() const;
@@ -61,6 +61,8 @@ public:
     RFeatures::CameraParams getCamera() const;
 
     const vtkActor* getActor() const;
+
+    const VisualisationAction* getCurrentVisualisation() const;
 
 public slots:
     // Set (and generate if necessary) current model visualisation and showModel(true).
@@ -93,7 +95,7 @@ private slots:
 
 private:
     ModelViewer* _viewer;
-    const FaceModel* _fmodel;
+    FaceModel* _fmodel;
     boost::unordered_map<VisualisationAction*, vtkSmartPointer<vtkActor> > _allvis;
     VisualisationAction* _curvis;    // Currently active visualisation
     bool _inview;

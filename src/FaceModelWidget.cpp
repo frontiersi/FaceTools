@@ -31,6 +31,7 @@ FaceModelWidget::FaceModelWidget( FaceTools::InteractiveModelViewer* viewer, con
 {
     connect( _combo, &FaceTools::FaceViewComboBox::onViewSelected, this, &FaceModelWidget::onViewSelected);
     setLayout( new QVBoxLayout);
+    layout()->setContentsMargins(QMargins(2,2,2,2));
     //std::cerr << "FaceModelWidget " << std::hex << this << std::endl;
     layout()->addWidget( _viewerFrame);
     layout()->addWidget( _combo);

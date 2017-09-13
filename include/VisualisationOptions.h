@@ -51,7 +51,6 @@ struct VisualisationOptions
     {
         double lineWidth;
         double vertexSize;
-        double movingVertexSize;
         QColor vertexColour;
         QColor lineColour;
     };  // end struct
@@ -59,6 +58,8 @@ struct VisualisationOptions
     Model model;
     Landmarks landmarks;
     Boundary boundary;
+    std::string munits; // Measurement units (e.g. "mm")
+    bool showAxes;
 };  // end struct
 
 

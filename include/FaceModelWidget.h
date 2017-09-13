@@ -48,7 +48,7 @@ public slots:
     void removeView( const std::string&);     // Remove single view
 
 signals:
-    void onViewSelected( const std::string&);   // Signal the newly active view title
+    void onViewSelected( FaceModel*, const std::string&);   // Signal the newly active model and its view
 
 private:
     InteractiveModelViewer* _viewer;

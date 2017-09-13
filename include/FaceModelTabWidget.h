@@ -31,11 +31,12 @@ public:
     virtual ~FaceModelTabWidget();
 
 signals:
-    void activated( const std::string&);    // Passes view title
+    void onViewSelected( FaceModel*, const std::string&);    // Passes model and view title
 
 public slots:
-    int addTabWidget( FaceModel*);   // Add model as new tab returning tab index and making it active.
-    size_t removeTabWidget( int);    // Remove the tab and all models in it returning the number of models removed.
+    int addTabWidget( FaceModel*);               // Add model as new tab returning tab index and making it active.
+    size_t removeModel( FaceModel*);             // Remove model from all tabs returning number of views removed.
+    size_t removeTabWidget( int);                // Remove the tab and all models in it returning the number of models removed.
     void addViewToTab( int, FaceModel*);         // Add a view to a tab returning tab.
     size_t removeModelFromTab( int, FaceModel*); // Remove model from tab returning num views removed.
 

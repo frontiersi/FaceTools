@@ -314,8 +314,9 @@ double ObjMetaData::shiftLandmarksToSurface()
 
     const ObjModel::Ptr model = getObject();
     const ObjModelSurfacePointFinder spfinder( model);
+    if ( _kdtree == NULL)
+        rebuildKDTree();
     const ObjModelKDTree::Ptr kdt = getKDTree();
-    assert( kdt != NULL);
 
     int notused;
     boost::unordered_set<std::string> lmnames;

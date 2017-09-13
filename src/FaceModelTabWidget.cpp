@@ -32,6 +32,7 @@ FaceModelTabWidget::FaceModelTabWidget( QMenu* cmenu, const QList<QAction*>* act
      _viewerLayout(NULL)
 {
     _viewerLayout = new QVBoxLayout(this);
+    _viewerLayout->setContentsMargins( QMargins());
     _viewer->addToLayout( _viewerLayout);
     setLayout(_viewerLayout);   // Will be reparented on tab widgets
 
@@ -57,7 +58,7 @@ int FaceModelTabWidget::addTabWidget( FaceModel* fmodel)
 {
     // Create the widget and add the actions
     FaceModelWidget* fmwidget = new FaceModelWidget( _viewer, _actions);
-    connect( fmwidget, &FaceModelWidget::onViewSelected, this, &FaceModelTabWidget::activated);
+    connect( fmwidget, &FaceModelWidget::onViewSelected, this, &FaceModelTabWidget::onViewSelected);
     const std::string& tname = fmwidget->addView( fmodel);
     setUpdatesEnabled(false);  // Disable painting (prevent flicker)
     const int tabIdx = addTab( fmwidget, tname.c_str());
@@ -65,6 +66,30 @@ int FaceModelTabWidget::addTabWidget( FaceModel* fmodel)
     setCurrentIndex(tabIdx);
     return tabIdx;
 }   // end addTabWidget
+
+
+// public
+size_t FaceModelTabWidget::removeModel( FaceModel* fmodel)
+{
+    size_t nViewsRem = 0;
+    QList<int> remTabs;
+    for ( int tabIdx = 0; tabIdx < count(); ++tabIdx)
+    {
+        FaceModelWidget* fmwidget = qobject_cast<FaceModelWidget*>( widget(tabIdx));
+        nViewsRem += fmwidget->removeModel(fmodel);
+        if ( fmwidget->getNumViews() == 0)
+            remTabs << tabIdx;
+    }   // end foreach
+
+    setUpdatesEnabled(false);  // Disable painting (prevent flicker)
+    // Remove tab widgets that no longer have views in them
+    foreach ( int tabIdx, remTabs)
+        removeTabWidget(tabIdx);
+
+    onTabChanged( currentIndex());
+    setUpdatesEnabled(true);   // Enable painting again
+    return nViewsRem;
+}   // end removeModel
 
 
 // public
@@ -125,15 +150,17 @@ void FaceModelTabWidget::consolidateTabs()
 void FaceModelTabWidget::onTabChanged( int tabIdx)
 {
     std::string vname;
+    FaceModel* fmodel = NULL;
     if ( tabIdx < 0)
         setLayout(_viewerLayout);
     else
     {
         FaceModelWidget* fmwidget = qobject_cast<FaceModelWidget*>( widget(tabIdx));
         vname = fmwidget->getActiveViewName();
+        fmodel = fmwidget->getActiveView()->getModel();
         fmwidget->reparentViewer(_viewerLayout);
     }   // end else
-    emit activated( vname);
+    emit onViewSelected( fmodel, vname);
 }   // end onTabChanged
 
 

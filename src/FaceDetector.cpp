@@ -17,7 +17,6 @@
 
 #include <FaceDetector.h>
 using FaceTools::FaceDetector;
-using FaceTools::ModelViewer;
 using FaceTools::ObjMetaData;
 
 #include <dlib/image_processing/frontal_face_detector.h>
@@ -29,7 +28,9 @@ using FaceTools::ObjMetaData;
 #include <sstream>
 #include <cmath>
 #include <cassert>
-#include <ImageGrabber.h>    // RVTK
+#include <ImageGrabber.h>       // RVTK
+#include <VtkActorCreator.h>    // RVTK
+#include <RendererPicker.h>     // RVTK
 #include <FaceTools.h>
 #include <NoseFinder.h>
 #include <FaceFinder2D.h>
@@ -50,11 +51,12 @@ public:
     }   // end ctor
 
 
-    bool detectFeatures( const ModelViewer* viewer, ObjMetaData::Ptr omd)
+    bool detectFeatures( RVTK::Viewer::Ptr viewer, ObjMetaData::Ptr omd)
     {
         RVTK::ImageGrabber imgGrabber( viewer->getRenderWindow());
         imgGrabber.update();
         const cv::Mat_<byte> lightMap = imgGrabber.getLightMap();
+        //RFeatures::showImage( lightMap, "detectFeatures", true);
         int nrows = lightMap.rows;
         int ncols = lightMap.cols;
         const cv::Mat_<cv::Vec3b> colMap = imgGrabber.getColourMap();
@@ -102,19 +104,18 @@ public:
     }   // end detectFeatures
 
 
-    void setLandmarks( const ModelViewer* viewer, ObjMetaData::Ptr omd,
-            const std::vector<bool>& foundVec, const std::vector<cv::Point2f>& cpts)
+    void setLandmarks( RVTK::Viewer::Ptr viewer, ObjMetaData::Ptr omd,
+                       const std::vector<bool>& foundVec, const std::vector<cv::Point2f>& cpts)
     {
         const int np = (int)foundVec.size();
+        assert( np == (int)cpts.size());
+        RVTK::RendererPicker rpicker( viewer->getRenderer(), RVTK::RendererPicker::TOP_LEFT);
         std::vector<cv::Vec3f> vpts(np);
-        for ( int i = 17; i < np; ++i)  // Vertices before 17 are ignored since these are boundary vertices
-        {
-            if ( foundVec[i])
-                vpts[i] = viewer->project( cpts[i]);
-        }   // end for
+        // Vertices before 17 are ignored since these are boundary vertices
+        for ( int i = 17; i < np; ++i)
+            vpts[i] = foundVec[i] ? rpicker.pickWorldPosition( cpts[i]) : cv::Vec3f(0,0,0);
 
         using namespace FaceTools::Landmarks;
-
         omd->setLandmark( L_EYEBROW_0, vpts[17]);
         omd->setLandmark( L_EYEBROW_1, vpts[18]);
         omd->setLandmark( L_EYEBROW_2, vpts[19]);
@@ -229,47 +230,103 @@ FaceDetector::Ptr FaceDetector::create( const std::string& haarCascadesModelDir,
 FaceDetector::FaceDetector( FaceTools::FeaturesDetector::Ptr fd, Impl* impl)
     : _featuresDetector(fd),
       _impl( impl),
-      _viewer( new ModelViewer( true/*floodlights*/, true/*offscreen rendering*/))
+      _viewer( RVTK::Viewer::create(true/*offscreen*/))
 {
-    //_viewer->show();
+    _viewer->setSize(512,512);
+    _viewer->setClippingRange(0.1,1000);
+    // Set flood lights in the viewer
+    std::vector<RVTK::Light> lights;
+    RVTK::createBoxLights( 600, lights, true);
+    RVTK::resetLights( _viewer->getRenderer(), lights);
 }   // end ctor
 
 
 // private
 FaceDetector::~FaceDetector()
 {
-    delete _viewer;
     delete _impl;
 }   // end dtor
 
 
 namespace {
-// Detect the initial oriention points for the eyes and nosetip.
-bool findOrientationPoints( FaceTools::FeaturesDetector::Ptr fd, ModelViewer& viewer,
-                            const ObjModel::Ptr model, cv::Vec3f& v0, cv::Vec3f& v1, cv::Vec3f& ntip)
+
+bool getEyePoints( vtkRenderer* ren, cv::Point2f& f0, cv::Vec3f& v0,
+                                     cv::Point2f& f1, cv::Vec3f& v1,
+                                                      cv::Vec3f& mp)
 {
-    RVTK::ImageGrabber imgGrabber( viewer.getRenderWindow());
-    imgGrabber.update();
-    FaceTools::FaceFinder2D faceFinder( fd);
-    const cv::Mat_<byte> lightMap = imgGrabber.getLightMap();
-    if ( !faceFinder.find( lightMap))
+    RVTK::RendererPicker rpicker( ren, RVTK::RendererPicker::TOP_LEFT);
+    cv::Point2f fmid = (f1 + f0) * 0.5f;
+    // While the given image positions for the eyes aren't returning an actor, move the points closer
+    // in towards the expected position of the nose. Picking points under these image positions can
+    // fail if there are holes in the model on the eyes. Small holes over the eyes can happen because
+    // some photogrammetric techniques are less robust to highly reflective surfaces.
+
+    // If haven't found valid points in space within MAX_CHECK tries, the model is too full of holes and we give up.
+    static const int MAX_CHECK = 20;
+    int checkCount = 0;
+    while ( !rpicker.pickActor(f0) && checkCount < MAX_CHECK)
+    {
+        f0.x += 0.005;
+        checkCount++;
+    }   // end while
+
+    if ( checkCount == MAX_CHECK)
         return false;
 
-    const cv::Mat_<float> dmap = imgGrabber.getDepthMap();
+    checkCount = 0;
+    while ( !rpicker.pickActor(f1) && checkCount < MAX_CHECK)
+    {
+        f1.x -= 0.005;
+        checkCount++;
+    }   // end while
+
+    if ( checkCount == MAX_CHECK)
+        return false;
+
+    checkCount = 0;
+    while ( !rpicker.pickActor(fmid) && checkCount < MAX_CHECK)   // Very unlikely to ever be the case
+    {
+        fmid.y -= 0.005;
+        checkCount++;
+    }   // end while
+
+    if ( checkCount == MAX_CHECK)
+        return false;
+
+    v0 = rpicker.pickWorldPosition( f0);
+    v1 = rpicker.pickWorldPosition( f1);
+    mp = rpicker.pickWorldPosition( fmid);
+    //std::cerr << "v0: " << v0 << std::endl;
+    //std::cerr << "v1: " << v1 << std::endl;
+    //std::cerr << "mp: " << mp << std::endl;
+    return true;
+}   // end getEyePoints
+
+
+// Detect the initial oriention points for the eyes and nosetip.
+std::string findOrientationPoints( FaceTools::FeaturesDetector::Ptr fd, RVTK::Viewer::Ptr viewer,
+                                   const ObjModel::Ptr model, cv::Vec3f& v0, cv::Vec3f& v1, cv::Vec3f& ntip)
+{
+    FaceTools::FaceFinder2D faceFinder( fd);
+    RVTK::ImageGrabber imgGrabber( viewer->getRenderWindow());
+    imgGrabber.update();
+    const cv::Mat_<byte> lightMap = imgGrabber.getLightMap();
+    //RFeatures::showImage( lightMap, "findOrientationPoints", true);
+    if ( !faceFinder.find( lightMap))
+        return "Failed to find face from 2D image.";
+
     cv::Point2f f0 = faceFinder.getLEyeCentre();    // [0,1]
     cv::Point2f f1 = faceFinder.getREyeCentre();    // [0,1]
-    int count = 0;
-    const double eyeDepthSum = RFeatures::findSumBetweenPoints<float>( dmap, f0, f1, 0, FLT_MAX, count);
-    const double eyeDepth = eyeDepthSum / count;
-    const RFeatures::CameraParams cp = viewer.getCamera();
-    // Estimate the 3D positions of the eyes by perspective projection
-    v0 = cp.project( cv::Point2f( f0.x - 0.5f, f0.y - 0.5f), eyeDepth); // Left
-    v1 = cp.project( cv::Point2f( f1.x - 0.5f, f1.y - 0.5f), eyeDepth); // Right
+    // Get the points in space for the eyes. If model is too full of holes, fail.
+    cv::Vec3f mp;
+    if ( !getEyePoints( viewer->getRenderer(), f0, v0, f1, v1, mp))
+        return "Unable to pick model positions from 2D points.";
 
-    // Need a reliable surface to detect the nosetip.
-    const cv::Vec3f eyeVec = v1 - v0;
-    const cv::Vec3f midEyePoint = v0 + 0.5 * eyeVec;
-    ObjModel::Ptr m1 = FaceTools::crop( model, midEyePoint, 70);
+    // If model is too small around the crop point, fail.
+    ObjModel::Ptr m1 = FaceTools::crop( model, mp, 70);
+    if ( m1->getNumFaces() < 50)
+        return "Cropped model around point mid-eye point has < 50 polygons.";
+
     FaceTools::fillHoles( m1);
 
     // Find the vertices of the clean submodel that are closest to the estimated world positions of the eyes
@@ -281,22 +338,12 @@ bool findOrientationPoints( FaceTools::FeaturesDetector::Ptr fd, ModelViewer& vi
     RFeatures::ObjModelSmoother( cmap).smooth( 0.7, numSmoothIterations);
     FaceTools::NoseFinder m1NoseFinder( cmap, m1LeftEyeVidx, m1RightEyeVidx);
 
-    const bool found = m1NoseFinder.find();
-    if ( found)
+    if ( m1NoseFinder.find())
         ntip = m1NoseFinder.getNoseTip();
-    return found;
+    else
+        return "Unable to find nose-tip.";
+    return "";
 }   // end findOrientationPoints
-
-
-void resetViewer( ModelViewer *viewer, const ObjModel::Ptr model, bool updateRender=true)
-{
-    viewer->removeAll();
-    viewer->resetDefaultCamera();
-    const ModelViewer::VisOptions visOptions( ModelViewer::VisTexture);
-    viewer->add( model, visOptions);
-    if (updateRender)
-        viewer->updateRender();
-}   // end resetViewer
 
 
 // Set 12 boundary landmark vertices
@@ -349,16 +396,44 @@ void findBoundary( ObjMetaData::Ptr omd, const double G)
 
 
 // public
-bool FaceDetector::findOrientation( ObjMetaData::Ptr omd)
+bool FaceDetector::detect( ObjMetaData::Ptr omd)
 {
+    _err = "";
     const ObjModel::Ptr model = omd->getObject();
     if ( model == NULL)
+    {
+        _err = "Internal model missing from ObjMetaData!";
+        return false;
+    }   // end if
+
+    _viewer->clear();   // Clear viewer of existing actors
+    RVTK::VtkActorCreator actorCreator;
+    std::vector<vtkSmartPointer<vtkActor> > actors;
+    actorCreator.generateTexturedActors( model, actors);
+    BOOST_FOREACH ( vtkSmartPointer<vtkActor> actor, actors)
+        _viewer->addActor(actor);
+
+    if (!findOrientation(omd))
         return false;
 
-    resetViewer( _viewer, model);
+    if (!findLandmarks(omd))
+        return false;
 
+    return true;
+}   // end detect
+
+
+// private
+bool FaceDetector::findOrientation( ObjMetaData::Ptr omd)
+{
+    const RFeatures::CameraParams dcam( cv::Vec3f(0,0,650));    // Default camera
+    _viewer->setCamera( dcam);
+    _viewer->updateRender();
+
+    const ObjModel::Ptr model = omd->getObject();
     cv::Vec3f v0, v1, ntip;
-    if ( !findOrientationPoints( _featuresDetector, *_viewer, model, v0, v1, ntip))
+    _err = findOrientationPoints( _featuresDetector, _viewer, model, v0, v1, ntip);
+    if ( !_err.empty())
         return false;
 
     using namespace FaceTools;
@@ -384,33 +459,24 @@ bool FaceDetector::findOrientation( ObjMetaData::Ptr omd)
 }   // end findOrientation
 
 
-
-// public
+// private
 bool FaceDetector::findLandmarks( ObjMetaData::Ptr omd)
 {
-    const ObjModel::Ptr model = omd->getObject();
-    if ( model == NULL)
-        return false;
-
-    if ( !omd->hasLandmark( FaceTools::Landmarks::NASAL_TIP))
-        return false;
-
-    cv::Vec3f nvec, uvec;
-    if ( !omd->getOrientation(nvec,uvec))
-        return false;
-
-    resetViewer( _viewer, model, false/*don't update render until camera moved*/);
     const cv::Vec3f& ntip = omd->getLandmark( FaceTools::Landmarks::NASAL_TIP);
-    _viewer->setCamera( ntip, nvec, uvec, 650);   // Set nose tip as focus
+    cv::Vec3f nvec, uvec;
+    omd->getOrientation( nvec,uvec);
+
+    RFeatures::CameraParams cp( 600*nvec + ntip, ntip, uvec);  // Set nose tip as focus
+    _viewer->setCamera( cp);
     _viewer->updateRender();
 
     // Model aligned to maximise good detection of feature points
     const bool found = _impl->detectFeatures( _viewer, omd);
-    if ( !found)
-        std::cerr << "[WARNING] FaceTools::FaceDetector::findLandmarks: Found only a subset of landmarks!" << std::endl;
-    else
+    if ( found)
         findBoundary( omd, 2.3);
-
+    else
+        _err = "Found only a subset of landmarks.";
     return found;
 }   // end findLandmarks
+
 

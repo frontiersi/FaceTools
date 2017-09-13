@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <FaceActionInterface.h>
+#include <FaceActionWorker.h>
 using FaceTools::FaceActionGroup;
 using FaceTools::FaceAction;
 
@@ -181,13 +182,16 @@ void FaceAction::progress( float propComplete)
 }   // end progress
 
 
-#include <FaceActionWorker.h>
 
 // private slot
 bool FaceAction::process()
 {
     if ( !_doasync)
-        return doAction();  // Blocks
+    {
+        bool rval = doAction();  // Blocks
+        emit finished(rval);
+        return rval;
+    }   // end if
 
     _fmaw = new FaceTools::FaceActionWorker( this);
     connect( _fmaw, &FaceTools::FaceActionWorker::workerFinished, this, &FaceAction::finished);
