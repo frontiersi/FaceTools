@@ -15,7 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include "FaceTools.h"
+#include <FaceOrienter.h>
+#include <DijkstraShortestPathFinder.h>
 using FaceTools::FaceOrienter;
 using RFeatures::ObjModelCurvatureMap;
 using RFeatures::ObjModelKDTree;

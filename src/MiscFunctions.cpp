@@ -15,7 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include "FaceTools.h"
+#include <MiscFunctions.h>
+#include <DijkstraShortestPathFinder.h>
+#include <FeatureUtils.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
@@ -185,19 +187,65 @@ cv::Vec3f FaceTools::calcSum( const std::vector<cv::Vec3f>& vs)
 
 double FaceTools::calcLength( const std::vector<cv::Vec3f>& vs)
 {
-    const int n = (int)vs.size();
-    if ( n == 0)
-        return -1.0f;
+    if ( vs.empty())
+        return 0;
 
-    const cv::Vec3f* v = &vs[0];
-    double len = 0.0;
+    const int n = (int)vs.size();
+    const cv::Vec3f* pv = &vs[0];
+    double len = 0;
     for ( int i = 1; i < n; ++i)
     {
-        len += cv::norm( vs[i] - *v, cv::NORM_L2);
-        v = &vs[i];
+        len += cv::norm( vs[i] - *pv, cv::NORM_L2);
+        pv = &vs[i];
     }   // end for
     return len;
 }   // end calcLength
+
+
+double FaceTools::calcLength( const ObjModel::Ptr model, const std::vector<int>& vidxs)
+{
+    double len = 0;
+    int pvidx = vidxs.front();
+    BOOST_FOREACH ( int vidx, vidxs)
+    {
+        len += cv::norm( model->vtx(vidx) - model->vtx(pvidx), cv::NORM_L2);
+        pvidx = vidx;
+    }   // end foreach
+    return len;
+}   // end calcLength
+
+
+double FaceTools::getEquidistant( const ObjModel::Ptr model, const std::vector<int>& gpath, int j, int H, std::vector<int>& ev)
+{
+    assert( H > 0);
+    const double glen = calcLength( model, gpath);
+    const double gstep = glen / H;
+
+    const int n = (int)gpath.size();
+    assert( j >= 0 && j < n);
+
+    int m = -1;
+    ev.resize(H);
+    cv::Vec3f pv = model->vtx(gpath[j]);    // Previous vertex
+    cv::Vec3f v = pv;
+    double gsum = 0;
+
+    for ( int i = 0; i < n; ++i)
+    {
+        v = model->vtx( gpath[j]);
+        gsum += cv::norm( v - pv, cv::NORM_L2);
+        if ( int( gsum / gstep) > m)
+        {
+            m = (m+1) % H;
+            ev[m] = gpath[j];
+        }   // end if
+
+        j = (j+1) % n;  // Next vertex
+        pv = v;
+    }   // end for
+
+    return glen;
+}   // end getEquidistant
 
 
 cv::Vec3f FaceTools::calcMean( const std::vector<cv::Vec3f>& vs)

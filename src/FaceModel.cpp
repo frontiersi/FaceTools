@@ -27,9 +27,12 @@ using RFeatures::ObjModel;
 
 // public
 FaceModel::FaceModel( ObjMetaData::Ptr md)
-    : _objmeta(md)
+    : _omd(md)
 {
     updateMesh( md->getObject());
+    _isAligned = false;
+    _isDetected = false;
+    _faceCropRadiusFactor = 2.1;
 }   // end ctor
 
 
@@ -71,10 +74,11 @@ void FaceModel::setSaveFilepath( const std::string& filepath)
 
 
 // public
-bool FaceModel::hasBoundary() const
+void FaceModel::setFaceCropFactor( double G)
 {
-    return _objmeta->getBoundary() != NULL;
-}   // end hasBoundary
+    _faceCropRadiusFactor = G;
+    emit onSetFaceCropFactor( G);
+}   // end setFaceCropFactor
 
 
 // public slot
@@ -96,9 +100,9 @@ bool FaceModel::updateLandmark( const std::string& lm, const cv::Vec3f* pos)
 {
     bool noerr = true;
     if ( pos != NULL)
-        _objmeta->setLandmark(lm, *pos);    // Set landmark with new position or add if not present
-    else if ( _objmeta->hasLandmark(lm))
-        _objmeta->deleteLandmark(lm);
+        _omd->setLandmark(lm, *pos);    // Set landmark with new position or add if not present
+    else if ( _omd->hasLandmark(lm))
+        _omd->deleteLandmark(lm);
     else
         noerr = false;
 
@@ -112,9 +116,9 @@ bool FaceModel::updateLandmark( const std::string& lm, const cv::Vec3f* pos)
 // public slot
 bool FaceModel::updateLandmarkMeta( const std::string& lm, bool visible, bool movable, bool deletable)
 {
-    if ( !_objmeta->hasLandmark(lm))
+    if ( !_omd->hasLandmark(lm))
         return false;
-    FaceTools::Landmarks::Landmark* landmark = _objmeta->getLandmarkMeta(lm);
+    FaceTools::Landmarks::Landmark* landmark = _omd->getLandmarkMeta(lm);
     landmark->visible = visible;
     landmark->movable = movable;
     landmark->deletable = deletable;
@@ -138,29 +142,29 @@ void FaceModel::updateMesh( const ObjModel::Ptr model)
 // public slot
 bool FaceModel::updateDistanceMaps( const cv::Vec3f& v)
 {
-    if ( !_objmeta->hasLandmark( FaceTools::Landmarks::NASAL_TIP))
+    if ( !_omd->hasLandmark( FaceTools::Landmarks::NASAL_TIP))
         return false;
 
-    const ObjModel::Ptr model = _objmeta->getObject();
+    const ObjModel::Ptr model = _omd->getObject();
     if ( _facalc.getFaceAngles().empty()) // Obtain face angles
     {
         RFeatures::ObjModelTriangleMeshParser tparser( model);
         tparser.addTriangleParser( &_facalc);
 
-        const cv::Vec3f& nt = _objmeta->getLandmark( FaceTools::Landmarks::NASAL_TIP);
-        const int vidx = _objmeta->getKDTree()->find( nt);
+        const cv::Vec3f& nt = _omd->getLandmark( FaceTools::Landmarks::NASAL_TIP);
+        const int vidx = _omd->getKDTree()->find( nt);
         const int fidx = *model->getFaceIds(vidx).begin();  // Get connected polygon to nose tip
         tparser.parse( fidx, cv::Vec3f(0,0,1));
     }   // end if
 
     // Propagate from nearest point on the face.
-    const int vidx = _objmeta->getKDTree()->find(v);
+    const int vidx = _omd->getKDTree()->find(v);
 
     const RFeatures::ObjModelFastMarcher::SpeedFunctor uniformSpeedFunctor;
     _udist = RFeatures::ObjModelFastMarcher::create( model, &uniformSpeedFunctor, &_facalc.getFaceAngles());
     _udist->propagateFront( vidx);
 
-    const FaceTools::CurvatureSpeedFunctor curvSpeedFunctor( _objmeta->getCurvatureMap());
+    const FaceTools::CurvatureSpeedFunctor curvSpeedFunctor( _omd->getCurvatureMap());
     _cdist = RFeatures::ObjModelFastMarcher::create( model, &curvSpeedFunctor, &_facalc.getFaceAngles());
     _cdist->propagateFront( vidx);
     return true;
@@ -171,48 +175,56 @@ bool FaceModel::updateDistanceMaps( const cv::Vec3f& v)
 bool FaceModel::detectFace( FaceDetector::Ptr faceDetector)
 {
     _err = "";
-    if ( !faceDetector->detect( _objmeta))
+    if ( !faceDetector->detect( _omd))
     {
         _err = faceDetector->err();
         return false;
     }   // end if
 
     _isDetected = true;
+
+    assert( _omd->hasLandmark( FaceTools::Landmarks::NASAL_TIP));
+    const cv::Vec3f& v = _omd->getLandmark( FaceTools::Landmarks::NASAL_TIP);
+    const int vidx = _omd->getKDTree()->find( v);
+    ObjModel::Ptr comp = FaceTools::getComponent( _omd->getObject(), vidx);
+    updateMesh(comp);
     emit onFaceDetected();
     return true;
 }   // end detectFace
 
 
 // public slot
-void FaceModel::updateBoundary( const std::vector<cv::Vec3f>& loop)
-{
-    _objmeta->setBoundary(loop);
-    emit onBoundaryUpdated();
-}   // end updateBoundary
-
-
-// public slot
-bool FaceModel::cropToBoundary( const cv::Vec3f& sv)
+bool FaceModel::cropFace()
 {
     _err = "";
-    ObjModel::Ptr cmodel = _objmeta->cropToBoundary( sv);
+    assert( _omd->hasLandmark( FaceTools::Landmarks::NASAL_TIP));
+    const double cropRadius = FaceTools::calcFaceCropRadius( _omd, _faceCropRadiusFactor);
+    if ( cropRadius <= 0)
+    {
+        _err = "Unable to calculate face crop radius!";
+        return false;
+    }   // end if
+
+    const int svid = _omd->getKDTree()->find( _omd->getLandmark( FaceTools::Landmarks::NASAL_TIP));
+    const cv::Vec3f fc = FaceTools::calcFaceCentre(_omd);
+    ObjModel::Ptr cmodel = FaceTools::crop( _omd->getObject(), fc, cropRadius, svid);
     if ( !cmodel)
     {
-        _err = "Failed to crop model on set boundary!";
+        _err = "Unable to crop face!";
         return false;
     }   // end if
 
     updateMesh( cmodel);
     emit onCropped();
     return true;
-}   // end cropToBoundary
+}   // end cropFace
 
 
 // public slot
 void FaceModel::transformToStandardPosition()
 {
     cv::Vec3f nvec, uvec;
-    _objmeta->getOrientation( nvec, uvec);
+    _omd->getOrientation( nvec, uvec);
 
     // Make complimentary on correcting axes
     nvec *= -1.0f;
@@ -220,13 +232,13 @@ void FaceModel::transformToStandardPosition()
     nvec[2] *= -1.0f;
     uvec[1] *= -1.0f;
 
-    const cv::Vec3d fc = FaceTools::calcFaceCentre(_objmeta);
+    const cv::Vec3d fc = FaceTools::calcFaceCentre(_omd);
     RFeatures::ObjModelMover rmat( nvec, uvec, -fc);
-    _objmeta->transform( rmat.getTransformMatrix());
+    _omd->transform( rmat.getTransformMatrix());
     // Need to reset because the face/vertex normals have changed
     // orientation even though their relative positions haven't.
     // Distance map data and face angles don't need recalculating however.
-    reset( _objmeta->getObject());
+    reset( _omd->getObject());
     _isAligned = true;
     emit onTransformed();
 }   // end transformToStandardPosition
@@ -235,18 +247,26 @@ void FaceModel::transformToStandardPosition()
 // private
 void FaceModel::reset( const ObjModel::Ptr model)
 {
-    _objmeta->setObject(model); // Resets internal kd-tree and curvature map if present
-    _objmeta->rebuildKDTree();
-
+    _omd->setObject(model); // Rebuilds internal kd-tree and resets curvature map to NULL
     _cmetrics.reset();
-    // If nosetip landmark available, update the curvature metrics
-    if ( _objmeta->hasLandmark( FaceTools::Landmarks::NASAL_TIP))
-    {
-        const cv::Vec3f& v = _objmeta->getLandmark( FaceTools::Landmarks::NASAL_TIP);
-        const int vidx = _objmeta->getKDTree()->find( v);
-        _objmeta->rebuildCurvatureMap( vidx);
-        _cmetrics = RFeatures::ObjModelCurvatureMetrics::create( _objmeta->getCurvatureMap());
-    }   // end if
-    _isAligned = false;
-    _isDetected = false;
+    buildCurvature();
 }   // end reset
+
+
+// private
+void FaceModel::buildCurvature()
+{
+    if ( _omd->getCurvatureMap() != NULL)
+        return;
+
+    // If nosetip landmark available, update the curvature metrics
+    if ( _omd->getObject() != NULL && _omd->hasLandmark( FaceTools::Landmarks::NASAL_TIP))
+    {
+        const cv::Vec3f& v = _omd->getLandmark( FaceTools::Landmarks::NASAL_TIP);
+        const int vidx = _omd->getKDTree()->find( v);
+        _omd->rebuildCurvatureMap( vidx);
+        const RFeatures::ObjModelCurvatureMap::Ptr cmap = _omd->getCurvatureMap();
+        assert( cmap != NULL);
+        _cmetrics = RFeatures::ObjModelCurvatureMetrics::create( cmap);
+    }   // end if
+}   // end buildCurvature

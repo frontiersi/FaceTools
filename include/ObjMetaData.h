@@ -33,18 +33,22 @@ public:
     static Ptr create( const std::string mfile="");
     static Ptr create( const std::string& mfile, const RFeatures::ObjModel::Ptr m);
 
-    void setObject( RFeatures::ObjModel::Ptr m);    // Does NOT build the underlying KD-tree and curvature map, but sets them to NULL.
+    // Shallow copies the internal object but makes a new KD-tree.
+    // Deep copies the landmarks.
+    // No curvature map present.
+    Ptr copy() const;
+
+    void setObject( RFeatures::ObjModel::Ptr m, bool buildKD=true); // Only builds the KD tree if buildKD true - does not build the curvature map
     RFeatures::ObjModel::Ptr getObject() const { return _model;}
 
     void releaseObject();   // Release reference to internal object and associated data structures.
 
-    void rebuildKDTree();   // Call after making changes to the object.
     const RFeatures::ObjModelKDTree::Ptr getKDTree() const;
 
     // Build the curvature map against the currently object. Normals will be defined on polygons to have consistent
     // adjacent direction starting calculation with those attached to vidx. The normals for these starting polygons
     // have a direction chosen so that their dot product with the +Z unit vector is positive.
-    void rebuildCurvatureMap( int vidx);    // NB ALSO RESETS THE REGISTRATION FACE!
+    void rebuildCurvatureMap( int vidx);
     const RFeatures::ObjModelCurvatureMap::Ptr getCurvatureMap() const;
 
     void setObjectFile( const std::string& mfile) { _mfile = mfile;}
@@ -56,20 +60,8 @@ public:
     // Set a landmark (new or extant) to position v.
     void setLandmark( const std::string& name, const cv::Vec3f& v);
 
-    // Set the boundary vertex indices in path order.
-    void setBoundary( const std::vector<cv::Vec3f>&);
-
-    // Get the list of model vertices that comprise the boundary or NULL if not set.
-    const std::vector<cv::Vec3f>* getBoundary() const;
-
-    // Return the region bounded by the set boundary, where sv is closest to vertices
-    // in the desired region to return. Assumes a triangulated manifold! KD-tree must be built.
-    RFeatures::ObjModel::Ptr cropToBoundary( const cv::Vec3f& sv) const;
-
-    // Create 12 boundary handles from the set boundary.
-    // Returns true iff the orientation vectors are available
-    // and the boundary was set.
-    bool makeBoundaryHandles( std::vector<cv::Vec3f>&) const;
+    // Create 12 handles from the given boundary based on equal inter-angles.
+    bool makeBoundaryHandles( const std::list<int>& boundary, std::vector<cv::Vec3f>& bhandles) const;
 
     // Return the position of the landmark only (convenience function). If snapToVertex is
     // true, the returned vertex will refer to the closest model vertex rather than the
@@ -98,13 +90,15 @@ public:
 
     // Add translation vector v to specified landmark (returns false if landmark not present).
     bool shiftLandmark( const std::string& name, const cv::Vec3f&);
-    void shiftLandmarks( const cv::Vec3f&);         // Add translation vector v to all landmarks.
-    void transformLandmarks( const cv::Matx44d&);   // Transform all landmarks according to the given matrix.
+    void shiftLandmarks( const cv::Vec3f&);         // Add translation vector v to all landmarks
+    void transformLandmarks( const cv::Matx44d&);   // Transform landmarks according to the given matrix.
 
     // Returns the mean positional difference between the existing and the new landmark positions.
     double shiftLandmarksToSurface();   // Uses RFeatures::ObjModelSurfacePointFinder
 
-    void transform( const cv::Matx44d&);            // Transform both the model and the landmarks.
+    // Transform the model, the landmarks, and the orientation.
+    // Causes KD tree and curvature map to be reset!
+    void transform( const cv::Matx44d&, bool buildKD=true);
 
     void writeTo( boost::property_tree::ptree&) const;      // Write ObjMetaData as XML output
     static void readFrom( const boost::property_tree::ptree&, ObjMetaData&); // Read XML metadata into a ObjMetaData object.
@@ -113,15 +107,14 @@ private:
     std::string _mfile;    // Origin info (filename, or description)
     cv::Vec3f _nvec, _uvec;
     boost::unordered_map<std::string, Landmarks::Landmark> _landmarks;
-    std::vector<cv::Vec3f> _boundary;
     RFeatures::ObjModel::Ptr _model;
     RFeatures::ObjModelKDTree::Ptr _kdtree;
     RFeatures::ObjModelCurvatureMap::Ptr _curvMap;
 
-    ObjMetaData( const ObjMetaData&);     // No copy
-    void operator=( const ObjMetaData&);  // No copy
+    ObjMetaData( const ObjMetaData&);       // Private copy
+    void operator=( const ObjMetaData&);    // No assignment
     explicit ObjMetaData( const std::string mfile="");
-    ObjMetaData( const std::string& mfile, const RFeatures::ObjModel::Ptr m);   // Does NOT build the KD-tree
+    ObjMetaData( const std::string& mfile, const RFeatures::ObjModel::Ptr m);
     class Deleter;
 };  // end class
 

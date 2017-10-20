@@ -57,15 +57,15 @@ void ModelViewerVTKInterface::OnMiddleButtonUp()
 
 void ModelViewerVTKInterface::OnMouseWheelForward()
 {
-    if ( !_qtinterface.isCameraLocked())
-        vtkInteractorStyleTrackballCamera::OnMouseWheelForward();
+    //if ( !_qtinterface.isCameraLocked())
+    vtkInteractorStyleTrackballCamera::OnMouseWheelForward();   // Do zoom
     _qtinterface.signalOnMouseWheelForward( getMouseCoords());
 }   // end OnMouseWheelForward
 
 void ModelViewerVTKInterface::OnMouseWheelBackward()
 {
-    if ( !_qtinterface.isCameraLocked())
-        vtkInteractorStyleTrackballCamera::OnMouseWheelBackward();
+    //if ( !_qtinterface.isCameraLocked())
+    vtkInteractorStyleTrackballCamera::OnMouseWheelBackward();
     _qtinterface.signalOnMouseWheelBackward( getMouseCoords());
 }   // end OnMouseWheelBackward
 

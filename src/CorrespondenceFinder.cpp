@@ -16,12 +16,13 @@
  ************************************************************************/
 
 #include <CorrespondenceFinder.h>
+#include <Landmarks.h>
 #include <ObjModelTools.h>
 #include <FaceTools.h>
 #include <ProgressDelegate.h>       // rlib
 using FaceTools::CorrespondenceFinder;
 using FaceTools::ObjMetaData;
-using FaceTools::RegistrationFace;
+using FaceTools::FaceSampler;
 using RFeatures::ObjModelKDTree;
 using RFeatures::ObjModelCurvatureMap;
 using RFeatures::ObjModelSurfacePatches;
@@ -51,13 +52,18 @@ CorrespondenceFinder::Ptr CorrespondenceFinder::create( const ObjMetaData::Ptr o
 
 // private
 CorrespondenceFinder::CorrespondenceFinder( const ObjMetaData::Ptr omd, int nc, bool makeUniform)
-    : _regFace( new RegistrationFace( omd->getCurvatureMap()))
+    : _faceSampler( NULL)
 {
+    assert( omd->hasLandmarks());
+    if ( omd->getCurvatureMap() == NULL)
+        omd->rebuildCurvatureMap( omd->getKDTree()->find( omd->getLandmark( FaceTools::Landmarks::NASAL_TIP)));
+
+    _faceSampler = new FaceSampler( omd->getCurvatureMap());
     std::cerr << " [ Sampling reference vertices for registration... ]" << std::endl;
     if ( makeUniform)
-        _refobj = _regFace->sampleUniformlyInterpolated( nc);
+        _refobj = _faceSampler->sampleUniformlyInterpolated( nc);
     else
-        _refobj = _regFace->sampleCurvatureVariableInterpolated( nc);
+        _refobj = _faceSampler->sampleCurvatureVariableInterpolated( nc);
     _cmat = cv::Mat_<cv::Vec3f>( 0, _refobj->getNumVertices());   // Correspondence points (columns)
 }   // end ctor
 
@@ -65,8 +71,8 @@ CorrespondenceFinder::CorrespondenceFinder( const ObjMetaData::Ptr omd, int nc, 
 // private
 CorrespondenceFinder::~CorrespondenceFinder()
 {
-    if ( _regFace)
-        delete _regFace;
+    if ( _faceSampler)
+        delete _faceSampler;
 }   // end dtor
 
 
@@ -104,7 +110,7 @@ ObjModel::Ptr CorrespondenceFinder::buildModel( const std::vector<cv::Vec3f>& vt
         vset.insert(vidx);
     }   // end for
 
-    const boost::unordered_map<int,IntSet>& edges = _regFace->getEdges();
+    const boost::unordered_map<int,IntSet>& edges = _faceSampler->getEdges();
 
     typedef std::pair<int,IntSet> ESet;
     BOOST_FOREACH ( const ESet& eset, edges)

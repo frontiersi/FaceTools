@@ -18,9 +18,13 @@
 #ifndef FACE_TOOLS_MISC_FUNCTIONS_H
 #define FACE_TOOLS_MISC_FUNCTIONS_H
 
-#include "FaceTools.h"
+#include "FaceTools_Export.h"
+#include <ObjModelKDTree.h> // RFeatures
+#include <opencv2/opencv.hpp>
 #include <vtkSmartPointer.h>
 #include <vtkIdList.h>
+#include <string>
+typedef unsigned char byte;
 
 
 namespace FaceTools
@@ -53,9 +57,17 @@ FaceTools_EXPORT cv::Point2f calcMid( const cv::Point2f&, const cv::Point2f&);
 
 FaceTools_EXPORT cv::Vec3f calcSum( const std::vector<cv::Vec3f>&);
 FaceTools_EXPORT cv::Vec3f calcMean( const std::vector<cv::Vec3f>&);
+
 // Calculates the sum over the points specified. A single point (or multiple same
-// points) returns a length of zero. A length of -1 is returned if the supplied vector is empty.
+// points) returns a length of zero. Empty vectors return a length of zero.
 FaceTools_EXPORT double calcLength( const std::vector<cv::Vec3f>&);
+
+// Calculate and return length of list of vertices in given order. Vertices don't have to be connected!
+FaceTools_EXPORT double calcLength( const RFeatures::ObjModel::Ptr, const std::vector<int>& vertices);
+
+// Get N equidistant points into q from among vertices in path p starting at entry j. Returns the length of the path p.
+// NB path p does not need to be a chain of sequentially connected vertices.
+FaceTools_EXPORT double getEquidistant( const RFeatures::ObjModel::Ptr, const std::vector<int>& p, int j, int N, std::vector<int>& q);
 
 FaceTools_EXPORT cv::Point2i scale( const cv::Point2i&, double scaleFactor);
 FaceTools_EXPORT cv::Point2f scale( const cv::Point2f&, double scaleFactor);

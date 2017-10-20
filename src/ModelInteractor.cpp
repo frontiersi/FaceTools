@@ -32,18 +32,20 @@ ModelInteractor::ModelInteractor( InteractiveModelViewer* viewer, FaceModel* fmo
      _pickedLandmark(""), _interactive(false)
 {
     _viewer->connectInterface(this);
-
-    // Create the view and connect up listener to the boundary view observer
-    _fview = new FaceView( viewer, fmodel, &_bobserver);
-    connect( &_bobserver, &FaceTools::BoundaryViewEventObserver::updatedBoundary, _fmodel, &FaceTools::FaceModel::updateBoundary);
+    _fview = new FaceView( viewer, fmodel);
 
     // Make this interactor available to all of the passed in actions.
-    foreach ( QAction* action, *_actions)
+    if ( _actions)
     {
-        FaceAction* faction = qobject_cast<FaceAction*>(action->parent());
-        assert(faction);
-        faction->addInteractor(this);
-    }   // end foreach
+        foreach ( QAction* action, *_actions)
+        {
+            FaceAction* faction = qobject_cast<FaceAction*>(action->parent());
+            assert(faction);
+            faction->addInteractor(this);
+        }   // end foreach
+    }   // end if
+    else
+        std::cerr << "[WARNING] FaceTools::ModelInteractor: NULL actions list provided!" << std::endl;
 }   // end ctor
 
 
@@ -51,13 +53,15 @@ ModelInteractor::ModelInteractor( InteractiveModelViewer* viewer, FaceModel* fmo
 ModelInteractor::~ModelInteractor()
 {
     // Remove this interactor from all available actions.
-    foreach ( QAction* action, *_actions)
+    if ( _actions)
     {
-        FaceAction* faction = qobject_cast<FaceAction*>(action->parent());
-        faction->setInteractive( this, false);
-        faction->removeInteractor( this);
-    }   // end foreach
-
+        foreach ( QAction* action, *_actions)
+        {
+            FaceAction* faction = qobject_cast<FaceAction*>(action->parent());
+            faction->setInteractive( this, false);
+            faction->removeInteractor( this);
+        }   // end foreach
+    }   // end if
     delete _fview;
 }   // end dtor
 
@@ -68,12 +72,15 @@ void ModelInteractor::setInteractive( bool enable)
     if ( enable != _interactive)
     {
         _interactive = enable;
-        // Tell all actions that this interactor is switching interactivity.
-        foreach ( QAction* action, *_actions)
+        if ( _actions)
         {
-            FaceAction* faction = qobject_cast<FaceAction*>(action->parent());
-            faction->setInteractive( this, enable);
-        }   // end foreach
+            // Tell all actions that this interactor is switching interactivity.
+            foreach ( QAction* action, *_actions)
+            {
+                FaceAction* faction = qobject_cast<FaceAction*>(action->parent());
+                faction->setInteractive( this, enable);
+            }   // end foreach
+        }   // end if
     }   // end if
 }   // end setInteractive
 
@@ -105,20 +112,15 @@ void ModelInteractor::leftButtonDown( const QPoint& p)
 {
     if ( _fview && _fview->isPointedAt(p))
     {
-        _viewer->setCursor( QCursor(Qt::CrossCursor));
-        _pickedLandmark = _fview->isLandmarkPointedAt(p);
-        if ( _pickedLandmark.empty())
+        _viewer->setCursor( QCursor( Qt::BlankCursor));
+        std::string lmk = _fview->isLandmarkPointedAt(p);
+        if ( !lmk.empty() && _fview->areLandmarksShown() && _fview->getModel()->getObjectMeta()->getLandmarkMeta(lmk)->movable)
         {
-            _isDrawingPath = true;
-            _fview->drawPath(p);
-        }   // end if
-        else if ( _fview->getModel()->getObjectMeta()->getLandmarkMeta(_pickedLandmark)->movable)
-        {
+            _pickedLandmark = lmk;
             _isMovingLandmark = true;
-            cv::Vec3f v;
-            _fview->calcSurfacePosition(p, v);
-            _fmodel->updateLandmark( _pickedLandmark, &v);
         }   // end else if
+        else
+            _isDrawingPath = true;
     }   // end if
 }   // end leftButtonDown
 
@@ -126,24 +128,12 @@ void ModelInteractor::leftButtonDown( const QPoint& p)
 // protected virtual
 void ModelInteractor::leftButtonUp( const QPoint& p)
 {
-    _viewer->setCursor( QCursor(Qt::ArrowCursor));
-    if ( !_pickedLandmark.empty())
-    {
-        if ( _fview->getModel()->getObjectMeta()->getLandmarkMeta(_pickedLandmark)->movable)
-        {
-            cv::Vec3f v;
-            _fview->calcSurfacePosition(p, v);
-            _fmodel->updateLandmark( _pickedLandmark, &v);
-            _isMovingLandmark = false;
-        }   // end if
-        _pickedLandmark = "";
-    }   // end if
-    else if ( isCameraLocked())
-    {
+    if ( isDrawingPath())
         _fview->finishPath(p);
-        _isDrawingPath = false;
-    }   // end else
-
+    _isMovingLandmark = false;
+    _isDrawingPath = false;
+    _pickedLandmark = "";
+    _viewer->setCursor( QCursor(Qt::ArrowCursor));
     doMouseHover(p);
 }   // end leftButtonUp
 
@@ -159,21 +149,15 @@ void ModelInteractor::leftDoubleClick( const QPoint& p)
 // protected virtual
 void ModelInteractor::leftDrag( const QPoint& p)
 {
-    if ( _fview && _fview->isPointedAt(p))
+    if ( isDrawingPath())
+        _fview->drawPath(p);
+    else if ( isMovingLandmark())
     {
-        if ( !_pickedLandmark.empty() && _fview->getModel()->getObjectMeta()->getLandmarkMeta(_pickedLandmark)->movable)
-        {
-            _isMovingLandmark = true;
-            cv::Vec3f v;
-            _fview->calcSurfacePosition(p, v);
-            _fmodel->updateLandmark( _pickedLandmark, &v);
-        }   // end if
-        else if ( isCameraLocked())
-        {
-            _isDrawingPath = true;
-            _fview->drawPath(p);
-        }   // end else if
-    }   // end if
+        assert(!_pickedLandmark.empty());
+        cv::Vec3f v;
+        _fview->calcSurfacePosition(p, v);
+        _fmodel->updateLandmark( _pickedLandmark, &v);
+    }   // end else if
 }   // end leftDrag
 
 
@@ -201,8 +185,8 @@ void ModelInteractor::doMouseHover( const QPoint& p)
         }   // end if
         else if ( !_lmHoverOld.empty() && lmHoverNow.empty())
         {
-            _fmodel->highlightLandmark( lmHoverNow, false);
-            emit onExitingLandmark( lmHoverNow, p);
+            _fmodel->highlightLandmark( _lmHoverOld, false);
+            emit onExitingLandmark( _lmHoverOld, p);
         }   // end else if
         _lmHoverOld = lmHoverNow;
     }   // end if

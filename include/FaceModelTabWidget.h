@@ -51,6 +51,7 @@ private slots:
 private:
     QMenu* _cmenu;
     const QList<QAction*>* _actions;
+    QTools::VtkActorViewer *_qvtkviewer;
     InteractiveModelViewer *_viewer;
     QVBoxLayout *_viewerLayout;
 

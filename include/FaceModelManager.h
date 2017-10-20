@@ -73,10 +73,10 @@ private:
     std::string _primaryExt;
     boost::unordered_set<FaceModel*> _fmodels;   // Open models
 
-    static FaceModelManager s_fmm;
+    static FaceModelManager *s_fmm;
 
     FaceModelManager();
-    ~FaceModelManager();
+    virtual ~FaceModelManager();
     FaceModelManager( const FaceModelManager&);
     FaceModelManager& operator=( const FaceModelManager&);
 };  // end class

@@ -23,7 +23,6 @@
 #include <Viewer.h> // RVTK
 #include "Landmarks.h"
 #include "ObjMetaData.h"
-#include "ModelViewer.h"
 #include "FeaturesDetector.h"
 
 
@@ -35,7 +34,11 @@ class FaceTools_EXPORT FaceDetector
 public:
     typedef boost::shared_ptr<FaceDetector> Ptr;
     static Ptr create( const std::string& haarCascadesModelDir,
-                       const std::string& faceShapeLandmarksModel);
+                       const std::string& faceShapeLandmarksModel,
+                       float orientationRange=700.0f,
+                       float detectionRange=288.0f,
+                       bool showDebug=false
+                       );
 
     // Find orientation and landmarks. Builds kd-tree as part of the process.
     // Returns false if any part of the process fails. Use err() to get the
@@ -49,13 +52,15 @@ private:
     FeaturesDetector::Ptr _featuresDetector;
     class Impl;
     Impl* _impl;
-    RVTK::Viewer::Ptr _viewer;  // Offscreen renderer
+    const float _orientationRange;
+    const float _detRng;
+    const bool _showDebug;
     std::string _err;
 
-    bool findOrientation( ObjMetaData::Ptr);
-    bool findLandmarks( ObjMetaData::Ptr);
+    bool findOrientation( RVTK::Viewer::Ptr, ObjMetaData::Ptr);
+    bool findLandmarks( RVTK::Viewer::Ptr, ObjMetaData::Ptr);
 
-    FaceDetector( FeaturesDetector::Ptr, Impl*);
+    FaceDetector( FeaturesDetector::Ptr, Impl*, float, float, bool);
     ~FaceDetector();
     FaceDetector( const FaceDetector&);     // NO COPY
     void operator=( const FaceDetector&);   // NO COPY

@@ -24,8 +24,8 @@ using FaceTools::VisualisationAction;
 using FaceTools::ModelInteractor;
 
 
-VisualisationAction::VisualisationAction()
-    : FaceAction()
+VisualisationAction::VisualisationAction( bool isdefault)
+    : FaceAction(), _isDefaultVis(isdefault)
 {
     setEnabled(false);
 }   // end ctor
@@ -41,7 +41,7 @@ bool VisualisationAction::doAction()
 
 
 // private slot
-void VisualisationAction::doOnMeshUpdated()
+void VisualisationAction::recheckCanVisualise()
 {
     bool enable = !_interactors.empty();
     // Only enable if ALL of the interactors allow for this visualisation
@@ -54,7 +54,19 @@ void VisualisationAction::doOnMeshUpdated()
         }   // end if
     }   // end foreach
     setEnabled( enable);
-}   // end doOnMeshUpdated
+}   // end recheckCanVisualise
+
+
+// public
+void VisualisationAction::addInteractor( ModelInteractor* mint)
+{
+    if ( _isDefaultVis)
+    {
+        setInteractive( mint, true);
+        if ( isEnabled())
+            mint->getView()->visualise(this);
+    }   // end if
+}   // end addInteractor
 
 
 // public
@@ -73,7 +85,8 @@ void VisualisationAction::setInteractive( ModelInteractor* mint, bool enable)
     else
     {
         _interactors.insert(mint);
-        connect( mint->getModel(), &FaceModel::onMeshUpdated, this, &VisualisationAction::doOnMeshUpdated);
+        connect( mint->getModel(), &FaceTools::FaceModel::onMeshUpdated, this, &VisualisationAction::recheckCanVisualise);
+        connect( mint->getModel(), &FaceTools::FaceModel::onFaceDetected, this, &VisualisationAction::recheckCanVisualise);
     }   // end else if
-    doOnMeshUpdated();
+    recheckCanVisualise();
 }   // end checkAllow

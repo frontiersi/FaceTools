@@ -26,18 +26,9 @@ void InteractiveModelViewer::init()
     vtkSmartPointer<FaceTools::ModelViewerVTKInterface> vtkInterface( FaceTools::ModelViewerVTKInterface::New());
     _qviewer->setInteractor(vtkInterface);
     _qinterface = vtkInterface->getQtInterface();
-
     _qviewer->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect( _qviewer, SIGNAL( customContextMenuRequested( const QPoint&)),
-                 this, SIGNAL( requestContextMenu( const QPoint&)));
+    connect( _qviewer, &QTools::VtkActorViewer::customContextMenuRequested, this, &InteractiveModelViewer::requestContextMenu);
 }   // end init
-
-// public
-InteractiveModelViewer::InteractiveModelViewer( bool useFloodLights)
-    : FaceTools::ModelViewer( useFloodLights)
-{
-    init();
-}   // end ctor
 
 // public
 InteractiveModelViewer::InteractiveModelViewer( QTools::VtkActorViewer* qviewer)
@@ -46,27 +37,18 @@ InteractiveModelViewer::InteractiveModelViewer( QTools::VtkActorViewer* qviewer)
     init();
 }   // end ctor
 
-// public
-InteractiveModelViewer::~InteractiveModelViewer() {}    // end dtor
-
 
 // public
 void InteractiveModelViewer::addToLayout( QLayout *layout)
 {
-    //std::cerr << "Layout " << std::hex << layout << std::endl;
-    //std::cerr << "Add Layout " << std::hex <<  _qviewer->parent();
     layout->addWidget(_qviewer);
-    //std::cerr << " --> " << std::hex <<  _qviewer->parent() << std::endl;
 }   // end addToLayout
 
 
 // public
 void InteractiveModelViewer::removeFromLayout( QLayout *layout)
 {
-    //std::cerr << "Rem Layout " << std::hex <<  _qviewer->parent();
     layout->removeWidget(_qviewer);
-    //_qviewer->setParent(NULL);
-    //std::cerr << " --> " << std::hex <<  _qviewer->parent() << std::endl;
 }   // end removeFromLayout
 
 
@@ -90,3 +72,10 @@ void InteractiveModelViewer::setCursor( QCursor cursor)
 {
     FaceTools::ModelViewer::setCursor(cursor);
 }   // end setCursor
+
+
+// public
+void InteractiveModelViewer::setKeyPressHandler( QTools::KeyPressHandler* kph)
+{
+    _qviewer->setKeyPressHandler(kph);  // Pass through to QVTKWidget
+}   // end setKeyPressHandler

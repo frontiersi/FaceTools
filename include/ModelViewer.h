@@ -47,9 +47,12 @@ public:
     void hide();
 
     void showLegend( bool);
+    bool legendShown() const;
     void showAxes( bool);
+    bool axesShown() const;
 
     void enableFloodLights( bool);  // Set true for textured objects, false for surface.
+    bool floodLightsEnabled() const;
 
     enum Visualisation
     {
@@ -65,6 +68,9 @@ public:
                                                 bool bf=false, float ps=1.0f, float lw=1.0f)
             : vis(v), r(rc),g(gc),b(bc),a(ac), backfaceCulling(bf), pointSize(ps), lineWidth(lw) {}
 
+        VisOptions( float rc, float gc, float bc, float ac=1.0f, bool bf=false, float ps=1.0f, float lw=1.0f)
+            : vis(VisSurface), r(rc),g(gc),b(bc),a(ac), backfaceCulling(bf), pointSize(ps), lineWidth(lw) {}
+
         VisOptions( Visualisation v, bool bf, float ps=1.0f, float lw=1.0f)
             : vis(v), r(1.0f), g(1.0f), b(1.0f), a(1.0f), backfaceCulling(bf), pointSize(ps), lineWidth(lw) {}
 
@@ -78,6 +84,7 @@ public:
     void updateRender();    // Call after making changes to the view content
 
     // Add a points actor in various formats.
+    int addPoint( const cv::Vec3f&, const VisOptions&);
     int addPoints( const std::vector<cv::Vec3f>& points, const VisOptions&);
     int addPoints( const RFeatures::ObjModel::Ptr, const VisOptions&);
     int addPoints( const RFeatures::ObjModel::Ptr, const IntSet& vset, const VisOptions&);
@@ -85,18 +92,21 @@ public:
     // Add a line actor (make a loop if joinEnds=true).
     int addLine( const std::vector<cv::Vec3f>&, bool joinEnds, const VisOptions&);
     
-    // Add line pairs: lp.size() must be even.
+    // Add line segments specified as endpoint pairs (lp.size() must be even).
     int addLinePairs( const std::vector<cv::Vec3f>& lp, const VisOptions&);
 
     int add( const RFeatures::ObjModel::Ptr, const VisOptions& vo=VisOptions());
 
     // Add custom surface actor. Set metric value colour mapping with setLegendColours.
     int add( RVTK::SurfaceMapper*, float minv, float maxv);
-    int add( vtkSmartPointer<vtkActor>, const std::string& legendTitle, float minv, float maxv);
+    int add( vtkSmartPointer<vtkActor>, const std::string& legendTitle, float minv, float maxv);    // Calls setLegendLookup
 
     // Number of discrete colours to use
+    void setLegendLookup( vtkMapper* mapper, const std::string& legendTitle, float minv, float maxv);
     void setLegendColours( const cv::Vec3b& minColourMapping, const cv::Vec3b& maxColourMapping, int ncolours=100);
     void setLegendColours( const QColor& minColourMapping, const QColor& maxColourMapping, int ncolours=100);
+
+    vtkProp* getProp(int);
 
     bool remove( int id);   // Remove a prop using an ID returned from a successful add.
     void removeAll();       // Remove all props that were added using one of the add functions that returns an ID.
@@ -110,11 +120,15 @@ public:
     cv::Point project( const cv::Vec3f&) const;         // Project to pixel coords.
     cv::Vec3f project( const cv::Point2f&) const;       // Project to world coords.
     cv::Vec3f project( const cv::Point&) const;         // Project to world coords.
+    cv::Vec3f project( const QPoint&) const;            // Project to world coords.
 
-    // Return the prop under the given coords or NULL.
+    // Return the prop under the given coords or NULL if none pointed at.
     const vtkProp* getPointedAt( const cv::Point2f&) const;
     const vtkProp* getPointedAt( const cv::Point&) const;
     const vtkProp* getPointedAt( const QPoint&) const;
+
+    // Returns true iff given coords pick out the given actor.
+    bool getPointedAt( const QPoint&, const vtkActor*) const;
 
     // Project the given point to a world position on the given prop, returning true.
     // Return false if the point doesn't project onto the given prop. Out param wpos
@@ -128,6 +142,7 @@ public:
     void setCamera( const RFeatures::CameraParams&);
     // Set the camera using vectors (normal is towards the camera).
     void setCamera( const cv::Vec3f& focus, const cv::Vec3f& normal, const cv::Vec3f& upvector, float camRng=650.0f);
+    void setFocus( const cv::Vec3f&);
     RFeatures::CameraParams getCamera() const;
 
     size_t getWidth() const;    // Return the width of the viewport in pixels
@@ -151,8 +166,9 @@ private:
     RVTK::ScalarLegend* _scalarLegend;
     RVTK::Axes* _axes;
     bool _dodel;
+    bool _floodLightsEnabled;
     int _addedModelID;
-    boost::unordered_map<int, std::vector<vtkProp*> > _props;
+    boost::unordered_map<int, vtkProp*> _props;
     int addPointsActor( vtkSmartPointer<vtkActor>, const VisOptions&);
     void init();
     ModelViewer( const ModelViewer&);       // NO COPY

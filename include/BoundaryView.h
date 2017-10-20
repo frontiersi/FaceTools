@@ -21,41 +21,30 @@
 #include "ModelViewer.h"
 #include "ObjMetaData.h"
 #include "VisualisationOptions.h"
-#include <ModelPathDrawer.h>    // RVTK
 
 namespace FaceTools
 {
 
-// Translate VTK callbacks into Qt signals so clients know when the boundary has changed.
-// Create this here instead of making it an internal class and placing signal in BoundaryView
-// (making it a Q_OBJECT) because that signal would need to be routed back through the
-// encapsulating objects via signal/slot connections. Cleaner for the controlling class to listen
-// for the update event and request the updated  boundary data from the BoundaryView instance.
-class FaceTools_EXPORT BoundaryViewEventObserver : public QObject, public RVTK::ModelPathEventObserver
+class FaceTools_EXPORT BoundaryView : public QObject
 { Q_OBJECT
 public:
-    virtual void interactionEvent( const RVTK::ModelPathDrawer*);
-signals:
-    void updatedBoundary( const std::vector<cv::Vec3f>&); // Emitted with new boundary when updated
-};  // end class
+    BoundaryView( ModelViewer*, const ObjMetaData::Ptr);
 
-
-class FaceTools_EXPORT BoundaryView
-{
-public:
-    BoundaryView( ModelViewer*, const ObjMetaData::Ptr, BoundaryViewEventObserver*);
-
-    void allowAdjustment( bool); // Respond to user interaction or not
-    bool canAdjust() const;
     void show( bool enable);
     bool isShown() const;
-    void reset( const vtkActor*); // Reset from the ObjMetaData
+    void reset();
     void setVisualisationOptions( const VisualisationOptions::Boundary&);
 
+public slots:
+    void setFaceCropFactor( double);
+
 private:
-    const ObjMetaData::Ptr _objmeta;
-    RVTK::ModelPathDrawer::Ptr _boundary;
+    ModelViewer *_viewer;
+    const ObjMetaData::Ptr _omd;
+    double _faceCropFactor;
+    bool _isshown;
     VisualisationOptions::Boundary _visopts;
+    vtkSmartPointer<vtkActor> _boundary;
 
     BoundaryView( const BoundaryView&);   // No copy
     void operator=( const BoundaryView&); // No copy

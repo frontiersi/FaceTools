@@ -18,7 +18,6 @@
 #ifndef FACE_TOOLS_FACES_COHORT_H
 #define FACE_TOOLS_FACES_COHORT_H
 
-#include "FaceTools.h"
 #include "ObjMetaData.h"
 
 namespace FaceTools

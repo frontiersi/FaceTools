@@ -32,7 +32,6 @@ FaceModelWidget::FaceModelWidget( FaceTools::InteractiveModelViewer* viewer, con
     connect( _combo, &FaceTools::FaceViewComboBox::onViewSelected, this, &FaceModelWidget::onViewSelected);
     setLayout( new QVBoxLayout);
     layout()->setContentsMargins(QMargins(2,2,2,2));
-    //std::cerr << "FaceModelWidget " << std::hex << this << std::endl;
     layout()->addWidget( _viewerFrame);
     layout()->addWidget( _combo);
 }   // end ctor
@@ -40,8 +39,9 @@ FaceModelWidget::FaceModelWidget( FaceTools::InteractiveModelViewer* viewer, con
 // public
 FaceModelWidget::~FaceModelWidget()
 {
-    // NB FaceModelTabWidget must have reparented the viewer layout!
-    assert( _viewerFrame->layout() == NULL);
+    // NB FaceModelTabWidget should have reparented the viewer layout!
+    if ( _viewerFrame->layout() != NULL)
+        std::cerr << "[WARNING] FaceTools::FaceModelWidget::~FaceModelWidget: Viewer layout not NULL - deleting!" << std::endl;
 }   // end dtor
 
 // public
@@ -68,13 +68,19 @@ std::string FaceModelWidget::getActiveViewName() const
 
 
 // public slots
-const std::string& FaceModelWidget::addView( FaceModel* fmodel) { return _combo->addView( fmodel, _xactions);}
+const std::string& FaceModelWidget::addView( FaceModel* fmodel)
+{
+    return _combo->addView( fmodel, _xactions);
+}   // end addView
+
+
 void FaceModelWidget::removeView( const std::string& vname) { _combo->removeView(vname);}
 size_t FaceModelWidget::removeModel( FaceModel* fmodel) { return _combo->removeModel(fmodel);}
 
 
+// public
 void FaceModelWidget::reparentViewer( QLayout* vlayout)
 {
     _viewerFrame->setLayout(vlayout);   // Reparent the viewer layout to this widget
-    //_viewer->show();
 }   // end showViewer
+

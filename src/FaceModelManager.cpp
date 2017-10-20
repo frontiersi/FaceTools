@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <FaceModelManager.h>
+#include <MiscFunctions.h>
 #include <FaceTools.h>
 #include <FaceModel.h>
 #include <boost/algorithm/string.hpp>
@@ -49,24 +50,28 @@ QStringList createFilters( const boost::unordered_map<std::string, std::string>&
 }   // end createFilters
 
 
-FaceModelManager FaceModelManager::s_fmm;
+FaceModelManager* FaceModelManager::s_fmm(NULL); // static
 
 // private
 FaceModelManager::FaceModelManager() {}
 
-// private
-FaceModelManager::~FaceModelManager()
-{
-    closeAll();
-}   // end dtor
+FaceModelManager::~FaceModelManager() {}
 
 // public static
-FaceModelManager& FaceModelManager::get() { return s_fmm;}
+FaceModelManager& FaceModelManager::get()
+{
+    if ( !s_fmm)
+        s_fmm = new FaceModelManager();
+    return *s_fmm;
+}   // end get
 
 
 // public
 bool FaceModelManager::load( const std::string& fname)
 {
+    if ( fname.empty())
+        return false;
+
     std::string err;
     if ( !boost::filesystem::exists( fname))
         err = "File " + fname + " does not exist!";
@@ -94,6 +99,9 @@ bool FaceModelManager::load( const std::string& fname)
 // public
 bool FaceModelManager::save( FaceModel* fmodel, const std::string& fname)
 {
+    if ( fname.empty())
+        return false;
+
     bool success = false;
     if ( !isValidExportFilename( fname))
     {

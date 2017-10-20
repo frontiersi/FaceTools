@@ -19,6 +19,7 @@
 #define FACE_TOOLS_FACE_MODEL_WIDGET_H
 
 #include "InteractiveModelViewer.h"
+#include "VisualisationAction.h"
 #include "FaceViewComboBox.h"
 
 namespace FaceTools
@@ -27,7 +28,7 @@ namespace FaceTools
 class FaceTools_EXPORT FaceModelWidget : public QWidget
 { Q_OBJECT
 public:
-    FaceModelWidget( InteractiveModelViewer*, const QList<QAction*>*, QWidget *parent=NULL);
+    FaceModelWidget( InteractiveModelViewer*, const QList<QAction*> *actions=NULL, QWidget *parent=NULL);
     virtual ~FaceModelWidget();
 
     // Get the models from this widget into the given set returning the number

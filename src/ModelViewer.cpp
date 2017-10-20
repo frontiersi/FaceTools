@@ -23,9 +23,10 @@
 #include <ImageGrabber.h>                       // RVTK
 #include <PointPlacer.h>                        // RVTK
 #include <QImageTools.h>                        // QTools
-#include <vtkInteractorStyleTrackballCamera.h>  // VTK
-#include <vtkMapper.h>                          // VTK
-#include <vtkProperty.h>                        // VTK
+#include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkMapper.h>
+#include <vtkProperty.h>
+#include <vtkSphereSource.h>
 #include <boost/foreach.hpp>
 using FaceTools::ModelViewer;
 using RFeatures::ObjModel;
@@ -44,11 +45,19 @@ void ModelViewer::enableFloodLights( bool enable)
 {
     std::vector<RVTK::Light> lights;
     if ( enable)
-        RVTK::createBoxLights( 600, lights);
+        RVTK::createBoxLights( 600, lights, true);
     else
         lights.push_back( RVTK::Light()); // Default RVTK::Light is a bright white headlight
+    _floodLightsEnabled = enable;
     _qviewer->setLights( lights);
 }   // end enableFloodLights
+
+
+// public
+bool ModelViewer::floodLightsEnabled() const
+{
+    return _floodLightsEnabled;
+}   // end floodLightsEnabled
 
 
 // public
@@ -71,13 +80,28 @@ void ModelViewer::showLegend( bool enable)
 }   // end showLegend
 
 
+// public
+bool ModelViewer::legendShown() const
+{
+    return _scalarLegend->isShown();
+}   // end legendShown
+
+
+// public
+bool ModelViewer::axesShown() const
+{
+    return _axes->isShown();
+}   // end axesShown
+
+
 // private
 void ModelViewer::init()
 {
     _scalarLegend = new RVTK::ScalarLegend( _qviewer->getRenderer());
     _axes = new RVTK::Axes( _qviewer->getRenderer());
     _axes->setInteractor( _qviewer->GetInteractor());
-    _axes->hide();
+    showAxes(false);
+    showLegend(false);
 }   // end init
 
 
@@ -163,6 +187,14 @@ cv::Vec3f ModelViewer::project( const cv::Point& p) const
 
 
 // public
+cv::Vec3f ModelViewer::project( const QPoint& q) const
+{
+    const cv::Point p( q.x(), q.y());
+    return _qviewer->pickWorldPosition( p);
+}   // end project
+
+
+// public
 const vtkProp* ModelViewer::getPointedAt( const cv::Point2f& p) const
 {
     const cv::Point preal = FaceTools::fromProportion( p, cv::Size2i( getWidth(), getHeight()));
@@ -182,6 +214,18 @@ const vtkProp* ModelViewer::getPointedAt( const QPoint& q) const
 {
     const cv::Point p(q.x(), q.y());
     return _qviewer->pickActor( p);
+}   // end getPointedAt
+
+
+// public
+bool ModelViewer::getPointedAt( const QPoint& q, const vtkActor* actor) const
+{
+    if ( !actor)
+        return false;
+    std::vector<vtkActor*> pactors(1);
+    pactors[0] = const_cast<vtkActor*>(actor);
+    const cv::Point p(q.x(), q.y());
+    return _qviewer->pickActor( p, pactors) == actor;
 }   // end getPointedAt
 
 
@@ -226,22 +270,26 @@ int ModelViewer::add( const ObjModel::Ptr model, const ModelViewer::VisOptions& 
     ModelViewer::Visualisation mvis = vo.vis;
     if ( mvis == VisTexture && model->getNumMaterials() == 0)
     {
-        std::cerr << "ModelViewer: Texture visualisation requested but not texture present!" << std::endl;
+        std::cerr << "ModelViewer: Texture visualisation requested but texture not present!" << std::endl;
         mvis = VisWireframe;
     }   // end if
 
     RVTK::VtkActorCreator actorCreator;
-    std::vector<vtkSmartPointer<vtkActor> > actors;
+    vtkSmartPointer<vtkActor> actor;
     if ( mvis == VisTexture)
+    {
+        std::vector<vtkSmartPointer<vtkActor> > actors;
         actorCreator.generateTexturedActors( model, actors);
+        assert( actors.size() == 1);    // Because all models should only have 1 texture!
+        actor = actors[0];
+    }   // end if
     else
     {
-        vtkSmartPointer<vtkActor> actor = actorCreator.generateSurfaceActor( model);
+        actor = actorCreator.generateSurfaceActor( model);
         switch ( mvis)
         {
             case VisPoints:
                 actor->GetProperty()->SetRepresentationToPoints();
-                actor->GetProperty()->SetPointSize(vo.pointSize);
                 break;
             case VisWireframe:
                 actor->GetProperty()->SetRepresentationToWireframe();
@@ -253,19 +301,16 @@ int ModelViewer::add( const ObjModel::Ptr model, const ModelViewer::VisOptions& 
 
         actor->GetProperty()->SetOpacity( vo.a);
         actor->GetProperty()->SetColor( vo.r, vo.g, vo.b);
+        actor->GetProperty()->SetPointSize(vo.pointSize);
+        actor->GetProperty()->SetLineWidth(vo.lineWidth);
         actor->GetMapper()->SetScalarVisibility(true);
-        actors.push_back( actor);
     }   // end if
 
-    const int modelID = _addedModelID++;
-    BOOST_FOREACH ( const vtkSmartPointer<vtkActor> actor, actors)
-    {
-        actor->GetProperty()->SetBackfaceCulling( vo.backfaceCulling);
-        _props[modelID].push_back(actor);
-        add( actor);
-    }   // end foreach
+    actor->GetProperty()->SetBackfaceCulling( vo.backfaceCulling);
 
-    showLegend(false);
+    const int modelID = _addedModelID++;
+    _props[modelID] = actor;
+    add( actor);
     return modelID;
 }   // end add
 
@@ -273,7 +318,7 @@ int ModelViewer::add( const ObjModel::Ptr model, const ModelViewer::VisOptions& 
 // public
 int ModelViewer::add( RVTK::SurfaceMapper* smapper, float minv, float maxv)
 {
-    vtkSmartPointer<vtkActor> actor = smapper->makeActor();
+    vtkSmartPointer<vtkActor> actor = smapper->mapActor();
     return add( actor, smapper->getMetricName(), minv, maxv);
 }   // end add
 
@@ -281,14 +326,22 @@ int ModelViewer::add( RVTK::SurfaceMapper* smapper, float minv, float maxv)
 // public
 int ModelViewer::add( vtkSmartPointer<vtkActor> actor, const std::string& ltitle, float minv, float maxv)
 {
-    _scalarLegend->setTitle( ltitle);
-    _scalarLegend->setLookupTable( actor->GetMapper(), minv, maxv);
-
+    setLegendLookup( actor->GetMapper(), ltitle, minv, maxv);
     const int modelID = _addedModelID++;
-    _props[modelID].push_back(actor);
+    _props[modelID] = actor;
     add(actor);
     return modelID;
 }   // end add
+
+
+// public
+vtkProp* ModelViewer::getProp( int mid)
+{
+    vtkProp* prop = NULL;
+    if ( _props.count(mid) > 0)
+        prop = _props.at(mid);
+    return prop;
+}   // end getProp
 
 
 // public
@@ -303,6 +356,14 @@ void ModelViewer::remove( const vtkProp* prop)
 {
     _qviewer->remove(prop);
 }   // end remove
+
+
+// public
+void ModelViewer::setLegendLookup( vtkMapper* mapper, const std::string& ltitle, float minv, float maxv)
+{
+    _scalarLegend->setTitle( ltitle);
+    _scalarLegend->setLookupTable( mapper, minv, maxv);
+}   // end setLegendLookup
 
 
 // public
@@ -327,15 +388,38 @@ void ModelViewer::setLegendColours( const QColor& col0, const QColor& col1, int 
 int ModelViewer::addPointsActor( vtkSmartPointer<vtkActor> actor, const ModelViewer::VisOptions& vo)
 {
     actor->GetProperty()->SetRepresentationToPoints();
-    actor->GetProperty()->SetRenderPointsAsSpheres(true);
+    actor->GetProperty()->SetRenderPointsAsSpheres( vo.pointSize >= 2.0f);
     actor->GetProperty()->SetPointSize( vo.pointSize);
     actor->GetProperty()->SetColor( vo.r, vo.g, vo.b);
+    actor->GetProperty()->SetOpacity( vo.a);
 
     const int modelID = _addedModelID++;
-    _props[modelID].push_back(actor);
+    _props[modelID] = actor;
     add(actor);
     return modelID;
 }   // end addPointsActor
+
+
+// public
+int ModelViewer::addPoint( const cv::Vec3f& vpt, const ModelViewer::VisOptions& vo)
+{
+    vtkSmartPointer<vtkSphereSource> sphere = vtkSmartPointer<vtkSphereSource>::New();
+    sphere->SetRadius( vo.pointSize);
+    sphere->SetCenter( vpt[0], vpt[1], vpt[2]);
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInputConnection( sphere->GetOutputPort());
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
+
+    actor->GetProperty()->SetPointSize( vo.pointSize);
+    actor->GetProperty()->SetColor( vo.r, vo.g, vo.b);
+    actor->GetProperty()->SetOpacity( vo.a);
+
+    const int modelID = _addedModelID++;
+    _props[modelID] = actor;
+    add(actor);
+    return modelID;
+}   // end addPoint
 
 
 int ModelViewer::addPoints( const std::vector<cv::Vec3f>& vpts, const ModelViewer::VisOptions& vo)
@@ -364,13 +448,15 @@ int ModelViewer::addLine( const std::vector<cv::Vec3f>& vpts, bool joinEnds, con
 {
     vtkSmartPointer<vtkActor> actor = RVTK::VtkActorCreator::generateLineActor( vpts, joinEnds);
     actor->GetProperty()->SetRepresentationToWireframe();
-    actor->GetProperty()->SetRenderPointsAsSpheres(true);
-    actor->GetProperty()->SetPointSize(vo.pointSize);
-    actor->GetProperty()->SetLineWidth(vo.lineWidth);
+    actor->GetProperty()->SetRenderPointsAsSpheres( vo.pointSize >= 2.0f);
+    actor->GetProperty()->SetRenderLinesAsTubes( vo.lineWidth >= 2.0f);
+    actor->GetProperty()->SetPointSize( vo.pointSize);
+    actor->GetProperty()->SetLineWidth( vo.lineWidth);
     actor->GetProperty()->SetColor( vo.r, vo.g, vo.b);
+    actor->GetProperty()->SetOpacity( vo.a);
 
     const int modelID = _addedModelID++;
-    _props[modelID].push_back(actor);
+    _props[modelID] = actor;
     add(actor);
     return modelID;
 }   // end addLine
@@ -380,13 +466,15 @@ int ModelViewer::addLinePairs( const std::vector<cv::Vec3f>& lps, const ModelVie
 {
     vtkSmartPointer<vtkActor> actor = RVTK::VtkActorCreator::generateLinePairsActor( lps);
     actor->GetProperty()->SetRepresentationToWireframe();
-    actor->GetProperty()->SetRenderPointsAsSpheres(true);
-    actor->GetProperty()->SetPointSize(vo.pointSize);
-    actor->GetProperty()->SetLineWidth(vo.lineWidth);
+    actor->GetProperty()->SetRenderPointsAsSpheres( vo.pointSize >= 2.0f);
+    actor->GetProperty()->SetRenderLinesAsTubes( vo.lineWidth >= 2.0f);
+    actor->GetProperty()->SetPointSize( vo.pointSize);
+    actor->GetProperty()->SetLineWidth( vo.lineWidth);
     actor->GetProperty()->SetColor( vo.r, vo.g, vo.b);
+    actor->GetProperty()->SetOpacity( vo.a);
 
     const int modelID = _addedModelID++;
-    _props[modelID].push_back(actor);
+    _props[modelID] = actor;
     add(actor);
     return modelID;
 }   // end addLinePairs
@@ -397,9 +485,7 @@ bool ModelViewer::remove( int modelID)
     if ( !_props.count(modelID))
         return false;
 
-    const std::vector<vtkProp*>& props = _props.at(modelID);
-    BOOST_FOREACH ( vtkProp* prop, props)
-        remove( prop);
+    remove( _props.at(modelID));
     _props.erase(modelID);
     return true;
 }   // end remove
@@ -407,9 +493,10 @@ bool ModelViewer::remove( int modelID)
 
 void ModelViewer::removeAll()
 {
-    typedef std::pair<int, std::vector<vtkProp*> > PPair;
+    typedef std::pair<int, vtkProp*> PPair;
     BOOST_FOREACH ( PPair ppair, _props)
-        remove( ppair.first);
+        remove( ppair.second);
+    _props.clear();
 }   // end removeAll
 
 
@@ -444,6 +531,7 @@ void ModelViewer::resetDefaultCamera( float camRng)
     // Set initial camera params
     CameraParams cp = getCamera();
     cp.fov = 30;
+    cp.up = cv::Vec3f(0,1,0);
     cp.focus = cv::Vec3f(0,0,0);
     cp.pos = cp.focus;
     cp.pos[2] += camRng; // Set the camera position to be directly infront of the focus
@@ -457,6 +545,16 @@ void ModelViewer::setCamera( const cv::Vec3f& focus, const cv::Vec3f& nvec, cons
     const CameraParams cp( pos, focus, uvec);
     setCamera( cp);
 }   // end setCamera
+
+
+void ModelViewer::setFocus( const cv::Vec3f& focus)
+{
+    CameraParams cp = getCamera();
+    // Set camera position to be exactly in front of focus at current position along +Z
+    float ndist = cp.pos[2] - focus[2]; // Maintain distance as along +Z axis
+    cp.focus = focus;
+    setCamera( cp);
+}   // end setFocus
 
 
 void ModelViewer::fitCamera( double radius)

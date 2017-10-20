@@ -33,13 +33,12 @@ class ModelInteractor;  // For friend declaration
 class FaceTools_EXPORT FaceView : public QObject
 { Q_OBJECT
 public:
-    FaceView( ModelViewer*, FaceModel*, BoundaryViewEventObserver*);
+    FaceView( ModelViewer*, FaceModel*);
     virtual ~FaceView();
 
     FaceModel* getModel() const { return _fmodel;}
     bool isModelShown() const;
     bool isBoundaryShown() const;
-    bool canAdjustBoundary() const;
     bool areLandmarksShown() const;
 
     // Can this model be visualised in the given manner?
@@ -64,8 +63,13 @@ public:
 
     const VisualisationAction* getCurrentVisualisation() const;
 
+signals:
+    void onChangedVisualisation( const VisualisationAction*);
+    void onShowBoundary( bool);
+
 public slots:
     // Set (and generate if necessary) current model visualisation and showModel(true).
+    // Fires onChangedVisualisation immediately afterwards.
     void visualise( VisualisationAction*);
  
     // Shows or hides the model's current visualisation (also ensures proper viewer config).
@@ -74,7 +78,6 @@ public slots:
 
     void applyVisualisationOptions( const VisualisationOptions&); // Apply global visualisation options and update render.
     void showBoundary( bool); // Show the boundary (if available).
-    void allowBoundaryAdjustment( bool);
     void showLandmarks( bool); // Show the landmarks (if available).
     void showLandmark( const std::string&, bool); // Show a specific landmark (if available).
     void highlightLandmark( const std::string&, bool); // Temporarily highlight a landmark
@@ -100,8 +103,8 @@ private:
     VisualisationAction* _curvis;    // Currently active visualisation
     bool _inview;
     BoundaryView _bview;
-    LandmarkGroupView _lview;
     SurfacePathDrawer _pathDrawer;
+    LandmarkGroupView _lview;
     VisualisationOptions _visopts;
 
     FaceView( const FaceView&);       // No copy

@@ -18,53 +18,36 @@
 #ifndef FACE_TOOLS_H
 #define FACE_TOOLS_H
 
-#include <stdexcept>
-#include <vector>
-#include <list>
-#include <string>
-#include <iostream>
-#include <cmath>
-#include <ObjModelTools.h>              // RFeatures
-#include <DijkstraShortestPathFinder.h> // RFeatures
-#include <HaarCascadeDetector.h>        // RFeatures
-
-#include "FacesCohort.h"
-#include "FaceTools_Export.h"
-#include "FeaturesDetector.h"
-#include "FaceDetector.h"
-#include "FaceModelManager.h"
-#include "FaceOrienter.h"
-#include "MiscFunctions.h"
 #include "ObjMetaData.h"
-#include "RegistrationFace.h"
-#include "CorrespondenceFinder.h"
-#include "CurvatureSpeedFunctor.h"
-#include "CurvatureVariableSpeedFunctor.h"
-#include "SurfaceMesher.h"
-#include "ModelViewer.h"
-#include "Landmarks.h"
+#include "MiscFunctions.h"
 
 namespace FaceTools
 {
+
+// Get the component boundary vertex indices into bverts - starting from vertex svid.
+FaceTools_EXPORT int getBoundary( const RFeatures::ObjModel::Ptr, std::vector<int>& bverts, int svid=0);
+
+// Get all boundary loops on the given object.
+FaceTools_EXPORT int findBoundaryLoops( const RFeatures::ObjModel::Ptr, std::list<std::vector<cv::Vec3f> > &loops);
 
 // Find the boundaries of the given model and create and return a new model being
 // the single component that is contiguously connected by polygons to vidx.
 // Optional translation offset is applied to the copied model.
 FaceTools_EXPORT RFeatures::ObjModel::Ptr getComponent( const RFeatures::ObjModel::Ptr, int vidx, const cv::Vec3d& copyOffset=cv::Vec3d(0,0,0));
 
-// Crop and copy the given model to be the part within radius from centre v.
-// Optional translation offset is applied to the copied model.
-// The returned object is guaranteed to be fully parsable (i.e., a single connected component).
-FaceTools_EXPORT RFeatures::ObjModel::Ptr crop( const RFeatures::ObjModel::Ptr, const cv::Vec3f& v,
-                                                double radius, const cv::Vec3d& copyOffset=cv::Vec3d(0,0,0));
+// Crop and copy the given model to be the part connected to vertex svid with a boundary of R from centre v.
+// The choice of svid allows the cropped part to be inside or outside the boundary. If svid is not a valid
+// model vertex, an empty object is returned. Returned object is parsable as a single connected component.
+FaceTools_EXPORT RFeatures::ObjModel::Ptr crop( const RFeatures::ObjModel::Ptr, const cv::Vec3f& v, double R, int svid=0);
 
 // Calculate and return the centre of the face as the point directly behind the nose tip in the plane of the front of the eyes.
 // Requires the left and right eye centre landmarks, the nose tip landmark, and orientation vectors for calculation.
 FaceTools_EXPORT cv::Vec3f calcFaceCentre( const ObjMetaData::Ptr);
 
-// Return the cropped subregion from around the face centre by G times the distance
+// Calculate the cropping radius for a face as G times the distance
 // from the face centre to the eye centre (average of both eyes used).
-FaceTools_EXPORT RFeatures::ObjModel::Ptr cropAroundFaceCentre( const ObjMetaData::Ptr, double G=2.3);
+// Returns < 0 if required landmarks are missing.
+FaceTools_EXPORT double calcFaceCropRadius( const ObjMetaData::Ptr, double G);
 
 // Create a vertices only ObjModel from the given row of points.
 FaceTools_EXPORT RFeatures::ObjModel::Ptr createFromVertices( const cv::Mat_<cv::Vec3f>& row);
@@ -85,14 +68,6 @@ FaceTools_EXPORT RFeatures::ObjModel::Ptr makeFlattened( const RFeatures::ObjMod
 
 // Clean the given model to ensure it's a triangulated manifold (wraps RFeatures::ObjModelCleaner).
 FaceTools_EXPORT void clean( RFeatures::ObjModel::Ptr);
-
-
-// Returns the number of holes filled. Assumes model is a triangulated mesh.
-FaceTools_EXPORT int fillHoles( RFeatures::ObjModel::Ptr);
-
-
-// Collapse polygons in the given model that have area less than A. Returns # polygons collapsed.
-FaceTools_EXPORT int collapseSmallPolygons( RFeatures::ObjModel::Ptr, double A);
 
 // Returns NULL if cannot load or if can't clean (if doClean true).
 FaceTools_EXPORT RFeatures::ObjModel::Ptr loadModel( const std::string& fname,

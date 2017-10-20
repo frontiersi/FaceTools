@@ -15,25 +15,35 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_FACE_REGISTRATION_MAPPER_H
-#define FACE_TOOLS_FACE_REGISTRATION_MAPPER_H
+#ifndef FACE_TOOLS_ACTION_ADD_LANDMARK_H
+#define FACE_TOOLS_ACTION_ADD_LANDMARK_H
 
-#include "ObjMetaData.h"
+#include "FaceActionInterface.h"
 
-namespace FaceTools
-{
+namespace FaceTools {
 
-class FaceTools_EXPORT FaceRegistrationMapper
-{
+class FaceTools_EXPORT ActionAddLandmark : public FaceAction
+{ Q_OBJECT
 public:
-    explicit FaceRegistrationMapper( ObjMetaData::Ptr);
+    explicit ActionAddLandmark( const std::string& iconfilename="");
 
-    void generate();
+    virtual const QIcon* getIcon() const { return &_icon;}
+    virtual QString getDisplayName() const { return "Add Landmark";}
+
+    virtual void setInteractive( ModelInteractor*, bool);
+
+protected:
+    virtual bool doAction();
+
+private slots:
+    void checkEnable();
 
 private:
-    ObjMetaData::Ptr _omd;
+    const QIcon _icon;
+    ModelInteractor* _interactor;
 };  // end class
 
 }   // end namespace
 
 #endif
+

@@ -49,9 +49,9 @@ struct VisualisationOptions
 
     struct Boundary
     {
-        double lineWidth;
         double vertexSize;
         QColor vertexColour;
+        double lineWidth;
         QColor lineColour;
     };  // end struct
 

@@ -32,9 +32,8 @@ namespace FaceTools
 class FaceTools_EXPORT InteractiveModelViewer : public QObject, public ModelViewer
 { Q_OBJECT
 public:
-    explicit InteractiveModelViewer( bool useFloodLights=true);
     explicit InteractiveModelViewer( QTools::VtkActorViewer*);
-    virtual ~InteractiveModelViewer();
+    virtual ~InteractiveModelViewer(){}
 
     void addToLayout( QLayout*);
     void removeFromLayout( QLayout*);
@@ -47,6 +46,8 @@ public:
     const vtkProp* getPointedAt() const;
 
     void setCursor( QCursor);
+
+    void setKeyPressHandler( QTools::KeyPressHandler*);
 
 signals:
     void requestContextMenu( const QPoint&);

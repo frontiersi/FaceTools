@@ -28,13 +28,14 @@ FaceModelTabWidget::FaceModelTabWidget( QMenu* cmenu, const QList<QAction*>* act
     : QTabWidget(parent),
       _cmenu(cmenu),
       _actions(actions),
-     _viewer( new FaceTools::InteractiveModelViewer( true)),
-     _viewerLayout(NULL)
+      _qvtkviewer( new QTools::VtkActorViewer),
+      _viewer(NULL),
+      _viewerLayout(NULL)
 {
-    _viewerLayout = new QVBoxLayout(this);
+    _viewer = new FaceTools::InteractiveModelViewer( _qvtkviewer);
+    _viewerLayout = new QVBoxLayout();
     _viewerLayout->setContentsMargins( QMargins());
     _viewer->addToLayout( _viewerLayout);
-    setLayout(_viewerLayout);   // Will be reparented on tab widgets
 
     //std::cerr << "FaceModelTabWidget " << std::hex << this << std::endl;
     setUsesScrollButtons(true);
@@ -50,6 +51,9 @@ FaceModelTabWidget::~FaceModelTabWidget()
 {
     for ( int i = 0; i < count(); ++i)
         removeTabWidget( i);
+    delete _viewerLayout;
+    delete _viewer;
+    delete _qvtkviewer;
 }   // end dtor
 
 
@@ -171,7 +175,8 @@ void FaceModelTabWidget::showContextMenu( const QPoint& p)
         return;
 
     const int tabIdx = currentIndex();
+
     const FaceView* fview = qobject_cast<FaceModelWidget*>( widget(tabIdx))->getActiveView();
     if ( fview && fview->isPointedAt(p))
-        _cmenu->exec(p);
+        _cmenu->exec(mapToGlobal(p));
 }   // end showContextMenu

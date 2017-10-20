@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <NoseFinder.h>
+#include <FaceOrienter.h>
 #include <MiscFunctions.h>
 using FaceTools::NoseFinder;
 #include <cassert>

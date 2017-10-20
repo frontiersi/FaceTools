@@ -48,8 +48,8 @@ private:
     ModelViewer* _viewer;
     ModelViewerAnnotator* _annotator;
     const Landmarks::Landmark* _landmark;
-    vtkSphereSource* _source;
-    vtkActor* _actor;
+    vtkSmartPointer<vtkSphereSource> _source;
+    vtkSmartPointer<vtkActor> _actor;
     bool _ishighlighted;
     VisualisationOptions::Landmarks _visopts;
     int _msgID;

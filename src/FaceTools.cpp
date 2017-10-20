@@ -16,18 +16,21 @@
  ************************************************************************/
 
 #include <FaceTools.h>
+#include <Landmarks.h>
+using FaceTools::ObjMetaData;
 using RFeatures::ObjModel;
+using RFeatures::ObjModelKDTree;
 using RFeatures::CameraParams;
 #include <AssetImporter.h>             // RModelIO
 
 
-void checkBoundaries( const RFeatures::ObjModelBoundaryFinder& boundaryFinder)
+void checkBoundaries( const RFeatures::ObjModelBoundaryFinder& bfinder)
 {
-    const int nb = boundaryFinder.getNumBoundaries();
+    const int nb = bfinder.getNumBoundaries();
     std::cerr << "\tFound " << nb << " boundaries of lengths:" << std::endl;
     for ( int i = 0; i < nb; ++i)
     {
-        const std::list<int>& blist = boundaryFinder.getBoundary(i);
+        const std::list<int>& blist = bfinder.getBoundary(i);
         std::cerr << "\t" << i << ") " << blist.size() << " :";
         // Check that the boundaries do not contain duplicate indices
         IntSet bset( blist.begin(), blist.end());
@@ -45,6 +48,56 @@ void checkBoundaries( const RFeatures::ObjModelBoundaryFinder& boundaryFinder)
 }   // end checkBoundaries
 
 
+int FaceTools::getBoundary( const ObjModel::Ptr model, std::vector<int>& bverts, int svid)
+{
+    assert(model);
+    assert( model->getVertexIds().count(svid) > 0);
+    using namespace RFeatures;
+
+    ObjModelTriangleMeshParser parser( model);
+    ObjModelBoundaryFinder bfinder;
+    parser.setBoundaryParser( &bfinder);
+
+    const IntSet& sfids = model->getFaceIds( svid);
+    assert( !sfids.empty());
+    parser.parse( *sfids.begin());
+
+    std::cerr << "Num boundaries found: " << bfinder.getNumBoundaries() << std::endl;
+    const std::list<int>& blist = bfinder.getBoundary(0);
+    bverts.insert( bverts.end(), blist.begin(), blist.end());
+    return blist.size();
+}   // end getBoundary
+
+
+int FaceTools::findBoundaryLoops( const ObjModel::Ptr model, std::list<std::vector<cv::Vec3f> > &loops)
+{
+    using namespace RFeatures;
+    ObjModelTriangleMeshParser parser(model);
+    ObjModelBoundaryFinder bfinder;
+    parser.setBoundaryParser( &bfinder);
+    if ( parser.parse() < 0)
+        return -1;
+
+    std::cerr << "[INFO] FaceTools::findBoundaryLoops: Parsed "
+        << bfinder.getNumEdgesParsed() << " edges of model's " << model->getNumEdges() << std::endl;
+
+    const int nbs = (int)bfinder.getNumBoundaries();
+    std::cerr << "[INFO] FaceTools::findBoundaryLoops: Found " << nbs << " boundary loops" << std::endl;
+
+    loops.resize(nbs);
+    std::list<std::vector<cv::Vec3f> >::iterator it = loops.begin();
+    for ( int i = 0; i < nbs; ++i)
+    {
+        const std::list<int>& blist = bfinder.getBoundary(i);
+        assert( model->getConnectedVertices( blist.back()).count( blist.front()) > 0); // Beginning of boundary must join end
+        std::cerr << " + boundary has " << blist.size() << " vertices" << std::endl;
+        std::vector<cv::Vec3f>& lvec = *it++;
+        BOOST_FOREACH ( int b, blist)
+            lvec.push_back( model->vtx(b));
+    }   // end for
+    return nbs;
+}   // end findBoundaryLoops
+
 
 ObjModel::Ptr FaceTools::getComponent( const ObjModel::Ptr model, int svid, const cv::Vec3d& coffset)
 {
@@ -52,23 +105,21 @@ ObjModel::Ptr FaceTools::getComponent( const ObjModel::Ptr model, int svid, cons
     using namespace RFeatures;
 
     ObjModelTriangleMeshParser parser( model);
-    ObjModelBoundaryFinder boundaryFinder;
-    parser.setBoundaryParser( &boundaryFinder);
+    ObjModelBoundaryFinder bfinder;
+    parser.setBoundaryParser( &bfinder);
 
     const IntSet& sfids = model->getFaceIds( svid);
     assert( !sfids.empty());
     parser.parse( *sfids.begin());
 
-    boundaryFinder.sortBoundaries();    // Sort the discovered boundaries (max length first)
-    //checkBoundaries( boundaryFinder);
-    const std::list<int>& blist = boundaryFinder.getBoundary(0);
-    ObjModelBoundaryFinder boundaryFinder2( &blist);    // Boundary of component we want (max number of edges)
+    const std::list<int>& blist = bfinder.getBoundary(0);
+    ObjModelBoundaryFinder bfinder2( &blist);    // Boundary of component we want (max number of edges)
 
     const ObjModelMover mover( coffset);
     ObjModelCopier modelCopier( &mover);
 
     ObjModelTriangleMeshParser parser2( model);
-    parser2.setBoundaryParser( &boundaryFinder2);
+    parser2.setBoundaryParser( &bfinder2);
     parser2.addTriangleParser( &modelCopier);
 
     // There can only be one polygon that shares and two consecutive vertices in blist.
@@ -82,39 +133,33 @@ ObjModel::Ptr FaceTools::getComponent( const ObjModel::Ptr model, int svid, cons
 
 
 
-ObjModel::Ptr FaceTools::crop( const ObjModel::Ptr m, const cv::Vec3f& v, double radius, const cv::Vec3d& offset)
+ObjModel::Ptr FaceTools::crop( const ObjModel::Ptr model, const cv::Vec3f& v, double radius, int svidx)
 {
-    assert(m);
+    if ( model->getVertexIds().count(svidx) == 0)
+    {
+        std::cerr << "[ERROR] FaceTools::crop: Invalid starting vertex!" << std::endl;
+        return ObjModel::Ptr();
+    }   // end if
+
+    if ( model->getFaceIds( svidx).empty())
+    {
+        std::cerr << "[ERROR] FaceTools::crop: Given starting vertex is not used in any of the model's polygons!" << std::endl;
+        return ObjModel::Ptr();
+    }   // end if
+
+    const int sfid = *model->getFaceIds( svidx).begin();
+
     using namespace RFeatures;
     ObjModelCropper cropper( v, radius);
-    const ObjModelMover mover( offset);
-    ObjModelCopier copier( &mover);
-
-    ObjModelTriangleMeshParser parser(m);
+    ObjModelCopier copier;
+    ObjModelTriangleMeshParser parser( model);
     parser.setBoundaryParser( &cropper);
     parser.addTriangleParser( &copier);
+    parser.parse( sfid);
+    ObjModel::Ptr cmodel = copier.getCopiedModel();
 
-    // Start parsing at the vertex closest to v.
-    int startVidx = 0;
-    double maxd = DBL_MAX;
-    double d;
-    const IntSet& vidxs = m->getVertexIds();
-    BOOST_FOREACH ( int vidx, vidxs)
-    {
-        d = cv::norm( m->getVertex(vidx) - v);
-        if ( d < maxd)
-        {
-            startVidx = vidx;
-            maxd = d;
-        }   // end if
-    }   // end foreach
-    const int sfid = *m->getFaceIds(startVidx).begin(); // Starting face
-    parser.parse(sfid);
-
-    ObjModel::Ptr nmodel = copier.getCopiedModel();
-
-    // Finally, remove vertices (and attached faces) that connect to 2 or fewer polygons so the boundary is clean.
-    RFeatures::ObjModelCleaner cleaner( nmodel);
+    // Remove vertices (and attached faces) that connect to 2 or fewer polygons so the boundary is clean.
+    ObjModelCleaner cleaner( cmodel);
     cleaner.remove3D();
     cleaner.remove1D();
     int pruned = 0;
@@ -125,25 +170,43 @@ ObjModel::Ptr FaceTools::crop( const ObjModel::Ptr m, const cv::Vec3f& v, double
         totPruned += pruned;
     } while ( pruned > 0);
 
-    return nmodel;
+    return cmodel;
 }   // end crop
+
+
+namespace
+{
+
+bool hasReqLandmarks( const ObjMetaData::Ptr omd)
+{
+    return omd &&
+           omd->hasLandmark( FaceTools::Landmarks::L_EYE_CENTRE) &&
+           omd->hasLandmark( FaceTools::Landmarks::R_EYE_CENTRE) &&
+           omd->hasLandmark( FaceTools::Landmarks::NASAL_TIP);
+}   // end hasReqLandmarks
+
+}
 
 
 cv::Vec3f FaceTools::calcFaceCentre( const ObjMetaData::Ptr omd)
 {
     assert(omd);
-    if ( !omd->hasLandmark( Landmarks::L_EYE_CENTRE) ||
-         !omd->hasLandmark( Landmarks::R_EYE_CENTRE) ||
-         !omd->hasLandmark( Landmarks::NASAL_TIP))
+    if ( !hasReqLandmarks(omd))
+    {
+        assert(false);
         return cv::Vec3f(0,0,0);
+    }   // end if
 
     cv::Vec3f nvec, uvec;
     if ( !omd->getOrientation( nvec, uvec))
+    {
+        assert(false);
         return cv::Vec3f(0,0,0);
+    }   // end if
 
-    const cv::Vec3f& v0 = omd->getLandmark( Landmarks::L_EYE_CENTRE);
-    const cv::Vec3f& v1 = omd->getLandmark( Landmarks::R_EYE_CENTRE);
-    const cv::Vec3f& nt = omd->getLandmark( Landmarks::NASAL_TIP);
+    const cv::Vec3f& v0 = omd->getLandmark( FaceTools::Landmarks::L_EYE_CENTRE);
+    const cv::Vec3f& v1 = omd->getLandmark( FaceTools::Landmarks::R_EYE_CENTRE);
+    const cv::Vec3f& nt = omd->getLandmark( FaceTools::Landmarks::NASAL_TIP);
 
     const cv::Vec3f midEye = (v0 + v1) * 0.5;
     const cv::Vec3f dvec = nt - midEye;
@@ -154,15 +217,17 @@ cv::Vec3f FaceTools::calcFaceCentre( const ObjMetaData::Ptr omd)
 }   // end calcFaceCentre
 
 
-ObjModel::Ptr FaceTools::cropAroundFaceCentre( const ObjMetaData::Ptr omd, double G)
+double FaceTools::calcFaceCropRadius( const ObjMetaData::Ptr omd, double G)
 {
     assert(omd);
-    const cv::Vec3f& v0 = omd->getLandmark( Landmarks::L_EYE_CENTRE);
-    const cv::Vec3f& v1 = omd->getLandmark( Landmarks::R_EYE_CENTRE);
+    if ( !hasReqLandmarks(omd))
+        return -1;
+
+    const cv::Vec3f& v0 = omd->getLandmark( FaceTools::Landmarks::L_EYE_CENTRE);
+    const cv::Vec3f& v1 = omd->getLandmark( FaceTools::Landmarks::R_EYE_CENTRE);
     const cv::Vec3f fcentre = calcFaceCentre( omd);
-    const double cropRadius = G * (cv::norm( fcentre - v0) + cv::norm( fcentre - v1))/2;
-    return crop( omd->getObject(), fcentre, cropRadius);
-}   // end cropAroundFaceCentre
+    return G * (cv::norm( fcentre - v0) + cv::norm( fcentre - v1))/2;
+}   // end calcFaceCropRadius
 
 
 ObjModel::Ptr FaceTools::createFromVertices( const cv::Mat_<cv::Vec3f>& vrow)
@@ -233,6 +298,8 @@ void FaceTools::clean( ObjModel::Ptr model)
     RFeatures::ObjModelCleaner omc(model);
     const int rem3d = omc.remove3D();
     const int rem1d = omc.remove1D();
+    if ( rem3d > 0 || rem1d > 0)
+        std::cerr << "[INFO] FaceTools::clean: Removed " << rem3d << " 3D and " << rem1d << " 1D vertices" << std::endl;
     int totRemTV = 0;
     int remTV = 0;
     do
@@ -240,110 +307,9 @@ void FaceTools::clean( ObjModel::Ptr model)
         remTV = RFeatures::ObjModelTetrahedronReplacer( model).removeTetrahedrons();
         totRemTV += remTV;
     } while ( remTV > 0);
-    std::cerr << "Removed " << rem3d << " 3D vertices" << std::endl;
-    std::cerr << "Removed " << rem1d << " 1D vertices" << std::endl;
-    std::cerr << "Removed/replaced " << totRemTV << " tetrahedron peaks" << std::endl;
+    if ( totRemTV > 0)
+        std::cerr << "[INFO] FaceTools::clean: Removed/replaced " << totRemTV << " tetrahedron peaks" << std::endl;
 }   // end clean
-
-
-int FaceTools::fillHoles( ObjModel::Ptr model)
-{
-    assert(model);
-    using namespace RFeatures;
-
-    ObjModelTriangleMeshParser parser( model);
-    ObjModelBoundaryFinder boundaryFinder;
-    parser.setBoundaryParser( &boundaryFinder);
-
-    parser.parse();
-
-    boundaryFinder.sortBoundaries();    // Sort the discovered boundaries (max length first)
-    const int nboundaries = (int)boundaryFinder.getNumBoundaries();
-
-    // Don't fill the largest boundary since this is the outer boundary!
-    for ( int i = 1; i < nboundaries; ++i)
-    {
-        const std::list<int>& blist = boundaryFinder.getBoundary(i);
-
-        const int firstVtx = *blist.begin();
-        std::list<int>::const_iterator ij = ++blist.begin();
-        std::list<int>::const_iterator ik = ++(++blist.begin());
-        for ( ; ik != blist.end(); ++ij, ++ik)
-        {
-            assert( *ij != *ik);
-            model->setFace( firstVtx, *ij, *ik);
-        }   // end for
-    }   // end for
-
-    ObjModelCleaner omc(model);
-    omc.remove3D();
-    omc.remove1D();
-
-    /*
-    // Get the component attached to the original largest boundary
-    boundaryFinder.reset();
-    parser.parse();
-    boundaryFinder.sortBoundaries();
-
-    const std::list<int>& bverts = boundaryFinder.getBoundary(0);
-    const IntSet& sfids = model->getFaceIds( *bverts.begin());  // All face IDs connected to the first boundary vertex
-    const int sfid = *model->getFaceIds( *bverts.begin()).begin();    // Start face on external boundary (save here since resetting).
-    boundaryFinder.reset( &bverts); // bverts is "hanging" alias after this!
-    ObjModelCopier copier;
-    parser.addTriangleParser(&copier);
-    parser.parse( sfid);
-    model = copier.getCopiedModel();
-    */
-
-    return nboundaries;
-}   // end fillHoles
-
-
-
-int FaceTools::collapseSmallPolygons( ObjModel::Ptr model, double minArea)
-{
-    assert(model);
-    using namespace RFeatures;
-    ObjModelTriangleMeshParser parser( model);
-    ObjModelPolygonAreaCalculator polyAreaCalculator;
-    parser.addTriangleParser( &polyAreaCalculator);
-    parser.parse();
-
-    ObjModelTopologyFinder topFinder( model);
-    int totCount = 0;
-
-    int count = 0;
-    do
-    {
-        count = 0;
-        const IntSet& fids = parser.getParsedFaces();
-        std::cerr << "Num polys parsed = " << fids.size() << std::endl;
-        std::cerr << "Num polys in model = " << model->getNumFaces() << std::endl;
-        BOOST_FOREACH ( int fid, fids)
-        {
-            // Collapsing a previous polygon may have also removed this one
-            if ( !model->getFaceIds().count(fid))
-                continue;
-
-            /*
-            // Don't collapse boundary polygons
-            const ObjPoly& poly = model->poly(fid);
-            if ( topFinder.isBoundary(poly.vindices[0]) || topFinder.isBoundary(poly.vindices[1]) || topFinder.isBoundary(poly.vindices[2]))
-                continue;
-            */
-
-            if ( polyAreaCalculator.getPolygonArea(fid) < minArea)
-            {
-                ObjModelPolygonCollapser( model).collapse(fid);
-                count++;
-            }   // end if
-        }   // end foreach
-        totCount += count;
-    } while ( count > 0);
-
-    return totCount;
-}   // end collapseSmallPolygons
-
 
 
 ObjModel::Ptr FaceTools::loadModel( const std::string& fname, bool useTexture, bool doClean)
@@ -371,6 +337,7 @@ ObjModel::Ptr FaceTools::loadModel( const std::string& fname, bool useTexture, b
         {
             std::cerr << " =====[ Combining Textures ]====="<< std::endl;
             model->mergeMaterials();
+            assert( model->getNumMaterials() == 1);
         }   // end if
 
         if ( doClean)
@@ -413,3 +380,4 @@ bool FaceTools::loadModels( const std::vector<std::string>& fnames, std::vector<
 
     return !failed;
 }   // end loadModels
+

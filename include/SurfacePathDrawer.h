@@ -18,12 +18,13 @@
 #ifndef FACE_TOOLS_SURFACE_PATH_DRAWER_H
 #define FACE_TOOLS_SURFACE_PATH_DRAWER_H
 
-#include "FaceTools_Export.h"
+#include "ObjMetaData.h"
 #include <ModelPathDrawer.h>    // RVTK
 #include <vtkRenderWindow.h>
 #include <vtkCaptionActor2D.h>
 #include <vtkTextActor.h>
 #include <QObject>
+#include <QPoint>
 
 namespace FaceTools
 {
@@ -34,25 +35,27 @@ class FaceTools_EXPORT SurfacePathDrawer : public QObject
 { Q_OBJECT
 public:
     SurfacePathDrawer( ModelViewer*, const std::string& modelUnits="mm");
-    virtual ~SurfacePathDrawer();
+    virtual ~SurfacePathDrawer(){}
+
+    void setUnits( const std::string&);
 
     bool isShown() const;
     void show( bool enable);    // Show or hide path information
 
-    void setPathEndPoints( const cv::Vec3f& v0, const cv::Vec3f& v1);
+    void setPathEndPoints( const QPoint&, const QPoint&);
+
+    void setActor( const vtkSmartPointer<vtkActor>);
 
 public slots:
     void doDrawingPath( const QPoint&);
     void doFinishedPath( const QPoint&);
-    void setModel( const vtkActor*);
 
 private:
-    const std::string _munits;
     ModelViewer* _viewer;
+    std::string _munits;
     vtkSmartPointer<vtkTextActor> _lenText;
     vtkSmartPointer<vtkCaptionActor2D> _lenCaption;
-    cv::Vec3f* _pathStart;
-    const vtkActor *_actor;
+    QPoint _pathStart;
     RVTK::ModelPathDrawer::Ptr _path;
 
     SurfacePathDrawer( const SurfacePathDrawer&); // NO COPY

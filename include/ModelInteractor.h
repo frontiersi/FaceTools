@@ -78,7 +78,6 @@ private:
     std::string _lmHoverOld;
     std::string _pickedLandmark;
     bool _interactive;
-    BoundaryViewEventObserver _bobserver;
 
     void doMouseHover( const QPoint&);
     ModelInteractor( const ModelInteractor&); // No copy

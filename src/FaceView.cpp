@@ -23,15 +23,14 @@ using FaceTools::FaceModel;
 using FaceTools::ModelViewer;
 using FaceTools::FaceView;
 using FaceTools::VisualisationAction;
-using FaceTools::BoundaryViewEventObserver;
 
 
 // public
-FaceView::FaceView( ModelViewer* viewer, FaceModel* fmodel, BoundaryViewEventObserver* bobserver)
+FaceView::FaceView( ModelViewer* viewer, FaceModel* fmodel)
     : _viewer(viewer), _fmodel(fmodel), _curvis(NULL), _inview(false),
-      _bview( viewer, fmodel->getObjectMeta(), bobserver),
-      _lview( viewer, fmodel->getObjectMeta()),
-      _pathDrawer( viewer)
+      _bview( viewer, fmodel->getObjectMeta()),
+      _pathDrawer( viewer, "mm"),
+      _lview( viewer, fmodel->getObjectMeta())
 {
     // This view updates itself in response to changes on the model, not the other way around.
     // Designed like this because there can be multiple views for a model, all providing means
@@ -39,6 +38,7 @@ FaceView::FaceView( ModelViewer* viewer, FaceModel* fmodel, BoundaryViewEventObs
     // be propagated back to all of the views (not just the one that it was changed through).
     connect( _fmodel, &FaceModel::onLandmarkUpdated, &_lview, &FaceTools::LandmarkGroupView::updateLandmark);
     connect( _fmodel, &FaceModel::onLandmarkSelected, &_lview, &FaceTools::LandmarkGroupView::selectLandmark);
+    connect( _fmodel, &FaceModel::onSetFaceCropFactor, &_bview, &FaceTools::BoundaryView::setFaceCropFactor);
     connect( _fmodel, &FaceModel::onMeshUpdated, this, &FaceView::forceRevisualise);
     connect( _fmodel, &FaceModel::onFaceDetected, this, &FaceView::showFaceDetection);
     connect( _fmodel, &FaceModel::onTransformed, this, &FaceView::setCameraToOrigin);
@@ -58,6 +58,10 @@ FaceView::~FaceView()
 // public
 bool FaceView::isModelShown() const
 {
+#ifndef NDEBUG
+    if ( _inview)
+        assert(_curvis);
+#endif
     return _inview;
 }   // end isModelShown
 
@@ -67,13 +71,6 @@ bool FaceView::isBoundaryShown() const
 {
     return _bview.isShown();
 }   // end isBoundaryShown
-
-
-// public
-bool FaceView::canAdjustBoundary() const
-{
-    return _bview.canAdjust();
-}   // end canAdjustBoundary
 
 
 // public
@@ -93,8 +90,14 @@ bool FaceView::canVisualise( VisualisationAction* visint) const
 // public
 bool FaceView::isPointedAt( const QPoint &p) const
 {
-    const vtkProp* prop = _viewer->getPointedAt(p);
-    return ( prop != NULL && (prop == getActor())) || !_lview.pointedAt(p).empty();
+    if ( !_curvis)
+        return false;
+
+    assert( _allvis.count(_curvis) > 0);
+    if ( _viewer->getPointedAt( p, getActor()))
+        return true;
+
+    return !_lview.pointedAt(p).empty();
 }   // end isPointedAt
 
 
@@ -122,7 +125,7 @@ RFeatures::CameraParams FaceView::getCamera() const
 // public
 const vtkActor* FaceView::getActor() const
 {
-    if ( _curvis)
+    if ( !_curvis)
         return NULL;
     return _allvis.at(_curvis);
 }   // end getActor
@@ -138,18 +141,28 @@ const VisualisationAction* FaceView::getCurrentVisualisation() const
 // public slot
 void FaceView::visualise( VisualisationAction* visint)
 {
+    if ( visint == _curvis)
+        return;
+
     assert( visint->isAvailable(_fmodel));
 
     // Remove current visualisation if shown
     if ( isModelShown())
+    {
         _viewer->remove( getActor());
+        _inview = false;
+    }   // end if
+
     _curvis = visint;
+    if ( _curvis != NULL && _allvis.count(_curvis) == 0) // Generate the model if necessary
+    {
+        vtkSmartPointer<vtkActor> actor = _curvis->makeActor(_fmodel);
+        _allvis[_curvis] = actor;
+        _pathDrawer.setActor( actor);
+    }   // end if
 
-    if ( _allvis.count(_curvis) == 0) // Generate the model if necessary
-        _allvis[_curvis] = _curvis->makeActor(_fmodel);
-
-    _pathDrawer.setModel( _allvis.at(_curvis));
     showModel(true);
+    emit onChangedVisualisation(_curvis);
 }   // end visualise
 
 
@@ -160,13 +173,14 @@ void FaceView::showModel( bool enable)
     _inview = enable;
 
     // If showing the model, ensure that the viewer is set up correctly
-    _viewer->enableFloodLights( _inview && _curvis->useFloodLights());
+    _viewer->enableFloodLights( _curvis->useFloodLights());
 
     float minv, maxv;
     const bool showLegend = _curvis->allowScalarVisualisation( minv, maxv);
     _viewer->showLegend( _inview && showLegend);
 
-    vtkSmartPointer<vtkActor> actor = _allvis[_curvis];
+    assert( _allvis.count(_curvis) > 0);
+    vtkSmartPointer<vtkActor> actor = _allvis.at(_curvis);
     if ( !_inview)
         _viewer->remove( actor);
     else
@@ -174,13 +188,7 @@ void FaceView::showModel( bool enable)
         if ( !showLegend)
             _viewer->add( actor);
         else
-        {
-            // minv and maxv are the allowed ranges from the visualisation.
-            // Get the desired min and max from the model options.
-            const float userminv = std::max( minv, std::min( _visopts.model.minVisibleScalar, maxv));
-            const float usermaxv = std::min( maxv, std::max( _visopts.model.maxVisibleScalar, minv));
-            _viewer->add( actor, _curvis->getDisplayName().toStdString(), userminv, usermaxv);
-        }   // end else
+            _viewer->add( actor, _curvis->getDisplayName().toStdString(), minv, maxv);
     }   // end else
 
     applyVisualisationOptions(_visopts);
@@ -196,12 +204,16 @@ void FaceView::applyVisualisationOptions( const FaceTools::VisualisationOptions&
 
     // Modify the actor according to the visualisation options
     vtkSmartPointer<vtkActor> actor = _allvis[_curvis];
+
     if ( _curvis->allowSetBackfaceCulling())
         actor->GetProperty()->SetBackfaceCulling( _visopts.model.backfaceCulling);
+
     if ( _curvis->allowSetVertexSize())
         actor->GetProperty()->SetPointSize( _visopts.model.vertexSize);
+
     if ( _curvis->allowSetWireframeLineWidth())
         actor->GetProperty()->SetLineWidth( _visopts.model.lineWidth);
+
     if ( _curvis->allowSetColour())
     {
         const QColor& mscol = _visopts.model.surfaceColourFlat;
@@ -209,10 +221,17 @@ void FaceView::applyVisualisationOptions( const FaceTools::VisualisationOptions&
         actor->GetProperty()->SetOpacity( mscol.alphaF());
     }   // end if
 
+    // Restrict the visualised range of values if doing a colour visualisation
+    float notusedminv, notusedmaxv;
+    if ( _curvis->allowScalarVisualisation( notusedminv, notusedmaxv))
+        actor->GetMapper()->SetScalarRange( _visopts.model.minVisibleScalar, _visopts.model.maxVisibleScalar);
+
     const QColor& mcol0 = _visopts.model.surfaceColourMin;
     const QColor& mcol1 = _visopts.model.surfaceColourMax;
     _viewer->setLegendColours( mcol0, mcol1, _visopts.model.numSurfaceColours);
+    _viewer->showAxes( _visopts.showAxes);
 
+    _pathDrawer.setUnits( _visopts.munits);
     _lview.setVisualisationOptions( _visopts.landmarks);
     _bview.setVisualisationOptions( _visopts.boundary);
     _viewer->updateRender();
@@ -224,14 +243,8 @@ void FaceView::showBoundary( bool enable)
 {
     _bview.show(enable);
     applyVisualisationOptions(_visopts);
+    emit onShowBoundary(enable);
 }   // end showBoundary
-
-
-// public slot
-void FaceView::allowBoundaryAdjustment( bool enable)
-{
-    _bview.allowAdjustment(enable);
-}   // end allowBoundaryAdjustment
 
 
 // public slot
@@ -277,11 +290,19 @@ void FaceView::forceRevisualise()
 {
     // Remove the existing visualisation from the viewer if it exists
     if ( _curvis && _allvis.count(_curvis) > 0)
+    {
         _viewer->remove( getActor());
-    // Clear all generated visualisations forcing them to be renewed on next call to visualise
+        _inview = false;
+    }   // end if
+
     _allvis.clear();
+
     if ( _curvis)
-        visualise(_curvis);
+    {
+        VisualisationAction* visact = _curvis;
+        _curvis = NULL;
+        visualise( visact);
+    }   // end if
 }   // end forceRevisualise
 
 
@@ -289,9 +310,9 @@ void FaceView::forceRevisualise()
 void FaceView::showFaceDetection()
 {
     _lview.erase();    // Erase existing!
-    _lview.reset();    // Reset from ObjMetaData
-    _bview.reset( getActor()); // Reset from ObjMetaData
     orientCameraToFace();
+    _lview.reset();    // Reset from ObjMetaData
+    _bview.reset();    // Reset from ObjMetaData
 }   // end showFaceDetection
 
 

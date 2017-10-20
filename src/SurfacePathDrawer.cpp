@@ -26,15 +26,14 @@
 #include <vtkTextProperty.h>
 #include <vtkRendererCollection.h>
 using FaceTools::SurfacePathDrawer;
+using FaceTools::ObjMetaData;
 
 
 SurfacePathDrawer::SurfacePathDrawer( FaceTools::ModelViewer* mv, const std::string& munits)
-    : _munits(munits),
-      _viewer(mv),
+    : _viewer(mv),
+      _munits(munits),
       _lenText( vtkSmartPointer<vtkTextActor>::New()),
-      _lenCaption( vtkSmartPointer<vtkCaptionActor2D>::New()),
-      _pathStart(NULL),
-      _actor(NULL)
+      _lenCaption( vtkSmartPointer<vtkCaptionActor2D>::New())
 {
     assert(mv != NULL);
     _lenText->GetTextProperty()->SetJustificationToRight();
@@ -48,44 +47,23 @@ SurfacePathDrawer::SurfacePathDrawer( FaceTools::ModelViewer* mv, const std::str
     _lenCaption->GetCaptionTextProperty()->ShadowOff();
     _lenCaption->GetCaptionTextProperty()->SetFontFamilyToArial();
     _lenCaption->GetCaptionTextProperty()->SetFontSize(8);
+
+    _pathStart = QPoint(-1,-1);
+    _path = RVTK::ModelPathDrawer::create( _viewer->getRenderWindow()->GetInteractor());
+    _path->setLineWidth(2);
+    _path->setLineColour(1.0, 1.0, 0.3);
+    _path->setPointColour(1.0,0.0,0.0);
+    _path->setPointSize(9);
 }   // end ctor
 
 
-SurfacePathDrawer::~SurfacePathDrawer()
-{
-}   // end dtor
-
-
-// public slot
-void SurfacePathDrawer::setModel( const vtkActor* actor)
-{
-    _actor= actor;
-    _path.reset();
-    if ( _pathStart)
-        delete _pathStart;
-    _pathStart = NULL;
-
-    if ( _actor)
-    {
-        _path = RVTK::ModelPathDrawer::create( _viewer->getRenderWindow()->GetInteractor());
-        _path->setClosed(false);    // A line segment rather than a boundary
-        _path->setModel(_actor);
-    }   // end if
-}   // end setModel
-
-
-// public
-bool SurfacePathDrawer::isShown() const
-{
-    return _path && _path->getVisibility();
-}   // end isShown
+void SurfacePathDrawer::setUnits( const std::string& units) { _munits = units;}
+bool SurfacePathDrawer::isShown() const { return _path && _path->getVisibility();}
 
 
 // public
 void SurfacePathDrawer::show( bool enable)
 {
-    if ( !_path)
-        return;
     _path->setVisibility(enable);
     if (enable)
     {
@@ -102,63 +80,65 @@ void SurfacePathDrawer::show( bool enable)
 
 
 // public
-void SurfacePathDrawer::setPathEndPoints( const cv::Vec3f& v0, const cv::Vec3f& v1)
+void SurfacePathDrawer::setActor( const vtkSmartPointer<vtkActor> actor)
 {
-    assert(_path);
-    // Update the interpolated path over the surface of the face
-    std::vector<cv::Vec3f> handles(2);
-    handles[0] = v0; handles[1] = v1;
-    _path->setPathHandles(handles);
+    assert(actor != NULL);
+    _path->setActor(actor);
+}   // end setActor
 
-    const double eucLen = cv::norm( v1 - v0);   // Euclidean length
+
+// public
+void SurfacePathDrawer::setPathEndPoints( const QPoint& p0, const QPoint& p1)
+{
+    bool isshown = _path->getVisibility();
+    _path->setVisibility(false);
+
+    // Update the interpolated path over the surface of the face
+    std::vector<cv::Point> handles(2);
+    handles[0] = cv::Point( p0.x(), p0.y());
+    handles[1] = cv::Point( p1.x(), p1.y());
+    _path->setPathHandles(handles);
 
     // Sum over the actual length of the displayed curve
     std::vector<cv::Vec3f> pvs;
-    _path->getAllPathVertices( pvs);
-    double psum = 0;
-    cv::Vec3f* prevVert = &pvs[0];
-    const int nverts = (int)pvs.size();
-    for ( int i = 1; i < nverts; ++i)
-    {
-        psum += cv::norm( pvs[i] - *prevVert);
-        prevVert = &pvs[i];
-    }   // end for
+    const int n = _path->getAllPathVertices( pvs);
+    assert( (int)pvs.size() == n);
 
-    // Set the caption's attachment point
-    double attachPoint[3] = { v1[0], v1[1], v1[2]};
+    const double elen = cv::norm( *pvs.rbegin() - *pvs.begin());   // Euclidean length
+    double psum = 0;
+    for ( int i = 1; i < n; ++i)
+        psum += cv::norm( pvs[i] - pvs[i-1]);
+
+    // Set the caption's attachment point at start of the path.
+    const cv::Vec3f& v0 = *pvs.begin();
+    double attachPoint[3] = { v0[0], v0[1], v0[2]};
     _lenCaption->SetAttachmentPoint( attachPoint);
 
     // Set the text contents for the label and the caption
     std::ostringstream oss1, oss2;
-    oss1 << "Caliper Distance = " << std::setw(5) << std::fixed << std::setprecision(1) << eucLen << " " << _munits << std::endl;
+    oss1 << "Caliper Distance = " << std::setw(5) << std::fixed << std::setprecision(1) << elen << " " << _munits << std::endl;
     oss2 << "Surface Distance = " << std::setw(5) << std::fixed << std::setprecision(1) << psum << " " << _munits;
     _lenText->SetInput( (oss1.str() + oss2.str()).c_str());
     _lenText->SetDisplayPosition( _viewer->getWidth() - 10, 10);  // Bottom right
 
     // Stick a caption actor at the finishing point
     std::ostringstream caposs;
-    caposs << std::fixed << std::setprecision(1) << eucLen << " " << _munits;
+    caposs << std::fixed << std::setprecision(1) << elen << " " << _munits;
     _lenCaption->SetCaption( caposs.str().c_str());
+
+    _path->setVisibility(isshown);
 }   // end setPathEndPoints
 
 
 // public slot
 void SurfacePathDrawer::doDrawingPath( const QPoint& p)
 {
-    if ( !_actor)
-        return;
+    if ( _pathStart.x() < 0)
+        _pathStart = p;
 
-    cv::Vec3f curPos;
-    cv::Vec3f* wpos = &curPos;
-    if ( _pathStart == NULL)
+    if ( p != _pathStart)
     {
-        _pathStart = new cv::Vec3f;
-        wpos = _pathStart;
-    }   // end if
-
-    if ( _viewer->calcSurfacePosition( _actor, p, *wpos))
-    {
-        setPathEndPoints( *_pathStart, *wpos);
+        setPathEndPoints( _pathStart, p);
         show(true);
     }   // end if
 }   // end doDrawingPath
@@ -167,9 +147,7 @@ void SurfacePathDrawer::doDrawingPath( const QPoint& p)
 // public slot
 void SurfacePathDrawer::doFinishedPath( const QPoint& p)
 {
-    if ( _pathStart)
-        delete _pathStart;
-    _pathStart = NULL;
+    _pathStart = QPoint(-1,-1);
     this->show(false);
 }   // end doFinishedPath
 

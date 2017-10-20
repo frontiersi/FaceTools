@@ -109,6 +109,7 @@ void LandmarkGroupView::erase()
 // public
 void LandmarkGroupView::reset()
 {
+    erase();
     boost::unordered_set<std::string> lmnames;
     _objmeta->getLandmarks( lmnames);
     foreach ( const std::string& lm, lmnames)

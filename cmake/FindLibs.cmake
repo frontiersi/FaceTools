@@ -75,6 +75,7 @@ if(WITH_FACETOOLS)
     find_package( FaceTools REQUIRED)
     include_directories( ${FaceTools_INCLUDE_DIRS})
     link_directories( ${FaceTools_LIBRARY_DIR})
+    set(WITH_CPD TRUE)
     set(WITH_CGAL TRUE)
     set(WITH_DLIB TRUE)
     set(WITH_QTOOLS TRUE)
@@ -304,5 +305,16 @@ if(WITH_LIBICP) # The ICP source library (Andreas Geiger) (https://github.com/sy
         )
 endif()
 
-
+if(WITH_CPD) # Coherent Point Drift
+    set( Cpd_ROOT "${LIB_PRE_REQS}/cpd" CACHE PATH "Location of CPD (Coherent Point Drift)")
+    if(IS_DEBUG)
+        set( Cpd_DIR "${Cpd_ROOT}/debug/lib/cmake/cpd" CACHE PATH "Location of cpd-config.cmake")
+    else()
+        set( Cpd_DIR "${Cpd_ROOT}/release/lib/cmake/cpd" CACHE PATH "Location of cpd-config.cmake")
+    endif()
+    message( STATUS "Cpd_DIR: ${Cpd_DIR}")
+    find_package( Cpd REQUIRED)
+    set( Cpd_INCLUDE_DIRS "${Cpd_DIR}/../../../include")
+    include_directories( ${Cpd_INCLUDE_DIRS})
+endif()
 

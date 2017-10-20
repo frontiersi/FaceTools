@@ -18,6 +18,7 @@
 #ifndef FACE_TOOLS_FACE_ORIENTER_H
 #define FACE_TOOLS_FACE_ORIENTER_H
 
+#include "FaceTools_Export.h"
 #include <ObjModelCurvatureMap.h>   // RFeatures
 #include <ObjModelKDTree.h>         // RFeatures
 

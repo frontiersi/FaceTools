@@ -19,7 +19,7 @@
 #define FACETOOLS_CORRESPONDENCE_FINDER_H
 
 #include "ObjMetaData.h"
-#include "RegistrationFace.h"
+#include "FaceSampler.h"    // Use ObjModelRemesher
 
 namespace FaceTools
 {
@@ -50,9 +50,9 @@ public:
 
 
 private:
-    RegistrationFace *_regFace;
-    RFeatures::ObjModel::Ptr _refobj;         // Reference vertices from face sampling (no triangles).
-    cv::Mat_<cv::Vec3f> _cmat;     // M model rows, with N correspondence point columns (3 channel).
+    FaceSampler *_faceSampler;
+    RFeatures::ObjModel::Ptr _refobj;   // Reference vertices from face sampling (no triangles).
+    cv::Mat_<cv::Vec3f> _cmat;          // M model rows, with N correspondence point columns (3 channel).
 
     CorrespondenceFinder( const ObjMetaData::Ptr, int nc, bool sampleUniformly);
     ~CorrespondenceFinder();

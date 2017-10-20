@@ -33,7 +33,7 @@ public:
     explicit FaceModel( ObjMetaData::Ptr);
     virtual ~FaceModel();
 
-    ObjMetaData::Ptr getObjectMeta() const { return _objmeta;}
+    ObjMetaData::Ptr getObjectMeta() const { return _omd;}
     const RFeatures::ObjModelCurvatureMetrics::Ptr getCurvatureMetrics() const; // May be NULL
     const boost::unordered_map<int,double>* getUniformDistanceMap() const;  // May be NULL
     const boost::unordered_map<int,double>* getCurvDistanceMap() const;  // May be NULL
@@ -42,12 +42,14 @@ public:
     void setSaveFilepath( const std::string& filepath);
     const std::string& getSaveFilepath() const { return _lastsave;}
 
+    // Set the face crop multiplier (see FaceCrop).
+    void setFaceCropFactor( double);
+
     // If detectFace returns false, get the nature of the error here.
     const std::string& err() const { return _err;}
     bool hasUndos() const { return false;}  // TODO add undo/redo functionality
     bool isAligned() const { return _isAligned;}
     bool isDetected() const { return _isDetected;}
-    bool hasBoundary() const;
 
 signals:
     // Notify of landmark addition, repositioning, or deletion, or just
@@ -55,10 +57,10 @@ signals:
     void onLandmarkUpdated( const std::string&, const cv::Vec3f*);
     void onLandmarkSelected( const std::string&, bool);     // Fires when the given landmark is selected.
     void onLandmarkHighlighted( const std::string&, bool);  // Fires when the given landmark is highlighted.
-    void onChangedSaveFilepath( FaceModel*);          // Fires after changing save filepath
+    void onChangedSaveFilepath( FaceModel*);          // Fires after changing save filepath.
     void onMeshUpdated();       // Fires whenever the underlying model morphology has been modified.
     void onFaceDetected();      // Fires upon successful detection of the face.
-    void onBoundaryUpdated();   // Fires upon user updating of the facial boundary.
+    void onSetFaceCropFactor( double);        // Fires after changing face crop multiplier.
     void onCropped();           // Fires after cropping and *after* onMeshUpdated emitted.
     void onTransformed();       // Fires after face transformed in space.
     void onClearedUndos( FaceModel*);  // Fires when undos reset (TODO)
@@ -99,12 +101,11 @@ public slots:
     // If not successful, user may need to adjust camera viewpoint.
     bool detectFace( FaceDetector::Ptr);
 
-    // Update the list of boundary vertices. Fires onBoundaryUpdated.
-    void updateBoundary( const std::vector<cv::Vec3f>&);
-
-    // Update the mesh to exclude everything outside the currently defined boundary.
+    // Update the mesh to exclude everything outside the region GxT where G
+    // is the face crop multiplier and T is the distance between the point in the
+    // plane of the eyes behind the nose tip and the mean eye position.
     // Causes both onMeshUpdated and onCropped to be emitted in that order.
-    bool cropToBoundary( const cv::Vec3f&);
+    bool cropFace();
 
     // Translate the face so that it's "centre" is at the world origin and
     // orient the face so that it's normal is incident with the world's +Z
@@ -113,7 +114,7 @@ public slots:
     void transformToStandardPosition();
 
 private:
-    ObjMetaData::Ptr _objmeta;
+    ObjMetaData::Ptr _omd;
     RFeatures::ObjModelFaceAngleCalculator _facalc;
     RFeatures::ObjModelCurvatureMetrics::Ptr _cmetrics;
     RFeatures::ObjModelFastMarcher::Ptr _udist;
@@ -122,7 +123,11 @@ private:
     std::string _lastsave;
     bool _isAligned;
     bool _isDetected;
+    double _faceCropRadiusFactor;
+
     void reset( RFeatures::ObjModel::Ptr);
+    void buildCurvature();
+
     FaceModel( const FaceModel&);               // No copy
     FaceModel& operator=( const FaceModel&);    // No copy
 };  // end class

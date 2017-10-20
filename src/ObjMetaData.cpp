@@ -44,6 +44,21 @@ ObjMetaData::Ptr ObjMetaData::create( const std::string& mfile, const ObjModel::
 }   // end create
 
 
+ObjMetaData::Ptr ObjMetaData::copy() const
+{
+    return Ptr( new ObjMetaData( *this), Deleter());
+}   // end copy
+
+
+// private
+ObjMetaData::ObjMetaData( const ObjMetaData& omd)
+    : _mfile(omd._mfile), _nvec(omd._nvec), _uvec(omd._uvec)
+{
+    _landmarks = omd._landmarks;
+    setObject( omd._model);
+}   // end ctor
+
+
 // private
 ObjMetaData::ObjMetaData( const std::string mfile)
     : _mfile(mfile), _nvec(0,0,0), _uvec(0,0,0)
@@ -59,10 +74,12 @@ ObjMetaData::ObjMetaData( const std::string& mfile, const ObjModel::Ptr model)
 }   // end ctor
 
 
-void ObjMetaData::setObject( ObjModel::Ptr model)
+void ObjMetaData::setObject( ObjModel::Ptr model, bool buildKD)
 {
     _model = model;
     _kdtree.reset();
+    if ( _model && buildKD)
+        _kdtree = RFeatures::ObjModelKDTree::create( _model);
     _curvMap.reset();
 }   // end setObject
 
@@ -73,20 +90,7 @@ void ObjMetaData::releaseObject()
 }   // end releaseObject
 
 
-void ObjMetaData::rebuildKDTree()
-{
-    _kdtree.reset();
-    if ( _model)
-        _kdtree = RFeatures::ObjModelKDTree::create( _model);
-}   // end rebuildKDTree
-
-
-const RFeatures::ObjModelKDTree::Ptr ObjMetaData::getKDTree() const
-{
-    if ( _kdtree == NULL)
-        std::cerr << "[ERROR] FaceTools::ObjMetaData::getKDTree(): kd tree is NULL!" << std::endl;
-    return _kdtree;
-}   // end getKDTree
+const RFeatures::ObjModelKDTree::Ptr ObjMetaData::getKDTree() const { return _kdtree;}
 
 
 void ObjMetaData::rebuildCurvatureMap( int svidx)
@@ -100,12 +104,7 @@ void ObjMetaData::rebuildCurvatureMap( int svidx)
 }   // end rebuildCurvatureMap
 
 
-const RFeatures::ObjModelCurvatureMap::Ptr ObjMetaData::getCurvatureMap() const
-{
-    if ( _curvMap == NULL)
-        std::cerr << "[ERROR] FaceTools::ObjMetaData::getCurvatureMap(): curvature map is NULL!" << std::endl;
-    return _curvMap;
-}   // end getCurvatureMap
+const RFeatures::ObjModelCurvatureMap::Ptr ObjMetaData::getCurvatureMap() const { return _curvMap;}
 
 
 void ObjMetaData::setOrientation( const cv::Vec3f& nvec, const cv::Vec3f& uvec)
@@ -137,57 +136,9 @@ void ObjMetaData::setLandmark( const std::string& name, const cv::Vec3f& v)
 }   // end setLandmark
 
 
-void ObjMetaData::setBoundary( const std::vector<cv::Vec3f>& bs)
+bool ObjMetaData::makeBoundaryHandles( const std::list<int>& boundary, std::vector<cv::Vec3f>& bhandles) const
 {
-    _boundary = bs;
-}   // end setBoundary
-
-
-const std::vector<cv::Vec3f>* ObjMetaData::getBoundary() const
-{
-    if ( _boundary.empty())
-        return NULL;
-    return &_boundary;
-}   // end getBoundary
-
-
-ObjModel::Ptr ObjMetaData::cropToBoundary( const cv::Vec3f& sv) const
-{
-    const size_t nb = _boundary.size();
-    if ( nb < 3)
-    {
-        std::cerr << "[ERROR] FaceTools::ObjMetaData::cropToBoundary: Boundary has too few vertices!" << std::endl;
-        return ObjModel::Ptr();
-    }   // end if
-
-    if ( !_kdtree)
-    {
-        std::cerr << "[ERROR] FaceTools::ObjMetaData::cropToBoundary: Can't crop to boundary without KD tree!" << std::endl;
-        return ObjModel::Ptr();
-    }   // end if
-
-    // Get the nearest vertex indices
-    std::list<int> bverts;
-    for ( size_t i = 0; i < nb; ++i)
-        bverts.push_back( _kdtree->find( _boundary[i]));
-
-    RFeatures::ObjModelBoundaryFinder bparser( &bverts);
-    RFeatures::ObjModelTriangleMeshParser tparser( _model);
-    tparser.setBoundaryParser( &bparser);
-    RFeatures::ObjModelCopier copier;
-    tparser.addTriangleParser( &copier);
-
-    // Get the nearest point on the model to sv to begin parsing
-    const int svidx = _kdtree->find(sv);
-    const int sfid = *_model->getFaceIds(svidx).begin();    // Starting face index
-    tparser.parse(sfid);
-    return copier.getCopiedModel();
-}   // end cropToBoundary
-
-
-bool ObjMetaData::makeBoundaryHandles( std::vector<cv::Vec3f>& bhandles) const
-{
-    if ( _boundary.empty())
+    if ( boundary.empty())
         return false;
 
     cv::Vec3f nvec, uvec;
@@ -195,9 +146,9 @@ bool ObjMetaData::makeBoundaryHandles( std::vector<cv::Vec3f>& bhandles) const
         return false;
 
     cv::Vec3f mp(0,0,0);
-    BOOST_FOREACH ( const cv::Vec3f& v, _boundary)
-        mp += v;
-    mp *= 1.0f/_boundary.size();    // Middle of boundary
+    BOOST_FOREACH ( int vidx, boundary)
+        mp += _model->vtx(vidx);
+    mp *= 1.0f/boundary.size();    // Middle of boundary
 
     // Go round the loop again checking to see which vertices are at 12 extremes
     const cv::Vec3f rvec = uvec.cross(nvec);
@@ -218,8 +169,9 @@ bool ObjMetaData::makeBoundaryHandles( std::vector<cv::Vec3f>& bhandles) const
 
     bhandles.resize(12);
     std::vector<double> vdps(12);   // Max dot-products in the corresponding directions
-    BOOST_FOREACH ( const cv::Vec3f& v, _boundary)
+    BOOST_FOREACH ( int vidx, boundary)
     {
+        const cv::Vec3f& v = _model->vtx(vidx);
         const cv::Vec3d dv = v-mp;
         for ( int i = 0; i < 12; ++i)
         {
@@ -301,7 +253,7 @@ void ObjMetaData::shiftLandmarks( const cv::Vec3f& t)
 {
     boost::unordered_set<std::string> names;
     getLandmarks( names);
-    BOOST_FOREACH ( const std::string& name, names)
+    BOOST_FOREACH ( const std::string& name, names) // Transform the landmarks
         _landmarks[name].pos = _landmarks[name].pos + t;
 }   // end shiftLandmarks
 
@@ -314,10 +266,9 @@ double ObjMetaData::shiftLandmarksToSurface()
 
     const ObjModel::Ptr model = getObject();
     const ObjModelSurfacePointFinder spfinder( model);
-    if ( _kdtree == NULL)
-        rebuildKDTree();
     const ObjModelKDTree::Ptr kdt = getKDTree();
 
+    cv::Vec3f fv;
     int notused;
     boost::unordered_set<std::string> lmnames;
     getLandmarks( lmnames);
@@ -328,7 +279,6 @@ double ObjMetaData::shiftLandmarksToSurface()
 
         // Project v onto the model's surface. Choose from all the polygons connected to vertex vidx the
         // projection into the plane of a polygon that gives the smallest difference in position.
-        cv::Vec3f fv;
         sdiff += spfinder.find( v, vidx, notused, fv);
         setLandmark( lmname, fv);
     }   // end foreach
@@ -339,23 +289,27 @@ double ObjMetaData::shiftLandmarksToSurface()
 
 void ObjMetaData::transformLandmarks( const cv::Matx44d& T)
 {
+    const RFeatures::ObjModelMover mover(T);
     boost::unordered_set<std::string> lmnames;
     getLandmarks( lmnames);
     BOOST_FOREACH ( const std::string& lmname, lmnames)
-    {
-        const cv::Vec3f& v = getLandmark(lmname);
-        const cv::Vec4d hv( v[0], v[1], v[2], 1);
-        const cv::Vec4d nv = T * hv;
-        _landmarks[lmname].pos = cv::Vec3f( float(nv[0]), float(nv[1]), float(nv[2]));
-    }   // end foreach
+        mover( _landmarks[lmname].pos); // In-place
 }   // end transformLandmarks
 
 
-void ObjMetaData::transform( const cv::Matx44d& T)
+void ObjMetaData::transform( const cv::Matx44d& T, bool buildKD)
 {
     const RFeatures::ObjModelMover mover(T);
+
+    // Adjust orientation first (don't want to translate - just rotate)
+    cv::Vec3f nvec = _nvec;
+    cv::Vec3f uvec = _uvec;
+    mover.rotate(nvec);
+    mover.rotate(uvec);
     mover( _model);
-    transformLandmarks(T);
+    setObject( _model, buildKD); // Need to rebuild KD tree and reset curvature!
+    transformLandmarks(T);       // Then all landmarks
+    setOrientation( nvec, uvec); // Set the orientation
 }   // end transform
 
 
@@ -375,11 +329,30 @@ size_t ObjMetaData::getLandmarks( boost::unordered_set<std::string>& lmks) const
 namespace PT = boost::property_tree;
 
 
+void putVertex( PT::ptree& node, const cv::Vec3f& v)
+{
+    node.put( "x", v[0]);
+    node.put( "y", v[1]);
+    node.put( "z", v[2]);
+}   // end putVertex
+
+
 // public
 void ObjMetaData::writeTo( PT::ptree& tree) const
 {
     PT::ptree& topNode = tree.add("record","");
     topNode.put( "filename", _mfile);
+
+    cv::Vec3f nvec, uvec;
+    if ( getOrientation( nvec, uvec))
+    {
+        PT::ptree& orientation = topNode.put( "orientation", "");
+        PT::ptree& normal = orientation.add( "normal","");
+        putVertex( normal, nvec);
+        PT::ptree& upnode = orientation.add( "up","");
+        putVertex( upnode, uvec);
+    }   // end if
+
     PT::ptree& landmarks = topNode.put( "landmarks", ""); // Landmarks node
     typedef std::pair<std::string, Landmark> LMPair;
     BOOST_FOREACH ( const LMPair& lmpair, _landmarks)
@@ -388,9 +361,7 @@ void ObjMetaData::writeTo( PT::ptree& tree) const
         const cv::Vec3f& v = lmpair.second.pos;
         PT::ptree& landmark = landmarks.add( "landmark","");
         landmark.put( "<xmlattr>.name", lmname);    // Landmark identifier
-        landmark.put( "x", v[0]);
-        landmark.put( "y", v[1]);
-        landmark.put( "z", v[2]);
+        putVertex( landmark, v);
     }   // end foreach
 }   // end writeTo
 
@@ -399,6 +370,18 @@ void ObjMetaData::writeTo( PT::ptree& tree) const
 void ObjMetaData::readFrom( const PT::ptree& record, ObjMetaData& fd)
 {
     fd.setObjectFile( record.get<std::string>( "filename"));
+
+    cv::Vec3f nvec, uvec;
+    const PT::ptree& orientation = record.get_child( "orientation");
+    BOOST_FOREACH ( const PT::ptree::value_type& vtx, orientation)
+    {
+        if ( vtx.first == "normal")
+            nvec = cv::Vec3f( vtx.second.get<float>("x"), vtx.second.get<float>("y"), vtx.second.get<float>("z"));
+        else if ( vtx.first == "up")
+            uvec = cv::Vec3f( vtx.second.get<float>("x"), vtx.second.get<float>("y"), vtx.second.get<float>("z"));
+    }   // end foreach
+    fd.setOrientation( nvec, uvec);
+
     const PT::ptree& lmks = record.get_child( "landmarks");
     BOOST_FOREACH ( const PT::ptree::value_type& lmk, lmks)
     {
@@ -414,12 +397,22 @@ void ObjMetaData::readFrom( const PT::ptree& record, ObjMetaData& fd)
 
 std::ostream& operator<<( std::ostream& os, const ObjMetaData& fd)
 {
+    cv::Vec3f nvec, uvec;
+    if ( fd.getOrientation( nvec, uvec))
+    {
+        os << "Normal: " << nvec << std::endl;
+        os << "Up:     " << uvec << std::endl;
+    }   // end if
+    else
+        os << "Orientation not defined!" << std::endl;
+
     boost::unordered_set<std::string> landmarks;
     fd.getLandmarks( landmarks);
     int maxNameLen = 0;
     BOOST_FOREACH ( const std::string& lmname, landmarks)
         maxNameLen = std::max( maxNameLen, (int)lmname.size());
     os << "Object source: " << std::setw(maxNameLen) << fd.getObjectFile() << std::endl;
+    os << landmarks.size() << " landmarks:" << std::endl;
     BOOST_FOREACH ( const std::string& lmname, landmarks)
         os << std::right << std::setw(maxNameLen) << lmname << " @ " << fd.getLandmark(lmname) << std::endl;
     return os;

@@ -33,7 +33,8 @@ class FaceModel;
 class FaceTools_EXPORT VisualisationAction : public FaceAction
 { Q_OBJECT
 public:
-    VisualisationAction();
+    // Default visualisations fire themselves for ModelInteractors as they're added.
+    explicit VisualisationAction( bool isDefaultVis=false);
     virtual ~VisualisationAction(){}
 
     // If this visualisation is available for the given model.
@@ -50,6 +51,8 @@ public:
     virtual bool allowSetColour() const = 0;
     virtual bool allowScalarVisualisation( float& minv, float& maxv) const = 0;
 
+    // Default visualisations for a ModelInteractor when added.
+    virtual void addInteractor( ModelInteractor*);
     virtual void removeInteractor( ModelInteractor*);
     virtual void setInteractive( ModelInteractor*, bool);
 
@@ -57,9 +60,10 @@ protected:
     virtual bool doAction();
 
 private slots:
-    void doOnMeshUpdated();
+    void recheckCanVisualise();
 
 private:
+    const bool _isDefaultVis;
     boost::unordered_set<ModelInteractor*> _interactors;
 };  // end class
 
