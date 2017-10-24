@@ -24,7 +24,7 @@
 namespace FaceTools
 {
 
-struct VisualisationOptions
+struct FaceTools_EXPORT VisualisationOptions
 {
     struct Model
     {

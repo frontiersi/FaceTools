@@ -103,8 +103,11 @@ public:
 
     // Number of discrete colours to use
     void setLegendLookup( vtkMapper* mapper, const std::string& legendTitle, float minv, float maxv);
-    void setLegendColours( const cv::Vec3b& minColourMapping, const cv::Vec3b& maxColourMapping, int ncolours=100);
-    void setLegendColours( const QColor& minColourMapping, const QColor& maxColourMapping, int ncolours=100);
+    void setLegendColours( const cv::Vec3b& c0, const cv::Vec3b& c1, int ncolours=100);
+    void setLegendColours( const QColor& c0, const QColor& c1, int ncolours=100);
+    void setLegendColours( const cv::Vec3b& c0, const cv::Vec3b& c1, const cv::Vec3b& c2, int nc0, int nc1);
+    void setLegendColours( const QColor& c0, const QColor& c1, const QColor& c3, int nc0, int nc1);
+    int getNumLegendColours() const;
 
     vtkProp* getProp(int);
 

@@ -27,7 +27,7 @@ InteractionInterface::InteractionInterface()
 
 
 // public
-void InteractionInterface::setInterface( ModelViewerQtInterface* qinterface)
+void InteractionInterface::setInterface( FaceTools::ModelViewerQtInterface* qinterface)
 {
     connect( qinterface, SIGNAL(onRightButtonDown()), this, SLOT(doOnRightButtonDown()));
     connect( qinterface, SIGNAL(onRightButtonUp()), this, SLOT(doOnRightButtonUp()));

@@ -51,7 +51,7 @@ void addUndoTag( const FaceModel* fmodel, std::string& mname)
 
 
 // public
-FaceViewComboBox::FaceViewComboBox( InteractiveModelViewer* viewer, QWidget* parent)
+FaceViewComboBox::FaceViewComboBox( FaceTools::InteractiveModelViewer* viewer, QWidget* parent)
     : QComboBox(parent), _viewer(viewer), _curView(-1)
 {
     setEditable(true);  // Allow user edits to the combo box

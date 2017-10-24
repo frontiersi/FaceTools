@@ -18,6 +18,10 @@
 #ifndef FACE_TOOLS_LANDMARKS_H
 #define FACE_TOOLS_LANDMARKS_H
 
+#ifdef _WIN32
+#pragma warning( disable : 4251)
+#endif
+
 #include <string>
 #include <opencv2/opencv.hpp>
 #include "FaceTools_Export.h"

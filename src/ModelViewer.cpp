@@ -197,7 +197,7 @@ cv::Vec3f ModelViewer::project( const QPoint& q) const
 // public
 const vtkProp* ModelViewer::getPointedAt( const cv::Point2f& p) const
 {
-    const cv::Point preal = FaceTools::fromProportion( p, cv::Size2i( getWidth(), getHeight()));
+    const cv::Point preal = FaceTools::fromProportion( p, cv::Size2i( (int)getWidth(), (int)getHeight()));
     return getPointedAt(preal);
 }   // end getPointedAt
 
@@ -251,7 +251,7 @@ bool ModelViewer::calcSurfacePosition( const vtkProp *prop, const cv::Point& p, 
 // public
 bool ModelViewer::calcSurfacePosition( const vtkProp *prop, const cv::Point2f& pf, cv::Vec3f& worldPos) const
 {
-    const cv::Point p = FaceTools::fromProportion( pf, cv::Size2i( getWidth(), getHeight()));
+    const cv::Point p = FaceTools::fromProportion( pf, cv::Size2i( (int)getWidth(), (int)getHeight()));
     return calcSurfacePosition( prop, p, worldPos);
 }   // end calcSurfacePosition
 
@@ -371,7 +371,7 @@ void ModelViewer::setLegendColours( const cv::Vec3b& col0, const cv::Vec3b& col1
 {
     const vtkColor3ub minCol( col0[0], col0[1], col0[2]);
     const vtkColor3ub maxCol( col1[0], col1[1], col1[2]);
-    _scalarLegend->setColours( ncols, minCol, maxCol);
+    _scalarLegend->setColours( minCol, maxCol, ncols);
 }   // end setLegendColours
 
 
@@ -382,6 +382,33 @@ void ModelViewer::setLegendColours( const QColor& col0, const QColor& col1, int 
     const cv::Vec3b cvcol1( col1.red(), col1.green(), col1.blue());
     setLegendColours( cvcol0, cvcol1, ncols);
 }   // end setLegendColours
+
+
+// public
+void ModelViewer::setLegendColours( const cv::Vec3b& col0, const cv::Vec3b& col1, const cv::Vec3b& col2, int ncols0, int ncols1)
+{
+    const vtkColor3ub c0( col0[0], col0[1], col0[2]);
+    const vtkColor3ub c1( col1[0], col1[1], col1[2]);
+    const vtkColor3ub c2( col2[0], col2[1], col2[2]);
+    _scalarLegend->setColours( c0, c1, c2, ncols0, ncols1);
+}   // end setLegendColours
+
+
+// public
+void ModelViewer::setLegendColours( const QColor& col0, const QColor& col1, const QColor& col2, int ncols0, int ncols1)
+{
+    const vtkColor3ub c0( col0.red(), col0.green(), col0.blue());
+    const vtkColor3ub c1( col1.red(), col1.green(), col1.blue());
+    const vtkColor3ub c2( col2.red(), col2.green(), col2.blue());
+    _scalarLegend->setColours( c0, c1, c2, ncols0, ncols1);
+}   // end setLegendColours
+
+
+// public
+int ModelViewer::getNumLegendColours() const
+{
+    return _scalarLegend->getNumColours();
+}   // end getNumLegendColours
 
 
 // private

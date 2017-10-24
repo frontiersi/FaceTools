@@ -20,6 +20,7 @@ using FaceTools::ModelInteractor;
 using FaceTools::InteractiveModelViewer;
 using FaceTools::InteractionInterface;
 using FaceTools::FaceAction;
+using FaceTools::FaceModel;
 using FaceTools::FaceView;
 
 

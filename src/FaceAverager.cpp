@@ -112,12 +112,7 @@ void FaceAverager::init( const ObjModel::Ptr model)
 
     { rlib::CpuTimer cputimer( "[INFO] FaceTools::FaceAverager::init: Cleaning sampled model", std::cerr);
         FaceTools::clean( _model);
-        RFeatures::ObjModelHoleFiller holeFiller( _model);
-        holeFiller.fillHoles();
-        FaceTools::clean( _model);
-        holeFiller.fillHoles();
-        FaceTools::clean( _model);
-        holeFiller.fillHoles();
+        RFeatures::ObjModelHoleFiller::fillHoles( _model);
         FaceTools::clean( _model);
     }   // end timed section
     // Is now a triangulated manifold

@@ -104,7 +104,7 @@ void BoundaryView::setFaceCropFactor( double G)
 
 
 // public
-void BoundaryView::setVisualisationOptions( const VisualisationOptions::Boundary& visopts)
+void BoundaryView::setVisualisationOptions( const FaceTools::VisualisationOptions::Boundary& visopts)
 {
     _visopts = visopts;
     _boundary->GetProperty()->SetLineWidth( _visopts.lineWidth);

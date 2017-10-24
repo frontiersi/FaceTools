@@ -30,8 +30,9 @@ class FaceTools_EXPORT ObjMetaData
 {
 public:
     typedef boost::shared_ptr<ObjMetaData> Ptr;
+    static Ptr create( RFeatures::ObjModel::Ptr m);
     static Ptr create( const std::string mfile="");
-    static Ptr create( const std::string& mfile, const RFeatures::ObjModel::Ptr m);
+    static Ptr create( const std::string& mfile, RFeatures::ObjModel::Ptr m);
 
     // Shallow copies the internal object but makes a new KD-tree.
     // Deep copies the landmarks.
@@ -114,7 +115,7 @@ private:
     ObjMetaData( const ObjMetaData&);       // Private copy
     void operator=( const ObjMetaData&);    // No assignment
     explicit ObjMetaData( const std::string mfile="");
-    ObjMetaData( const std::string& mfile, const RFeatures::ObjModel::Ptr m);
+    ObjMetaData( const std::string& mfile, RFeatures::ObjModel::Ptr m);
     class Deleter;
 };  // end class
 

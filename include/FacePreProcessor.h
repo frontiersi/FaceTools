@@ -43,7 +43,8 @@ public:
     // 4) Smooths the face with smooth curvature factor sf over max of 10 iterations.
     // 5) Transforms the "centre" of the face to the world coordinate origin and orients.
     // 6) Shifts landmarks to the closest positions on the newly smoothed face.
-    void operator()( bool fillHoles, double mta, double nl, double sf);
+    // Leaving the parameters as default simply transforms to standard position (5&6).
+    void operator()( bool fillHoles=false, double mta=0, double nl=0, double sf=0);
 
 private:
     ObjMetaData::Ptr _omd;

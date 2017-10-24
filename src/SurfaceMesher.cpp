@@ -89,6 +89,6 @@ int SurfaceMesher::operator()()
     MeshConstructor meshConstructor(_model);
     meshConstructor.mesh();
 
-    return _model->getNumFaces();
+    return (int)_model->getNumFaces();
 }   // end operator()
 

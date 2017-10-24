@@ -23,7 +23,7 @@ using RFeatures::ObjModelKDTree;
 using RFeatures::CameraParams;
 #include <AssetImporter.h>             // RModelIO
 
-
+/*
 void checkBoundaries( const RFeatures::ObjModelBoundaryFinder& bfinder)
 {
     const int nb = bfinder.getNumBoundaries();
@@ -46,6 +46,7 @@ void checkBoundaries( const RFeatures::ObjModelBoundaryFinder& bfinder)
         std::cerr << std::endl;
     }   // end for
 }   // end checkBoundaries
+*/
 
 
 int FaceTools::getBoundary( const ObjModel::Ptr model, std::vector<int>& bverts, int svid)
@@ -65,7 +66,7 @@ int FaceTools::getBoundary( const ObjModel::Ptr model, std::vector<int>& bverts,
     std::cerr << "Num boundaries found: " << bfinder.getNumBoundaries() << std::endl;
     const std::list<int>& blist = bfinder.getBoundary(0);
     bverts.insert( bverts.end(), blist.begin(), blist.end());
-    return blist.size();
+    return (int)blist.size();
 }   // end getBoundary
 
 

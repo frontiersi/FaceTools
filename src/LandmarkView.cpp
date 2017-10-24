@@ -20,6 +20,9 @@
 #include <vtkPolyDataMapper.h>
 #include <vtkMapper.h>
 using FaceTools::LandmarkView;
+using FaceTools::ModelViewer;
+using FaceTools::ModelViewerAnnotator;
+using FaceTools::VisualisationOptions;
 using namespace FaceTools::Landmarks;
 
 

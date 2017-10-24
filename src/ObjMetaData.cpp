@@ -38,7 +38,14 @@ ObjMetaData::Ptr ObjMetaData::create( const std::string mfile)
 
 
 // public static
-ObjMetaData::Ptr ObjMetaData::create( const std::string& mfile, const ObjModel::Ptr model)
+ObjMetaData::Ptr ObjMetaData::create( ObjModel::Ptr model)
+{
+    return Ptr( new ObjMetaData( "", model), Deleter());
+}   // end create
+
+
+// public static
+ObjMetaData::Ptr ObjMetaData::create( const std::string& mfile, ObjModel::Ptr model)
 {
     return Ptr( new ObjMetaData( mfile, model), Deleter());
 }   // end create
@@ -67,7 +74,7 @@ ObjMetaData::ObjMetaData( const std::string mfile)
 
 
 // private
-ObjMetaData::ObjMetaData( const std::string& mfile, const ObjModel::Ptr model)
+ObjMetaData::ObjMetaData( const std::string& mfile, ObjModel::Ptr model)
     : _mfile(mfile)
 {
     setObject( model);
@@ -76,11 +83,13 @@ ObjMetaData::ObjMetaData( const std::string& mfile, const ObjModel::Ptr model)
 
 void ObjMetaData::setObject( ObjModel::Ptr model, bool buildKD)
 {
-    _model = model;
+    _model.reset();
     _kdtree.reset();
-    if ( _model && buildKD)
-        _kdtree = RFeatures::ObjModelKDTree::create( _model);
     _curvMap.reset();
+    if ( model)
+        _model = model;
+    if ( model && buildKD)
+        _kdtree = RFeatures::ObjModelKDTree::create( _model);
 }   // end setObject
 
 
@@ -183,6 +192,7 @@ bool ObjMetaData::makeBoundaryHandles( const std::list<int>& boundary, std::vect
             }   // end if
         }   // end for
     }   // end foreach
+    return true;
 }   // makeBoundaryHandles
 
 

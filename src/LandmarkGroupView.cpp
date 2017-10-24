@@ -20,6 +20,8 @@
 #include <iostream>
 using FaceTools::LandmarkGroupView;
 using FaceTools::LandmarkView;
+using FaceTools::VisualisationOptions;
+using FaceTools::ModelViewer;
 
 
 // public

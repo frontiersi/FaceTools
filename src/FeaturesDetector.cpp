@@ -134,7 +134,7 @@ struct RectClusterComparator
 {
     bool operator()( const RC& rc0, const RC& rc1) const
     {
-        return !((*rc0) < (*rc1));  // Negated for descending order
+        return rc0->calcQuality() > rc1->calcQuality();  // Negated for descending order
     }   // end operator()
 };  // end class
 
@@ -175,8 +175,8 @@ bool FeaturesDetector::findEyes()
     std::sort( clusters.begin(), clusters.end(), RectClusterComparator());
 
     // Get the mean size of a detection in these two clusters
-    const cv::Rect_<float> meanBox0 = clusters[0]->getMean();
-    const cv::Rect_<float> meanBox1 = clusters[1]->getMean();
+    const cv::Rect_<double> meanBox0 = clusters[0]->getMean();
+    const cv::Rect_<double> meanBox1 = clusters[1]->getMean();
     if (( meanBox0 & meanBox1).area() > 0)
         return false;
 
@@ -218,7 +218,7 @@ void FeaturesDetector::setDetectorsFromFaceBox( const cv::Mat_<byte> dimg)
 {
     // Only use the top 3/5ths of the face box for the eyes
     cv::Rect topHalf = _faceBox;
-    topHalf.height = cvRound(3*float(_faceBox.height)/5);
+    topHalf.height = (int)cvRound(3*((double)(_faceBox.height))/5);
     cv::Mat_<byte> thimg = RFeatures::contrastStretch( dimg( topHalf));
     cv::medianBlur( thimg, thimg, 5);
     _faceImg = dimg(_faceBox);
@@ -243,7 +243,7 @@ bool FeaturesDetector::find( const cv::Mat_<byte> img)
         return false;
 
     std::vector<RC> clusters;
-    RFeatures::clusterRects( faces, 0.7, clusters);
+    RFeatures::clusterRects( faces, 0.7f, clusters);
     if ( clusters.empty())
         return false;
 /*
@@ -253,7 +253,7 @@ bool FeaturesDetector::find( const cv::Mat_<byte> img)
 */
     std::sort( clusters.begin(), clusters.end(), RectClusterComparator());
 
-    const cv::Rect_<float> fb = clusters[0]->getMean();
+    const cv::Rect_<double> fb = clusters[0]->getMean();
     _faceBox.x = cvRound(fb.x);
     _faceBox.y = cvRound(fb.y);
     _faceBox.width = cvRound(fb.width);

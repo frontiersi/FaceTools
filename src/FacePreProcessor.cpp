@@ -40,7 +40,7 @@ FacePreProcessor::FacePreProcessor( ObjMetaData::Ptr omd) : _omd(omd)
 
 void FacePreProcessor::operator()( bool fillHoles, double mta, double nl, double sfactor)
 {
-    const cv::Vec3d fc = FaceTools::calcFaceCentre( _omd);  // Based on eyes and nosetip landmarks
+    const cv::Vec3f fc = FaceTools::calcFaceCentre( _omd);  // Based on eyes and nosetip landmarks
     ObjModel::Ptr model = _omd->getObject();    // To modify
 
     // Crop #1
@@ -56,10 +56,12 @@ void FacePreProcessor::operator()( bool fillHoles, double mta, double nl, double
     if ( fillHoles)
     {
         std::cerr << "[INFO] FaceTools::FacePreProcessor::preprocess: Filling holes... ";
-        RFeatures::ObjModelHoleFiller holeFiller( model);
-        const int nfilled = holeFiller.fillHoles() - 1;
+        const int nfilled = RFeatures::ObjModelHoleFiller::fillHoles( model) - 1;
         if ( nfilled > 0)
+        {
             std::cerr << nfilled << " filled";
+            FaceTools::clean( model);
+        }   // end if
         else
             std::cerr << " none found";
         std::cerr << std::endl;
@@ -73,7 +75,6 @@ void FacePreProcessor::operator()( bool fillHoles, double mta, double nl, double
         vadder.subdivideAndMerge( mta);
     }   // end if
 
-    /*
     // Crop #2 (for smoother boundary)
     if ( nl > 0.0)
     {
@@ -81,7 +82,6 @@ void FacePreProcessor::operator()( bool fillHoles, double mta, double nl, double
         std::cerr << "[INFO] FaceTools::FacePreProcessor::preprocess: Crop #2 within " << crad << " mm of face centre..." << std::endl;
         model = FaceTools::crop( model, fc, crad, 0);
     }   // end if
-    */
 
     // Smooth
     if ( sfactor > 0.0)

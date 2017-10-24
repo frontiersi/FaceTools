@@ -1,10 +1,10 @@
 set( CMAKE_COLOR_MAKEFILE TRUE)
 set( CMAKE_VERBOSE_MAKEFILE FALSE)
 
-#set( CMAKE_CXX_FLAGS "-Wno-deprecated -Wno-deprecated-declarations -Wno-error=unknown-pragmas")
 if(UNIX)
-    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wno-deprecated -Wno-deprecated-declarations -Wno-error=unknown-pragmas")
+    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wno-deprecated-declarations -Wno-error=unknown-pragmas")
 endif()
+set(CMAKE_CXX_STANDARD 11)
 
 set( LIB_PRE_REQS "$ENV{INSTALL_PARENT_DIR}" CACHE PATH
     "Where library prerequisites are installed (if not in the standard system library locations).")

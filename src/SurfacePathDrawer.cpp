@@ -119,7 +119,7 @@ void SurfacePathDrawer::setPathEndPoints( const QPoint& p0, const QPoint& p1)
     oss1 << "Caliper Distance = " << std::setw(5) << std::fixed << std::setprecision(1) << elen << " " << _munits << std::endl;
     oss2 << "Surface Distance = " << std::setw(5) << std::fixed << std::setprecision(1) << psum << " " << _munits;
     _lenText->SetInput( (oss1.str() + oss2.str()).c_str());
-    _lenText->SetDisplayPosition( _viewer->getWidth() - 10, 10);  // Bottom right
+    _lenText->SetDisplayPosition( (int)_viewer->getWidth() - 10, 10);  // Bottom right
 
     // Stick a caption actor at the finishing point
     std::ostringstream caposs;
