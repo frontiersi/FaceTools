@@ -19,52 +19,48 @@
 #define FACE_TOOLS_VISUALISATION_ACTION_H
 
 #include "FaceActionInterface.h"
+#include <boost/unordered_set.hpp>
 #include <vtkSmartPointer.h>
 #include <vtkActor.h>
-#include <boost/unordered_set.hpp>
+
 
 namespace FaceTools
 {
-
-class FaceView;
-class FaceModel;
 
 // The interface to interact with discovered visualisation plugins
 class FaceTools_EXPORT VisualisationAction : public FaceAction
 { Q_OBJECT
 public:
-    // Default visualisations fire themselves for ModelInteractors as they're added.
-    explicit VisualisationAction( bool isDefaultVis=false);
+    VisualisationAction();
     virtual ~VisualisationAction(){}
 
     // If this visualisation is available for the given model.
-    virtual bool isAvailable( const FaceModel*) const = 0;
-
-    // Make the actor for the given model.
-    virtual vtkSmartPointer<vtkActor> makeActor( const FaceModel*) = 0;
+    virtual bool isAvailable( const FaceControl*) const { return false;}
 
     // How visualisation options apply
-    virtual bool useFloodLights() const = 0; // Use headlight if return false.
-    virtual bool allowSetBackfaceCulling() const = 0;
-    virtual bool allowSetVertexSize() const = 0;
-    virtual bool allowSetWireframeLineWidth() const = 0;
-    virtual bool allowSetColour() const = 0;
-    virtual bool allowScalarVisualisation( float& minv, float& maxv) const = 0;
+    virtual bool useTexture() const { return false;}     // Use texture mapping?
+    virtual bool useFloodLights() const { return false;} // Use headlight if return false.
+    virtual bool allowSetVertexSize() const { return false;}
+    virtual bool allowSetWireframeLineWidth() { return false;}
+    virtual bool allowSetColour() const { return false;}
+    virtual bool allowScalarVisualisation( float& minv, float& maxv) const { return false;}
 
-    // Default visualisations for a ModelInteractor when added.
-    virtual void addInteractor( ModelInteractor*);
-    virtual void removeInteractor( ModelInteractor*);
-    virtual void setInteractive( ModelInteractor*, bool);
+    virtual void mapActor( FaceControl*) = 0;
+
+    // Default visualisations for a FaceControl when added.
+    virtual void addController( FaceControl*);
+    virtual void removeController( FaceControl*);
+    virtual void setControlled( FaceControl*, bool);
 
 protected:
-    virtual bool doAction();
+    virtual bool doAction();    // Apply this visualisation over all views.
 
-private slots:
-    void recheckCanVisualise();
+    // If this is the default visualistion for a model upon first adding.
+    virtual bool isDefault( const FaceControl*) const { return false;}
 
 private:
-    const bool _isDefaultVis;
-    boost::unordered_set<ModelInteractor*> _interactors;
+    boost::unordered_set<FaceControl*> _fconts;
+    void recheckCanVisualise( FaceControl*);
 };  // end class
 
 }   // end namespace

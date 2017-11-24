@@ -18,10 +18,8 @@
 #include <FaceTools.h>
 #include <Landmarks.h>
 using FaceTools::ObjMetaData;
-using RFeatures::ObjModel;
-using RFeatures::ObjModelKDTree;
-using RFeatures::CameraParams;
 #include <AssetImporter.h>             // RModelIO
+using namespace RFeatures;
 
 /*
 void checkBoundaries( const RFeatures::ObjModelBoundaryFinder& bfinder)
@@ -53,7 +51,6 @@ int FaceTools::getBoundary( const ObjModel::Ptr model, std::vector<int>& bverts,
 {
     assert(model);
     assert( model->getVertexIds().count(svid) > 0);
-    using namespace RFeatures;
 
     ObjModelTriangleMeshParser parser( model);
     ObjModelBoundaryFinder bfinder;
@@ -69,30 +66,66 @@ int FaceTools::getBoundary( const ObjModel::Ptr model, std::vector<int>& bverts,
     return (int)blist.size();
 }   // end getBoundary
 
-
+/*
 int FaceTools::findBoundaryLoops( const ObjModel::Ptr model, std::list<std::vector<cv::Vec3f> > &loops)
 {
-    using namespace RFeatures;
-    ObjModelTriangleMeshParser parser(model);
-    ObjModelBoundaryFinder bfinder;
-    parser.setBoundaryParser( &bfinder);
-    if ( parser.parse() < 0)
-        return -1;
+    int totBoundaries = 0;
+    IntSet fids = model->getFaceIds();  // Copy out the face Ids
 
-    std::cerr << "[INFO] FaceTools::findBoundaryLoops: Parsed "
-        << bfinder.getNumEdgesParsed() << " edges of model's " << model->getNumEdges() << std::endl;
+    int pfid = 5730;    // Check on petra.obj
+    while ( !fids.empty())
+    {
+        ObjModelTriangleMeshParser parser(model);
+        ObjModelBoundaryFinder bfinder;
+        parser.setBoundaryParser( &bfinder);
+        std::cerr << "Parsing with face ID " << pfid << "... " << std::endl;
+        if ( parser.parse( pfid) < 0)
+            return -1;
 
-    const int nbs = (int)bfinder.getNumBoundaries();
-    std::cerr << "[INFO] FaceTools::findBoundaryLoops: Found " << nbs << " boundary loops" << std::endl;
+        const IntSet& pfaces = parser.getParsedFaces();
+        BOOST_FOREACH ( int fid, pfaces)
+            fids.erase(fid);
 
-    loops.resize(nbs);
-    std::list<std::vector<cv::Vec3f> >::iterator it = loops.begin();
+        const int nbs = (int)bfinder.getNumBoundaries();
+        totBoundaries += nbs;
+
+        std::cerr << "  Parsed " << pfaces.size() << " faces starting at face " << pfid << ". "
+                  << fids.size() << " remaining. Found " << nbs << " boundaries." << std::endl;
+        for ( int i = 0; i < nbs; ++i)
+        {
+            const std::list<int>& blist = bfinder.getBoundary(i);
+            assert( model->getConnectedVertices( blist.back()).count( blist.front()) > 0); // Beginning of boundary must join end
+            std::cerr << "  + boundary has " << blist.size() << " vertices" << std::endl;
+            loops.resize( loops.size() + 1);
+            std::vector<cv::Vec3f>& lvec = loops.back();
+            BOOST_FOREACH ( int b, blist)
+                lvec.push_back( model->vtx(b));
+        }   // end for
+
+        if ( !fids.empty())
+            pfid = *fids.begin();
+    }   // end while
+
+    //std::cerr << "[INFO] FaceTools::findBoundaryLoops: Finished setting " << nbs << " boundary loops" << std::endl;
+    return totBoundaries;
+}   // end findBoundaryLoops
+*/
+
+
+#include <ObjModelBoundaryFinder2.h>
+int FaceTools::findBoundaryLoops( const ObjModel::Ptr model, std::list<std::vector<cv::Vec3f> > &loops)
+{
+    ObjModelBoundaryFinder2 bfinder(model);
+    const int nbs = bfinder.findOrderedBoundaryVertices();
+    bfinder.sortBoundaries(true);
+
     for ( int i = 0; i < nbs; ++i)
     {
         const std::list<int>& blist = bfinder.getBoundary(i);
         assert( model->getConnectedVertices( blist.back()).count( blist.front()) > 0); // Beginning of boundary must join end
-        std::cerr << " + boundary has " << blist.size() << " vertices" << std::endl;
-        std::vector<cv::Vec3f>& lvec = *it++;
+        std::cerr << "  + boundary has " << blist.size() << " vertices" << std::endl;
+        loops.resize( loops.size() + 1);
+        std::vector<cv::Vec3f>& lvec = loops.back();
         BOOST_FOREACH ( int b, blist)
             lvec.push_back( model->vtx(b));
     }   // end for
@@ -100,10 +133,12 @@ int FaceTools::findBoundaryLoops( const ObjModel::Ptr model, std::list<std::vect
 }   // end findBoundaryLoops
 
 
+
+
+
 ObjModel::Ptr FaceTools::getComponent( const ObjModel::Ptr model, int svid, const cv::Vec3d& coffset)
 {
     assert(model);
-    using namespace RFeatures;
 
     ObjModelTriangleMeshParser parser( model);
     ObjModelBoundaryFinder bfinder;
@@ -150,7 +185,6 @@ ObjModel::Ptr FaceTools::crop( const ObjModel::Ptr model, const cv::Vec3f& v, do
 
     const int sfid = *model->getFaceIds( svidx).begin();
 
-    using namespace RFeatures;
     ObjModelCropper cropper( v, radius);
     ObjModelCopier copier;
     ObjModelTriangleMeshParser parser( model);
@@ -175,18 +209,13 @@ ObjModel::Ptr FaceTools::crop( const ObjModel::Ptr model, const cv::Vec3f& v, do
 }   // end crop
 
 
-namespace
-{
-
-bool hasReqLandmarks( const ObjMetaData::Ptr omd)
+bool FaceTools::hasReqLandmarks( const ObjMetaData::Ptr omd)
 {
     return omd &&
            omd->hasLandmark( FaceTools::Landmarks::L_EYE_CENTRE) &&
            omd->hasLandmark( FaceTools::Landmarks::R_EYE_CENTRE) &&
            omd->hasLandmark( FaceTools::Landmarks::NASAL_TIP);
 }   // end hasReqLandmarks
-
-}
 
 
 cv::Vec3f FaceTools::calcFaceCentre( const ObjMetaData::Ptr omd)
@@ -229,6 +258,40 @@ double FaceTools::calcFaceCropRadius( const ObjMetaData::Ptr omd, double G)
     const cv::Vec3f fcentre = calcFaceCentre( omd);
     return G * (cv::norm( fcentre - v0) + cv::norm( fcentre - v1))/2;
 }   // end calcFaceCropRadius
+
+
+bool FaceTools::transformToOrigin( ObjMetaData::Ptr omd, const cv::Vec3f* t)
+{
+    cv::Vec3f fc;
+    if ( t)
+        fc = *t;
+    else
+    {
+        if ( hasReqLandmarks( omd))
+            fc = calcFaceCentre( omd);
+        else
+            return false;
+    }   // end else
+
+    cv::Vec3f nvec, uvec;
+    if ( !omd->getOrientation( nvec, uvec))
+        return false;
+
+    fc = -fc;   // Subtract to origin
+
+    // Get complimentary axes coordinates for the normal and up vectors
+    nvec[0] = -nvec[0];
+    nvec[1] = -nvec[1];
+    uvec[0] = -uvec[0];
+    uvec[2] = -uvec[2];
+
+    RFeatures::ObjModelMover mover( nvec, uvec);
+    mover.prependTranslation( fc);
+    const cv::Matx44d tmat = mover();
+    omd->transform( tmat);
+
+    return true;
+}   // end transformToOrigin
 
 
 ObjModel::Ptr FaceTools::createFromVertices( const cv::Mat_<cv::Vec3f>& vrow)
@@ -381,4 +444,6 @@ bool FaceTools::loadModels( const std::vector<std::string>& fnames, std::vector<
 
     return !failed;
 }   // end loadModels
+
+
 

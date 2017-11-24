@@ -380,6 +380,9 @@ bool FaceDetector::detect( ObjMetaData::Ptr omd)
         return false;
     }   // end if
 
+    if ( omd->getKDTree() == NULL)
+        omd->rebuildKDTree();
+
     RVTK::Viewer::Ptr viewer = RVTK::Viewer::create(true/*offscreen*/);
     viewer->setSize(600,600);
     viewer->setClippingRange(0.1,1000);

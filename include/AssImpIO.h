@@ -20,7 +20,6 @@
 
 #include "FileIOInterface.h"
 #include <AssetImporter.h>   // RModelIO
-#include <AssetExporter.h>   // RModelIO
 
 namespace FaceTools {
 
@@ -38,16 +37,14 @@ public:
     virtual size_t getFileExtensions( std::vector<std::string>& exts) const;
 
     virtual bool canImport() const { return _importer != NULL;}
-    virtual bool canExport() const { return _exporter != NULL;}
+    virtual bool canExport() const { return false;}
 
 protected:
     virtual FaceModel* load( const std::string& fname);
-    virtual bool save( const FaceModel*, const std::string& fname);
 
 private:
     const std::string _ext;
     RModelIO::AssetImporter* _importer;
-    RModelIO::AssetExporter* _exporter;
     const boost::unordered_map<std::string, std::string>* available() const;
 };  // end class
 

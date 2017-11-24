@@ -41,10 +41,10 @@ FacePreProcessor::FacePreProcessor( ObjMetaData::Ptr omd) : _omd(omd)
 void FacePreProcessor::operator()( bool fillHoles, double mta, double nl, double sfactor)
 {
     const cv::Vec3f fc = FaceTools::calcFaceCentre( _omd);  // Based on eyes and nosetip landmarks
-    ObjModel::Ptr model = _omd->getObject();    // To modify
+    ObjModel::Ptr model = _omd->getObject();          // To modify
 
     // Crop #1
-    if ( nl > 0.0)
+    if ( nl > 0)
     {
         double crad = FaceTools::calcFaceCropRadius( _omd, nl+0.2);
         std::cerr << "[INFO] FaceTools::FacePreProcessor::preprocess: Crop #1 within " << crad << " mm of face centre..." << std::endl;
@@ -68,7 +68,7 @@ void FacePreProcessor::operator()( bool fillHoles, double mta, double nl, double
     }   // end if
 
     // Increase vertex density
-    if ( mta > 0.0)
+    if ( mta > 0)
     {
         std::cerr << "[INFO] FaceTools::FacePreProcessor::preprocess: Subdividing and merging polys with area > " << mta << " mm^2..." << std::endl;
         RFeatures::ObjModelVertexAdder vadder(model);
@@ -84,26 +84,17 @@ void FacePreProcessor::operator()( bool fillHoles, double mta, double nl, double
     }   // end if
 
     // Smooth
-    if ( sfactor > 0.0)
+    if ( sfactor > 0)
     {
         std::cerr << "[INFO] FaceTools::FacePreProcessor::preprocess: Smoothing (" << sfactor << " factor over max 10 iterations)..." << std::endl;
         RFeatures::ObjModelCurvatureMap::Ptr cmap = RFeatures::ObjModelCurvatureMap::create( model, *model->getFaceIds(0).begin());
         size_t numSmoothIterations = 10;
         RFeatures::ObjModelSmoother( cmap).smooth( sfactor, numSmoothIterations);
+
+        const double lmshift = _omd->shiftLandmarksToSurface();    // Map landmarks back to the surface (which changed from the smooth operation).
+        std::cerr << "[INFO] FaceTools::FacePreProcessor::preprocess: Shifted landmarks to surface by mean of " << lmshift << " units" << std::endl;
+        // Shifting the landmarks slightly will mean the face centre is slightly different, but it will be a small difference that can be ignored.
     }   // end if
 
-    // Transform the model so that centre is at origin and face is oriented according to set normal and up vectors.
-    cv::Vec3f nvec, uvec;
-    _omd->getOrientation( nvec, uvec);
-    // Make complimentary on correcting axes
-    nvec *= -1.0f;
-    uvec *= -1.0f;
-    nvec[2] *= -1.0f;
-    uvec[1] *= -1.0f;
-    const cv::Matx44d tmat = RFeatures::ObjModelMover( nvec, uvec, -fc)();
-    _omd->setObject( model, false); // Don't rebuild KD tree yet...
-    _omd->transform( tmat, true);   // Rebuild KD tree only after transforming!
-
-    const double lmshift = _omd->shiftLandmarksToSurface();    // Map landmarks back to the surface (which changed from the smooth operation).
-    std::cerr << "[INFO] FaceTools::FacePreProcessor::preprocess: Shifted landmarks to surface by mean of " << lmshift << " units" << std::endl;
+    _omd->setObject( model);
 }   // end operator()

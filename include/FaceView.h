@@ -18,94 +18,45 @@
 #ifndef FACE_TOOLS_FACE_VIEW_H
 #define FACE_TOOLS_FACE_VIEW_H
 
-#include "FaceModel.h"
-#include "BoundaryView.h"
-#include "SurfacePathDrawer.h"
-#include "LandmarkGroupView.h"
-#include "VisualisationAction.h"
+#include "ModelOptions.h"
+#include <ObjModel.h>   // RFeatures
+#include <vtkSmartPointer.h>
+#include <vtkActor.h>
 
 namespace FaceTools
 {
 
-class ModelInteractor;  // For friend declaration
+class ModelViewer;
 
-
-class FaceTools_EXPORT FaceView : public QObject
-{ Q_OBJECT
+class FaceTools_EXPORT FaceView
+{
 public:
-    FaceView( ModelViewer*, FaceModel*);
+    explicit FaceView( const RFeatures::ObjModel::Ptr);
     virtual ~FaceView();
 
-    FaceModel* getModel() const { return _fmodel;}
-    bool isModelShown() const;
-    bool isBoundaryShown() const;
-    bool areLandmarksShown() const;
+    void reset( const RFeatures::ObjModel::Ptr);
 
-    // Can this model be visualised in the given manner?
-    bool canVisualise( VisualisationAction*) const;
+    void setVisible( bool, ModelViewer* viewer=NULL);
+    ModelViewer* getViewer() { return _viewer;}
+    bool isVisible() const;
 
-    // Returns true iff this model (or any of its landmarks)
-    // is under the given viewport coordinates.
-    bool isPointedAt( const QPoint&) const;
+    vtkActor* getActor() const;   // Texture or surface depending on isTexture()
+    vtkActor* getSurfaceActor() const;
 
-    // Set v to the projected 3D position of point p, returning
-    // true iff p projects onto the model's surface.
-    bool calcSurfacePosition( const QPoint& p, cv::Vec3f&) const;
+    void setTexture( bool); // Set model for next visualisation
+    bool isTexture() const; // If true, getActor() returns getTextureActor()
 
-    // Returns the name of any landmark under the given coordinates,
-    // or an empty string if no landmarks belonging to this model
-    // are under the coordinates.
-    std::string isLandmarkPointedAt( const QPoint&) const;
-
-    RFeatures::CameraParams getCamera() const;
-
-    const vtkActor* getActor() const;
-
-    const VisualisationAction* getCurrentVisualisation() const;
-
-signals:
-    void onChangedVisualisation( const VisualisationAction*);
-    void onShowBoundary( bool);
-
-public slots:
-    // Set (and generate if necessary) current model visualisation and showModel(true).
-    // Fires onChangedVisualisation immediately afterwards.
-    void visualise( VisualisationAction*);
+    void setOptions( const ModelOptions&);
+    const boost::unordered_map<int,int>* getPolyIdLookups() const;
  
-    // Shows or hides the model's current visualisation (also ensures proper viewer config).
-    // Implies applyVisualisationOptions.
-    void showModel( bool);
-
-    void applyVisualisationOptions( const VisualisationOptions&); // Apply global visualisation options and update render.
-    void showBoundary( bool); // Show the boundary (if available).
-    void showLandmarks( bool); // Show the landmarks (if available).
-    void showLandmark( const std::string&, bool); // Show a specific landmark (if available).
-    void highlightLandmark( const std::string&, bool); // Temporarily highlight a landmark
-    void orientCameraToFace(); // Set camera to view the model from the front at standard range.
-    void setCameraToOrigin();  // Reset camera to world coordinate origin oriented along Z axis.
-    bool saveSnapshot() const; // Saves a 2D snapshot
-
-    // Project p to the point on the face, setting the camera focus there.
-    // Returns true iff p projected onto the face.
-    bool setCameraFocus( const QPoint& p);
-
-private slots:
-    void forceRevisualise();
-    void showFaceDetection();
-    void drawPath( const QPoint&);    // Forwards through to SurfacePathDrawer
-    void finishPath( const QPoint&);  // Forwards through to SurfacePathDrawer
-    friend class ModelInteractor;
-
 private:
-    ModelViewer* _viewer;
-    FaceModel* _fmodel;
-    boost::unordered_map<VisualisationAction*, vtkSmartPointer<vtkActor> > _allvis;
-    VisualisationAction* _curvis;    // Currently active visualisation
-    bool _inview;
-    BoundaryView _bview;
-    SurfacePathDrawer _pathDrawer;
-    LandmarkGroupView _lview;
-    VisualisationOptions _visopts;
+    ModelViewer *_viewer;
+    bool _isshown;
+    bool _istexture;
+    vtkSmartPointer<vtkActor> _tactor;
+    vtkSmartPointer<vtkActor> _sactor;
+    ModelOptions _opts;
+    boost::unordered_map<int,int> _flookup;
 
     FaceView( const FaceView&);       // No copy
     void operator=( const FaceView&); // No copy

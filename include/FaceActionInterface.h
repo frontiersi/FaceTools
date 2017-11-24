@@ -32,7 +32,7 @@ namespace FaceTools
 {
 
 class FaceActionWorker;
-class ModelInteractor;
+class FaceControl;
 
 // Must remain pure virtual so Qt can make it a plugin interface.
 class FaceTools_EXPORT FaceActionInterface : public QTools::PluginInterface
@@ -45,20 +45,20 @@ public:
     // Class FaceAction creates an internal member QAction which is configured to use the
     // FaceAction's display name, icon, and shortcut key. Child classes should call
     // setEnabled(bool) as appropriate on the member QAction* in
-    // the slots that are connected to the ModelInteractor signals.
+    // the slots that are connected to the FaceControl signals.
     virtual QAction* qaction() = 0;
 
     // Add/remove interactors so action knows what to apply itself
     // to and/or what conditions to respond to (e.g. to enable/disable
     // self, or automatically trigger when certain conditions are met).
-    virtual void addInteractor( ModelInteractor*) = 0;
-    virtual void removeInteractor( ModelInteractor*) = 0;
+    virtual void addController( FaceControl*) = 0;
+    virtual void removeController( FaceControl*) = 0;
 
     // Allow an already added interactor to inform this action of when it starts or stops
     // being interacted on by the user. One or more interactors of the full set of added
     // interactors may be set interactive. Actions may want to reimplement this function
     // to allow them to enable/disable themselves in response to these events.
-    virtual void setInteractive( ModelInteractor*, bool) = 0;
+    virtual void setControlled( FaceControl*, bool) = 0;
 };  // end class
 
 
@@ -66,24 +66,21 @@ class FaceTools_EXPORT FaceAction : public FaceActionInterface
 { Q_OBJECT
 public:
     FaceAction();
-    virtual ~FaceAction(){}
 
     // Triggering the action calls this action's process function.
     virtual QAction* qaction() { return &_action;}
 
-    // Connect interactors to this action. Several interactors may
-    // be attached to an action, or each newly connected interactor
-    // may replace the existing one (up to the implementing action).
-    // Whether or not an interactor is currently being acted upon is
-    // communicated via setInteractive. In this way, an action can be
-    // aware of a larger set of interactors than are telling it that
-    // they are ready to be acted upon. Some actions may not care about
-    // which interactors are currently available to it, and only want
-    // to work on the interactive set (e.g. visualisation actions). In
-    // this case, it is only necessary to reimplement setInteractive.
-    virtual void addInteractor( ModelInteractor*){}
-    virtual void removeInteractor( ModelInteractor*){}
-    virtual void setInteractive( ModelInteractor*, bool){}
+    // Connect interactors to this action. Several interactors may be attached to an
+    // action, or each newly connected interactor may replace the existing one (decided
+    // by the implementing action). Whether or not an interactor is currently being acted
+    // upon is communicated via setControlled. In this way, an action can be aware of a
+    // larger set of interactors than those telling it that they are ready to be acted
+    // upon. Some actions may not care about which interactors are currently available
+    // to it, and only want to work on the interactive set (e.g. visualisation actions).
+    // In this case, it is only necessary to reimplement setControlled.
+    virtual void addController( FaceControl*){}
+    virtual void removeController( FaceControl*){}
+    virtual void setControlled( FaceControl*, bool){}
 
     // Set whether this action will be undertaken asynchronously or not
     // on the next call to process. Default is synchronous (blocking calls).
@@ -108,7 +105,7 @@ public slots:
     bool process();
 
 protected:
-    // Derived types must call initAction() from within their constructor to initialise
+    // Derived types must call init() from within their constructor to initialise
     // the FaceAction's member action. This can't be done from within the FaceAction
     // constructor itself due to the use of polymorphic calls which, if used from the base
     // class's constructor, will resolve to an incompletely instantiated object of the
@@ -116,8 +113,14 @@ protected:
     // (NULL pointers being returned for the icon and key sequence).
     void init();
 
+    // Preparation immediately before doAction - which may occur in a separate thread.
+    // doPrepAction always occurs in the GUI thread so this is where present file dialogs
+    // etc in order to get user input.
+    virtual void doPrepAction(){}
+
     // Implement the action; process() decides whether it runs asynchronously or not.
-    virtual bool doAction() = 0;
+    // DON'T call GUI functions inside doAction if running asynchronously.
+    virtual bool doAction(){ return true;}
 
     // If interested in providing progress updates for long running
     // actions that may be asynchronous, derived type should regularly
@@ -158,20 +161,15 @@ class FaceTools_EXPORT FaceActionGroup : public FaceActionInterface
 { Q_OBJECT
 public:
     FaceActionGroup();
-    virtual ~FaceActionGroup(); // Deletes all actions added by addAction
+    ~FaceActionGroup(); // Deletes all actions added by addAction
 
-    // Whether this group of actions should be available as a main
-    // menu, on its own toolbar, or added to the context menu.
+    // Create menus / toolbars for the action group.
     const QMenu* createMenu();
     const QToolBar* createToolBar();
 
-    // Add this action group to the given menu which isn't managed by this class.
-    // If there already exist items on the menu, a separator is added first.
     virtual void addTo( QMenu*) const;
-
-    // Add this action group to the given toolbar which isn't managed by this class.
-    // If there already exist items on the toolbar, a separator is added first.
     virtual void addTo( QToolBar*) const;
+    virtual void addToContext( QMenu*) const{}  // Add selected actions to provided context menu
 
     // QTools::PluginInterface
     virtual QStringList getInterfaceIds() const;
@@ -195,9 +193,9 @@ private:
     QList<FaceAction*> _actionList;
 
     virtual QAction* qaction() { return NULL;}
-    virtual void addInteractor( ModelInteractor*){}
-    virtual void removeInteractor( ModelInteractor*){}
-    virtual void setInteractive( ModelInteractor*, bool){}
+    virtual void addController( FaceControl*){}
+    virtual void removeController( FaceControl*){}
+    virtual void setControlled( FaceControl*, bool){}
     FaceActionGroup( const FaceActionGroup&);   // No copy
     void operator=( const FaceActionGroup&);    // No copy
 };  // end class

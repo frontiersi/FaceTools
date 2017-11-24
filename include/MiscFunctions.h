@@ -30,12 +30,6 @@ typedef unsigned char byte;
 namespace FaceTools
 {
 
-/*
-// Draw path on image m, which is assumed to have same relative dimensions as the viewer.
-void drawPath( const std::vector<cv::Vec3f>&, cv::Mat& m,
-               cv::Scalar colour=cv::Scalar(255,255,255), int thickness=1);
-*/
-
 // Removes all occurances of "(*)" in s (where * is any character).
 FaceTools_EXPORT void removeParentheticalContent( std::string& s);
 

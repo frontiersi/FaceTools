@@ -24,9 +24,8 @@ using FaceTools::FaceModel;
 
 
 // public
-FaceModelTabWidget::FaceModelTabWidget( QMenu* cmenu, const QList<QAction*>* actions, QWidget *parent)
+FaceModelTabWidget::FaceModelTabWidget( const QList<QAction*>* actions, QWidget *parent)
     : QTabWidget(parent),
-      _cmenu(cmenu),
       _actions(actions),
       _qvtkviewer( new QTools::VtkActorViewer),
       _viewer(NULL),
@@ -37,12 +36,10 @@ FaceModelTabWidget::FaceModelTabWidget( QMenu* cmenu, const QList<QAction*>* act
     _viewerLayout->setContentsMargins( QMargins());
     _viewer->addToLayout( _viewerLayout);
 
-    //std::cerr << "FaceModelTabWidget " << std::hex << this << std::endl;
     setUsesScrollButtons(true);
     setDocumentMode(true);
     connect( this, &FaceModelTabWidget::currentChanged, this, &FaceModelTabWidget::onTabChanged);
-    connect( _viewer, &FaceTools::InteractiveModelViewer::requestContextMenu,
-                this, &FaceModelTabWidget::showContextMenu);
+    connect( _viewer, &FaceTools::InteractiveModelViewer::requestContextMenu, this, &FaceModelTabWidget::requestContextMenu);
 }   // end ctor
 
 
@@ -62,7 +59,7 @@ int FaceModelTabWidget::addTabWidget( FaceModel* fmodel)
 {
     // Create the widget and add the actions
     FaceModelWidget* fmwidget = new FaceModelWidget( _viewer, _actions);
-    connect( fmwidget, &FaceModelWidget::onViewSelected, this, &FaceModelTabWidget::onViewSelected);
+    connect( fmwidget, &FaceModelWidget::onMadeActive, this, &FaceModelTabWidget::onMadeActive);
     const std::string& tname = fmwidget->addView( fmodel);
     setUpdatesEnabled(false);  // Disable painting (prevent flicker)
     const int tabIdx = addTab( fmwidget, tname.c_str());
@@ -154,29 +151,14 @@ void FaceModelTabWidget::consolidateTabs()
 void FaceModelTabWidget::onTabChanged( int tabIdx)
 {
     std::string vname;
-    FaceModel* fmodel = NULL;
+    Mint* mint = NULL;
     if ( tabIdx < 0)
         setLayout(_viewerLayout);
     else
     {
         FaceModelWidget* fmwidget = qobject_cast<FaceModelWidget*>( widget(tabIdx));
-        vname = fmwidget->getActiveViewName();
-        fmodel = fmwidget->getActiveView()->getModel();
+        mint = fmwidget->getActive( &vname);
         fmwidget->reparentViewer(_viewerLayout);
     }   // end else
-    emit onViewSelected( fmodel, vname);
+    emit onMadeActive( mint, vname);
 }   // end onTabChanged
-
-
-// private slot
-void FaceModelTabWidget::showContextMenu( const QPoint& p)
-{
-    if ( !_cmenu || count() == 0 || _cmenu->actions().empty())
-        return;
-
-    const int tabIdx = currentIndex();
-
-    const FaceView* fview = qobject_cast<FaceModelWidget*>( widget(tabIdx))->getActiveView();
-    if ( fview && fview->isPointedAt(p))
-        _cmenu->exec(mapToGlobal(p));
-}   // end showContextMenu

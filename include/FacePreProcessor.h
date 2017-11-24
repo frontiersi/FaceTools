@@ -41,9 +41,8 @@ public:
     // 2) Sets triangles to be no larger than mta units in area (subdivides with extra vertices).
     // 3) Crops around face using standardised radius based on multiple of nose length (nl).
     // 4) Smooths the face with smooth curvature factor sf over max of 10 iterations.
-    // 5) Transforms the "centre" of the face to the world coordinate origin and orients.
-    // 6) Shifts landmarks to the closest positions on the newly smoothed face.
-    // Leaving the parameters as default simply transforms to standard position (5&6).
+    // 5) Shifts landmarks to the closest positions on the newly smoothed face.
+    // Leaving the parameters as default leaves the model untouched.
     void operator()( bool fillHoles=false, double mta=0, double nl=0, double sf=0);
 
 private:

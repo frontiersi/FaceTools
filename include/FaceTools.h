@@ -35,6 +35,10 @@ FaceTools_EXPORT int findBoundaryLoops( const RFeatures::ObjModel::Ptr, std::lis
 // Optional translation offset is applied to the copied model.
 FaceTools_EXPORT RFeatures::ObjModel::Ptr getComponent( const RFeatures::ObjModel::Ptr, int vidx, const cv::Vec3d& copyOffset=cv::Vec3d(0,0,0));
 
+// Checks if given model as the essential landmarks (eyes and nose tip) needed
+// for crop, calcFaceCentre, calcFaceCropRadius, transformToOrigin and others.
+FaceTools_EXPORT bool hasReqLandmarks( const ObjMetaData::Ptr);
+
 // Crop and copy the given model to be the part connected to vertex svid with a boundary of R from centre v.
 // The choice of svid allows the cropped part to be inside or outside the boundary. If svid is not a valid
 // model vertex, an empty object is returned. Returned object is parsable as a single connected component.
@@ -48,6 +52,15 @@ FaceTools_EXPORT cv::Vec3f calcFaceCentre( const ObjMetaData::Ptr);
 // from the face centre to the eye centre (average of both eyes used).
 // Returns < 0 if required landmarks are missing.
 FaceTools_EXPORT double calcFaceCropRadius( const ObjMetaData::Ptr, double G);
+
+// Transform and rotate (using the orientation vectors) the given object to the origin.
+// Object is translated by -(*t) so that t is incident with the world origin on return.
+// If t is not given, it is calculated as calcFaceCentre(omd).
+// Returns false if the orientation vectors on omd don't exist, or t is NULL and
+// the face centre can't be calculated. Returns true iff object was successfully transformed.
+// Note that this function will cause the object's internal KD tree to be reset
+// (call omd->rebuildKDTree() after this function if KD tree needed).
+FaceTools_EXPORT bool transformToOrigin( ObjMetaData::Ptr omd, const cv::Vec3f* t=NULL);
 
 // Create a vertices only ObjModel from the given row of points.
 FaceTools_EXPORT RFeatures::ObjModel::Ptr createFromVertices( const cv::Mat_<cv::Vec3f>& row);

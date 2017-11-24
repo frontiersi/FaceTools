@@ -25,8 +25,7 @@ using FaceTools::FaceModel;
 AssImpIO::AssImpIO( const std::string& ext)
     : FaceTools::FileIOInterface(),
       _ext( boost::algorithm::to_lower_copy(ext)),
-      _importer( new RModelIO::AssetImporter( true/*load textures*/, true/*fail on non triangles*/)),
-      _exporter( new RModelIO::AssetExporter)
+      _importer( new RModelIO::AssetImporter( true/*load textures*/, true/*fail on non triangles*/))
 {
     init();
 
@@ -36,24 +35,14 @@ AssImpIO::AssImpIO( const std::string& ext)
         delete _importer;
         _importer = NULL;
     }   // end if
-
-    // And check if we can export using it.
-    if ( !_exporter->enableFormat(_ext))
-    {
-        delete _exporter;
-        _exporter = NULL;
-    }   // end if
 }   // end ctor
 
 
 // public
 AssImpIO::~AssImpIO()
 {
-    if ( _exporter)
-        delete _exporter;
     if ( _importer)
         delete _importer;
-    _exporter = NULL;
     _importer = NULL;
 }   // end dtor
 
@@ -64,8 +53,6 @@ const boost::unordered_map<std::string, std::string>* AssImpIO::available() cons
     const boost::unordered_map<std::string, std::string>* av = NULL;
     if ( _importer)
         av = &_importer->getAvailable();
-    else if ( _exporter)
-        av = &_exporter->getAvailable();
     assert(av);
     return av;
 }   // end getAvailable
@@ -109,21 +96,4 @@ FaceModel* AssImpIO::load( const std::string& fname)
     FaceModel* fmodel = new FaceModel( FaceTools::ObjMetaData::create(fname, model));
     return fmodel;
 }   // end load
-
-
-// protected
-bool AssImpIO::save( const FaceModel* fmodel, const std::string& fname)
-{
-    if ( !canExport())
-        return false;
-
-    _err = "";
-    if ( !_exporter->save( fmodel->getObjectMeta()->getObject(), fname))
-    {
-        _err = _exporter->err();
-        return false;
-    }   // end if
-    return true;
-}   // end save
-
 

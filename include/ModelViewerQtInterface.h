@@ -16,8 +16,7 @@
  ************************************************************************/
 
 /**
- * Interactive functionality for the ModelViewer.
- * Ties VTK's event system to Qt's.
+ * Interactive functionality for the ModelViewer. Ties VTK's event system to Qt's.
  */
 
 #ifndef FACE_TOOLS_MODEL_VIEWER_QT_INTERFACE_H
@@ -40,8 +39,8 @@ public:
     // Return the most recent mouse coords having top left origin.
     const QPoint& getMouseCoords() const { return _mcoords;}
 
-    // Camera is only unlocked if the user left double clicks.
-    bool isCameraLocked() const { return _cameraLocked;}
+    bool isCameraLocked() const;
+    void setCameraLocked( bool v);
 
 signals:
     // Clients should listen to these signals to know what user input events from VTK are being forwarded.
@@ -58,12 +57,12 @@ signals:
     void onLeftButtonUp();
     void onLeftDoubleClick();
 
-    void lockedCamera();      // Locked camera from panning, rotating, and zooming
-    void unlockedCamera();    // Unlocked camera from panning, rotating, and zooming
+    void requestContextMenu( const QPoint&);
 
 private:
-    bool _cameraLocked;
+    int _camLockedCount;
     qint64 _lbDownTime; // If not 0, last time left mouse button went down
+    qint64 _rbDownTime;
     QPoint _mcoords;    // Last set mouse coords
 
     // No copying

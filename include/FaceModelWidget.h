@@ -19,7 +19,6 @@
 #define FACE_TOOLS_FACE_MODEL_WIDGET_H
 
 #include "InteractiveModelViewer.h"
-#include "VisualisationAction.h"
 #include "FaceViewComboBox.h"
 
 namespace FaceTools
@@ -38,8 +37,7 @@ public:
     size_t getNumModels() const; // Get the number of models displayed in this widget.
     size_t getNumViews() const;  // Get the number of views displayed in this widget (possibly > getNumModels())
 
-    const FaceView* getActiveView() const;
-    std::string getActiveViewName() const;
+    Mint* getActive( std::string *vname=NULL) const;
 
     void reparentViewer( QLayout*);
 
@@ -49,7 +47,7 @@ public slots:
     void removeView( const std::string&);     // Remove single view
 
 signals:
-    void onViewSelected( FaceModel*, const std::string&);   // Signal the newly active model and its view
+    void onMadeActive( ModelInteractor*, const std::string&);   // Signal the newly active view
 
 private:
     InteractiveModelViewer* _viewer;

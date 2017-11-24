@@ -15,24 +15,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_VISUALISATION_OPTIONS_H
-#define FACE_TOOLS_VISUALISATION_OPTIONS_H
+#ifndef FACE_TOOLS_MODEL_OPTIONS_H
+#define FACE_TOOLS_MODEL_OPTIONS_H
 
 #include "FaceTools_Export.h"
 #include <QColor>
+#include <string>
 
 namespace FaceTools
 {
 
-struct FaceTools_EXPORT VisualisationOptions
+struct FaceTools_EXPORT ModelOptions
 {
     struct Model
     {
         bool backfaceCulling;
         double vertexSize;
         double lineWidth;
-        QColor surfaceColourFlat;
+        QColor activeColour;
         QColor surfaceColourMin;
+        QColor surfaceColourMid;
         QColor surfaceColourMax;
         float minVisibleScalar;
         float maxVisibleScalar;
@@ -49,17 +51,19 @@ struct FaceTools_EXPORT VisualisationOptions
 
     struct Boundary
     {
-        double vertexSize;
-        QColor vertexColour;
-        double lineWidth;
         QColor lineColour;
+        double lineWidth;
+        double cropFactor;  // 2.0 nominal
     };  // end struct
 
     Model model;
     Landmarks landmarks;
     Boundary boundary;
-    std::string munits; // Measurement units (e.g. "mm")
-    bool showAxes;
+    std::string munits;     // Measurement units (e.g. "mm")
+    QColor textColour;      // Text annotation colour
+    bool showCaptions;
+    double maxTriangleArea;
+    double smoothFactor;
 };  // end struct
 
 

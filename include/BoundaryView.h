@@ -20,30 +20,29 @@
 
 #include "ModelViewer.h"
 #include "ObjMetaData.h"
-#include "VisualisationOptions.h"
+#include "ModelOptions.h"
 
 namespace FaceTools
 {
 
-class FaceTools_EXPORT BoundaryView : public QObject
-{ Q_OBJECT
+class FaceTools_EXPORT BoundaryView
+{
 public:
-    BoundaryView( ModelViewer*, const ObjMetaData::Ptr);
+    explicit BoundaryView( const ObjMetaData::Ptr);
+    virtual ~BoundaryView();
 
-    void show( bool enable);
-    bool isShown() const;
     void reset();
-    void setVisualisationOptions( const VisualisationOptions::Boundary&);
 
-public slots:
-    void setFaceCropFactor( double);
+    void setVisible( bool enable, ModelViewer* viewer);
+    bool isVisible() const;
+
+    void setOptions( const ModelOptions::Boundary&);
 
 private:
     ModelViewer *_viewer;
     const ObjMetaData::Ptr _omd;
-    double _faceCropFactor;
     bool _isshown;
-    VisualisationOptions::Boundary _visopts;
+    ModelOptions::Boundary _opts;
     vtkSmartPointer<vtkActor> _boundary;
 
     BoundaryView( const BoundaryView&);   // No copy

@@ -15,37 +15,36 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_ALIGN_FACE_H
-#define FACE_TOOLS_ACTION_ALIGN_FACE_H
+#ifndef FACE_TOOLS_ACTION_FULLSCREEN_VIEWER_H
+#define FACE_TOOLS_ACTION_FULLSCREEN_VIEWER_H
 
-#include "FaceActionInterface.h"
-#include "ModelInteractor.h"
+#include "InteractiveModelViewer.h"
+#include <string>
+#include <QIcon>
+#include <QAction>
 
 namespace FaceTools {
 
-class FaceTools_EXPORT ActionAlignFace : public FaceAction
+class FaceTools_EXPORT ActionFullScreenViewer : public QObject
 { Q_OBJECT
 public:
-    explicit ActionAlignFace( const std::string& iconfilename="");
+    ActionFullScreenViewer( InteractiveModelViewer*, const std::string& dname="&Full Screen");
+    virtual ~ActionFullScreenViewer();
 
-    virtual const QIcon* getIcon() const { return &_icon;}
-    virtual QString getDisplayName() const { return "Align to Axes";}
+    QAction* qaction() { return &_action;}
 
-    virtual void setInteractive( ModelInteractor*, bool);
-
-protected:
-    virtual bool doAction();
-
-private slots:
-    void checkEnable();
+public slots:
+    void toggleFullScreen();    // Fired by action
 
 private:
-    const QIcon _icon;
-    FaceModel* _fmodel;
+    InteractiveModelViewer* _viewer;
+    class KeyPressHandler;        // Derives from QTools::KeyPressHandler
+    KeyPressHandler* _kphandler;  // implements virtual bool handleKeyPress(QKeyEvent*)
+    QAction _action;
+    bool _isfull;
 };  // end class
 
 }   // end namespace
 
 #endif
-
 

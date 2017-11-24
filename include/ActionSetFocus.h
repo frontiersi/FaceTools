@@ -19,7 +19,8 @@
 #define FACE_TOOLS_ACTION_SET_FOCUS_H
 
 #include "FaceActionInterface.h"
-#include "ModelInteractor.h"
+#include "ModelViewer.h"
+#include "FaceControl.h"
 
 namespace FaceTools {
 
@@ -30,7 +31,8 @@ public:
 
     virtual QString getDisplayName() const { return "Set Camera Focus";}
 
-    virtual void setInteractive( ModelInteractor*, bool);
+    virtual void addController( FaceControl*);
+    virtual void removeController( FaceControl*);
 
 protected:
     virtual bool doAction();
@@ -39,7 +41,7 @@ private slots:
     void checkEnable();
 
 private:
-    ModelInteractor* _interactor;
+    FaceControl *_fcont;
 };  // end class
 
 }   // end namespace

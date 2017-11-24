@@ -20,24 +20,26 @@
 
 #include "ObjMetaData.h"
 #include "LandmarkView.h"
-
+#include "ModelOptions.h"
 
 namespace FaceTools
 {
 
-class FaceTools_EXPORT LandmarkGroupView : public QObject
-{ Q_OBJECT
+class FaceTools_EXPORT LandmarkGroupView
+{
 public:
-    LandmarkGroupView( ModelViewer*, const ObjMetaData::Ptr);
+    LandmarkGroupView( const ObjMetaData::Ptr);
     virtual ~LandmarkGroupView();
 
-    void showAll( bool enable);                     // Show/hide all landmarks
-    bool isShown() const;                           // Returns true iff ALL landmarks shown
-    void showLandmark( const std::string&, bool);   // Show/hide individual landmark
-    bool isShown( const std::string&) const;        // Returns true iff a particular landmark is shown
+    void setVisible( bool, ModelViewer*);        // Show/hide all landmarks (also sets current viewer)
+    bool isVisible() const;                      // Returns true iff ANY landmark shown
+    void getVisibleLandmarks( std::vector<std::string>&) const; // Get the names of the visible landmarks into the given vector.
 
-    void highlightLandmark( const std::string&, bool);
-    void setVisualisationOptions( const VisualisationOptions::Landmarks&);
+    void showLandmark( bool, const std::string&);       // Show/hide individual landmark
+    bool isLandmarkVisible( const std::string&) const;  // Returns true iff a particular landmark is shown
+    void highlightLandmark( bool, const std::string&);  // Highlights a (visible) landmark
+
+    void setOptions( const ModelOptions::Landmarks&);
 
     void erase(); // Remove existing landmarks
     void reset(); // Reset all landmarks from the ObjMetaData
@@ -46,15 +48,19 @@ public:
     // or an empty string if no landmarks lie under the coordinates.
     std::string pointedAt( const QPoint&) const;
 
-public slots:
+    // Returns true if given prop is one of the landmarks AND the landmark is visible.
+    bool isLandmark( const vtkProp*) const;
+
     void updateLandmark( const std::string&, const cv::Vec3f*);
-    void selectLandmark( const std::string&, bool enable);
 
 private:
-    ModelViewer* _viewer;
-    const ObjMetaData::Ptr _objmeta;
+    ModelViewer *_viewer;
+    const ObjMetaData::Ptr _omd;
     boost::unordered_map<std::string, LandmarkView*> _lviews;
-    VisualisationOptions::Landmarks _visopts;
+    ModelOptions::Landmarks _opts;
+
+    LandmarkGroupView( const LandmarkGroupView&);   // No copy
+    void operator=( const LandmarkGroupView&);      // No copy
 };  // end class
 
 }   // end namespace

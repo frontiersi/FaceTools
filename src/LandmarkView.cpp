@@ -21,102 +21,89 @@
 #include <vtkMapper.h>
 using FaceTools::LandmarkView;
 using FaceTools::ModelViewer;
-using FaceTools::ModelViewerAnnotator;
-using FaceTools::VisualisationOptions;
+using FaceTools::ModelOptions;
 using namespace FaceTools::Landmarks;
 
 
-LandmarkView::LandmarkView( ModelViewer* viewer, const FaceTools::Landmarks::Landmark* lm, const VisualisationOptions::Landmarks& visopts)
-    : _viewer(viewer),
-      _annotator( new ModelViewerAnnotator( viewer->getRenderer())),
+LandmarkView::LandmarkView( const FaceTools::Landmarks::Landmark* lm, const ModelOptions::Landmarks& opts)
+    : _viewer(NULL),
       _landmark(lm),
       _source( vtkSmartPointer<vtkSphereSource>::New()),
       _actor( vtkSmartPointer<vtkActor>::New()),
-      _ishighlighted(false), _msgID(0), _isshown(false)
+      _ishighlighted(false), _isshown(false)
 {
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection( _source->GetOutputPort());
     _actor->SetMapper(mapper);
     update();
-    setVisualisationOptions(visopts);
+    setOptions(opts);
 }   // end ctor
 
 
 LandmarkView::~LandmarkView()
 {
-    show(false);
-    _annotator->removeMessage( _msgID);
-    delete _annotator;
+    setVisible( false, NULL);
 }   // end dtor
 
 
-void LandmarkView::show( bool enable)
+void LandmarkView::setVisible( bool enable, ModelViewer* viewer)
 {
-    if ( enable && _landmark->visible)
+    if ( _viewer)
+        _viewer->remove(_actor);
+
+    if ( viewer)
+        viewer->remove(_actor);
+
+    _isshown = false;
+    _viewer = viewer;
+    if ( enable && viewer)
     {
-        if ( !_isshown)
-            _viewer->add(_actor);
+        viewer->add(_actor);
         _isshown = true;
     }   // end if
-    else
-    {
-        if ( _isshown)
-            _viewer->remove(_actor);
-        _isshown = false;
-    }   // end else
-}   // end show
+}   // end setVisible
 
 
-bool LandmarkView::isShown() const
-{
-    return _isshown;
-}   // end isShown
+bool LandmarkView::isVisible() const { return _isshown;}
 
 
 void LandmarkView::update()
 {
     _source->SetCenter( _landmark->pos[0], _landmark->pos[1], _landmark->pos[2]);
     _source->Update();
-    _annotator->removeMessage( _msgID);
-    if ( _ishighlighted && _landmark->visible)
-        _msgID = _annotator->showMessage( 0.95, 0.05, ModelViewerAnnotator::RightJustify, _landmark->name);
-    _viewer->updateRender();
 }   // end update
 
 
 void LandmarkView::highlight( bool enable)
 {
-    _ishighlighted = enable;
-    double rad;
-    QColor col;
-
+    QColor col = _opts.colour;
+    double rad = _opts.radius;
+    _ishighlighted = enable && isVisible();
     if ( _ishighlighted)
     {
-        col = _visopts.highlightColour;
-        rad = _visopts.highlightRadius;
-        _msgID = _annotator->showMessage( 0.95, 0.05, ModelViewerAnnotator::RightJustify, _landmark->name);
+        col = _opts.highlightColour;
+        rad = _opts.highlightRadius;
     }   // end if
-    else
-    {
-        col = _visopts.colour;
-        rad = _visopts.radius;
-        _annotator->removeMessage( _msgID);
-    }   // end else
-
     _actor->GetProperty()->SetColor( col.redF(), col.greenF(), col.blueF());
     _actor->GetProperty()->SetOpacity( col.alphaF());
     _source->SetRadius( rad);
 }   // end highlight
 
 
-void LandmarkView::setVisualisationOptions( const VisualisationOptions::Landmarks& visopts)
+void LandmarkView::setOptions( const ModelOptions::Landmarks& opts)
 {
-    _visopts = visopts;
+    _opts = opts;
     highlight( _ishighlighted);
-}   // end setVisualisationOptions
+}   // end setOptions
 
 
 bool LandmarkView::isPointedAt( const QPoint& p) const
 {
-    return _viewer->getPointedAt(p, _actor);
+    bool pointedAt = false;
+    if ( _viewer)
+        pointedAt = _viewer->getPointedAt(p, _actor);
+    return pointedAt;
 }   // end isPointedAt
+
+
+bool LandmarkView::isProp( const vtkProp* prop) const { return _actor == prop;}

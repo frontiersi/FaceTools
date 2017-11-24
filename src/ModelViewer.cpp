@@ -34,13 +34,6 @@ using RFeatures::CameraParams;
 
 
 // public
-void ModelViewer::updateRender()
-{
-    _qviewer->updateRender();
-}   // end updateRender
-
-
-// public
 void ModelViewer::enableFloodLights( bool enable)
 {
     std::vector<RVTK::Light> lights;
@@ -54,20 +47,11 @@ void ModelViewer::enableFloodLights( bool enable)
 
 
 // public
-bool ModelViewer::floodLightsEnabled() const
-{
-    return _floodLightsEnabled;
-}   // end floodLightsEnabled
-
-
-// public
-void ModelViewer::showAxes( bool enable)
-{
-    if ( enable)
-        _axes->show();
-    else
-        _axes->hide();
-}   // end showAxes
+bool ModelViewer::floodLightsEnabled() const { return _floodLightsEnabled;}
+void ModelViewer::showAxes( bool enable) { _axes->setEnabled(enable);}
+bool ModelViewer::legendShown() const { return _scalarLegend->isShown();}
+bool ModelViewer::axesShown() const { return _axes->isShown();}
+void ModelViewer::updateRender() { _qviewer->updateRender();}
 
 
 // public
@@ -80,48 +64,35 @@ void ModelViewer::showLegend( bool enable)
 }   // end showLegend
 
 
-// public
-bool ModelViewer::legendShown() const
-{
-    return _scalarLegend->isShown();
-}   // end legendShown
-
-
-// public
-bool ModelViewer::axesShown() const
-{
-    return _axes->isShown();
-}   // end axesShown
-
-
 // private
 void ModelViewer::init()
 {
     _scalarLegend = new RVTK::ScalarLegend( _qviewer->getRenderer());
-    _axes = new RVTK::Axes( _qviewer->getRenderer());
-    _axes->setInteractor( _qviewer->GetInteractor());
+    _axes = new RVTK::Axes( _qviewer->getRenderWindow()->GetInteractor());
     showAxes(false);
     showLegend(false);
+    enableFloodLights( _floodLightsEnabled);
 }   // end init
 
 
 // public
 ModelViewer::ModelViewer( bool floodFill)
-    : _qviewer( new QTools::VtkActorViewer( NULL)), _scalarLegend(NULL), _axes(NULL), _dodel(true), _addedModelID(0)
+    : _qviewer( new QTools::VtkActorViewer( NULL)), _scalarLegend(NULL),
+      _axes(NULL), _dodel(true), _floodLightsEnabled(floodFill), _addedModelID(0)
 {
     vtkObject::GlobalWarningDisplayOff();   // Prevent GUI error warning pop-ups
     vtkSmartPointer<vtkRenderer> renderer = _qviewer->getRenderer();
     renderer->SetGradientBackground(false);
     renderer->SetBackground(0,0,0);
     _qviewer->setInteractor( vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New());
-    enableFloodLights( floodFill);
     init();
 }   // end ctor
 
 
 // public
 ModelViewer::ModelViewer( QTools::VtkActorViewer* viewer)
-    : _qviewer( viewer), _scalarLegend(NULL), _axes(NULL), _dodel(false), _addedModelID(0)
+    : _qviewer( viewer), _scalarLegend(NULL), _axes(NULL), _dodel(false),
+      _floodLightsEnabled(false), _addedModelID(0)
 {
     init();
 }   // end ctor
@@ -138,52 +109,22 @@ ModelViewer::~ModelViewer()
 
 
 // public
-void ModelViewer::setSize( const cv::Size& sz)
-{
-    _qviewer->setSize( sz.width, sz.height);
-}   // end setSize
-
-
-// public
-void ModelViewer::show()
-{
-    _qviewer->show();
-}   // end show
-
-
-// public
-void ModelViewer::hide()
-{
-    _qviewer->hide();
-}   // end hide
-
-
-// public
-cv::Point2f ModelViewer::projectProp( const cv::Vec3f& v) const
-{
-    return _qviewer->projectToDisplayProportion( v);
-}   // end projectProp
-
-
-// public
-cv::Point ModelViewer::project( const cv::Vec3f& v) const
-{
-    return _qviewer->projectToDisplay( v);
-}   // end project
-
-
-// public
-cv::Vec3f ModelViewer::project( const cv::Point2f& p) const
-{
-    return _qviewer->pickWorldPosition( p);
-}   // end project
-
-
-// public
-cv::Vec3f ModelViewer::project( const cv::Point& p) const
-{
-    return _qviewer->pickWorldPosition( p);
-}   // end project
+void ModelViewer::setSize( const cv::Size& sz) { _qviewer->setSize( sz.width, sz.height);}
+void ModelViewer::show() { _qviewer->show();}
+void ModelViewer::hide() { _qviewer->hide();}
+cv::Point2f ModelViewer::projectProp( const cv::Vec3f& v) const { return _qviewer->projectToDisplayProportion( v);}
+cv::Point ModelViewer::project( const cv::Vec3f& v) const { return _qviewer->projectToDisplay( v);}
+cv::Vec3f ModelViewer::project( const cv::Point2f& p) const { return _qviewer->pickWorldPosition( p);}
+cv::Vec3f ModelViewer::project( const cv::Point& p) const { return _qviewer->pickWorldPosition( p);}
+const vtkProp* ModelViewer::getPointedAt( const cv::Point& p) const { return _qviewer->pickActor( p);}
+void ModelViewer::setCursor( QCursor cursor) { _qviewer->setCursor(cursor);}
+void ModelViewer::add( const vtkProp* prop) { _qviewer->add(prop);}
+void ModelViewer::remove( const vtkProp* prop) { _qviewer->remove(prop);}
+int ModelViewer::getNumLegendColours() const { return _scalarLegend->getNumColours();}
+void ModelViewer::setCamera( const CameraParams& cp) { _qviewer->setCamera( cp);}
+size_t ModelViewer::getWidth() const { return _qviewer->getWidth();}
+size_t ModelViewer::getHeight() const { return _qviewer->getHeight();}
+bool ModelViewer::saveSnapshot() const { return QTools::saveImage( _qviewer->getColourImg());}
 
 
 // public
@@ -199,13 +140,6 @@ const vtkProp* ModelViewer::getPointedAt( const cv::Point2f& p) const
 {
     const cv::Point preal = FaceTools::fromProportion( p, cv::Size2i( (int)getWidth(), (int)getHeight()));
     return getPointedAt(preal);
-}   // end getPointedAt
-
-
-// public
-const vtkProp* ModelViewer::getPointedAt( const cv::Point& p) const
-{
-    return _qviewer->pickActor( p);
 }   // end getPointedAt
 
 
@@ -254,13 +188,6 @@ bool ModelViewer::calcSurfacePosition( const vtkProp *prop, const cv::Point2f& p
     const cv::Point p = FaceTools::fromProportion( pf, cv::Size2i( (int)getWidth(), (int)getHeight()));
     return calcSurfacePosition( prop, p, worldPos);
 }   // end calcSurfacePosition
-
-
-// public
-void ModelViewer::setCursor( QCursor cursor)
-{
-    _qviewer->setCursor(cursor);
-}   // end setCursor
 
 
 // public
@@ -316,14 +243,6 @@ int ModelViewer::add( const ObjModel::Ptr model, const ModelViewer::VisOptions& 
 
 
 // public
-int ModelViewer::add( RVTK::SurfaceMapper* smapper, float minv, float maxv)
-{
-    vtkSmartPointer<vtkActor> actor = smapper->mapActor();
-    return add( actor, smapper->getMetricName(), minv, maxv);
-}   // end add
-
-
-// public
 int ModelViewer::add( vtkSmartPointer<vtkActor> actor, const std::string& ltitle, float minv, float maxv)
 {
     setLegendLookup( actor->GetMapper(), ltitle, minv, maxv);
@@ -342,20 +261,6 @@ vtkProp* ModelViewer::getProp( int mid)
         prop = _props.at(mid);
     return prop;
 }   // end getProp
-
-
-// public
-void ModelViewer::add( const vtkProp* prop)
-{
-    _qviewer->add(prop);
-}   // end add
-
-
-// public
-void ModelViewer::remove( const vtkProp* prop)
-{
-    _qviewer->remove(prop);
-}   // end remove
 
 
 // public
@@ -404,18 +309,11 @@ void ModelViewer::setLegendColours( const QColor& col0, const QColor& col1, cons
 }   // end setLegendColours
 
 
-// public
-int ModelViewer::getNumLegendColours() const
-{
-    return _scalarLegend->getNumColours();
-}   // end getNumLegendColours
-
-
 // private
-int ModelViewer::addPointsActor( vtkSmartPointer<vtkActor> actor, const ModelViewer::VisOptions& vo)
+int ModelViewer::addPointsActor( vtkSmartPointer<vtkActor> actor, const ModelViewer::VisOptions& vo, bool asSpheres)
 {
     actor->GetProperty()->SetRepresentationToPoints();
-    actor->GetProperty()->SetRenderPointsAsSpheres( vo.pointSize >= 2.0f);
+    actor->GetProperty()->SetRenderPointsAsSpheres( asSpheres && vo.pointSize >= 2.0f);
     actor->GetProperty()->SetPointSize( vo.pointSize);
     actor->GetProperty()->SetColor( vo.r, vo.g, vo.b);
     actor->GetProperty()->SetOpacity( vo.a);
@@ -449,25 +347,25 @@ int ModelViewer::addPoint( const cv::Vec3f& vpt, const ModelViewer::VisOptions& 
 }   // end addPoint
 
 
-int ModelViewer::addPoints( const std::vector<cv::Vec3f>& vpts, const ModelViewer::VisOptions& vo)
+int ModelViewer::addPoints( const std::vector<cv::Vec3f>& vpts, const ModelViewer::VisOptions& vo, bool asSpheres)
 {
-    return addPointsActor( RVTK::VtkActorCreator::generatePointsActor( vpts), vo);
+    return addPointsActor( RVTK::VtkActorCreator::generatePointsActor( vpts), vo, asSpheres);
 }   // end addPoints
 
 
-int ModelViewer::addPoints( const ObjModel::Ptr model, const ModelViewer::VisOptions& vo)
+int ModelViewer::addPoints( const ObjModel::Ptr model, const ModelViewer::VisOptions& vo, bool asSpheres)
 {
-    return addPointsActor( RVTK::VtkActorCreator::generatePointsActor( model), vo);
+    return addPointsActor( RVTK::VtkActorCreator::generatePointsActor( model), vo, asSpheres);
 }   // end addPoints
 
 
-int ModelViewer::addPoints( const ObjModel::Ptr model, const IntSet& vidxs, const ModelViewer::VisOptions& vo)
+int ModelViewer::addPoints( const ObjModel::Ptr model, const IntSet& vidxs, const ModelViewer::VisOptions& vo, bool asSpheres)
 {
     std::vector<cv::Vec3f> vpts(vidxs.size());
     int i = 0;
     BOOST_FOREACH ( int vidx, vidxs)
         vpts[i++] = model->vtx(vidx);
-    return addPoints( vpts, vo);
+    return addPoints( vpts, vo, asSpheres);
 }   // end addPoints
 
 
@@ -475,8 +373,10 @@ int ModelViewer::addLine( const std::vector<cv::Vec3f>& vpts, bool joinEnds, con
 {
     vtkSmartPointer<vtkActor> actor = RVTK::VtkActorCreator::generateLineActor( vpts, joinEnds);
     actor->GetProperty()->SetRepresentationToWireframe();
-    actor->GetProperty()->SetRenderPointsAsSpheres( vo.pointSize >= 2.0f);
-    actor->GetProperty()->SetRenderLinesAsTubes( vo.lineWidth >= 2.0f);
+    //actor->GetProperty()->SetRenderPointsAsSpheres( vo.pointSize >= 2.0f);
+    //actor->GetProperty()->SetRenderPointsAsSpheres( false);
+    //actor->GetProperty()->SetRenderLinesAsTubes( vo.lineWidth >= 2.0f);
+    actor->GetProperty()->SetRenderLinesAsTubes( false);
     actor->GetProperty()->SetPointSize( vo.pointSize);
     actor->GetProperty()->SetLineWidth( vo.lineWidth);
     actor->GetProperty()->SetColor( vo.r, vo.g, vo.b);
@@ -493,8 +393,10 @@ int ModelViewer::addLinePairs( const std::vector<cv::Vec3f>& lps, const ModelVie
 {
     vtkSmartPointer<vtkActor> actor = RVTK::VtkActorCreator::generateLinePairsActor( lps);
     actor->GetProperty()->SetRepresentationToWireframe();
-    actor->GetProperty()->SetRenderPointsAsSpheres( vo.pointSize >= 2.0f);
-    actor->GetProperty()->SetRenderLinesAsTubes( vo.lineWidth >= 2.0f);
+    //actor->GetProperty()->SetRenderPointsAsSpheres( vo.pointSize >= 2.0f);
+    //actor->GetProperty()->SetRenderPointsAsSpheres( false);
+    //actor->GetProperty()->SetRenderLinesAsTubes( vo.lineWidth >= 2.0f);
+    actor->GetProperty()->SetRenderLinesAsTubes( false);
     actor->GetProperty()->SetPointSize( vo.pointSize);
     actor->GetProperty()->SetLineWidth( vo.lineWidth);
     actor->GetProperty()->SetColor( vo.r, vo.g, vo.b);
@@ -533,24 +435,6 @@ CameraParams ModelViewer::getCamera() const
     _qviewer->getCamera( cp);
     return cp;
 }   // end getCamera
-
-
-void ModelViewer::setCamera( const CameraParams& cp)
-{
-    _qviewer->setCamera( cp);
-}   // end setCamera
-
-
-size_t ModelViewer::getWidth() const
-{
-    return _qviewer->getWidth();
-}   // end getWidth
-
-
-size_t ModelViewer::getHeight() const
-{
-    return _qviewer->getHeight();
-}   // end getHeight
 
 
 void ModelViewer::resetDefaultCamera( float camRng)
@@ -601,10 +485,4 @@ void ModelViewer::showSnapshot( bool waitForInput)
     imgGrabber.update();
     RFeatures::showImage( imgGrabber.getColourMap(), "SNAPSHOT", waitForInput);
 }   // end showSnapshot
-
-
-bool ModelViewer::saveSnapshot() const
-{
-    return QTools::saveImage( _qviewer->getColourImg());
-}   // end saveSnapshot
 

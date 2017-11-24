@@ -15,35 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_ADD_LANDMARK_H
-#define FACE_TOOLS_ACTION_ADD_LANDMARK_H
+#ifndef FACE_TOOLS_ACTION_MOVE_FACE_H
+#define FACE_TOOLS_ACTION_MOVE_FACE_H
 
-#include "FaceActionInterface.h"
+#include "ActionProcessModel.h"
 
 namespace FaceTools {
 
-class FaceTools_EXPORT ActionAddLandmark : public FaceAction
+class FaceTools_EXPORT ActionMoveFace : public ActionProcessModel
 { Q_OBJECT
 public:
-    explicit ActionAddLandmark( const std::string& iconfilename="");
+    ActionMoveFace( const std::string& dname="Transform to Origin", const std::string& iconfilename="");
+    virtual ~ActionMoveFace(){}
 
-    virtual const QIcon* getIcon() const { return &_icon;}
-    virtual QString getDisplayName() const { return "Add Landmark";}
-
-    virtual void setInteractive( ModelInteractor*, bool);
-
-protected:
-    virtual bool doAction();
-
-private slots:
-    void checkEnable();
-
-private:
-    const QIcon _icon;
-    ModelInteractor* _interactor;
+    virtual bool operator()( FaceControl*);
+    virtual bool isActionable( FaceControl*) const;
 };  // end class
 
 }   // end namespace
 
 #endif
+
 

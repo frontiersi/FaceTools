@@ -27,11 +27,12 @@ namespace FaceTools
 class FaceTools_EXPORT FaceModelTabWidget : public QTabWidget
 { Q_OBJECT
 public:
-    FaceModelTabWidget( QMenu* contextMenu, const QList<QAction*>* actions, QWidget *parent=NULL);
+    FaceModelTabWidget( const QList<QAction*>* actions, QWidget *parent=NULL);
     virtual ~FaceModelTabWidget();
 
 signals:
-    void onViewSelected( FaceModel*, const std::string&);    // Passes model and view title
+    void onMadeActive( ModelInteractor*, const std::string&);
+    void requestContextMenu( const QPoint&);
 
 public slots:
     int addTabWidget( FaceModel*);               // Add model as new tab returning tab index and making it active.
@@ -45,11 +46,9 @@ public slots:
     void consolidateTabs();
 
 private slots:
-    void showContextMenu( const QPoint&);
     void onTabChanged(int);
 
 private:
-    QMenu* _cmenu;
     const QList<QAction*>* _actions;
     QTools::VtkActorViewer *_qvtkviewer;
     InteractiveModelViewer *_viewer;

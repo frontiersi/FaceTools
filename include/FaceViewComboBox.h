@@ -25,24 +25,17 @@ namespace FaceTools
 {
 
 typedef ModelInteractor Mint;
-typedef const ModelInteractor CMint;
 
 class FaceTools_EXPORT FaceViewComboBox : public QComboBox
 { Q_OBJECT
 public:
-    explicit FaceViewComboBox( InteractiveModelViewer*, QWidget* parent=NULL);
-    virtual ~FaceViewComboBox();
+    explicit FaceViewComboBox( QWidget* parent=NULL);
 
-    size_t getModels( boost::unordered_set<FaceModel*>&) const;
-    const std::string& addView( FaceModel*, const QList<QAction*>*); // Insert new view in the combo box, returning view name.
-    void removeView( const std::string&);       // Remove a single view with given name.
-    size_t removeModel( FaceModel*);            // Remove all views for the given model, returning the number removed.
-    CMint* getSelectedView() const;             // Returns the currently selected view or NULL if none selected.
-    std::string getSelectedViewName() const;    // Returns the currently selected view name or "" if none selected.
-    size_t getNumModels() const;                // Return number of models (use count() for num views).
+    void addView( Mint*);               // Add a view
+    void removeView( Mint*);            // Remove a single view.
 
 signals:
-    void onViewSelected( FaceModel*, const std::string&);
+    void onActivated( Mint*);           // When selected from the dropdown
 
 private slots:
     void onSelectedRow( int);
@@ -51,11 +44,10 @@ private slots:
 
 private:
     static int s_mintKey;
-    InteractiveModelViewer *_viewer;
-    int _curView;
     boost::unordered_map<FaceModel*, boost::unordered_set<int> > _viewKeys; // How models map to their view keys
     boost::unordered_map<int, std::string> _vnameLookup;       // keys to names
     boost::unordered_map<int, Mint*> _mintLookup;              // keys to Mint
+    boost::unordered_map<Mint*, int> _mintLookupR;             // Mint to keys
 
     std::string createViewName( FaceModel*) const;
     int getRowFromName( const std::string&, int&) const;

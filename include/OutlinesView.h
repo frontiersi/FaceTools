@@ -15,37 +15,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_CROP_BOUNDARY_H
-#define FACE_TOOLS_ACTION_CROP_BOUNDARY_H
+#ifndef FACE_TOOLS_OUTLINES_VIEW_H
+#define FACE_TOOLS_OUTLINES_VIEW_H
 
-#include "FaceActionInterface.h"
-#include "ModelInteractor.h"
-#include "FaceModel.h"
+#include "ModelViewer.h"
 
-namespace FaceTools {
+namespace FaceTools
+{
 
-class FaceTools_EXPORT ActionCropBoundary : public FaceAction
-{ Q_OBJECT
+class FaceTools_EXPORT OutlinesView
+{
 public:
-    explicit ActionCropBoundary( const std::string& iconfilename="");
+    // Outlines are extracted on creation. If model changes, a new OutlinesView will need to be created.
+    OutlinesView( const RFeatures::ObjModel::Ptr, const ModelViewer::VisOptions* vo=NULL);
+    ~OutlinesView();
 
-    virtual const QIcon* getIcon() const { return &_icon;}
-    virtual QString getDisplayName() const { return "Crop Boundary";}
+    void reset( const RFeatures::ObjModel::Ptr);
 
-    virtual void setInteractive( ModelInteractor*, bool);
-
-protected:
-    virtual bool doAction();
-
-private slots:
-    void checkEnable();
+    // Call updateRender on the viewer after setVisible.
+    void setVisible( bool, ModelViewer* viewer);
+    bool isVisible() const;
 
 private:
-    const QIcon _icon;
-    ModelInteractor* _interactor;
+    ModelViewer::VisOptions _voptions;
+    std::list<std::vector<cv::Vec3f> > _vloops;
+    IntSet _bloops;
+    ModelViewer *_viewer;
 };  // end class
 
 }   // end namespace
 
 #endif
-

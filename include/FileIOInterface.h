@@ -32,6 +32,10 @@ public:
     FileIOInterface();
     virtual ~FileIOInterface(){}
 
+    // QTools::PluginInterface
+    virtual FileIOInterface* getInterface( const QString&) { return this;}
+    virtual QString getDisplayName() const { return this->getFileDescription().c_str();}
+
     // Human readable file type description.
     virtual std::string getFileDescription() const = 0;
 
@@ -48,15 +52,15 @@ public:
     bool setFileOp( const std::string& fp, FaceModel* fmodel=NULL);
 
     // Return the filepath set in last call to setFileOp that returned true.
-    const std::string getFilepath() const { return _filepath;}
+    std::string getFilePath() const { return _filepath;}
+    std::string getError() const { return _err;} 
+    FaceModel* getModel() const { return _fmodel;}
 
 signals:
     // On the result of an import, the FaceModel is NULL on failure.
-    // On the result of an export, the boolean denotes success or failure.
-    // For both signals, a non-empty string contains error info.
-    // After returning from the listening function, filepath (and model) are reset.
-    void finishedImport( FaceModel*, const QString&);
-    void finishedExport( bool, const QString&);
+    // On the result of an import or export, a non-empty error string denotes failure.
+    void finishedImport();
+    void finishedExport();
 
 protected:
     std::string _err;       // Set if error
@@ -64,11 +68,10 @@ protected:
     // Re-implement load and/or save functions if available
     virtual FaceModel* load( const std::string&) { return NULL;}
     virtual bool save( const FaceModel*, const std::string&) { return false;}
-
     virtual bool doAction();
 
 private slots:
-    void doFinished(bool);
+    void doFinished();
 
 private:
     FaceModel* _fmodel;

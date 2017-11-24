@@ -18,46 +18,66 @@
 #ifndef FACE_TOOLS_SURFACE_PATH_DRAWER_H
 #define FACE_TOOLS_SURFACE_PATH_DRAWER_H
 
-#include "ObjMetaData.h"
-#include <ModelPathDrawer.h>    // RVTK
-#include <vtkRenderWindow.h>
+#include "FaceControl.h"
+#include <vtkSphereSource.h>
 #include <vtkCaptionActor2D.h>
 #include <vtkTextActor.h>
-#include <QObject>
 #include <QPoint>
+#include <QColor>
 
 namespace FaceTools
 {
 
-class ModelViewer;
-
-class FaceTools_EXPORT SurfacePathDrawer : public QObject
-{ Q_OBJECT
+class FaceTools_EXPORT SurfacePathDrawer
+{
 public:
-    SurfacePathDrawer( ModelViewer*, const std::string& modelUnits="mm");
-    virtual ~SurfacePathDrawer(){}
+    SurfacePathDrawer( FaceControl*, const std::string& modelUnits="mm", const QColor& textColour=Qt::white, bool showCaptions=true);
+    virtual ~SurfacePathDrawer();
 
+    void clearHandles();     // Unset the endpoints
+    size_t nhandles() const; // Number of endpoint handles set (0, 1, or 2).
     void setUnits( const std::string&);
+    void setVisible( bool);    // Show or hide path information
+    bool isVisible() const;
 
-    bool isShown() const;
-    void show( bool enable);    // Show or hide path information
+    struct FaceTools_EXPORT Handle
+    {
+        void set( const QPoint&);   // Update the position of this endpoint handle.
+        cv::Vec3f get() const;
+        void highlight(bool);
+    private:
+        explicit Handle( SurfacePathDrawer*);
+        SurfacePathDrawer* _host;
+        vtkSmartPointer<vtkSphereSource> _source;
+        vtkSmartPointer<vtkActor> _actor;
+        friend class SurfacePathDrawer;
+    };  // end struct
 
-    void setPathEndPoints( const QPoint&, const QPoint&);
+    // Set positions of the handles without needing a reference to them
+    // Both functions return pointers to the handles after setting.
+    Handle* setHandle0( const QPoint&);
+    Handle* setHandle1( const QPoint&);
 
-    void setActor( const vtkSmartPointer<vtkActor>);
+    // Highlight the specified handles.
+    void highlightHandle0( bool);
+    void highlightHandle1( bool);
 
-public slots:
-    void doDrawingPath( const QPoint&);
-    void doFinishedPath( const QPoint&);
+    // Returns the handle corresponding to a given display
+    // coordinate or NULL if no handle under the coordinate.
+    Handle* handle( const QPoint&) const;
 
 private:
-    ModelViewer* _viewer;
+    FaceControl* _fcont;
+    Handle *_h0, *_h1;
     std::string _munits;
+    bool _visible;
+    int _pathID;
     vtkSmartPointer<vtkTextActor> _lenText;
     vtkSmartPointer<vtkCaptionActor2D> _lenCaption;
-    QPoint _pathStart;
-    RVTK::ModelPathDrawer::Ptr _path;
 
+    void addPath();
+    void removePath();
+    bool createPath( std::vector<cv::Vec3f>&);
     SurfacePathDrawer( const SurfacePathDrawer&); // NO COPY
     void operator=( const SurfacePathDrawer&);    // NO COPY
 };  // end class

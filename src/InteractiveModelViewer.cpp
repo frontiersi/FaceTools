@@ -19,6 +19,7 @@
 #include <ModelViewerVTKInterface.h>
 #include <cassert>
 using FaceTools::InteractiveModelViewer;
+using FaceTools::InteractionInterface;
 
 // private
 void InteractiveModelViewer::init()
@@ -26,13 +27,12 @@ void InteractiveModelViewer::init()
     vtkSmartPointer<FaceTools::ModelViewerVTKInterface> vtkInterface( FaceTools::ModelViewerVTKInterface::New());
     _qviewer->setInteractor(vtkInterface);
     _qinterface = vtkInterface->getQtInterface();
-    _qviewer->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect( _qviewer, &QTools::VtkActorViewer::customContextMenuRequested, this, &InteractiveModelViewer::requestContextMenu);
+    connect( _qinterface, &ModelViewerQtInterface::requestContextMenu, this, &InteractiveModelViewer::requestContextMenu);
 }   // end init
 
 // public
 InteractiveModelViewer::InteractiveModelViewer( QTools::VtkActorViewer* qviewer)
-    : FaceTools::ModelViewer(qviewer), _qinterface(NULL)
+    : FaceTools::ModelViewer(qviewer), _qinterface(NULL), _pwidget(NULL)
 {
     init();
 }   // end ctor
@@ -53,7 +53,7 @@ void InteractiveModelViewer::removeFromLayout( QLayout *layout)
 
 
 // public
-void InteractiveModelViewer::connectInterface( FaceTools::InteractionInterface* iint) const
+void InteractiveModelViewer::connectInterface( InteractionInterface* iint) const
 {
     assert(iint);
     iint->setInterface(_qinterface);
@@ -61,9 +61,23 @@ void InteractiveModelViewer::connectInterface( FaceTools::InteractionInterface* 
 
 
 // public
+void InteractiveModelViewer::disconnectInterface( InteractionInterface* iint) const
+{
+    assert(iint);
+    iint->setInterface(NULL);
+}   // end disconnectInterface
+
+
+// public
+bool InteractiveModelViewer::isCameraLocked() const { return _qinterface->isCameraLocked();}
+void InteractiveModelViewer::setCameraLocked( bool v) { _qinterface->setCameraLocked(v);}
+
+
+// public
 const vtkProp* InteractiveModelViewer::getPointedAt() const
 {
-    return FaceTools::ModelViewer::getPointedAt( getMouseCoords());
+    const QPoint& p = getMouseCoords();
+    return FaceTools::ModelViewer::getPointedAt( p);
 }   // end getPointedAt
 
 
@@ -75,7 +89,38 @@ void InteractiveModelViewer::setCursor( QCursor cursor)
 
 
 // public
-void InteractiveModelViewer::setKeyPressHandler( QTools::KeyPressHandler* kph)
+void InteractiveModelViewer::addKeyPressHandler( QTools::KeyPressHandler* kph)
 {
-    _qviewer->setKeyPressHandler(kph);  // Pass through to QVTKWidget
-}   // end setKeyPressHandler
+    _qviewer->addKeyPressHandler(kph);  // Pass through to QVTKWidget
+}   // end addKeyPressHandler
+
+
+// public
+void InteractiveModelViewer::removeKeyPressHandler( QTools::KeyPressHandler* kph)
+{
+    _qviewer->removeKeyPressHandler(kph);  // Pass through to QVTKWidget
+}   // end removeKeyPressHandler
+
+
+// public slot
+void InteractiveModelViewer::setFullScreen( bool fs)
+{
+    if ( fs && _pwidget == NULL)    // Go fullscreen
+    {
+        // Store previous state
+        _pwidget = _qviewer->parentWidget();
+        _winflags = _qviewer->windowFlags();
+        _qviewer->setParent(NULL);
+        _qviewer->setWindowFlags( Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+        _qviewer->showMaximized();
+    }   // end if
+    else if ( !fs && _pwidget != NULL) // Go non-fullscreen only if previously went full screen!
+    {
+        _qviewer->setParent(_pwidget);
+        _pwidget = NULL;
+        _qviewer->overrideWindowFlags(_winflags);
+        _qviewer->show();
+    }   // end else
+}   // end setFullScreen
+
+

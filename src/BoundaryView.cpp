@@ -29,43 +29,61 @@ using FaceTools::ObjMetaData;
 
 
 // public
-BoundaryView::BoundaryView( ModelViewer* viewer, const ObjMetaData::Ptr omd)
-    : _viewer(viewer), _omd(omd), _faceCropFactor(1.0), _isshown(false)
+BoundaryView::BoundaryView( const ObjMetaData::Ptr omd)
+    : _viewer(NULL), _omd(omd), _isshown(false)
 {
-    assert( omd->hasLandmark( FaceTools::Landmarks::NASAL_TIP));
+    _opts.cropFactor = 2.0;
+    reset();
 }   // end ctor
 
 
-void BoundaryView::show( bool enable)
+// public
+BoundaryView::~BoundaryView()
 {
+    setVisible(false, NULL);
+}   // en dtor
+
+
+// public
+void BoundaryView::setVisible( bool enable, ModelViewer* viewer)
+{
+#ifndef NDEBUG
     if ( enable)
+        assert(_boundary);
+#endif
+    if ( _viewer)
+        _viewer->remove(_boundary);
+
+    if ( viewer)
+        viewer->remove(_boundary);
+
+    _isshown = false;
+    _viewer = viewer;
+    if ( enable && viewer && _boundary != NULL)
     {
-        if ( !_isshown)
-            _viewer->add(_boundary);
+        viewer->add(_boundary);
         _isshown = true;
     }   // end if
-    else
-    {
-        if ( _isshown)
-            _viewer->remove(_boundary);
-        _isshown = false;
-    }   // end else
-}   // end show
+}   // end setVisible
 
 
-bool BoundaryView::isShown() const { return _isshown;}
+// public
+bool BoundaryView::isVisible() const { return _isshown;}
 
 
 // public
 void BoundaryView::reset()
 {
     // Calc boundary for given radius
-    const double radius = FaceTools::calcFaceCropRadius( _omd, _faceCropFactor);
-    if ( radius <= 0)
+    const double radius = FaceTools::calcFaceCropRadius( _omd, _opts.cropFactor);
+    if ( radius <= 0)   // If can't calculate, the boundary can't be set
         return;
 
-    const bool shown = isShown();
-    show(false);    // Ensure old boundary removed from viewer
+    assert( _omd->hasLandmark( FaceTools::Landmarks::NASAL_TIP));
+    assert( _omd->getKDTree() != NULL);
+
+    const bool shown = isVisible();
+    setVisible(false, _viewer);    // Ensure old boundary removed from viewer
 
     const cv::Vec3f fc = FaceTools::calcFaceCentre( _omd);  // Face centre
 
@@ -87,28 +105,26 @@ void BoundaryView::reset()
     // Create new boundary
     _boundary = RVTK::VtkActorCreator::generateLineActor( bvs, true/*join ends*/);
     _boundary->GetProperty()->SetRepresentationToWireframe();
-    _boundary->GetProperty()->SetRenderPointsAsSpheres(true);
-    _boundary->GetProperty()->SetRenderLinesAsTubes(true);
-    // Set actor visualisation options
-    setVisualisationOptions( _visopts);
 
-    show( shown);   // Restore shown state with new boundary
+    setOptions( _opts); // Set actor visualisation options
+    setVisible( shown, _viewer);   // Restore shown state with new boundary
 }   // end reset
 
 
 // public
-void BoundaryView::setFaceCropFactor( double G)
+void BoundaryView::setOptions( const FaceTools::ModelOptions::Boundary& opts)
 {
-    _faceCropFactor = G;
-}   // end setFaceCropFactor
+    double oldRad = _opts.cropFactor;
+    _opts = opts;
+    if ( !_boundary)
+        return;
 
-
-// public
-void BoundaryView::setVisualisationOptions( const FaceTools::VisualisationOptions::Boundary& visopts)
-{
-    _visopts = visopts;
-    _boundary->GetProperty()->SetLineWidth( _visopts.lineWidth);
-    _boundary->GetProperty()->SetPointSize( _visopts.vertexSize);
-    const QColor& lcol = _visopts.lineColour;
-    _boundary->GetProperty()->SetColor( lcol.redF(), lcol.greenF(), lcol.blueF());
-}   // end setVisualisationOptions
+    if ( _opts.cropFactor != oldRad)
+        reset();    // Will recurse back into this function with same crop factor
+    else
+    {
+        _boundary->GetProperty()->SetLineWidth( opts.lineWidth);
+        const QColor& lcol = _opts.lineColour;
+        _boundary->GetProperty()->SetColor( lcol.redF(), lcol.greenF(), lcol.blueF());
+    }   // end else
+}   // end setOptions

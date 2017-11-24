@@ -29,7 +29,7 @@ FaceModelWidget::FaceModelWidget( FaceTools::InteractiveModelViewer* viewer, con
       _viewerFrame( new QFrame),
       _combo( new FaceTools::FaceViewComboBox( viewer, this))
 {
-    connect( _combo, &FaceTools::FaceViewComboBox::onViewSelected, this, &FaceModelWidget::onViewSelected);
+    connect( _combo, &FaceTools::FaceViewComboBox::onMadeActive, this, &FaceModelWidget::onMadeActive);
     setLayout( new QVBoxLayout);
     layout()->setContentsMargins(QMargins(2,2,2,2));
     layout()->addWidget( _viewerFrame);
@@ -48,39 +48,12 @@ FaceModelWidget::~FaceModelWidget()
 size_t FaceModelWidget::getModels( boost::unordered_set<FaceModel*>& fmodels) const { return _combo->getModels( fmodels);}
 size_t FaceModelWidget::getNumModels() const { return _combo->getNumModels();}
 size_t FaceModelWidget::getNumViews() const { return _combo->count();}
-
-
-// public
-const FaceTools::FaceView* FaceModelWidget::getActiveView() const
-{
-    CMint* mint = _combo->getSelectedView();
-    if ( !mint)
-        return NULL;
-    return mint->getView();
-}   // end getActiveView
-
-
-// public
-std::string FaceModelWidget::getActiveViewName() const
-{
-    return _combo->getSelectedViewName();
-}   // end getActiveViewName
+FaceTools::Mint* FaceModelWidget::getActive( std::string *vname) const { return _combo->getActive( vname);}
+void FaceModelWidget::reparentViewer( QLayout* vlayout) { _viewerFrame->setLayout(vlayout);}
 
 
 // public slots
-const std::string& FaceModelWidget::addView( FaceModel* fmodel)
-{
-    return _combo->addView( fmodel, _xactions);
-}   // end addView
-
-
+const std::string& FaceModelWidget::addView( FaceModel* fmodel) { return _combo->addView( fmodel, _xactions);}
 void FaceModelWidget::removeView( const std::string& vname) { _combo->removeView(vname);}
 size_t FaceModelWidget::removeModel( FaceModel* fmodel) { return _combo->removeModel(fmodel);}
-
-
-// public
-void FaceModelWidget::reparentViewer( QLayout* vlayout)
-{
-    _viewerFrame->setLayout(vlayout);   // Reparent the viewer layout to this widget
-}   // end showViewer
 

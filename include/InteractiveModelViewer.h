@@ -37,23 +37,38 @@ public:
 
     void addToLayout( QLayout*);
     void removeFromLayout( QLayout*);
+
+    // Set the provided InteractionInterface ii to receive
+    // inputs from this viewer's ModelViewerQtInterface,
+    // replacing the previously set input interface.
     void connectInterface( InteractionInterface*) const;
+
+    // Disconnect the given interaction interface from this viewer.
+    void disconnectInterface( InteractionInterface*) const;
+
+    void setCameraLocked( bool v);
+    bool isCameraLocked() const;
 
     // The most recent mouse coords with top-left origin.
     const QPoint& getMouseCoords() const { return _qinterface->getMouseCoords();}
 
-    // Uses current mouse coords with top-left origin.
-    const vtkProp* getPointedAt() const;
+    const vtkProp* getPointedAt() const; // Uses current mouse coords with top-left origin.
 
     void setCursor( QCursor);
 
-    void setKeyPressHandler( QTools::KeyPressHandler*);
+    void addKeyPressHandler( QTools::KeyPressHandler*);
+    void removeKeyPressHandler( QTools::KeyPressHandler*);
 
 signals:
     void requestContextMenu( const QPoint&);
 
+public slots:
+    void setFullScreen( bool enable=true);
+
 private:
     ModelViewerQtInterface *_qinterface;
+    QWidget* _pwidget;
+    Qt::WindowFlags _winflags;
     void init();
 };  // end class
 

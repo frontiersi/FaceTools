@@ -4,8 +4,26 @@
 using FaceTools::ModelViewerQtInterface;
 
 ModelViewerQtInterface::ModelViewerQtInterface()
-    : _cameraLocked(false), _lbDownTime(0)
+    : _camLockedCount(0), _lbDownTime(0), _rbDownTime(0)
 {}   // end ctor
+
+
+bool ModelViewerQtInterface::isCameraLocked() const
+{
+    return _camLockedCount > 0;
+}   // end isCameraLocked
+
+
+void ModelViewerQtInterface::setCameraLocked( bool v)
+{
+    if ( v)
+        _camLockedCount++;
+    else
+        _camLockedCount--;
+    if ( _camLockedCount < 0)
+        _camLockedCount = 0;
+}   // end setCameraLocked
+
 
 void ModelViewerQtInterface::signalOnMouseEnter( const QPoint& mc)
 {
@@ -39,18 +57,12 @@ void ModelViewerQtInterface::signalOnMouseWheelBackward( const QPoint& mc)
 
 void ModelViewerQtInterface::signalOnMiddleButtonDown( const QPoint& mc)
 {
-    if ( _cameraLocked)
-        emit unlockedCamera();
-    _cameraLocked = false;
     _mcoords = mc;
     emit onMiddleButtonDown();
 }   // end signalOnMiddleButtonDown
 
 void ModelViewerQtInterface::signalOnMiddleButtonUp( const QPoint& mc)
 {
-    if ( !_cameraLocked)
-        emit lockedCamera();
-    _cameraLocked = true;
     _mcoords = mc;
     emit onMiddleButtonUp();
 }   // end signalOnMiddleButtonUp
@@ -58,6 +70,7 @@ void ModelViewerQtInterface::signalOnMiddleButtonUp( const QPoint& mc)
 void ModelViewerQtInterface::signalOnRightButtonDown( const QPoint& mc)
 {
     _mcoords = mc;
+    _rbDownTime = QDateTime::currentDateTime().currentMSecsSinceEpoch();
     emit onRightButtonDown();
 }   // end signalOnRightButtonDown
 
@@ -65,37 +78,34 @@ void ModelViewerQtInterface::signalOnRightButtonUp( const QPoint& mc)
 {
     _mcoords = mc;
     emit onRightButtonUp();
+
+    const qint64 timeNow = QDateTime::currentDateTime().currentMSecsSinceEpoch();
+    const bool rightUpFast = (timeNow - _rbDownTime) < QApplication::doubleClickInterval();
+    // If right mouse released fast enough, then request the context menu.
+    if ( rightUpFast)
+        emit requestContextMenu( _mcoords);
 }   // end signalOnRightButtonUp
 
 void ModelViewerQtInterface::signalOnLeftButtonDown( const QPoint& mc)
 {
     _mcoords = mc;
-    // Lock the camera from moving if not a double left click.
-    // Camera can be moved only when double clicking and dragging.
     const qint64 timeNow = QDateTime::currentDateTime().currentMSecsSinceEpoch();
     const bool doubleClicked = (timeNow - _lbDownTime) < QApplication::doubleClickInterval();
 
-    if ( _cameraLocked && doubleClicked)
-        emit unlockedCamera();
-
-    _cameraLocked = !doubleClicked;
-    if ( _cameraLocked)
-    {
-        _lbDownTime = timeNow;
-        emit onLeftButtonDown();
-    }   // end if
-    else
+    if ( doubleClicked)
     {
         _lbDownTime = 0;
         emit onLeftDoubleClick();
+    }   // end if
+    else
+    {
+        _lbDownTime = timeNow;
+        emit onLeftButtonDown();
     }   // end if
 }   // end signalOnLeftButton
 
 void ModelViewerQtInterface::signalOnLeftButtonUp( const QPoint& mc)
 {
-    if ( !_cameraLocked)
-        emit lockedCamera();
-    _cameraLocked = true;
     _mcoords = mc;
     emit onLeftButtonUp();
 }   // end signalOnLeftButtonUp

@@ -23,7 +23,6 @@
 using FaceTools::FaceViewComboBox;
 using FaceTools::FaceModel;
 using FaceTools::Mint;
-using FaceTools::CMint;
 
 int FaceViewComboBox::s_mintKey(0);
 
@@ -51,10 +50,11 @@ void addUndoTag( const FaceModel* fmodel, std::string& mname)
 
 
 // public
-FaceViewComboBox::FaceViewComboBox( FaceTools::InteractiveModelViewer* viewer, QWidget* parent)
-    : QComboBox(parent), _viewer(viewer), _curView(-1)
+FaceViewComboBox::FaceViewComboBox( QWidget* parent)
+    : QComboBox(parent)
 {
-    setEditable(true);  // Allow user edits to the combo box
+    //setEditable(true);  // Allow user edits to the combo box
+    setEditable(false);
     setDuplicatesEnabled(false);
     setInsertPolicy( QComboBox::InsertAlphabetically);
     connect( this, SIGNAL( currentIndexChanged(int)), this, SLOT( onSelectedRow(int)));
@@ -63,39 +63,17 @@ FaceViewComboBox::FaceViewComboBox( FaceTools::InteractiveModelViewer* viewer, Q
 
 
 // public
-FaceViewComboBox::~FaceViewComboBox()
-{
-    typedef std::pair<int, Mint*> MPair;
-    foreach ( const MPair& mpair, _mintLookup)
-        delete mpair.second;
-}   // end dtor
-
-
-// public
-size_t FaceViewComboBox::getModels( boost::unordered_set<FaceModel*>& fmodels) const
-{
-    typedef std::pair<FaceModel*, boost::unordered_set<int> > VPair;
-    foreach ( const VPair& vpair, _viewKeys)
-        fmodels.insert(vpair.first);
-    return _viewKeys.size();
-}   // end getModels
-
-
-// public
-const std::string& FaceViewComboBox::addView( FaceModel* fmodel, const QList<QAction*> *agroup)
+void FaceViewComboBox::addView( Mint* mint)
 {
     int vkey = s_mintKey++;     // key for this view
     _viewKeys[fmodel].insert(vkey);   // Map model to view key
-    _mintLookup[vkey] = new Mint( _viewer, fmodel, agroup);
+    _mintLookup[vkey] = mint;
+    _mintLookupR[mint] = vkey;
 
-    std::string mname = createViewName( fmodel);
+    std::string mname = createViewName( mint->getView()->getModel());
     _vnameLookup[vkey] = mname;
     addUndoTag( fmodel, mname);
     addItem( mname.c_str(), QVariant(vkey)); // Inserts alphabetically
-
-    // Connect up the model for when the save filepath changes
-    connect( fmodel, SIGNAL( onChangedSaveFilepath( FaceModel*)), this, SLOT( changeViewNames( FaceModel*)));
-    connect( fmodel, SIGNAL( onClearedUndos( FaceModel*)), this, SLOT( changeViewNames( FaceModel*)));
 
     setEnabled(true);
 
@@ -104,77 +82,41 @@ const std::string& FaceViewComboBox::addView( FaceModel* fmodel, const QList<QAc
     const int rowi = getRowFromName( mname, notused);
     assert(notused == vkey);
     onSelectedRow(rowi);
-    return _vnameLookup.at(vkey);
 }   // end addView
 
 
 // public
-void FaceViewComboBox::removeView( const std::string& vname)
+void FaceViewComboBox::removeView( Mint* mint)
 {
-    int vkey;
-    const int rowi = getRowFromName( vname, vkey);
-    assert(rowi >= 0);
-
+    assert(mint);
+    int vkey = _mintLookupR.at(mint);
+    int rowi = getRowFromName( _vnameLookup.at(vkey), vkey);
     removeItem(rowi);
-   
-    Mint* mint = _mintLookup.at(vkey); 
+
+    mint->disconnect(this);
     _mintLookup.erase(vkey);
+    _mintLookupR.erase(mint);
     _vnameLookup.erase(vkey);
 
-    FaceModel* fmodel = mint->getModel();
+    FaceModel* fmodel = mint->getView()->getModel();
     _viewKeys[fmodel].erase(vkey);
-
     if ( _viewKeys.at(fmodel).empty())
-    {
-        fmodel->disconnect(this);
         _viewKeys.erase(fmodel);
-    }   // end if
-
-    delete mint;
 }   // end removeView
 
 
 // public
-size_t FaceViewComboBox::removeModel( FaceModel* fmodel)
-{
-    if ( _viewKeys.count(fmodel) == 0)
-        return 0;
-
-    const boost::unordered_set<int> vkeys = _viewKeys.at(fmodel);   // Copy out
-    foreach ( int vkey, vkeys)
-        removeView( _vnameLookup.at(vkey));
-
-    const size_t nviews = vkeys.size();
-    _viewKeys.erase(fmodel);
-    return nviews;
-}   // end removeModel
-
-
-// public
-CMint* FaceViewComboBox::getSelectedView() const
+Mint* FaceViewComboBox::getActive( std::string *vname)
 {
     int rowi = currentIndex();
     if ( rowi < 0)
         return NULL;
-    return _mintLookup.at( getMintKeyFromRow( this, rowi));
-}   // end getSelectedView
-
-
-// public
-std::string FaceViewComboBox::getSelectedViewName() const
-{
-    int rowi = currentIndex();
-    if ( rowi < 0)
-        return "";
-    return _vnameLookup.at( getMintKeyFromRow( this, rowi));
-}   // end getSelectedViewName
-
-
-// public
-size_t FaceViewComboBox::getNumModels() const
-{
-    return _viewKeys.size();
-}   // end getNumModels
+    int vkey = getMintKeyFromRow( this, rowi);
+    Mint* mint = _mintLookup.at( vkey);
+    if ( vname)
+        *vname = _vnameLookup.at( vkey);
+    return mint;
+}   // end getActive
 
 
 // private slot
@@ -183,12 +125,8 @@ void FaceViewComboBox::onSelectedRow( int rowi)
     if ( rowi < 0)
         return;
     const int vkey = getMintKeyFromRow( this, rowi);
-    if ( _curView >= 0)
-        _mintLookup.at(_curView)->setInteractive(false);
-    _curView = vkey;
-    Mint* mint = _mintLookup.at(_curView);
-    mint->setInteractive(true);
-    emit onViewSelected( mint->getModel(), _vnameLookup.at(vkey));
+    Mint* mint = _mintLookup.at(vkey);
+    emit onActivated( mint);
 }   // end onSelectedRow
 
 
@@ -219,7 +157,7 @@ void FaceViewComboBox::onEditedViewName( const QString& text)
     if ( rowIdx < 0)
         return;
     Mint* mint = _mintLookup.at( getMintKeyFromRow( this, rowIdx));
-    mint->getModel()->setSaveFilepath( text.toStdString()); // Causes all views related to the model to be updated
+    mint->getView()->getModel()->setSaveFilepath( text.toStdString()); // Causes all views related to the model to be updated
 }   // end onEditedViewName
 
 

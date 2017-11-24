@@ -18,30 +18,18 @@
 #ifndef FACE_TOOLS_ACTION_ORIENT_CAMERA_TO_FACE_H
 #define FACE_TOOLS_ACTION_ORIENT_CAMERA_TO_FACE_H
 
-#include "FaceActionInterface.h"
-#include "ModelInteractor.h"
+#include "ActionProcessModel.h"
 
 namespace FaceTools {
 
-class FaceTools_EXPORT ActionOrientCameraToFace : public FaceAction
+class FaceTools_EXPORT ActionOrientCameraToFace : public ActionProcessModel
 { Q_OBJECT
 public:
-    explicit ActionOrientCameraToFace( const std::string& iconfilename="");
+    ActionOrientCameraToFace( const std::string& dname="Orient Camera to Face", const std::string& iconfilename="");
+    virtual ~ActionOrientCameraToFace(){}
 
-    virtual const QIcon* getIcon() const { return &_icon;}
-    virtual QString getDisplayName() const { return "Orient Camera to Face";}
-
-    virtual void setInteractive( ModelInteractor*, bool);
-
-protected:
-    virtual bool doAction();
-
-private slots:
-    void checkEnable();
-
-private:
-    const QIcon _icon;
-    ModelInteractor* _interactor;
+    virtual bool operator()( FaceControl*);
+    virtual bool isActionable( FaceControl*) const;
 };  // end class
 
 }   // end namespace

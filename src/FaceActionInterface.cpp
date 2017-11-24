@@ -186,16 +186,19 @@ void FaceAction::progress( float propComplete)
 // private slot
 bool FaceAction::process()
 {
+    this->doPrepAction();  // Always in the GUI thread
+    bool rval = true;
     if ( !_doasync)
     {
-        bool rval = doAction();  // Blocks
+        rval = doAction();  // Blocks
         emit finished(rval);
-        return rval;
     }   // end if
-
-    _fmaw = new FaceTools::FaceActionWorker( this);
-    connect( _fmaw, &FaceTools::FaceActionWorker::workerFinished, this, &FaceAction::finished);
-    connect( _fmaw, SIGNAL( finished()), _fmaw, SLOT(deleteLater()));
-    _fmaw->start();   // Asynchronous; immediately return and listen for finished(bool)
-    return true;
+    else
+    {
+        _fmaw = new FaceTools::FaceActionWorker( this);
+        connect( _fmaw, &FaceTools::FaceActionWorker::workerFinished, this, &FaceAction::finished);
+        connect( _fmaw, SIGNAL( finished()), _fmaw, SLOT(deleteLater()));
+        _fmaw->start();   // Asynchronous; immediately return and listen for finished(bool)
+    }   // end else
+    return rval;
 }   // end process

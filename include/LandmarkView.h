@@ -19,9 +19,8 @@
 #define FACE_TOOLS_LANDMARK_VIEW_H
 
 #include "Landmarks.h"
-#include "VisualisationOptions.h"
+#include "ModelOptions.h"
 #include "ModelViewer.h"
-#include "ModelViewerAnnotator.h"
 #include <vtkSphereSource.h>
 #include <vtkActor.h>
 
@@ -31,29 +30,33 @@ namespace FaceTools
 class FaceTools_EXPORT LandmarkView
 {
 public:
-    LandmarkView( ModelViewer*, const Landmarks::Landmark*, const VisualisationOptions::Landmarks&);
+    LandmarkView( const Landmarks::Landmark*, const ModelOptions::Landmarks&);
     virtual ~LandmarkView();
 
-    void show( bool enable);    // Add/remove from viewer
-    bool isShown() const;       // Returns true iff shown
-    void update();              // Update from stored meta data
-    void highlight( bool);      // Show highlighted and annotate on viewer
+    void setVisible( bool, ModelViewer* viewer);   // Add/remove from viewer
+    bool isVisible() const;                 // Returns true iff shown
+    void update();                          // Update from stored meta data
+    void highlight( bool);                  // Show highlighted (only if already visible)
 
-    void setVisualisationOptions( const VisualisationOptions::Landmarks&);
+    void setOptions( const ModelOptions::Landmarks&);
 
     // Returns true if this landmark is under the given coordinates.
     bool isPointedAt( const QPoint&) const;
 
+    // Returns true if given prop is this landmark's actor.
+    bool isProp( const vtkProp*) const;
+
 private:
     ModelViewer* _viewer;
-    ModelViewerAnnotator* _annotator;
     const Landmarks::Landmark* _landmark;
     vtkSmartPointer<vtkSphereSource> _source;
     vtkSmartPointer<vtkActor> _actor;
     bool _ishighlighted;
-    VisualisationOptions::Landmarks _visopts;
-    int _msgID;
+    ModelOptions::Landmarks _opts;
     bool _isshown;
+
+    LandmarkView( const LandmarkView&);     // No copy
+    void operator=( const LandmarkView&);   // No copy
 };  // end class
 
 }   // end namespace

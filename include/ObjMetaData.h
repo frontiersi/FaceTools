@@ -34,10 +34,9 @@ public:
     static Ptr create( const std::string mfile="");
     static Ptr create( const std::string& mfile, RFeatures::ObjModel::Ptr m);
 
-    // Shallow copies the internal object but makes a new KD-tree.
-    // Deep copies the landmarks.
-    // No curvature map present.
-    Ptr copy() const;
+    // Shallow copies the internal object but makes a new KD-tree (unless buildKD=false).
+    // Deep copies the landmarks. No curvature map present.
+    Ptr copy( bool buildKD=true) const;
 
     void setObject( RFeatures::ObjModel::Ptr m, bool buildKD=true); // Only builds the KD tree if buildKD true - does not build the curvature map
     RFeatures::ObjModel::Ptr getObject() const { return _model;}
@@ -45,11 +44,12 @@ public:
     void releaseObject();   // Release reference to internal object and associated data structures.
 
     const RFeatures::ObjModelKDTree::Ptr getKDTree() const;
+    const RFeatures::ObjModelKDTree::Ptr rebuildKDTree();   // Rebuilds KD tree before returning it.
 
     // Build the curvature map against the currently object. Normals will be defined on polygons to have consistent
     // adjacent direction starting calculation with those attached to vidx. The normals for these starting polygons
     // have a direction chosen so that their dot product with the +Z unit vector is positive.
-    void rebuildCurvatureMap( int vidx);
+    const RFeatures::ObjModelCurvatureMap::Ptr rebuildCurvatureMap( int vidx);
     const RFeatures::ObjModelCurvatureMap::Ptr getCurvatureMap() const;
 
     void setObjectFile( const std::string& mfile) { _mfile = mfile;}
@@ -60,6 +60,7 @@ public:
 
     // Set a landmark (new or extant) to position v.
     void setLandmark( const std::string& name, const cv::Vec3f& v);
+    void setLandmark( const Landmarks::Landmark&);
 
     // Create 12 handles from the given boundary based on equal inter-angles.
     bool makeBoundaryHandles( const std::list<int>& boundary, std::vector<cv::Vec3f>& bhandles) const;
@@ -112,9 +113,10 @@ private:
     RFeatures::ObjModelKDTree::Ptr _kdtree;
     RFeatures::ObjModelCurvatureMap::Ptr _curvMap;
 
-    ObjMetaData( const ObjMetaData&);       // Private copy
+    ObjMetaData( const ObjMetaData&, bool buildKD); // Private copy
     void operator=( const ObjMetaData&);    // No assignment
     explicit ObjMetaData( const std::string mfile="");
+    ~ObjMetaData();
     ObjMetaData( const std::string& mfile, RFeatures::ObjModel::Ptr m);
     class Deleter;
 };  // end class

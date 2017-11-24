@@ -21,10 +21,11 @@ using FaceTools::FaceModel;
 
 
 FileIOInterface::FileIOInterface()
+    : FaceAction(), _err(""), _fmodel(NULL), _filepath(""), _doExport(false)
 {
     setAsync(true);
     connect( this, &FileIOInterface::finished, this, &FileIOInterface::doFinished);
-    doFinished(false);  // Initialise
+    setEnabled(false);
 }   // end ctor
 
 
@@ -43,14 +44,14 @@ bool FileIOInterface::setFileOp( const std::string& fp, FaceModel* fmodel)
 }   // end setFileOp
 
 
-// private
-void FileIOInterface::doFinished( bool status)
+// private slot
+void FileIOInterface::doFinished()
 {
     setEnabled(false);
     if ( _doExport)
-        emit finishedExport( status, _err.c_str());
+        emit finishedExport();
     else
-        emit finishedImport( _fmodel, _err.c_str());
+        emit finishedImport();
     _fmodel = NULL;
     _filepath = "";
     _err = "";
@@ -62,7 +63,7 @@ void FileIOInterface::doFinished( bool status)
 bool FileIOInterface::doAction()
 {
     bool success;
-    if ( _fmodel)
+    if ( _doExport)
         success = save( _fmodel, _filepath);
     else
     {

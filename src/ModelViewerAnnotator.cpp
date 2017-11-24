@@ -24,7 +24,7 @@ using FaceTools::ModelViewerAnnotator;
 
 struct ModelViewerAnnotator::Message
 {
-    Message( float cp, float rp, const std::string& txt, ModelViewerAnnotator::TextJustification justification, vtkSmartPointer<vtkRenderer> r)
+    Message( float cp, float rp, const std::string& txt, ModelViewerAnnotator::TextJustification justification, vtkRenderer* r)
         : colProp(cp), rowProp(rp), msg( vtkSmartPointer<vtkTextActor>::New()), ren(r)
     {
         switch (justification)
@@ -60,13 +60,13 @@ struct ModelViewerAnnotator::Message
     float colProp;
     float rowProp;
     vtkSmartPointer<vtkTextActor> msg;
-    vtkSmartPointer<vtkRenderer> ren;
+    vtkRenderer* ren;
 };  // end struct
 
 
 // public
-ModelViewerAnnotator::ModelViewerAnnotator( vtkSmartPointer<vtkRenderer> ren)
-    : _renderer( ren)
+ModelViewerAnnotator::ModelViewerAnnotator( vtkRenderer* ren)
+    : _renderer(ren)
 {}   // end ctor
 
 

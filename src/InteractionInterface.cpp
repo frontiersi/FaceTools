@@ -29,14 +29,21 @@ InteractionInterface::InteractionInterface()
 // public
 void InteractionInterface::setInterface( FaceTools::ModelViewerQtInterface* qinterface)
 {
-    connect( qinterface, SIGNAL(onRightButtonDown()), this, SLOT(doOnRightButtonDown()));
-    connect( qinterface, SIGNAL(onRightButtonUp()), this, SLOT(doOnRightButtonUp()));
-    connect( qinterface, SIGNAL(onMiddleButtonDown()), this, SLOT(doOnMiddleButtonDown()));
-    connect( qinterface, SIGNAL(onMiddleButtonUp()), this, SLOT(doOnMiddleButtonUp()));
-    connect( qinterface, SIGNAL(onLeftButtonDown()), this, SLOT(doOnLeftButtonDown()));
-    connect( qinterface, SIGNAL(onLeftButtonUp()), this, SLOT(doOnLeftButtonUp()));
-    connect( qinterface, SIGNAL(onLeftDoubleClick()), this, SLOT(doOnLeftDoubleClick()));
-    connect( qinterface, SIGNAL(onMouseMove()), this, SLOT(doOnMouseMove()));
+    if ( _qinterface)
+        _qinterface->disconnect(this);
+    _qinterface = NULL;
+
+    if ( qinterface)
+    {
+        connect( qinterface, SIGNAL(onRightButtonDown()), this, SLOT(doOnRightButtonDown()));
+        connect( qinterface, SIGNAL(onRightButtonUp()), this, SLOT(doOnRightButtonUp()));
+        connect( qinterface, SIGNAL(onMiddleButtonDown()), this, SLOT(doOnMiddleButtonDown()));
+        connect( qinterface, SIGNAL(onMiddleButtonUp()), this, SLOT(doOnMiddleButtonUp()));
+        connect( qinterface, SIGNAL(onLeftButtonDown()), this, SLOT(doOnLeftButtonDown()));
+        connect( qinterface, SIGNAL(onLeftButtonUp()), this, SLOT(doOnLeftButtonUp()));
+        connect( qinterface, SIGNAL(onLeftDoubleClick()), this, SLOT(doOnLeftDoubleClick()));
+        connect( qinterface, SIGNAL(onMouseMove()), this, SLOT(doOnMouseMove()));
+    }   // end if
     _qinterface = qinterface;
 }   // end setInterface
 
@@ -49,11 +56,9 @@ const QPoint& InteractionInterface::getMouseCoords() const
 }   // end getMouseCoords
 
 
-// protected
-bool InteractionInterface::isCameraLocked() const
-{
-    return _qinterface->isCameraLocked();
-}   // end isCameraLocked
+// public
+bool InteractionInterface::isCameraLocked() const { return _qinterface->isCameraLocked();}
+void InteractionInterface::setCameraLocked( bool v) { _qinterface->setCameraLocked(v);}
 
 
 // private slot
@@ -80,7 +85,6 @@ void InteractionInterface::doOnMiddleButtonDown()
 {
     const QPoint& p = _qinterface->getMouseCoords();
     emit mousePressed(p);
-    emit startedCameraPan(p);
     middleButtonDown(p);
     _mbdown = true;
 }   // end doOnMiddleButtonDown
@@ -90,7 +94,6 @@ void InteractionInterface::doOnMiddleButtonDown()
 void InteractionInterface::doOnMiddleButtonUp()
 {
     const QPoint& p = _qinterface->getMouseCoords();
-    emit finishedCameraPan(p);
     middleButtonUp(p);
     _mbdown = false;
 }   // end doOnMiddleButtonUp
@@ -110,8 +113,6 @@ void InteractionInterface::doOnLeftButtonDown()
 void InteractionInterface::doOnLeftButtonUp()
 {
     const QPoint& p = _qinterface->getMouseCoords();
-    if ( _qinterface->isCameraLocked())
-        emit finishedCameraRotate(p);
     leftButtonUp(p);
     _lbdown = false;
 }   // end doOnLeftButtonUp
@@ -121,9 +122,7 @@ void InteractionInterface::doOnLeftButtonUp()
 void InteractionInterface::doOnLeftDoubleClick()
 {
     const QPoint& p = _qinterface->getMouseCoords();
-    emit mousePressed(p);
-    if ( !_qinterface->isCameraLocked())
-        emit startedCameraRotate(p);
+    leftDoubleClick(p);
 }   // end doOnLeftDoubleClick
 
 

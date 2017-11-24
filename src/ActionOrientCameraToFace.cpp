@@ -16,43 +16,39 @@
  ************************************************************************/
 
 #include <ActionOrientCameraToFace.h>
+#include <InteractiveModelViewer.h>
+#include <FaceTools.h>
 using FaceTools::ActionOrientCameraToFace;
-using FaceTools::ModelInteractor;
+using FaceTools::FaceControl;
+using FaceTools::ObjMetaData;
 
 
-ActionOrientCameraToFace::ActionOrientCameraToFace( const std::string& fname)
-    : FaceTools::FaceAction(),
-      _icon( fname.c_str()),
-      _interactor(NULL)
+ActionOrientCameraToFace::ActionOrientCameraToFace( const std::string& dname, const std::string& fname)
+    : FaceTools::ActionProcessModel( dname, fname, true, true, true)
 {
-    init();
-    checkEnable();
 }   // end ctor
 
 
-void ActionOrientCameraToFace::setInteractive( ModelInteractor* interactor, bool enable)
+bool ActionOrientCameraToFace::operator()( FaceControl* fcont)
 {
-    _interactor = NULL;
-    if ( !enable)
-        interactor->getModel()->disconnect( this);
-    else
+    assert( isActionable( fcont));
+    const ObjMetaData::Ptr omd = fcont->getModel()->getObjectMeta();
+    const cv::Vec3f focus = FaceTools::calcFaceCentre(omd);
+    cv::Vec3f nvec, uvec;
+    if ( !omd->getOrientation( nvec, uvec))
     {
-        _interactor = interactor;
-        connect( _interactor->getModel(), &FaceTools::FaceModel::onFaceDetected, this, &ActionOrientCameraToFace::checkEnable);
-    }   // end else
-    checkEnable();
-}   // end setInteractive
-
-
-bool ActionOrientCameraToFace::doAction()
-{
-    _interactor->getView()->orientCameraToFace();
+        std::cerr << "Unable to get orientation from ObjMetaData!" << std::endl;
+        assert(false);
+        return false;
+    }   // end if
+    fcont->getViewer()->setCamera( focus, nvec, uvec, 500.0f);
+    fcont->getViewer()->updateRender();
     return true;
-}   // end doAction
+}   // end operator()
 
 
-void ActionOrientCameraToFace::checkEnable()
+bool ActionOrientCameraToFace::isActionable( FaceControl* fcont) const
 {
-    setEnabled( _interactor && _interactor->getModel()->isDetected());
-}   // end checkEnable
+    return FaceTools::hasReqLandmarks( fcont->getModel()->getObjectMeta());
+}   // end isActionable
 

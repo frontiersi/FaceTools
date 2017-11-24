@@ -32,7 +32,7 @@ namespace FaceTools
 class FaceTools_EXPORT ModelViewerAnnotator : public QObject
 { Q_OBJECT
 public:
-    explicit ModelViewerAnnotator( vtkSmartPointer<vtkRenderer>);
+    explicit ModelViewerAnnotator( vtkRenderer*);
     virtual ~ModelViewerAnnotator();
 
     enum TextJustification

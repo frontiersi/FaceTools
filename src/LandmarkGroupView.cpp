@@ -16,17 +16,20 @@
  ************************************************************************/
 
 #include <LandmarkGroupView.h>
-#include <cassert>
+#include <LandmarkView.h>
+#include <ModelViewer.h>
 #include <iostream>
+#include <cassert>
+using FaceTools::ModelOptions;
 using FaceTools::LandmarkGroupView;
 using FaceTools::LandmarkView;
-using FaceTools::VisualisationOptions;
 using FaceTools::ModelViewer;
+using FaceTools::ObjMetaData;
 
 
 // public
-LandmarkGroupView::LandmarkGroupView( ModelViewer* viewer, const FaceTools::ObjMetaData::Ptr objmeta)
-    : _viewer(viewer), _objmeta(objmeta)
+LandmarkGroupView::LandmarkGroupView( const ObjMetaData::Ptr omd)
+    : _viewer(NULL), _omd(omd)
 {
     reset();
 }   // end ctor
@@ -40,59 +43,88 @@ LandmarkGroupView::~LandmarkGroupView()
 
 
 // public
-void LandmarkGroupView::showAll( bool enable)
+void LandmarkGroupView::setVisible( bool enable, ModelViewer* viewer)
 {
     typedef std::pair<std::string, LandmarkView*> LMPair;
-    foreach ( const LMPair& lm, _lviews)
-        showLandmark( lm.first, enable);
-}   // end showAll
+
+    if ( _viewer)
+    {
+        foreach ( const LMPair& lm, _lviews)
+            lm.second->setVisible( false, _viewer);
+    }   // end if
+
+    if ( viewer)
+    {
+        foreach ( const LMPair& lm, _lviews)
+            lm.second->setVisible( false, viewer);
+    }   // end if
+
+    _viewer = viewer;
+    if ( enable && viewer)
+    {
+        foreach ( const LMPair& lm, _lviews)
+            lm.second->setVisible( true, viewer);
+    }   // end if
+}   // end setVisible
 
 
 // public
-bool LandmarkGroupView::isShown() const
+bool LandmarkGroupView::isVisible() const
 {
     typedef std::pair<std::string, LandmarkView*> LMPair;
     foreach ( const LMPair& lm, _lviews)
     {
-        if ( !isShown( lm.first))
-            return false;
+        if ( isLandmarkVisible( lm.first))
+            return true;
     }   // end foreach
-    return true;
-}   // end isShown
+    return false;
+}   // end isVisible
 
 
 // public
-void LandmarkGroupView::showLandmark( const std::string& lm, bool enable)
+void LandmarkGroupView::getVisibleLandmarks( std::vector<std::string>& lmks) const
+{
+    typedef std::pair<std::string, LandmarkView*> LMPair;
+    foreach ( const LMPair& lm, _lviews)
+    {
+        if ( isLandmarkVisible( lm.first))
+            lmks.push_back(lm.first);
+    }   // end foreach
+}   // end getVisibleLandmarks
+
+
+// public
+void LandmarkGroupView::showLandmark( bool enable, const std::string& lm)
 {
     assert( _lviews.count(lm) > 0);
-    _lviews.at(lm)->show(enable);
+    _lviews.at(lm)->setVisible( enable, _viewer);
 }   // end showLandmark
 
 
 // public
-bool LandmarkGroupView::isShown( const std::string& lm) const
+bool LandmarkGroupView::isLandmarkVisible( const std::string& lm) const
 {
     assert( _lviews.count(lm) > 0);
-    return _lviews.at(lm)->isShown();
-}   // end isShown
+    return _lviews.at(lm)->isVisible();
+}   // end isLandmarkVisible
 
 
 // public
-void LandmarkGroupView::highlightLandmark( const std::string& lm, bool enable)
+void LandmarkGroupView::highlightLandmark( bool enable, const std::string& lm)
 {
-    assert( _lviews.count(lm) > 0);
-    _lviews.at(lm)->highlight(enable);
+    if ( _lviews.count(lm) > 0)
+        _lviews.at(lm)->highlight( _lviews.at(lm)->isVisible() && enable);
 }   // end highlightLandmark
 
 
 // public
-void LandmarkGroupView::setVisualisationOptions( const VisualisationOptions::Landmarks& visopts)
+void LandmarkGroupView::setOptions( const ModelOptions::Landmarks& opts)
 {
-    _visopts = visopts;
+    _opts = opts;
     typedef std::pair<std::string, LandmarkView*> LMPair;
     foreach ( const LMPair& lm, _lviews)
-        lm.second->setVisualisationOptions(visopts);
-}   // end setVisualisationOptions
+        lm.second->setOptions(opts);
+}   // end setOptions
 
 
 // public
@@ -101,7 +133,7 @@ void LandmarkGroupView::erase()
     typedef std::pair<std::string, LandmarkView*> LMPair;
     foreach ( const LMPair& lm, _lviews)
     {
-        lm.second->show(false); // Ensure landmark not present anymore
+        lm.second->setVisible( false, _viewer); // Ensure landmark not present anymore
         delete lm.second;
     }   // end foreach
     _lviews.clear();
@@ -111,45 +143,33 @@ void LandmarkGroupView::erase()
 // public
 void LandmarkGroupView::reset()
 {
+    const bool shown = isVisible();
     erase();
     boost::unordered_set<std::string> lmnames;
-    _objmeta->getLandmarks( lmnames);
+    _omd->getLandmarks( lmnames);
     foreach ( const std::string& lm, lmnames)
-        _lviews[lm] = new LandmarkView( _viewer, _objmeta->getLandmarkMeta(lm), _visopts);
+        _lviews[lm] = new LandmarkView( _omd->getLandmarkMeta(lm), _opts);
+    setVisible(shown, _viewer);
 }   // end reset
 
 
-// public slot
+// public
 void LandmarkGroupView::updateLandmark( const std::string& lm, const cv::Vec3f* pos)
 {
     if ( pos != NULL)   // Landmark was added, or an existing landmark's position was changed.
     {
-        assert( _objmeta->hasLandmark(lm));
+        assert( _omd->hasLandmark(lm));
         if ( _lviews.count(lm) == 0)    // Landmark was added
-            _lviews[lm] = new LandmarkView( _viewer, _objmeta->getLandmarkMeta(lm), _visopts);
+            _lviews[lm] = new LandmarkView( _omd->getLandmarkMeta(lm), _opts);
         else
             _lviews[lm]->update();
-        showLandmark(lm,true);  // Ensure moved or added landmark is seen next render
     }   // end if
-    else if ( !_objmeta->hasLandmark(lm))    // Landmark was deleted
+    else if ( !_omd->hasLandmark(lm))    // Landmark was deleted
     {
-        showLandmark(lm,false); // Remove erased landmark from viewer
         delete _lviews.at(lm);
         _lviews.erase(lm);
     }   // end else if
-    else
-    {
-        std::cerr << "Invalid logic in LandmarkGroupView::updateLandmark!" << std::endl;
-        assert(false);
-    }   // end else
 }   // end updateLandmark
-
-
-// public slot
-void LandmarkGroupView::selectLandmark( const std::string& lm, bool enable)
-{
-    _lviews.at(lm)->highlight(enable);
-}   // end selectLandmark
 
 
 // public
@@ -163,3 +183,16 @@ std::string LandmarkGroupView::pointedAt( const QPoint& p) const
     }   // end foreach
     return "";  // Not found
 }   // end pointedAt
+
+
+// public
+bool LandmarkGroupView::isLandmark( const vtkProp* prop) const
+{
+    typedef std::pair<std::string, LandmarkView*> LMPair;
+    foreach ( const LMPair& lm, _lviews)
+    {
+        if ( lm.second->isProp(prop))
+            return true;
+    }   // end foreach
+    return false;
+}   // end isLandmark

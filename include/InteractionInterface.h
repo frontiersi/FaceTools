@@ -28,26 +28,19 @@ class FaceTools_EXPORT InteractionInterface : public QObject
 { Q_OBJECT
 public:
     InteractionInterface();
-    virtual ~InteractionInterface(){}
 
+    // Set with NULL to disconnect.
     void setInterface( ModelViewerQtInterface*);
 
     // Get the latest mouse coordinates. It's an error to
     // call this function before calling setInterface.
     const QPoint& getMouseCoords() const;
+
+    bool isCameraLocked() const;
+    void setCameraLocked( bool); // Lock/unlock camera movement
    
 signals:
     void mousePressed( const QPoint&); // Generic mouse button press event
-
-    // Lateral camera panning within view plane
-    void startedCameraPan( const QPoint&);
-    void finishedCameraPan( const QPoint&);
-
-    // Camera rotation about focus
-    void startedCameraRotate( const QPoint&);
-    void finishedCameraRotate( const QPoint&);
-
-    void requestContextMenu( const QPoint&);
 
 protected:
     virtual void mouseMove( const QPoint&){}
@@ -64,8 +57,6 @@ protected:
     virtual void leftButtonUp( const QPoint&){}
     virtual void leftDoubleClick( const QPoint&){}
     virtual void leftDrag( const QPoint&){}
-
-    bool isCameraLocked() const;
 
 private slots:
     void doOnMiddleButtonDown();

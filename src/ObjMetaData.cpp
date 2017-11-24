@@ -51,18 +51,18 @@ ObjMetaData::Ptr ObjMetaData::create( const std::string& mfile, ObjModel::Ptr mo
 }   // end create
 
 
-ObjMetaData::Ptr ObjMetaData::copy() const
+ObjMetaData::Ptr ObjMetaData::copy( bool buildKD) const
 {
-    return Ptr( new ObjMetaData( *this), Deleter());
+    return Ptr( new ObjMetaData( *this, buildKD), Deleter());
 }   // end copy
 
 
 // private
-ObjMetaData::ObjMetaData( const ObjMetaData& omd)
+ObjMetaData::ObjMetaData( const ObjMetaData& omd, bool buildKD)
     : _mfile(omd._mfile), _nvec(omd._nvec), _uvec(omd._uvec)
 {
     _landmarks = omd._landmarks;
-    setObject( omd._model);
+    setObject( omd._model, buildKD);
 }   // end ctor
 
 
@@ -81,11 +81,18 @@ ObjMetaData::ObjMetaData( const std::string& mfile, ObjModel::Ptr model)
 }   // end ctor
 
 
+// private
+ObjMetaData::~ObjMetaData()
+{
+    setObject( ObjModel::Ptr(), false);
+}   // end dtor
+
+
 void ObjMetaData::setObject( ObjModel::Ptr model, bool buildKD)
 {
-    _model.reset();
-    _kdtree.reset();
-    _curvMap.reset();
+    _curvMap = NULL;
+    _kdtree = NULL;
+    _model = NULL;
     if ( model)
         _model = model;
     if ( model && buildKD)
@@ -102,14 +109,24 @@ void ObjMetaData::releaseObject()
 const RFeatures::ObjModelKDTree::Ptr ObjMetaData::getKDTree() const { return _kdtree;}
 
 
-void ObjMetaData::rebuildCurvatureMap( int svidx)
+const RFeatures::ObjModelKDTree::Ptr ObjMetaData::rebuildKDTree()
 {
-    _curvMap.reset();
+    assert( _model != NULL);
+    if ( _model)
+        _kdtree = RFeatures::ObjModelKDTree::create( _model);
+    return _kdtree;
+}   // end rebuildKDTree
+
+
+const RFeatures::ObjModelCurvatureMap::Ptr ObjMetaData::rebuildCurvatureMap( int svidx)
+{
+    _curvMap = NULL;
     if ( _model)
     {
         const IntSet& sfids = _model->getFaceIds( svidx);
         _curvMap = RFeatures::ObjModelCurvatureMap::create( _model, *sfids.begin());
     }   // end if
+    return _curvMap;
 }   // end rebuildCurvatureMap
 
 
@@ -125,6 +142,8 @@ void ObjMetaData::setOrientation( const cv::Vec3f& nvec, const cv::Vec3f& uvec)
 
 bool ObjMetaData::getOrientation( cv::Vec3f& nvec, cv::Vec3f& uvec) const
 {
+    nvec = cv::Vec3f(0,0,0);
+    uvec = cv::Vec3f(0,0,0);
     bool hasOrientation = false;
     if ( cv::norm(_nvec) > 0)
     {
@@ -143,6 +162,12 @@ void ObjMetaData::setLandmark( const std::string& name, const cv::Vec3f& v)
     else
         _landmarks[name] = Landmark(name,v);        // Add a new landmark
 }   // end setLandmark
+
+
+void ObjMetaData::setLandmark( const Landmark& lmk)
+{
+    _landmarks[lmk.name] = lmk; // copy in
+}   // setLandmark
 
 
 bool ObjMetaData::makeBoundaryHandles( const std::list<int>& boundary, std::vector<cv::Vec3f>& bhandles) const
@@ -272,11 +297,14 @@ void ObjMetaData::shiftLandmarks( const cv::Vec3f& t)
 double ObjMetaData::shiftLandmarksToSurface()
 {
     using namespace RFeatures;
-    double sdiff = 0.0;
+    const ObjModelKDTree::Ptr kdt = getKDTree();
+    assert(kdt);
+    if ( !kdt)
+        return 0;
 
+    double sdiff = 0;
     const ObjModel::Ptr model = getObject();
     const ObjModelSurfacePointFinder spfinder( model);
-    const ObjModelKDTree::Ptr kdt = getKDTree();
 
     cv::Vec3f fv;
     int notused;
@@ -354,14 +382,12 @@ void ObjMetaData::writeTo( PT::ptree& tree) const
     topNode.put( "filename", _mfile);
 
     cv::Vec3f nvec, uvec;
-    if ( getOrientation( nvec, uvec))
-    {
-        PT::ptree& orientation = topNode.put( "orientation", "");
-        PT::ptree& normal = orientation.add( "normal","");
-        putVertex( normal, nvec);
-        PT::ptree& upnode = orientation.add( "up","");
-        putVertex( upnode, uvec);
-    }   // end if
+    getOrientation( nvec, uvec);
+    PT::ptree& orientation = topNode.put( "orientation", "");
+    PT::ptree& normal = orientation.add( "normal","");
+    putVertex( normal, nvec);
+    PT::ptree& upnode = orientation.add( "up","");
+    putVertex( upnode, uvec);
 
     PT::ptree& landmarks = topNode.put( "landmarks", ""); // Landmarks node
     typedef std::pair<std::string, Landmark> LMPair;

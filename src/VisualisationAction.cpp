@@ -16,16 +16,14 @@
  ************************************************************************/
 
 #include <VisualisationAction.h>
-#include <ModelInteractor.h>
-#include <FaceModel.h>
-#include <FaceView.h>
+#include <FaceControl.h>
 #include <cassert>
 using FaceTools::VisualisationAction;
-using FaceTools::ModelInteractor;
+using FaceTools::FaceControl;
 
 
-VisualisationAction::VisualisationAction( bool isdefault)
-    : FaceAction(), _isDefaultVis(isdefault)
+VisualisationAction::VisualisationAction()
+    : FaceAction()
 {
     setEnabled(false);
 }   // end ctor
@@ -34,59 +32,48 @@ VisualisationAction::VisualisationAction( bool isdefault)
 // protected slot
 bool VisualisationAction::doAction()
 {
-    foreach ( ModelInteractor* mint, _interactors)
-        mint->getView()->visualise(this);
+    foreach ( FaceControl* fcont, _fconts)
+        fcont->setVisualisation(this);
     return true;
 }   // end doAction
 
 
-// private slot
-void VisualisationAction::recheckCanVisualise()
+// public
+void VisualisationAction::addController( FaceControl* fcont)
 {
-    bool enable = !_interactors.empty();
-    // Only enable if ALL of the interactors allow for this visualisation
-    foreach ( ModelInteractor* mint, _interactors)
-    {
-        if ( !mint->getView()->canVisualise(this))
-        {
-            enable = false;
-            break;
-        }   // end if
-    }   // end foreach
-    setEnabled( enable);
-}   // end recheckCanVisualise
+    assert(fcont);
+    if ( this->isDefault(fcont))
+        fcont->setVisualisation(this);
+}   // end addController
 
 
 // public
-void VisualisationAction::addInteractor( ModelInteractor* mint)
+void VisualisationAction::removeController( FaceControl *fcont)
 {
-    if ( _isDefaultVis)
-    {
-        setInteractive( mint, true);
-        if ( isEnabled())
-            mint->getView()->visualise(this);
-    }   // end if
-}   // end addInteractor
+    _fconts.erase(fcont);
+    fcont->disconnect(this);
+}   // end removeController
 
 
 // public
-void VisualisationAction::removeInteractor( ModelInteractor *mint)
+void VisualisationAction::setControlled( FaceControl* fcont, bool enable)
 {
-    _interactors.erase(mint);
-    mint->getModel()->disconnect(this);
-}   // end removeInteractor
-
-
-// public
-void VisualisationAction::setInteractive( ModelInteractor* mint, bool enable)
-{
-    if ( !enable)
-        removeInteractor(mint);
-    else
+    removeController(fcont);
+    if ( enable)
     {
-        _interactors.insert(mint);
-        connect( mint->getModel(), &FaceTools::FaceModel::onMeshUpdated, this, &VisualisationAction::recheckCanVisualise);
-        connect( mint->getModel(), &FaceTools::FaceModel::onFaceDetected, this, &VisualisationAction::recheckCanVisualise);
+        recheckCanVisualise(fcont);
+        connect( fcont, &FaceControl::meshUpdated, [=](){ this->recheckCanVisualise(fcont);});
+        connect( fcont, &FaceControl::metaUpdated, [=](){ this->recheckCanVisualise(fcont);});
     }   // end else if
-    recheckCanVisualise();
-}   // end checkAllow
+    setEnabled( !_fconts.empty());
+}   // end setControlled
+
+
+// private
+void VisualisationAction::recheckCanVisualise( FaceControl* fcont)
+{
+    _fconts.erase(fcont);
+    if ( this->isAvailable(fcont))
+        _fconts.insert(fcont);
+    setEnabled( !_fconts.empty());
+}   // end recheckCanVisualise

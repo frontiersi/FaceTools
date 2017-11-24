@@ -18,62 +18,65 @@ ModelViewerVTKInterface::ModelViewerVTKInterface()
 void ModelViewerVTKInterface::OnLeftButtonDown()
 {
     _qtinterface.signalOnLeftButtonDown( getMouseCoords());
-    vtkInteractorStyleTrackballCamera::OnLeftButtonDown();
+    if ( !_qtinterface.isCameraLocked())
+        vtkInteractorStyleTrackballCamera::OnLeftButtonDown();
 }   // end OnLeftButtonDown
 
 
 void ModelViewerVTKInterface::OnLeftButtonUp()
 {
-    vtkInteractorStyleTrackballCamera::OnLeftButtonUp();
+    if ( !_qtinterface.isCameraLocked())
+        vtkInteractorStyleTrackballCamera::OnLeftButtonUp();
     _qtinterface.signalOnLeftButtonUp( getMouseCoords());
 }   // end OnLeftButtonUp
 
 
 void ModelViewerVTKInterface::OnRightButtonDown()
 {
-    //vtkInteractorStyleTrackballCamera::OnRightButtonDown();
+    if ( !_qtinterface.isCameraLocked())
+        vtkInteractorStyleTrackballCamera::OnMiddleButtonDown();    // Want the right mouse button to pan (S.K. request)
     _qtinterface.signalOnRightButtonDown( getMouseCoords());
 }   // end OnRightButtonDown
 
 
 void ModelViewerVTKInterface::OnRightButtonUp()
 {
-    //vtkInteractorStyleTrackballCamera::OnRightButtonUp();
+    if ( !_qtinterface.isCameraLocked())
+        vtkInteractorStyleTrackballCamera::OnMiddleButtonUp();  // Right mouse pans (S.K. request)
     _qtinterface.signalOnRightButtonUp( getMouseCoords());
 }   // end OnRightButtonUp
 
 
 void ModelViewerVTKInterface::OnMiddleButtonDown()
 {
-    vtkInteractorStyleTrackballCamera::OnMiddleButtonDown();
+    // Don't pass up to TrackballCamera since we want right mouse button to pan
     _qtinterface.signalOnMiddleButtonDown( getMouseCoords());
 }   // end OnMiddleButtonDown
 
 void ModelViewerVTKInterface::OnMiddleButtonUp()
 {
-    vtkInteractorStyleTrackballCamera::OnMiddleButtonUp();
+    // Don't pass up to TrackballCamera since we want right mouse button to pan
     _qtinterface.signalOnMiddleButtonUp( getMouseCoords());
 }   // end OnMiddleButtonUp
 
 void ModelViewerVTKInterface::OnMouseWheelForward()
 {
-    //if ( !_qtinterface.isCameraLocked())
-    vtkInteractorStyleTrackballCamera::OnMouseWheelForward();   // Do zoom
+    if ( !_qtinterface.isCameraLocked())
+        vtkInteractorStyleTrackballCamera::OnMouseWheelForward();   // Do zoom
     _qtinterface.signalOnMouseWheelForward( getMouseCoords());
 }   // end OnMouseWheelForward
 
 void ModelViewerVTKInterface::OnMouseWheelBackward()
 {
-    //if ( !_qtinterface.isCameraLocked())
-    vtkInteractorStyleTrackballCamera::OnMouseWheelBackward();
+    if ( !_qtinterface.isCameraLocked())
+        vtkInteractorStyleTrackballCamera::OnMouseWheelBackward();
     _qtinterface.signalOnMouseWheelBackward( getMouseCoords());
 }   // end OnMouseWheelBackward
 
 
 void ModelViewerVTKInterface::OnMouseMove()
 {
-    if ( !_qtinterface.isCameraLocked())
-        vtkInteractorStyleTrackballCamera::OnMouseMove();
+    vtkInteractorStyleTrackballCamera::OnMouseMove();
     _qtinterface.signalOnMouseMove( getMouseCoords());
 }   // end OnMouseMove
 

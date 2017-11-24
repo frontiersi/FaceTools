@@ -26,7 +26,6 @@
 #include <ObjModel.h>       // RFeatures
 #include <CameraParams.h>   // RFeatures
 #include <VtkActorViewer.h> // QTools
-#include <SurfaceMapper.h>  // RVTK
 #include <ScalarLegend.h>   // RVTK
 #include <Axes.h>           // RVTK
 #include <QColor>
@@ -37,7 +36,7 @@ namespace FaceTools
 class FaceTools_EXPORT ModelViewer
 {
 public:
-    explicit ModelViewer( QTools::VtkActorViewer*);
+    explicit ModelViewer( QTools::VtkActorViewer*); // Given VtkActorViewer must already have an interactor set!
     explicit ModelViewer( bool useFloodLights=true);
     virtual ~ModelViewer();
 
@@ -83,11 +82,14 @@ public:
 
     void updateRender();    // Call after making changes to the view content
 
-    // Add a points actor in various formats.
+    // Add an individual point (spherical).
     int addPoint( const cv::Vec3f&, const VisOptions&);
-    int addPoints( const std::vector<cv::Vec3f>& points, const VisOptions&);
-    int addPoints( const RFeatures::ObjModel::Ptr, const VisOptions&);
-    int addPoints( const RFeatures::ObjModel::Ptr, const IntSet& vset, const VisOptions&);
+
+    // Add a points actor in various formats. Note that using software rendering, the vtkProperty->SetRenderPointsAsSpheres(true)
+    // option is not working properly and may cause the app to crash. For portable spheres, use addPoint for each individual point.
+    int addPoints( const std::vector<cv::Vec3f>& points, const VisOptions&, bool renderAsSpheres=false);
+    int addPoints( const RFeatures::ObjModel::Ptr, const VisOptions&, bool renderAsSpheres=false);
+    int addPoints( const RFeatures::ObjModel::Ptr, const IntSet& vset, const VisOptions&, bool renderAsSpheres=false);
 
     // Add a line actor (make a loop if joinEnds=true).
     int addLine( const std::vector<cv::Vec3f>&, bool joinEnds, const VisOptions&);
@@ -98,7 +100,6 @@ public:
     int add( const RFeatures::ObjModel::Ptr, const VisOptions& vo=VisOptions());
 
     // Add custom surface actor. Set metric value colour mapping with setLegendColours.
-    int add( RVTK::SurfaceMapper*, float minv, float maxv);
     int add( vtkSmartPointer<vtkActor>, const std::string& legendTitle, float minv, float maxv);    // Calls setLegendLookup
 
     // Number of discrete colours to use
@@ -172,7 +173,7 @@ private:
     bool _floodLightsEnabled;
     int _addedModelID;
     boost::unordered_map<int, vtkProp*> _props;
-    int addPointsActor( vtkSmartPointer<vtkActor>, const VisOptions&);
+    int addPointsActor( vtkSmartPointer<vtkActor>, const VisOptions&, bool asSpheres);
     void init();
     ModelViewer( const ModelViewer&);       // NO COPY
     void operator=( const ModelViewer&);    // NO COPY
