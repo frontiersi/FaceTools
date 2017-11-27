@@ -16,6 +16,8 @@
  ************************************************************************/
 
 #include <FaceModelViewer.h>
+#include <VisualisationAction.h>
+#include <ImageGrabber.h>   // RVTK
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <QVBoxLayout>
 #include <QMenu>
@@ -24,28 +26,10 @@ using FaceTools::FaceControl;
 using FaceTools::ModelSelector;
 using FaceTools::FaceModelViewer;
 
-namespace {
+namespace
+{
 
 typedef std::pair<FaceModel*, FaceControl*> MPair;
-
-
-FaceControl* findViewFromProp( const boost::unordered_map<FaceModel*, FaceControl*> mfcont, const vtkProp* p)
-{
-    // Search for the model - could hash the props in to make this faster,
-    // but since the operation is user driven, and there won't be that many
-    // models to search through, this is okay for now.
-    FaceControl* sfcont = NULL; // Will be the selected FaceControl.
-    foreach ( const MPair& mp, mfcont)
-    {
-        FaceControl* fcont = mp.second;
-        if ( fcont->belongs(p))
-        {
-            sfcont = fcont;
-            break;
-        }   // end if
-    }   // end foreach
-    return sfcont;
-}   // end findViewFromProp
 
 }   // end namespace
 
@@ -57,7 +41,6 @@ FaceModelViewer::FaceModelViewer( QMenu* cmenu, QWidget *parent)
       _fsaction(NULL),
       _screenshotSaver( "Save Screenshot", this),
       _cameraResetter( "Reset Camera", this),
-      _lightsToggler( "Toggle Texture Lighting", this),
       _axesToggler( "Toggle Axes", this)
 {
     QTools::VtkActorViewer* qviewer = new QTools::VtkActorViewer;
@@ -66,8 +49,6 @@ FaceModelViewer::FaceModelViewer( QMenu* cmenu, QWidget *parent)
     _selector = new ModelSelector( _viewer);
     _fsaction = new FaceTools::ActionFullScreenViewer( _viewer);
     _fsaction->qaction()->setEnabled(false);   // DISABLE FULLSCREEN FOR NOW (NOT WORKING PROPERLY)
-    _lightsToggler.setCheckable(true);
-    _lightsToggler.setChecked( _viewer->floodLightsEnabled());
     _axesToggler.setCheckable(true);
     _axesToggler.setChecked( _viewer->axesShown());
 
@@ -75,11 +56,9 @@ FaceModelViewer::FaceModelViewer( QMenu* cmenu, QWidget *parent)
     layout()->setContentsMargins( QMargins(0,0,0,0));
     _viewer->addToLayout( layout());
     connect( _viewer, &FaceTools::InteractiveModelViewer::requestContextMenu, this, &FaceModelViewer::showContextMenu);
-    connect( _selector, &ModelSelector::onSelectAll, this, &FaceModelViewer::doOnSelectAll);
-    connect( _selector, &ModelSelector::onSelected, this, &FaceModelViewer::toggleControlled);
+    connect( _selector, &ModelSelector::onSelected, this, &FaceModelViewer::doOnSelected);
     connect( &_screenshotSaver, &QAction::triggered, [=](){ _viewer->saveSnapshot();});
     connect( &_cameraResetter, &QAction::triggered,  [=](){ _viewer->resetDefaultCamera( 650.0f); _viewer->updateRender();});
-    connect( &_lightsToggler, &QAction::triggered,   [=](){ _viewer->enableFloodLights( _lightsToggler.isChecked()); _viewer->updateRender();});
     connect( &_axesToggler, &QAction::triggered,     [=](){ _viewer->showAxes( _axesToggler.isChecked()); _viewer->updateRender();});
 
     _cameraResetter.trigger();
@@ -110,6 +89,26 @@ void FaceModelViewer::addKeyPressHandler( QTools::KeyPressHandler* kph) { _viewe
 void FaceModelViewer::removeKeyPressHandler( QTools::KeyPressHandler* kph) { _viewer->removeKeyPressHandler(kph);}
 
 
+// public
+void FaceModelViewer::applyOptions( const FaceTools::ModelOptions& opts)
+{
+    const boost::unordered_set<FaceControl*>& uselected = _selector->getSelected();
+    foreach ( FaceControl* fcont, uselected)
+        fcont->setOptions(opts);
+    _viewer->showAxes( opts.showAxes);
+    _viewer->updateRender();
+}   // end applyOptions
+
+
+// public
+cv::Mat_<cv::Vec3b> FaceModelViewer::grabImage() const
+{
+    RVTK::ImageGrabber imgGrabber( _viewer->getRenderWindow());
+    imgGrabber.update();
+    return imgGrabber.getColourMap();
+}   // end grabImage
+
+
 size_t FaceModelViewer::getNumModels() const { return _modelConts.size();}
 
 
@@ -118,10 +117,11 @@ size_t FaceModelViewer::getSelectedModels( boost::unordered_set<FaceModel*>* fms
 {
     if ( fms)
     {
-        foreach ( FaceControl* fcont, _uselected)
+        const boost::unordered_set<FaceControl*>& uselected = _selector->getSelected();
+        foreach ( FaceControl* fcont, uselected)
             fms->insert( fcont->getModel());
     }   // end if
-    return _uselected.size();
+    return _selector->getSelected().size();
 }   // end getSelectedModels
 
 
@@ -131,10 +131,13 @@ bool FaceModelViewer::give( FaceControl* fcont)
     // Don't add view if its model is already in the viewer.
     if ( _modelConts.count(fcont->getModel()) > 0)
         return false;
+    if ( _modelConts.empty())
+        _cameraResetter.trigger();
     _modelConts[fcont->getModel()] = fcont;
-    _viewer->connectInterface(fcont);
     fcont->setViewer(_viewer);
+    _viewer->connectInterface(fcont);
     fcont->setVisualisation( fcont->getVisualisation());
+    _selector->add(fcont);  // Auto selects on add
     setControlled( fcont->getModel(), true, true);
     return true;
 }   // end give
@@ -147,10 +150,13 @@ FaceControl* FaceModelViewer::take( FaceModel* fmodel)
     if ( _modelConts.count(fmodel) == 0)
         return NULL;
     FaceControl* fcont = _modelConts.at(fmodel);
-    setControlled( fcont->getModel(), false, true);
+    _selector->remove(fcont);   // Auto deselects on remove
+    setControlled( fmodel, false, true);
     _viewer->disconnectInterface(fcont);
     _modelConts.erase(fmodel);
     fcont->setViewer(NULL);
+    if ( _modelConts.empty())
+        _cameraResetter.trigger();
     return fcont;
 }   // end take
 
@@ -162,14 +168,6 @@ FaceControl* FaceModelViewer::get( FaceModel* fmodel) const
         return _modelConts.at(fmodel);
     return NULL;
 }   // end get
-
-
-// public
-void FaceModelViewer::setAllControlled( bool enable)
-{
-    foreach ( const MPair& mp, _modelConts)
-        setControlled( mp.first, enable, false);
-}   // end setAllControlled
 
 
 // protected
@@ -190,12 +188,10 @@ bool FaceModelViewer::setControlled( FaceModel* fmodel, bool controlled, bool em
     if ( _modelConts.count(fmodel) == 0)
         return false;
     FaceControl* fcont = _modelConts.at(fmodel);
+    _viewer->enableFloodLights( fcont->getVisualisation()->useTexture());
+    _selector->setSelected( fcont, controlled);
     fcont->setControlled(controlled);    // Causes actions to fire
-    fcont->showOutline(controlled);
-    if ( controlled)
-        _uselected.insert( fcont);
-    else
-        _uselected.erase( fcont);
+    fcont->showSelected(controlled);
     if ( emitSelected)
         emit updatedSelected( fcont, controlled);
     return true;
@@ -203,22 +199,10 @@ bool FaceModelViewer::setControlled( FaceModel* fmodel, bool controlled, bool em
 
 
 // private slot
-void FaceModelViewer::toggleControlled( const vtkProp* p, bool)
+void FaceModelViewer::doOnSelected( FaceControl* fcont, bool v)
 {
-    FaceControl* fcont = findViewFromProp( _modelConts, p);
-    if ( fcont)
-        setControlled( fcont->getModel(), _uselected.count(fcont) == 0, true); // Toggle interactivity on the activated model
-}   // end toggleControlled
-
-
-// private slot
-void FaceModelViewer::doOnSelectAll()
-{
-    // Select all if not all currently selected, otherwise clear.
-    const bool selectAll = _uselected.size() < _modelConts.size();
-    foreach ( const MPair& mp, _modelConts)
-        setControlled( mp.first, selectAll, true);
-}   // end doOnSelectAll
+    setControlled( fcont->getModel(), v, true);
+}   // end doOnSelected
 
 
 // private slot
@@ -226,7 +210,8 @@ void FaceModelViewer::showContextMenu( const QPoint& p)
 {
     // Only show if p is on one of the models currently selected
     bool onModel = false;
-    foreach ( const FaceControl* fcont, _uselected)
+    const boost::unordered_set<FaceControl*>& uselected = _selector->getSelected();
+    foreach ( const FaceControl* fcont, uselected)
     {
         if ( onModel = fcont->isPointedAt())
             break;

@@ -31,12 +31,11 @@ namespace FaceTools
 class FaceTools_EXPORT SurfacePathDrawer
 {
 public:
-    SurfacePathDrawer( FaceControl*, const std::string& modelUnits="mm", const QColor& textColour=Qt::white, bool showCaptions=true);
+    explicit SurfacePathDrawer( FaceControl*);
     virtual ~SurfacePathDrawer();
 
     void clearHandles();     // Unset the endpoints
     size_t nhandles() const; // Number of endpoint handles set (0, 1, or 2).
-    void setUnits( const std::string&);
     void setVisible( bool);    // Show or hide path information
     bool isVisible() const;
 
@@ -69,7 +68,6 @@ public:
 private:
     FaceControl* _fcont;
     Handle *_h0, *_h1;
-    std::string _munits;
     bool _visible;
     int _pathID;
     vtkSmartPointer<vtkTextActor> _lenText;

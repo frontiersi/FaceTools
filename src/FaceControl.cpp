@@ -22,6 +22,7 @@
 #include <LandmarkGroupView.h>
 #include <VisualisationAction.h>
 #include <InteractiveModelViewer.h>
+#include <vtkProperty.h>
 using FaceTools::InteractionInterface;
 using FaceTools::ModelOptions;
 using FaceTools::VisualisationAction;
@@ -137,6 +138,8 @@ void FaceControl::setVisualisation( VisualisationAction* vaction)
 
     _curvis->mapActor(this);
     _fview->setTexture( vaction->useTexture());
+    if ( _viewer)
+        _viewer->enableFloodLights( vaction->useTexture());
 
     std::string vname;
     float fmin, fmax;
@@ -173,7 +176,7 @@ void FaceControl::setOptions( const ModelOptions& vo)
         _legend->setScalarMappingMinMax( _opts.model.minVisibleScalar, _opts.model.maxVisibleScalar);
     }   // end if
 
-    _lview->setOptions( _opts.landmarks);
+    _lview->setOptions( _opts);
     _bview->setOptions( _opts.boundary);
 }   // end setOptions
 
@@ -302,18 +305,25 @@ void FaceControl::mouseMove( const QPoint& p)
 
 
 // public
-bool FaceControl::isOutlineShown() const { return _oview->isVisible();}
+bool FaceControl::isSelected() const { return _oview->isVisible();}
 bool FaceControl::isBoundaryShown() const { return _bview->isVisible();}
 bool FaceControl::areLandmarksShown() const { return _lview->isVisible();}
 
 
 // public
-void FaceControl::showOutline( bool enable)
+void FaceControl::showSelected( bool enable)
 {
+    // Move these details into FaceView at some point.
     _oview->setVisible(enable, _viewer);
+    //const QColor& scol = _opts.model.surfaceColourMid;
+    //_fview->getSurfaceActor()->GetProperty()->SetColor( scol.redF(), scol.greenF(), scol.blueF());
+    //double alpha = _opts.model.opacity;
+    //if (!enable)
+    //    alpha /= 2.0;
+    //_fview->getSurfaceActor()->GetProperty()->SetOpacity( alpha);
     if ( _viewer)
         _viewer->updateRender();
-}   // end showOutline
+}   // end showSelected
 
 
 // public
@@ -362,13 +372,13 @@ void FaceControl::highlightLandmark( bool enable, const std::string& lm)
 
 
 // public
-bool FaceControl::updateLandmark( const std::string& lm, const cv::Vec3f* v)
+void FaceControl::updateLandmark( const std::string& lm, const cv::Vec3f* v, bool updateModel)
 {
-    const bool updated = _fmodel->updateLandmark(lm,v);
+    if ( updateModel)
+        _fmodel->updateLandmark(lm, v);
     _lview->updateLandmark(lm, v);
     if ( _viewer)
         _viewer->updateRender();
-    return updated;
 }   // end updateLandmark
 
 
@@ -394,7 +404,7 @@ void FaceControl::resetVisualisation()
 {
     _fview->reset(_fmodel->getObjectMeta()->getObject());
 
-    const bool showingOutline = _oview->isVisible();
+    const bool showingOutline = isSelected();
     _oview->reset(_fmodel->getObjectMeta()->getObject());
 
     const bool showingBoundary = _bview->isVisible();
@@ -405,7 +415,7 @@ void FaceControl::resetVisualisation()
     _lview->reset();
 
     // Restore the views
-    _oview->setVisible( showingOutline, _viewer);
+    showSelected( showingOutline);
     _bview->setVisible( showingBoundary, _viewer);
     _lview->setVisible( false, _viewer);
     foreach ( const std::string& lm, visibleLandmarks)

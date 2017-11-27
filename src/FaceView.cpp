@@ -84,7 +84,7 @@ void FaceView::setOptions( const FaceTools::ModelOptions& vo)
     _sactor->GetProperty()->SetLineWidth( _opts.model.lineWidth);
     const QColor& mscol = _opts.model.surfaceColourMid;
     _sactor->GetProperty()->SetColor( mscol.redF(), mscol.greenF(), mscol.blueF());
-    _sactor->GetProperty()->SetOpacity( mscol.alphaF());
+    _sactor->GetProperty()->SetOpacity( vo.model.opacity);
     // Backface culling
     _sactor->GetProperty()->SetBackfaceCulling( _opts.model.backfaceCulling);
     if ( _tactor)

@@ -18,11 +18,11 @@
 #ifndef FACE_TOOLS_LANDMARK_VIEW_H
 #define FACE_TOOLS_LANDMARK_VIEW_H
 
-#include "Landmarks.h"
 #include "ModelOptions.h"
 #include "ModelViewer.h"
-#include <vtkSphereSource.h>
 #include <vtkActor.h>
+#include <vtkSphereSource.h>
+#include <vtkCaptionActor2D.h>
 
 namespace FaceTools
 {
@@ -30,15 +30,15 @@ namespace FaceTools
 class FaceTools_EXPORT LandmarkView
 {
 public:
-    LandmarkView( const Landmarks::Landmark*, const ModelOptions::Landmarks&);
+    explicit LandmarkView( const ModelOptions&);
     virtual ~LandmarkView();
 
-    void setVisible( bool, ModelViewer* viewer);   // Add/remove from viewer
-    bool isVisible() const;                 // Returns true iff shown
-    void update();                          // Update from stored meta data
-    void highlight( bool);                  // Show highlighted (only if already visible)
+    void highlight( bool);                              // Show highlighted (only if already visible)
+    bool isVisible() const;                             // Returns true iff shown
+    void set( const std::string&, const cv::Vec3f&);    // Set displayed name (on highlight) and position
+    void setVisible( bool, ModelViewer* viewer);        // Add/remove from viewer
 
-    void setOptions( const ModelOptions::Landmarks&);
+    void setOptions( const ModelOptions&);
 
     // Returns true if this landmark is under the given coordinates.
     bool isPointedAt( const QPoint&) const;
@@ -48,11 +48,11 @@ public:
 
 private:
     ModelViewer* _viewer;
-    const Landmarks::Landmark* _landmark;
     vtkSmartPointer<vtkSphereSource> _source;
     vtkSmartPointer<vtkActor> _actor;
+    vtkSmartPointer<vtkCaptionActor2D> _caption;
     bool _ishighlighted;
-    ModelOptions::Landmarks _opts;
+    ModelOptions _opts;
     bool _isshown;
 
     LandmarkView( const LandmarkView&);     // No copy

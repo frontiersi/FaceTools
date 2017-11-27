@@ -18,122 +18,117 @@
 #include <ModelSelector.h>
 using FaceTools::ModelSelector;
 using FaceTools::InteractiveModelViewer;
-
-class HandleModifierKeyPress : public QTools::KeyPressHandler
-{
-public:
-    HandleModifierKeyPress( ModelSelector* mselector, int key)
-        : _mselector(mselector), _key(key) {}
-
-protected:
-    virtual bool handleKeyPress( QKeyEvent* e)
-    {
-        bool handled = false;
-        if ( e->key() == _key)
-        {
-            handled = true;
-            _mselector->setSelecting( e->type() == QEvent::KeyPress);
-        }   // end if
-        return handled;
-    }   // end handleKeyPress
-
-private:
-    ModelSelector* _mselector;
-    int _key;
-};  // end class
-
+using FaceTools::FaceControl;
 
 
 // public
-ModelSelector::ModelSelector( InteractiveModelViewer* viewer, Qt::Key key)
-    : _viewer(viewer), _kph(NULL), _selecting(false), _camLockState(false), _dblclick(false)
+ModelSelector::ModelSelector( InteractiveModelViewer* viewer)
+    : _viewer(viewer)
 {
     viewer->connectInterface( this);
-    _kph = new HandleModifierKeyPress( this, key);
-    viewer->addKeyPressHandler( _kph);
 }   // end ctor
 
 
 // public
-ModelSelector::~ModelSelector()
+void ModelSelector::add( FaceControl* fcont)
 {
-    _viewer->removeKeyPressHandler( _kph);
-    delete _kph;
-}   // end dtor
+    assert( _selected.count(fcont) == 0);
+    assert( _available.count(fcont) == 0);
+    _available.insert(fcont);
+    setSelected( fcont, true);
+}   // end add
 
 
 // public
-void ModelSelector::setSelecting( bool v)
+void ModelSelector::remove( FaceControl* fcont)
 {
-    if ( _selecting == v) // Only react to state changes
-        return;
+    assert( _available.count(fcont) > 0);
+    setSelected( fcont, false);
+    _available.erase(fcont);
+}   // end remove
 
-    _selecting = v;
-    if ( _selecting)
+
+// public
+void ModelSelector::setSelected( FaceControl* fcont, bool selected)
+{
+    _selected.erase(fcont);
+    if ( selected)
     {
-        _selected.clear();
-        _camLockState = isCameraLocked();
-        setCameraLocked(true);
+        assert( _available.count(fcont) > 0);
+        _selected.insert(fcont);
     }   // end if
-    else
+}   // end setSelected
+
+
+// protected
+void ModelSelector::rightButtonDown( const QPoint& p)
+{
+    FaceControl* fcont = findFromProp( _viewer->getPointedAt());
+    if ( fcont && _selected.count( fcont) == 0)
     {
-        _dblclick = false;
-        setCameraLocked( _camLockState);
-    }   // end else
-}   // end setSelecting
+        _selected.insert( fcont);
+        emit onSelected( fcont, true);
+    }   // end if
+}   // end rightButtonDown
 
 
+// protected
 void ModelSelector::leftDoubleClick( const QPoint& p)
 {
-    _dblclick = true;
-    setSelecting(true);
-    const vtkProp* prop = _viewer->getPointedAt();
-    if ( prop)
-        leftButtonDown(p);
+    FaceControl* fcont = findFromProp( _viewer->getPointedAt());
+    if ( fcont)
+    {
+        if ( _selected.count(fcont) == 0)
+        {
+            _selected.insert( fcont);
+            emit onSelected( fcont, true);
+        }   // end if
+        else
+        {
+            _selected.erase( fcont);
+            emit onSelected( fcont, false);
+        }   // end else
+    }   // end if
     else
-        emit onSelectAll();
+    {   // Select all toggle!
+        const bool addall = _selected.size() < _available.size();
+        foreach ( FaceControl* fcont, _available)
+        {
+            if ( addall && _selected.count(fcont) == 0)
+            {
+                _selected.insert( fcont);
+                emit onSelected( fcont, true);
+            }   // end if
+            else if ( !addall && _selected.count(fcont) > 0)
+            {
+                _selected.erase( fcont);
+                emit onSelected( fcont, false);
+            }   // end else if
+        }   // end foreach
+    }   // end else
 }   // end leftDoubleClick
 
 
-void ModelSelector::mouseMove( const QPoint&)
+// private
+FaceControl* ModelSelector::findFromProp( const vtkProp* prop) const
 {
-    if ( _dblclick)
-    {
-        const vtkProp* prop = _viewer->getPointedAt();
-        if ( prop && _selected.count(prop) == 0)
-        {
-            _selected.insert(prop);
-            onSelected( prop, true);
-        }   // end if
-    }   // end if
-}   // end mouseMove
+    FaceControl* sfcont = NULL; // Will be the selected FaceControl.
 
-
-void ModelSelector::leftButtonDown( const QPoint&)
-{
-    if ( _selecting)    // Only possible to be selecting with modifier key press
+    if (prop)
     {
-        const vtkProp* prop = _viewer->getPointedAt();
-        if ( prop)
+        // Search for the model - could hash the props in to make this faster,
+        // but since the operation is user driven, and there won't be that many
+        // models to search through, this is okay for now.
+        foreach ( FaceControl* fcont, _available)
         {
-            if ( _selected.count(prop) == 0)
+            if ( fcont->belongs(prop))
             {
-                _selected.insert(prop);
-                onSelected( prop, true);
+                sfcont = fcont;
+                break;
             }   // end if
-            else
-            {
-                _selected.erase(prop);
-                onSelected( prop, false);
-            }   // end else
-        }   // end if
+        }   // end foreach
     }   // end if
-}   // end leftButtonDown
 
-
-void ModelSelector::leftButtonUp( const QPoint&)
-{
-    if ( _dblclick)
-        setSelecting(false);
-}   // end leftButtonUp
+    return sfcont;
+}   // end findFromProp
 

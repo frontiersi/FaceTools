@@ -123,8 +123,7 @@ void BoundaryView::setOptions( const FaceTools::ModelOptions::Boundary& opts)
         reset();    // Will recurse back into this function with same crop factor
     else
     {
-        _boundary->GetProperty()->SetLineWidth( opts.lineWidth);
-        const QColor& lcol = _opts.lineColour;
-        _boundary->GetProperty()->SetColor( lcol.redF(), lcol.greenF(), lcol.blueF());
+        _boundary->GetProperty()->SetLineWidth( 3.0);
+        _boundary->GetProperty()->SetColor( 0.4f, 0.2f, 0.8f);
     }   // end else
 }   // end setOptions

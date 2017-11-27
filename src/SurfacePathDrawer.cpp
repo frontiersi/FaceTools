@@ -38,24 +38,21 @@ using RFeatures::ObjModel;
 
 
 // public
-SurfacePathDrawer::SurfacePathDrawer( FaceControl* fcont, const std::string& munits, const QColor& tcol, bool showCaps)
-    : _fcont(fcont), _h0(NULL), _h1(NULL), _munits(munits), _visible(false), _pathID(-1),
+SurfacePathDrawer::SurfacePathDrawer( FaceControl* fcont)
+    : _fcont(fcont), _h0(NULL), _h1(NULL), _visible(false), _pathID(-1),
       _lenText( vtkSmartPointer<vtkTextActor>::New()),
       _lenCaption( vtkSmartPointer<vtkCaptionActor2D>::New())
 {
     _lenText->GetTextProperty()->SetJustificationToRight();
-    _lenText->GetTextProperty()->SetFontFamilyToArial();
-    _lenText->GetTextProperty()->SetFontSize(16);
-    _lenText->GetTextProperty()->SetColor( tcol.redF(), tcol.greenF(), tcol.blueF());
+    _lenText->GetTextProperty()->SetFontFamilyToCourier();
+    _lenText->GetTextProperty()->SetFontSize(15);
 
     _lenCaption->BorderOff();
     _lenCaption->GetCaptionTextProperty()->BoldOff();
     _lenCaption->GetCaptionTextProperty()->ItalicOff();
     _lenCaption->GetCaptionTextProperty()->ShadowOff();
-    _lenCaption->GetCaptionTextProperty()->SetFontFamilyToArial();
-    _lenCaption->GetCaptionTextProperty()->SetFontSize(8);
-    _lenCaption->GetCaptionTextProperty()->SetColor( tcol.redF(), tcol.greenF(), tcol.blueF());
-    _lenCaption->SetVisibility( showCaps);
+    _lenCaption->GetCaptionTextProperty()->SetFontFamilyToCourier();
+    _lenCaption->GetCaptionTextProperty()->SetFontSize(6);
     _lenCaption->SetPickable( true);
 }   // end ctor
 
@@ -96,7 +93,6 @@ size_t SurfacePathDrawer::nhandles() const
 }   // end nhandles
 
 
-void SurfacePathDrawer::setUnits( const std::string& units) { _munits = units;}
 bool SurfacePathDrawer::isVisible() const { return _visible;}
 
 
@@ -194,7 +190,7 @@ void SurfacePathDrawer::addPath()
         std::vector<cv::Vec3f> lpath;
         if ( createPath( lpath))
         {
-            const ModelViewer::VisOptions loptions( 1.0f,1.0f,1.0f,1.0f,false,1.0f,5.0f);
+            const ModelViewer::VisOptions loptions( 1.0f,1.0f,1.0f,1.0f,false,1.0f,4.0f);
             InteractiveModelViewer* viewer = _fcont->getViewer();
             _pathID = viewer->addLine( lpath, false, loptions);
             viewer->add(_h0->_actor);
@@ -245,16 +241,15 @@ cv::Vec3f SurfacePathDrawer::Handle::get() const
 // public
 void SurfacePathDrawer::Handle::highlight( bool v)
 {
-    double opacity = 1.0;
-    double rad = 2.0;
-    double cols[3] = {0.8,0.4,1.0};
+    double opacity = 0.6;
+    double rad = 2.6;
+    double cols[3] = {0.5,0.2,1.0};
     if (v)
     {
         cols[0] = 0.5;
         cols[1] = 0.1;
         cols[2] = 0.7;
-        rad = 2.2;
-        opacity = 0.5;
+        opacity = 0.2;
     }   // end if
     _actor->GetProperty()->SetColor( cols[0], cols[1], cols[2]);
     _actor->GetProperty()->SetOpacity( opacity);
@@ -296,17 +291,21 @@ bool SurfacePathDrawer::createPath( std::vector<cv::Vec3f>& lpath)
     const cv::Vec3f& av = model->vtx(pvids[pvids.size()/2]);
     double attachPoint[3] = { av[0], av[1], av[2]};
     _lenCaption->SetAttachmentPoint( attachPoint);
+    const FaceTools::ModelOptions& opts = _fcont->getOptions();
+    const QColor& tcol = opts.textColour;
+    _lenCaption->GetCaptionTextProperty()->SetColor( tcol.redF(), tcol.greenF(), tcol.blueF());
+    _lenCaption->SetVisibility( opts.showCaptions);
 
     // Set the text contents for the label and the caption
     std::ostringstream oss1, oss2;
-    oss1 << "Caliper: " << std::setw(5) << std::fixed << std::setprecision(1) << elen << " " << _munits << std::endl;
-    oss2 << "Geodesic: " << std::setw(5) << std::fixed << std::setprecision(1) << psum << " " << _munits;
+    oss1 << "Caliper: " << std::setw(5) << std::fixed << std::setprecision(1) << elen << " " << opts.munits<< std::endl;
+    oss2 << "Geodesic: " << std::setw(5) << std::fixed << std::setprecision(1) << psum << " " << opts.munits;
     _lenText->SetInput( (oss1.str() + oss2.str()).c_str());
     _lenText->SetDisplayPosition( (int)_fcont->getViewer()->getWidth() - 10, 10);  // Bottom right
+    _lenText->GetTextProperty()->SetColor( tcol.redF(), tcol.greenF(), tcol.blueF());
 
-    // Stick a caption actor at the finishing point
     std::ostringstream caposs;
-    caposs << std::fixed << std::setprecision(1) << elen << " " << _munits;
+    caposs << std::fixed << std::setprecision(1) << elen << " " << opts.munits;
     _lenCaption->SetCaption( caposs.str().c_str());
     return true;
 }   // end createPath

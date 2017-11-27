@@ -62,8 +62,8 @@ public:
     void setOptions( const ModelOptions&);
     const ModelOptions& getOptions() const { return _opts;}
 
-    void showOutline( bool);    // viewUpdated NOT emitted for visualising the outline!
-    bool isOutlineShown() const;
+    void showSelected( bool);    // viewUpdated NOT emitted for visualising the outline!
+    bool isSelected() const;
 
     void showBoundary( bool);
     bool isBoundaryShown() const;
@@ -72,9 +72,11 @@ public:
     void showLandmark( bool, const std::string&);
     void highlightLandmark( bool, const std::string&);
 
-    // Set/get data
-    bool updateLandmark( const std::string&, const cv::Vec3f*);
-    void updateLandmark( const Landmarks::Landmark&);
+    // Update landmarks. If making many updates in short succession, call with updateModel=false
+    // until the very last update so that the FaceModel does not signal listening clients more
+    // than necessary (clients may run long operations on response to a FaceModel metadata update).
+    void updateLandmark( const std::string&, const cv::Vec3f*, bool updateModel=true);
+    void updateLandmark( const Landmarks::Landmark&);   // Updates view and model
     void updateMesh( const RFeatures::ObjModel::Ptr);   // Also calls resetVisualisation
     FaceModel* getModel() const { return _fmodel;}
     FaceView* getView() const { return _fview;}

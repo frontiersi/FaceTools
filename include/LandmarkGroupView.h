@@ -39,7 +39,7 @@ public:
     bool isLandmarkVisible( const std::string&) const;  // Returns true iff a particular landmark is shown
     void highlightLandmark( bool, const std::string&);  // Highlights a (visible) landmark
 
-    void setOptions( const ModelOptions::Landmarks&);
+    void setOptions( const ModelOptions&);
 
     void erase(); // Remove existing landmarks
     void reset(); // Reset all landmarks from the ObjMetaData
@@ -57,7 +57,7 @@ private:
     ModelViewer *_viewer;
     const ObjMetaData::Ptr _omd;
     boost::unordered_map<std::string, LandmarkView*> _lviews;
-    ModelOptions::Landmarks _opts;
+    ModelOptions _opts;
 
     LandmarkGroupView( const LandmarkGroupView&);   // No copy
     void operator=( const LandmarkGroupView&);      // No copy

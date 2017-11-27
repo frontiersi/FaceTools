@@ -19,6 +19,7 @@
 #define FACE_TOOLS_MODEL_SELECTOR_H
 
 #include "InteractiveModelViewer.h"
+#include "FaceControl.h"
 
 namespace FaceTools
 {
@@ -26,34 +27,27 @@ namespace FaceTools
 class FaceTools_EXPORT ModelSelector : public InteractionInterface
 { Q_OBJECT
 public:
-    ModelSelector( InteractiveModelViewer* viewer, Qt::Key key=Qt::Key_Control);
-    ~ModelSelector() override;
+    explicit ModelSelector( InteractiveModelViewer* viewer);
 
-    void setSelecting( bool);
+    void add( FaceControl*);    // Makes selected
+    void remove( FaceControl*); // Makes deselected
+    void setSelected( FaceControl*, bool);  // Mark fcont as selected or not - does NOT cause onSelected to fire!
+
+    const boost::unordered_set<FaceControl*>& getSelected() const { return _selected;}
 
 signals:
-    // Emitted on user double clicking in an empty area
-    void onSelectAll();
-
-    // Called as mouse pointer selects props as a result of double clicking and
-    // dragging over props, or the user holding down the modifier key (Ctrl by default)
-    // and single clicking on props.
-    void onSelected( const vtkProp*, bool);
+    void onSelected( FaceControl*, bool);
 
 protected:
+    void rightButtonDown( const QPoint&) override;
     void leftDoubleClick( const QPoint&) override;
-    void mouseMove( const QPoint&) override;
-    void leftButtonUp( const QPoint&) override;
-    void leftButtonDown( const QPoint&) override;
 
 private:
     InteractiveModelViewer *_viewer;
-    QTools::KeyPressHandler *_kph;
-    bool _selecting;
-    bool _camLockState;
-    bool _dblclick;
-    boost::unordered_set<const vtkProp*> _selected;
+    boost::unordered_set<FaceControl*> _selected;
+    boost::unordered_set<FaceControl*> _available;
 
+    FaceControl* findFromProp( const vtkProp* p) const;
     ModelSelector( const ModelSelector&);   // No copy
     void operator=( const ModelSelector&);  // No copy
 };  // end class

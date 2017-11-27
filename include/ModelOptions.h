@@ -27,32 +27,43 @@ namespace FaceTools
 
 struct FaceTools_EXPORT ModelOptions
 {
+    ModelOptions()
+    {
+        model.backfaceCulling = false;
+        model.vertexSize = 1.0;
+        model.lineWidth = 1.0;
+        model.opacity = 1.0;
+        model.numSurfaceColours = 100;
+        landmarks.radius = 1.7;
+        boundary.cropFactor = 2.0;
+        showAxes = false;
+        showCaptions = true;
+        maxTriangleArea = 2.0;
+        smoothFactor = 0.8;
+    }   // end ctor
+
     struct Model
     {
         bool backfaceCulling;
         double vertexSize;
         double lineWidth;
-        QColor activeColour;
+        double opacity;
         QColor surfaceColourMin;
         QColor surfaceColourMid;
         QColor surfaceColourMax;
+        int numSurfaceColours;
         float minVisibleScalar;
         float maxVisibleScalar;
-        int numSurfaceColours;
     };  // end struct
 
     struct Landmarks
     {
         double radius;
         QColor colour;
-        double highlightRadius;
-        QColor highlightColour;
     };  // end struct
 
     struct Boundary
     {
-        QColor lineColour;
-        double lineWidth;
         double cropFactor;  // 2.0 nominal
     };  // end struct
 
@@ -61,9 +72,10 @@ struct FaceTools_EXPORT ModelOptions
     Boundary boundary;
     std::string munits;     // Measurement units (e.g. "mm")
     QColor textColour;      // Text annotation colour
+    bool showAxes;
     bool showCaptions;
-    double maxTriangleArea;
-    double smoothFactor;
+    double maxTriangleArea; // Not used
+    double smoothFactor;    // Not used
 };  // end struct
 
 

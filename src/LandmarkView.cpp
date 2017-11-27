@@ -17,25 +17,35 @@
 
 #include <LandmarkView.h>
 #include <vtkProperty.h>
+#include <vtkTextProperty.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkMapper.h>
 using FaceTools::LandmarkView;
 using FaceTools::ModelViewer;
 using FaceTools::ModelOptions;
-using namespace FaceTools::Landmarks;
 
 
-LandmarkView::LandmarkView( const FaceTools::Landmarks::Landmark* lm, const ModelOptions::Landmarks& opts)
+LandmarkView::LandmarkView( const ModelOptions& opts)
     : _viewer(NULL),
-      _landmark(lm),
       _source( vtkSmartPointer<vtkSphereSource>::New()),
       _actor( vtkSmartPointer<vtkActor>::New()),
+      _caption( vtkSmartPointer<vtkCaptionActor2D>::New()),
       _ishighlighted(false), _isshown(false)
 {
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection( _source->GetOutputPort());
     _actor->SetMapper(mapper);
-    update();
+
+    _caption->BorderOff();
+    _caption->GetCaptionTextProperty()->BoldOff();
+    _caption->GetCaptionTextProperty()->ItalicOff();
+    _caption->GetCaptionTextProperty()->ShadowOff();
+    _caption->GetCaptionTextProperty()->SetFontFamilyToCourier();
+    _caption->GetCaptionTextProperty()->SetFontSize(4);
+    _caption->GetCaptionTextProperty()->SetUseTightBoundingBox(true);
+    _caption->SetPickable(false);
+
+    set( "NO_NAME", cv::Vec3f(0.0f, 0.0f, 0.0f));
     setOptions(opts);
 }   // end ctor
 
@@ -49,10 +59,16 @@ LandmarkView::~LandmarkView()
 void LandmarkView::setVisible( bool enable, ModelViewer* viewer)
 {
     if ( _viewer)
+    {
         _viewer->remove(_actor);
+        _viewer->remove(_caption);
+    }   // end if
 
     if ( viewer)
+    {
         viewer->remove(_actor);
+        viewer->remove(_caption);
+    }   // end if
 
     _isshown = false;
     _viewer = viewer;
@@ -67,30 +83,42 @@ void LandmarkView::setVisible( bool enable, ModelViewer* viewer)
 bool LandmarkView::isVisible() const { return _isshown;}
 
 
-void LandmarkView::update()
+void LandmarkView::set( const std::string& lname, const cv::Vec3f& pos)
 {
-    _source->SetCenter( _landmark->pos[0], _landmark->pos[1], _landmark->pos[2]);
+    _source->SetCenter( pos[0], pos[1], pos[2]);
     _source->Update();
-}   // end update
+    _caption->SetCaption( lname.c_str());
+    double attachPoint[3] = {pos[0], pos[1], pos[2]};
+    _caption->SetAttachmentPoint( attachPoint);
+}   // end set
 
 
 void LandmarkView::highlight( bool enable)
 {
-    QColor col = _opts.colour;
-    double rad = _opts.radius;
+    QColor col = _opts.landmarks.colour;
+    double opacity = 1.0;
+    double rad = _opts.landmarks.radius;
     _ishighlighted = enable && isVisible();
     if ( _ishighlighted)
-    {
-        col = _opts.highlightColour;
-        rad = _opts.highlightRadius;
-    }   // end if
+        opacity = 0.4;
     _actor->GetProperty()->SetColor( col.redF(), col.greenF(), col.blueF());
-    _actor->GetProperty()->SetOpacity( col.alphaF());
+    _actor->GetProperty()->SetOpacity( opacity);
     _source->SetRadius( rad);
+
+    const QColor& tcol = _opts.textColour;
+    _caption->GetCaptionTextProperty()->SetColor( tcol.redF(), tcol.greenF(), tcol.blueF());
+    _caption->SetVisibility( _opts.showCaptions);
+
+    if ( _viewer)
+    {
+        _viewer->remove(_caption);
+        if ( _ishighlighted)
+            _viewer->add(_caption);
+    }   // end if
 }   // end highlight
 
 
-void LandmarkView::setOptions( const ModelOptions::Landmarks& opts)
+void LandmarkView::setOptions( const ModelOptions& opts)
 {
     _opts = opts;
     highlight( _ishighlighted);
@@ -107,3 +135,4 @@ bool LandmarkView::isPointedAt( const QPoint& p) const
 
 
 bool LandmarkView::isProp( const vtkProp* prop) const { return _actor == prop;}
+

@@ -29,12 +29,11 @@ class FaceTools_EXPORT FaceModelViewer : public QWidget
 { Q_OBJECT
 public:
     FaceModelViewer( QMenu* contextMenu=NULL, QWidget *parent=NULL);
-    virtual ~FaceModelViewer();
+    ~FaceModelViewer() override;
 
     QAction* getFullScreenAction() { return _fsaction->qaction();}
     QAction* getScreenshotSaver() { return &_screenshotSaver;}
     QAction* getCameraResetter() { return &_cameraResetter;}
-    QAction* getLightsToggler() { return &_lightsToggler;}
     QAction* getAxesToggler() { return &_axesToggler;}
 
     // Get the models from this widget into the given set returning the number
@@ -51,10 +50,6 @@ public:
     // Return pointer to the control if this has the model, otherwise returns NULL.
     FaceControl* get( FaceModel* fm) const;
 
-    // Sets whether all models in this viewer should be controlled.
-    // Signal updateSelected is NOT emitted as a consequence of calling this!
-    void setAllControlled( bool);
-
     // Sets the given model (assumed to be accessible to this viewer) to be under
     // the control of this viewer or not. Returns false if the given model is
     // not owned by this viewer. By default, causes updateSelected to be emitted
@@ -65,16 +60,19 @@ public:
     void addKeyPressHandler( QTools::KeyPressHandler*);
     void removeKeyPressHandler( QTools::KeyPressHandler*);
 
+    void applyOptions( const ModelOptions&);
+
+    cv::Mat_<cv::Vec3b> grabImage() const; // Copy out the current screen.
+
 signals:
     void updatedSelected( FaceControl*, bool);  // Notify that user has (de)selected the given model.
     void toggleZeroArea( bool); // When going from positve to zero viewing area (true) and back (false).
 
 protected:
-    virtual void resizeEvent( QResizeEvent*);
+    void resizeEvent( QResizeEvent*) override;
 
 private slots:
-    void doOnSelectAll();
-    void toggleControlled( const vtkProp*, bool);
+    void doOnSelected( FaceControl*, bool);
     void showContextMenu( const QPoint&);
 
 private:
@@ -82,8 +80,7 @@ private:
     InteractiveModelViewer *_viewer;
     ModelSelector *_selector;
     ActionFullScreenViewer *_fsaction;
-    QAction _screenshotSaver, _lightsToggler, _cameraResetter, _axesToggler;
-    boost::unordered_set<FaceControl*> _uselected;
+    QAction _screenshotSaver, _cameraResetter, _axesToggler;
     boost::unordered_map<FaceModel*, FaceControl*> _modelConts;
 
     FaceModelViewer( const FaceModelViewer&); // No copy

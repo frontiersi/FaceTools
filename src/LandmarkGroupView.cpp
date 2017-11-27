@@ -118,7 +118,7 @@ void LandmarkGroupView::highlightLandmark( bool enable, const std::string& lm)
 
 
 // public
-void LandmarkGroupView::setOptions( const ModelOptions::Landmarks& opts)
+void LandmarkGroupView::setOptions( const ModelOptions& opts)
 {
     _opts = opts;
     typedef std::pair<std::string, LandmarkView*> LMPair;
@@ -148,7 +148,11 @@ void LandmarkGroupView::reset()
     boost::unordered_set<std::string> lmnames;
     _omd->getLandmarks( lmnames);
     foreach ( const std::string& lm, lmnames)
-        _lviews[lm] = new LandmarkView( _omd->getLandmarkMeta(lm), _opts);
+    {
+        const FaceTools::Landmarks::Landmark* lmk = _omd->getLandmarkMeta(lm);
+        _lviews[lm] = new LandmarkView( _opts);
+        _lviews[lm]->set( lm, lmk->pos);
+    }   // end foreach
     setVisible(shown, _viewer);
 }   // end reset
 
@@ -160,9 +164,8 @@ void LandmarkGroupView::updateLandmark( const std::string& lm, const cv::Vec3f* 
     {
         assert( _omd->hasLandmark(lm));
         if ( _lviews.count(lm) == 0)    // Landmark was added
-            _lviews[lm] = new LandmarkView( _omd->getLandmarkMeta(lm), _opts);
-        else
-            _lviews[lm]->update();
+            _lviews[lm] = new LandmarkView( _opts);
+        _lviews[lm]->set( lm, *pos);
     }   // end if
     else if ( !_omd->hasLandmark(lm))    // Landmark was deleted
     {
