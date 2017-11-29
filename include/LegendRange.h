@@ -34,11 +34,12 @@ public:
     LegendRange();
     virtual ~LegendRange();
 
+    void setActor( vtkActor*);
+
     // Set a new viewer to map to and the same time as restoring a range.
     // If the range name is left empty, the existing range is used.
     // If the viewer is NULL, the existing viewer is used.
-    // The existing actor is used if actor is NULL.
-    void setVisible( std::string v="", vtkActor* actor=NULL, ModelViewer* viewer=NULL);
+    void setVisible( std::string v="", ModelViewer* viewer=NULL);
 
     // Returns true if v is set to a non-empty string, matches a legend range,
     // and that legend range is currently set, or if v is empty, returns true

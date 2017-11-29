@@ -99,9 +99,12 @@ void FaceModel::updateMesh( const ObjModel::Ptr model)
     _udist = NULL;
     _cdist = NULL;
     _omd->setObject(model); // Rebuilds internal kd-tree and resets curvature map to NULL (landmark info not changed!)
-    emit meshUpdated();
+    _omd->shiftLandmarksToSurface();    // Ensures landmarks stay at surface
     _cmetrics = NULL;
     buildCurvature();
+    buildDistanceMaps();
+    emit meshUpdated();
+    emit metaUpdated();
 }   // end updateMesh
 
 
@@ -120,32 +123,45 @@ void FaceModel::buildCurvature()
         const RFeatures::ObjModelCurvatureMap::Ptr cmap = _omd->getCurvatureMap();
         assert( cmap != NULL);
         _cmetrics = RFeatures::ObjModelCurvatureMetrics::create( cmap);
-        emit metaUpdated();
     }   // end if
 }   // end buildCurvature
 
-/*
-// public
-bool FaceModel::updateDistanceMaps( const cv::Vec3f& v)
-{
-    if ( !_omd->hasLandmark( FaceTools::Landmarks::NASAL_TIP))
-        return false;
 
+// private
+void FaceModel::buildDistanceMaps()
+{
+    if ( _omd->getObject() == NULL || !_omd->hasLandmark( FaceTools::Landmarks::NASAL_TIP))
+        return;
+
+    const cv::Vec3f& nt = _omd->getLandmark( FaceTools::Landmarks::NASAL_TIP);
+    const int vidx = _omd->getKDTree()->find( nt);
     const ObjModel::Ptr model = _omd->getObject();
+
     if ( _facalc.getFaceAngles().empty()) // Obtain face angles
     {
         RFeatures::ObjModelTriangleMeshParser tparser( model);
         tparser.addTriangleParser( &_facalc);
-
-        const cv::Vec3f& nt = _omd->getLandmark( FaceTools::Landmarks::NASAL_TIP);
-        const int vidx = _omd->getKDTree()->find( nt);
         const int fidx = *model->getFaceIds(vidx).begin();  // Get connected polygon to nose tip
         tparser.parse( fidx, cv::Vec3f(0,0,1));
     }   // end if
 
-    // Propagate from nearest point on the face.
-    const int vidx = _omd->getKDTree()->find(v);
+    /*
+    // Check the angles
+    const RFeatures::FaceAngles& fangles = _facalc.getFaceAngles();
+    const IntSet& fids = model->getFaceIds();
+    foreach ( int fid, fids)
+    {
+        const RFeatures::VertexAngles& va = fangles.at(fid);
+        const int* vidxs = model->getFaceVertices(fid);
+        const double v0 = va.at(vidxs[0]);
+        const double v1 = va.at(vidxs[1]);
+        const double v2 = va.at(vidxs[2]);
+        if ( fabs(v0 + v1 + v2 - CV_PI) > 0.0000001)
+            std::cerr << "F_" << fid << ") " << v0 << ", " << v1 << ", " << v2 << std::endl;
+    }   // end foreach
+    */
 
+    // Propagate from nose tip
     const RFeatures::ObjModelFastMarcher::SpeedFunctor uniformSpeedFunctor;
     _udist = RFeatures::ObjModelFastMarcher::create( model, &uniformSpeedFunctor, &_facalc.getFaceAngles());
     _udist->propagateFront( vidx);
@@ -153,6 +169,4 @@ bool FaceModel::updateDistanceMaps( const cv::Vec3f& v)
     const FaceTools::CurvatureSpeedFunctor curvSpeedFunctor( _omd->getCurvatureMap());
     _cdist = RFeatures::ObjModelFastMarcher::create( model, &curvSpeedFunctor, &_facalc.getFaceAngles());
     _cdist->propagateFront( vidx);
-    return true;
-}   // end updateDistanceMaps
-*/
+}   // end buildDistanceMaps

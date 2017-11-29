@@ -48,9 +48,18 @@ void ModelViewer::enableFloodLights( bool enable)
 
 // public
 bool ModelViewer::floodLightsEnabled() const { return _floodLightsEnabled;}
-void ModelViewer::showAxes( bool enable) { _axes->setEnabled(enable);}
+
+void ModelViewer::showAxes( bool enable)
+{
+    if ( enable)
+        add(_axes);
+    else
+        remove(_axes);
+    _axesVisible = enable;
+}   // end showAxes
+
 bool ModelViewer::legendShown() const { return _scalarLegend->isShown();}
-bool ModelViewer::axesShown() const { return _axes->isShown();}
+bool ModelViewer::axesShown() const { return _axesVisible;}
 void ModelViewer::updateRender() { _qviewer->updateRender();}
 
 
@@ -68,7 +77,8 @@ void ModelViewer::showLegend( bool enable)
 void ModelViewer::init()
 {
     _scalarLegend = new RVTK::ScalarLegend( _qviewer->getRenderer());
-    _axes = new RVTK::Axes( _qviewer->getRenderWindow()->GetInteractor());
+    //_axes = new RVTK::Axes( _qviewer->getRenderWindow()->GetInteractor());
+    _axes = vtkSmartPointer<vtkAxesActor>::New();
     showAxes(false);
     showLegend(false);
     enableFloodLights( _floodLightsEnabled);
@@ -77,8 +87,8 @@ void ModelViewer::init()
 
 // public
 ModelViewer::ModelViewer( bool floodFill)
-    : _qviewer( new QTools::VtkActorViewer( NULL)), _scalarLegend(NULL),
-      _axes(NULL), _dodel(true), _floodLightsEnabled(floodFill), _addedModelID(0)
+    : _qviewer( new QTools::VtkActorViewer( NULL)), _scalarLegend(NULL), _axesVisible(false),
+      _dodel(true), _floodLightsEnabled(floodFill), _addedModelID(0)
 {
     vtkObject::GlobalWarningDisplayOff();   // Prevent GUI error warning pop-ups
     vtkSmartPointer<vtkRenderer> renderer = _qviewer->getRenderer();
@@ -91,7 +101,7 @@ ModelViewer::ModelViewer( bool floodFill)
 
 // public
 ModelViewer::ModelViewer( QTools::VtkActorViewer* viewer)
-    : _qviewer( viewer), _scalarLegend(NULL), _axes(NULL), _dodel(false),
+    : _qviewer( viewer), _scalarLegend(NULL), _axesVisible(false), _dodel(false),
       _floodLightsEnabled(false), _addedModelID(0)
 {
     init();
@@ -101,7 +111,6 @@ ModelViewer::ModelViewer( QTools::VtkActorViewer* viewer)
 // public
 ModelViewer::~ModelViewer()
 {
-    delete _axes;
     delete _scalarLegend;
     if ( _dodel)
         delete _qviewer;

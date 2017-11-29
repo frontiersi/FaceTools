@@ -145,6 +145,7 @@ private:
     boost::unordered_set<QAction*> _actions;
     boost::unordered_set<const vtkProp*> _tmpProps;
 
+    void setScalarVisualisation();
     FaceControl( const FaceControl&);     // No copy
     void operator=( const FaceControl&);  // No copy
 };  // end class

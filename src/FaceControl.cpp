@@ -128,10 +128,25 @@ void FaceControl::setViewer( FaceTools::InteractiveModelViewer* viewer)
 }   // end setViewer
 
 
+// private
+void FaceControl::setScalarVisualisation()
+{
+    std::string vname;
+    float fmin, fmax;
+    if ( _curvis->allowScalarVisualisation( fmin, fmax))
+    {
+        vname = _curvis->getDisplayName().toStdString();
+        if ( !_legend->gotMapping(vname))
+            _legend->setBounds( vname, fmin, fmax);
+    }   // end if
+    _legend->setActor( _fview->getSurfaceActor());
+    _legend->setVisible( vname, _viewer);
+}   // end setScalarVisualisation
+
+
 // public
 void FaceControl::setVisualisation( VisualisationAction* vaction)
 {
-    const bool changedVis = vaction != _curvis;
     _curvis = vaction;
     assert(vaction);
     assert(vaction->isAvailable(this));
@@ -141,19 +156,10 @@ void FaceControl::setVisualisation( VisualisationAction* vaction)
     if ( _viewer)
         _viewer->enableFloodLights( vaction->useTexture());
 
-    std::string vname;
-    float fmin, fmax;
-    if ( vaction->allowScalarVisualisation( fmin, fmax))
-    {
-        vname = vaction->getDisplayName().toStdString();
-        if ( !_legend->gotMapping(vname))
-            _legend->setBounds( vname, fmin, fmax);
-    }   // end if
-    _legend->setVisible( vname, _fview->getSurfaceActor(), _viewer);
-
+    setScalarVisualisation();
     _fview->setVisible( true, _viewer);
-    if ( changedVis)
-        emit viewUpdated();
+
+    emit viewUpdated();
     if ( _viewer)
         _viewer->updateRender();
 }   // end setVisualisation
@@ -165,7 +171,7 @@ void FaceControl::setOptions( const ModelOptions& vo)
     _opts = vo;
     _fview->setOptions( _opts);
 
-    // Restrict the visualised range of values if doing a colour visualisation
+    // Set legend visualisation options
     if ( _curvis && _legend->gotMapping( _curvis->getDisplayName().toStdString()))
     {
         const QColor& mcol0 = _opts.model.surfaceColourMin;
@@ -403,6 +409,8 @@ void FaceControl::updateMesh( const RFeatures::ObjModel::Ptr model)
 void FaceControl::resetVisualisation()
 {
     _fview->reset(_fmodel->getObjectMeta()->getObject());
+    delete _legend;
+    _legend = new LegendRange;
 
     const bool showingOutline = isSelected();
     _oview->reset(_fmodel->getObjectMeta()->getObject());
@@ -421,7 +429,6 @@ void FaceControl::resetVisualisation()
     foreach ( const std::string& lm, visibleLandmarks)
         _lview->showLandmark( true, lm);
 
-    setOptions(_opts);
     setVisualisation( _curvis);
 }   // end resetVisualisation
 

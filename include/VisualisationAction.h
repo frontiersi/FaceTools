@@ -32,28 +32,26 @@ class FaceTools_EXPORT VisualisationAction : public FaceAction
 { Q_OBJECT
 public:
     VisualisationAction();
-    virtual ~VisualisationAction(){}
 
     // If this visualisation is available for the given model.
     virtual bool isAvailable( const FaceControl*) const { return false;}
 
     // How visualisation options apply
     virtual bool useTexture() const { return false;}     // Use texture mapping?
-    virtual bool useFloodLights() const { return false;} // Use headlight if return false.
     virtual bool allowSetVertexSize() const { return false;}
-    virtual bool allowSetWireframeLineWidth() { return false;}
+    virtual bool allowSetWireframeLineWidth() const { return false;}
     virtual bool allowSetColour() const { return false;}
     virtual bool allowScalarVisualisation( float& minv, float& maxv) const { return false;}
 
     virtual void mapActor( FaceControl*) = 0;
 
     // Default visualisations for a FaceControl when added.
-    virtual void addController( FaceControl*);
-    virtual void removeController( FaceControl*);
-    virtual void setControlled( FaceControl*, bool);
+    void addController( FaceControl*) override;
+    void removeController( FaceControl*) override;
+    void setControlled( FaceControl*, bool) override;
 
 protected:
-    virtual bool doAction();    // Apply this visualisation over all views.
+    bool doAction() override;    // Apply this visualisation over all views.
 
     // If this is the default visualistion for a model upon first adding.
     virtual bool isDefault( const FaceControl*) const { return false;}

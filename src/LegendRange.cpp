@@ -43,7 +43,14 @@ LegendRange::~LegendRange()
 
 
 // public
-void LegendRange::setVisible( std::string v, vtkActor* actor, ModelViewer* viewer)
+void LegendRange::setActor( vtkActor* actor)
+{
+    _sactor = actor;
+}   // end setActor
+
+
+// public
+void LegendRange::setVisible( std::string v, ModelViewer* viewer)
 {
     if ( _viewer)
         _viewer->showLegend(false);
@@ -53,9 +60,6 @@ void LegendRange::setVisible( std::string v, vtkActor* actor, ModelViewer* viewe
     else
         viewer->showLegend(false);
 
-    if ( !actor)
-        actor = _sactor;
-    _sactor = actor;
     restoreRange("");
     _viewer = viewer;
     if ( !v.empty() && viewer && _sactor)

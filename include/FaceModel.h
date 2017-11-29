@@ -77,6 +77,7 @@ private:
     RFeatures::ObjModelFastMarcher::Ptr _cdist;
 
     void buildCurvature();
+    void buildDistanceMaps();
 
     FaceModel( const FaceModel&);               // No copy
     FaceModel& operator=( const FaceModel&);    // No copy

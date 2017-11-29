@@ -128,6 +128,7 @@ size_t FaceModelViewer::getSelectedModels( boost::unordered_set<FaceModel*>* fms
 // public
 bool FaceModelViewer::give( FaceControl* fcont)
 {
+    assert(fcont);
     // Don't add view if its model is already in the viewer.
     if ( _modelConts.count(fcont->getModel()) > 0)
         return false;
@@ -146,8 +147,7 @@ bool FaceModelViewer::give( FaceControl* fcont)
 // public
 FaceControl* FaceModelViewer::take( FaceModel* fmodel)
 {
-    assert(fmodel);
-    if ( _modelConts.count(fmodel) == 0)
+    if ( fmodel == NULL || _modelConts.count(fmodel) == 0)
         return NULL;
     FaceControl* fcont = _modelConts.at(fmodel);
     _selector->remove(fcont);   // Auto deselects on remove
