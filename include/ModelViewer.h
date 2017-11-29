@@ -27,7 +27,7 @@
 #include <CameraParams.h>   // RFeatures
 #include <VtkActorViewer.h> // QTools
 #include <ScalarLegend.h>   // RVTK
-#include <vtkAxesActor.h>
+#include <Axes.h>           // RVTK
 #include <QColor>
 
 namespace FaceTools
@@ -168,11 +168,10 @@ protected:
 
 private:
     RVTK::ScalarLegend* _scalarLegend;
-    bool _axesVisible;
+    RVTK::Axes* _axes;
     bool _dodel;
     bool _floodLightsEnabled;
     int _addedModelID;
-    vtkSmartPointer<vtkAxesActor> _axes;
     boost::unordered_map<int, vtkProp*> _props;
     int addPointsActor( vtkSmartPointer<vtkActor>, const VisOptions&, bool asSpheres);
     void init();
