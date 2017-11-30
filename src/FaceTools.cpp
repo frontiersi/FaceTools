@@ -19,100 +19,10 @@
 #include <Landmarks.h>
 using FaceTools::ObjMetaData;
 #include <AssetImporter.h>             // RModelIO
+#include <ObjModelBoundaryFinder2.h>
 using namespace RFeatures;
 
-/*
-void checkBoundaries( const RFeatures::ObjModelBoundaryFinder& bfinder)
-{
-    const int nb = bfinder.getNumBoundaries();
-    std::cerr << "\tFound " << nb << " boundaries of lengths:" << std::endl;
-    for ( int i = 0; i < nb; ++i)
-    {
-        const std::list<int>& blist = bfinder.getBoundary(i);
-        std::cerr << "\t" << i << ") " << blist.size() << " :";
-        // Check that the boundaries do not contain duplicate indices
-        IntSet bset( blist.begin(), blist.end());
-        assert( bset.size() == blist.size());
-        // Print the list of vertices
-        if ( blist.size() < 25)
-        {
-            BOOST_FOREACH ( const int& uv, blist)
-                std::cerr << " " << uv;
-        }   // end if
-        else
-            std::cerr << " TOO LONG TO PRINT";
-        std::cerr << std::endl;
-    }   // end for
-}   // end checkBoundaries
-*/
 
-
-int FaceTools::getBoundary( const ObjModel::Ptr model, std::vector<int>& bverts, int svid)
-{
-    assert(model);
-    assert( model->getVertexIds().count(svid) > 0);
-
-    ObjModelTriangleMeshParser parser( model);
-    ObjModelBoundaryFinder bfinder;
-    parser.setBoundaryParser( &bfinder);
-
-    const IntSet& sfids = model->getFaceIds( svid);
-    assert( !sfids.empty());
-    parser.parse( *sfids.begin());
-
-    std::cerr << "Num boundaries found: " << bfinder.getNumBoundaries() << std::endl;
-    const std::list<int>& blist = bfinder.getBoundary(0);
-    bverts.insert( bverts.end(), blist.begin(), blist.end());
-    return (int)blist.size();
-}   // end getBoundary
-
-/*
-int FaceTools::findBoundaryLoops( const ObjModel::Ptr model, std::list<std::vector<cv::Vec3f> > &loops)
-{
-    int totBoundaries = 0;
-    IntSet fids = model->getFaceIds();  // Copy out the face Ids
-
-    int pfid = 5730;    // Check on petra.obj
-    while ( !fids.empty())
-    {
-        ObjModelTriangleMeshParser parser(model);
-        ObjModelBoundaryFinder bfinder;
-        parser.setBoundaryParser( &bfinder);
-        std::cerr << "Parsing with face ID " << pfid << "... " << std::endl;
-        if ( parser.parse( pfid) < 0)
-            return -1;
-
-        const IntSet& pfaces = parser.getParsedFaces();
-        BOOST_FOREACH ( int fid, pfaces)
-            fids.erase(fid);
-
-        const int nbs = (int)bfinder.getNumBoundaries();
-        totBoundaries += nbs;
-
-        std::cerr << "  Parsed " << pfaces.size() << " faces starting at face " << pfid << ". "
-                  << fids.size() << " remaining. Found " << nbs << " boundaries." << std::endl;
-        for ( int i = 0; i < nbs; ++i)
-        {
-            const std::list<int>& blist = bfinder.getBoundary(i);
-            assert( model->getConnectedVertices( blist.back()).count( blist.front()) > 0); // Beginning of boundary must join end
-            std::cerr << "  + boundary has " << blist.size() << " vertices" << std::endl;
-            loops.resize( loops.size() + 1);
-            std::vector<cv::Vec3f>& lvec = loops.back();
-            BOOST_FOREACH ( int b, blist)
-                lvec.push_back( model->vtx(b));
-        }   // end for
-
-        if ( !fids.empty())
-            pfid = *fids.begin();
-    }   // end while
-
-    //std::cerr << "[INFO] FaceTools::findBoundaryLoops: Finished setting " << nbs << " boundary loops" << std::endl;
-    return totBoundaries;
-}   // end findBoundaryLoops
-*/
-
-
-#include <ObjModelBoundaryFinder2.h>
 int FaceTools::findBoundaryLoops( const ObjModel::Ptr model, std::list<std::vector<cv::Vec3f> > &loops)
 {
     ObjModelBoundaryFinder2 bfinder(model);
@@ -123,7 +33,7 @@ int FaceTools::findBoundaryLoops( const ObjModel::Ptr model, std::list<std::vect
     {
         const std::list<int>& blist = bfinder.getBoundary(i);
         assert( model->getConnectedVertices( blist.back()).count( blist.front()) > 0); // Beginning of boundary must join end
-        std::cerr << "  + boundary has " << blist.size() << " vertices" << std::endl;
+        //std::cerr << "  + boundary has " << blist.size() << " vertices" << std::endl;
         loops.resize( loops.size() + 1);
         std::vector<cv::Vec3f>& lvec = loops.back();
         BOOST_FOREACH ( int b, blist)
@@ -133,43 +43,26 @@ int FaceTools::findBoundaryLoops( const ObjModel::Ptr model, std::list<std::vect
 }   // end findBoundaryLoops
 
 
-
-
-
-ObjModel::Ptr FaceTools::getComponent( const ObjModel::Ptr model, int svid, const cv::Vec3d& coffset)
+ObjModel::Ptr FaceTools::getComponent( const ObjModel::Ptr model, int svidx)
 {
-    assert(model);
+    if ( model->getVertexIds().count(svidx) == 0)
+    {
+        std::cerr << "[ERROR] FaceTools::getComponent: Invalid starting vertex!" << std::endl;
+        return ObjModel::Ptr();
+    }   // end if
 
     ObjModelTriangleMeshParser parser( model);
-    ObjModelBoundaryFinder bfinder;
-    parser.setBoundaryParser( &bfinder);
+    parser.parse( *model->getFaceIds( svidx).begin());
+    const IntSet& fids = parser.getParsedFaces();
 
-    const IntSet& sfids = model->getFaceIds( svid);
-    assert( !sfids.empty());
-    parser.parse( *sfids.begin());
-
-    const std::list<int>& blist = bfinder.getBoundary(0);
-    ObjModelBoundaryFinder bfinder2( &blist);    // Boundary of component we want (max number of edges)
-
-    const ObjModelMover mover( coffset);
-    ObjModelCopier modelCopier( &mover);
-
-    ObjModelTriangleMeshParser parser2( model);
-    parser2.setBoundaryParser( &bfinder2);
-    parser2.addTriangleParser( &modelCopier);
-
-    // There can only be one polygon that shares and two consecutive vertices in blist.
-    // Get a polygon ID in this manner to ensure that the starting polygon for parsing
-    // is inside the blist boundary.
-    const IntSet& sfids2 = model->getSharedFaces( *blist.begin(), *(++blist.begin()));
-    parser2.parse( *sfids2.begin());
-
-    return modelCopier.getCopiedModel();
+    ObjModelCopier copier( model);
+    BOOST_FOREACH ( int fid, fids)
+        copier.addTriangle(fid);
+    return copier.getCopiedModel();
 }   // end getComponent
 
 
-
-ObjModel::Ptr FaceTools::crop( const ObjModel::Ptr model, const cv::Vec3f& v, double radius, int svidx)
+ObjModel::Ptr FaceTools::crop( const ObjModel::Ptr model, const cv::Vec3f& v, int svidx, double radius)
 {
     if ( model->getVertexIds().count(svidx) == 0)
     {
@@ -183,14 +76,15 @@ ObjModel::Ptr FaceTools::crop( const ObjModel::Ptr model, const cv::Vec3f& v, do
         return ObjModel::Ptr();
     }   // end if
 
-    const int sfid = *model->getFaceIds( svidx).begin();
+    ObjModelCropper::Ptr cropper = ObjModelCropper::create( model, v, svidx);
+    cropper->adjustRadius( radius);
+    IntSet cfids;
+    cropper->getCroppedFaces( cfids);
 
-    ObjModelCropper cropper( v, radius);
-    ObjModelCopier copier;
-    ObjModelTriangleMeshParser parser( model);
-    parser.setBoundaryParser( &cropper);
-    parser.addTriangleParser( &copier);
-    parser.parse( sfid);
+    // Copy the subset of faces into a new model
+    ObjModelCopier copier( model);
+    BOOST_FOREACH ( int fid, cfids)
+        copier.addTriangle(fid);
     ObjModel::Ptr cmodel = copier.getCopiedModel();
 
     // Remove vertices (and attached faces) that connect to 2 or fewer polygons so the boundary is clean.
@@ -205,7 +99,7 @@ ObjModel::Ptr FaceTools::crop( const ObjModel::Ptr model, const cv::Vec3f& v, do
         totPruned += pruned;
     } while ( pruned > 0);
 
-    return cmodel;
+    return getComponent( cmodel, *cmodel->getVertexIds().begin());
 }   // end crop
 
 
@@ -416,7 +310,7 @@ ObjModel::Ptr FaceTools::loadModel( const std::string& fname, bool useTexture, b
                 assert( ic.is2DManifold());
                 if ( !ic.is2DManifold())
                 {
-                    std::cerr << "ERROR - model clean failed! Unable to manufacture a 2D triangulated mesh from input model '" << fname << "'" << std::endl;
+                    std::cerr << "[ERROR] FaceTools::loadModel: Unable to make 2D triangulated mesh from '" << fname << "'" << std::endl;
                     model.reset();
                 }   // end if
             }   // end if
@@ -444,6 +338,3 @@ bool FaceTools::loadModels( const std::vector<std::string>& fnames, std::vector<
 
     return !failed;
 }   // end loadModels
-
-
-

@@ -24,16 +24,12 @@
 namespace FaceTools
 {
 
-// Get the component boundary vertex indices into bverts - starting from vertex svid.
-FaceTools_EXPORT int getBoundary( const RFeatures::ObjModel::Ptr, std::vector<int>& bverts, int svid=0);
-
 // Get all boundary loops on the given object.
 FaceTools_EXPORT int findBoundaryLoops( const RFeatures::ObjModel::Ptr, std::list<std::vector<cv::Vec3f> > &loops);
 
 // Find the boundaries of the given model and create and return a new model being
-// the single component that is contiguously connected by polygons to vidx.
-// Optional translation offset is applied to the copied model.
-FaceTools_EXPORT RFeatures::ObjModel::Ptr getComponent( const RFeatures::ObjModel::Ptr, int vidx, const cv::Vec3d& copyOffset=cv::Vec3d(0,0,0));
+// the single component that is contiguously connected by polygon edges to vidx.
+FaceTools_EXPORT RFeatures::ObjModel::Ptr getComponent( const RFeatures::ObjModel::Ptr, int vidx);
 
 // Checks if given model as the essential landmarks (eyes and nose tip) needed
 // for crop, calcFaceCentre, calcFaceCropRadius, transformToOrigin and others.
@@ -42,7 +38,7 @@ FaceTools_EXPORT bool hasReqLandmarks( const ObjMetaData::Ptr);
 // Crop and copy the given model to be the part connected to vertex svid with a boundary of R from centre v.
 // The choice of svid allows the cropped part to be inside or outside the boundary. If svid is not a valid
 // model vertex, an empty object is returned. Returned object is parsable as a single connected component.
-FaceTools_EXPORT RFeatures::ObjModel::Ptr crop( const RFeatures::ObjModel::Ptr, const cv::Vec3f& v, double R, int svid=0);
+FaceTools_EXPORT RFeatures::ObjModel::Ptr crop( const RFeatures::ObjModel::Ptr, const cv::Vec3f& v, int svid=0, double R=DBL_MAX);
 
 // Calculate and return the centre of the face as the point directly behind the nose tip in the plane of the front of the eyes.
 // Requires the left and right eye centre landmarks, the nose tip landmark, and orientation vectors for calculation.

@@ -61,7 +61,7 @@ void ModelViewer::init()
 {
     _scalarLegend = new RVTK::ScalarLegend( _qviewer->getRenderer());
     _axes = new RVTK::Axes( _qviewer->getRenderWindow()->GetInteractor());
-    _axes->setEnabled(false);
+    //_axes->setEnabled(false);
     showAxes(false);
     showLegend(false);
     enableFloodLights( _floodLightsEnabled);

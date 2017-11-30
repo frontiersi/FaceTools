@@ -20,7 +20,6 @@
 #include <FaceTools.h>
 #include <Landmarks.h>
 #include <ObjModelVertexAdder.h>    // RFeatures
-#include <ObjModelBoundaryFinder.h> // RFeatures
 #include <DijkstraShortestPathFinder.h> // RFeatures
 #include <sstream>
 #include <cassert>

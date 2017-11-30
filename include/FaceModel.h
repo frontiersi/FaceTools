@@ -32,7 +32,6 @@ class FaceTools_EXPORT FaceModel : public QObject
 public:
     // Client MUST call updateMesh after instantiation to initialise curvature etc.
     explicit FaceModel( ObjMetaData::Ptr);
-    virtual ~FaceModel(){}
 
     ObjMetaData::Ptr getObjectMeta() const { return _omd;}
 

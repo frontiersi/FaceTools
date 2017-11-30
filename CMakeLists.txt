@@ -56,7 +56,7 @@ set( INCLUDE_FILES
     "${INCLUDE_DIR}/FaceFinder2D.h"
     "${INCLUDE_DIR}/FaceModelFileIOHandler.h"
     "${INCLUDE_DIR}/FaceOrienter.h"
-    "${INCLUDE_DIR}/FacePointSampler.h"
+    #"${INCLUDE_DIR}/FacePointSampler.h"
     "${INCLUDE_DIR}/FacePreferences.h"
     "${INCLUDE_DIR}/FacePreProcessor.h"
     "${INCLUDE_DIR}/FaceView.h"
@@ -101,7 +101,7 @@ set( SRC_FILES
     #${SRC_DIR}/FaceModelWidget
     #${SRC_DIR}/FaceModelTabWidget
     ${SRC_DIR}/FaceOrienter
-    ${SRC_DIR}/FacePointSampler
+    #${SRC_DIR}/FacePointSampler
     ${SRC_DIR}/FacePreProcessor
     ${SRC_DIR}/FaceView
     #${SRC_DIR}/FaceViewComboBox

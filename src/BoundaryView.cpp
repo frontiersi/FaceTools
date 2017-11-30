@@ -82,28 +82,37 @@ void BoundaryView::reset()
     assert( _omd->hasLandmark( FaceTools::Landmarks::NASAL_TIP));
     assert( _omd->getKDTree() != NULL);
 
+    const cv::Vec3f fc = FaceTools::calcFaceCentre( _omd);  // Face centre
+    const int svidx = _omd->getKDTree()->find( _omd->getLandmark( FaceTools::Landmarks::NASAL_TIP));
+    const RFeatures::ObjModel::Ptr model = _omd->getObject();
+    RFeatures::ObjModelCropper::Ptr cropper = RFeatures::ObjModelCropper::create( model, fc, svidx);
+    cropper->adjustRadius( radius);
+
+    // Cannot get boundary since boundary loop doesn't exist.
+    const IntSet* bverts = cropper->getBoundary();
+    if ( bverts->size() < 3)
+        return;
+
     const bool shown = isVisible();
     setVisible(false, _viewer);    // Ensure old boundary removed from viewer
 
-    const cv::Vec3f fc = FaceTools::calcFaceCentre( _omd);  // Face centre
-
-    const cv::Vec3f& ntip = _omd->getLandmark( FaceTools::Landmarks::NASAL_TIP);
-    const int svidx = _omd->getKDTree()->find(ntip);    // Starting vertex for parsing
-
-    const RFeatures::ObjModel::Ptr model = _omd->getObject();
-    RFeatures::ObjModelCropper cropper( fc, radius);
-    RFeatures::ObjModelTriangleMeshParser parser( model);
-    parser.setBoundaryParser( &cropper);
-
-    parser.parse( *model->getFaceIds( svidx).begin());
-    const std::list<int>& bverts = cropper.getBoundary();
-
-    std::vector<cv::Vec3f> bvs;
-    foreach ( int bv, bverts)
-        bvs.push_back( _omd->getObject()->vtx(bv));
+    // Create line pairs
+    std::vector<cv::Vec3f> bpairs;
+    foreach ( int bv, *bverts)
+    {
+        const IntSet& cvs = model->getConnectedVertices(bv);
+        foreach ( int cv, cvs)
+        {
+            if ( bverts->count(cv) > 0)
+            {
+                bpairs.push_back( model->vtx( bv));
+                bpairs.push_back( model->vtx( cv));
+            }   // end if
+        }   // end foreach
+    }   // end foreach
 
     // Create new boundary
-    _boundary = RVTK::VtkActorCreator::generateLineActor( bvs, true/*join ends*/);
+    _boundary = RVTK::VtkActorCreator::generateLinePairsActor( bpairs);
     _boundary->GetProperty()->SetRepresentationToWireframe();
 
     setOptions( _opts); // Set actor visualisation options
