@@ -38,7 +38,7 @@ struct FaceTools_EXPORT ModelOptions
         boundary.cropFactor = 2.0;
         showAxes = false;
         showCaptions = true;
-        maxTriangleArea = 2.0;
+        maxEdgeLength = 2.0;
         smoothFactor = 0.8;
     }   // end ctor
 
