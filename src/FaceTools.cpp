@@ -32,7 +32,7 @@ int FaceTools::findBoundaryLoops( const ObjModel::Ptr model, std::list<std::vect
     for ( int i = 0; i < nbs; ++i)
     {
         const std::list<int>& blist = bfinder.getBoundary(i);
-        assert( model->getConnectedVertices( blist.back()).count( blist.front()) > 0); // Beginning of boundary must join end
+        //assert( model->getConnectedVertices( blist.back()).count( blist.front()) > 0); // Beginning of boundary must join end
         //std::cerr << "  + boundary has " << blist.size() << " vertices" << std::endl;
         loops.resize( loops.size() + 1);
         std::vector<cv::Vec3f>& lvec = loops.back();
@@ -80,7 +80,12 @@ ObjModel::Ptr FaceTools::crop( const ObjModel::Ptr model, const cv::Vec3f& v, in
     cropper->adjustRadius( radius);
     IntSet cfids;
     cropper->getCroppedFaces( cfids);
+    return crop( model, cfids);
+}   // end crop
 
+
+ObjModel::Ptr FaceTools::crop( const ObjModel::Ptr model, const IntSet& cfids)
+{
     // Copy the subset of faces into a new model
     ObjModelCopier copier( model);
     BOOST_FOREACH ( int fid, cfids)

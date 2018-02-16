@@ -59,9 +59,8 @@ void ModelViewer::showLegend( bool enable) { _scalarLegend->setVisible(enable); 
 // private
 void ModelViewer::init()
 {
-    _scalarLegend = new RVTK::ScalarLegend( _qviewer->getRenderer());
+    _scalarLegend = new RVTK::ScalarLegend( _qviewer->getRenderWindow()->GetInteractor());
     _axes = new RVTK::Axes( _qviewer->getRenderWindow()->GetInteractor());
-    //_axes->setEnabled(false);
     showAxes(false);
     showLegend(false);
     enableFloodLights( _floodLightsEnabled);

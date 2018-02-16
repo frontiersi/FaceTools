@@ -40,6 +40,9 @@ FaceTools_EXPORT bool hasReqLandmarks( const ObjMetaData::Ptr);
 // model vertex, an empty object is returned. Returned object is parsable as a single connected component.
 FaceTools_EXPORT RFeatures::ObjModel::Ptr crop( const RFeatures::ObjModel::Ptr, const cv::Vec3f& v, int svid=0, double R=DBL_MAX);
 
+// As above, but crop from a given set of polygons.
+FaceTools_EXPORT RFeatures::ObjModel::Ptr crop( const RFeatures::ObjModel::Ptr, const IntSet& fids);
+
 // Calculate and return the centre of the face as the point directly behind the nose tip in the plane of the front of the eyes.
 // Requires the left and right eye centre landmarks, the nose tip landmark, and orientation vectors for calculation.
 FaceTools_EXPORT cv::Vec3f calcFaceCentre( const ObjMetaData::Ptr);

@@ -20,6 +20,7 @@
 
 #include <ObjModelCurvatureMetrics.h>   // RFeatures
 #include <ObjModelFastMarcher.h>        // RFeatures
+#include <ObjModelCropper.h>            // RFeatures
 #include "ObjMetaData.h"                // FaceTools
 #include <QObject>
 #include <QMetaMethod>
@@ -42,6 +43,10 @@ public:
     const RFeatures::ObjModelCurvatureMetrics::Ptr getCurvatureMetrics() const; // May be NULL
     const boost::unordered_map<int,double>* getUniformDistanceMap() const;  // May be NULL
     const boost::unordered_map<int,double>* getCurvDistanceMap() const;  // May be NULL
+
+    void setCroppingRadius( double cropRadiusFactor);
+    const IntSet* getCroppingBoundary() const;  // Returns the cropping boundary vertex IDs
+    size_t getCroppingRegion( IntSet& fids) const;  // Set the IDs of the polygons within the cropping region
 
     // Update the model mesh. Resets mesh data. If the nasal tip is defined,
     // rebuilds all curvature data (the distance maps are generated on demand).
@@ -70,10 +75,12 @@ signals:
 
 private:
     ObjMetaData::Ptr _omd;
+    double _cropRadiusFactor;
     RFeatures::ObjModelFaceAngleCalculator _facalc;
     RFeatures::ObjModelCurvatureMetrics::Ptr _cmetrics;
     RFeatures::ObjModelFastMarcher::Ptr _udist;
     RFeatures::ObjModelFastMarcher::Ptr _cdist;
+    RFeatures::ObjModelCropper::Ptr _cropper;
 
     void buildCurvature();
     void buildDistanceMaps();

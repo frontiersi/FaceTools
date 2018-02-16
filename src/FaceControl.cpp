@@ -41,7 +41,7 @@ FaceControl::FaceControl( FaceModel* fmodel)
     : InteractionInterface(), _viewer(NULL), _fmodel(fmodel),
      _fview( new FaceView( fmodel->getObjectMeta()->getObject())),
      _oview( new OutlinesView( fmodel->getObjectMeta()->getObject())),
-     _bview( new BoundaryView( fmodel->getObjectMeta())),
+     _bview( new BoundaryView),
      _lview( new LandmarkGroupView( fmodel->getObjectMeta())),
      _legend( new LegendRange),
      _curvis(NULL),
@@ -183,7 +183,8 @@ void FaceControl::setOptions( const ModelOptions& vo)
     }   // end if
 
     _lview->setOptions( _opts);
-    _bview->setOptions( _opts.boundary);
+    _fmodel->setCroppingRadius( _opts.boundary.cropFactor);
+    _bview->setBoundary( _fmodel->getObjectMeta()->getObject(), _fmodel->getCroppingBoundary());
 }   // end setOptions
 
 
@@ -383,6 +384,7 @@ void FaceControl::updateLandmark( const std::string& lm, const cv::Vec3f* v, boo
     if ( updateModel)
         _fmodel->updateLandmark(lm, v);
     _lview->updateLandmark(lm, v);
+    emit viewUpdated();
     if ( _viewer)
         _viewer->updateRender();
 }   // end updateLandmark
@@ -393,6 +395,7 @@ void FaceControl::updateLandmark( const FaceTools::Landmarks::Landmark& lmk)
 {
     _fmodel->updateLandmark(lmk);
     _lview->updateLandmark( lmk.name, &lmk.pos);
+    emit viewUpdated();
     if ( _viewer)
         _viewer->updateRender();
 }   // end updateLandmark
@@ -401,7 +404,8 @@ void FaceControl::updateLandmark( const FaceTools::Landmarks::Landmark& lmk)
 // public
 void FaceControl::updateMesh( const RFeatures::ObjModel::Ptr model)
 {
-    _fmodel->updateMesh(model);
+    _fmodel->updateMesh( model);
+    _fmodel->setCroppingRadius( _opts.boundary.cropFactor);
 }   // end updateMesh
 
 
@@ -415,12 +419,12 @@ void FaceControl::resetVisualisation()
     const bool showingOutline = isSelected();
     _oview->reset(_fmodel->getObjectMeta()->getObject());
 
-    const bool showingBoundary = _bview->isVisible();
-    _bview->reset();
-
     std::vector<std::string> visibleLandmarks;
     _lview->getVisibleLandmarks( visibleLandmarks);
     _lview->reset();
+
+    const bool showingBoundary = _bview->isVisible();
+    _bview->setBoundary( _fmodel->getObjectMeta()->getObject(), _fmodel->getCroppingBoundary());
 
     // Restore the views
     showSelected( showingOutline);

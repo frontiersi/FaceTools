@@ -17,23 +17,16 @@
 
 #include <BoundaryView.h>
 #include <VtkActorCreator.h>    // RVTK
-#include <FaceTools.h>
-#include <Landmarks.h>
-#include <ObjModelTools.h>
 using FaceTools::BoundaryView;
 using FaceTools::ModelViewer;
-using FaceTools::ObjMetaData;
 #include <vtkProperty.h>
 #include <sstream>
 #include <cassert>
 
 
 // public
-BoundaryView::BoundaryView( const ObjMetaData::Ptr omd)
-    : _viewer(NULL), _omd(omd), _isshown(false)
+BoundaryView::BoundaryView() : _viewer(NULL), _isshown(false)
 {
-    _opts.cropFactor = 2.0;
-    reset();
 }   // end ctor
 
 
@@ -72,25 +65,10 @@ bool BoundaryView::isVisible() const { return _isshown;}
 
 
 // public
-void BoundaryView::reset()
+void BoundaryView::setBoundary( const RFeatures::ObjModel::Ptr model, const IntSet* bverts)
 {
-    // Calc boundary for given radius
-    const double radius = FaceTools::calcFaceCropRadius( _omd, _opts.cropFactor);
-    if ( radius <= 0)   // If can't calculate, the boundary can't be set
-        return;
-
-    assert( _omd->hasLandmark( FaceTools::Landmarks::NASAL_TIP));
-    assert( _omd->getKDTree() != NULL);
-
-    const cv::Vec3f fc = FaceTools::calcFaceCentre( _omd);  // Face centre
-    const int svidx = _omd->getKDTree()->find( _omd->getLandmark( FaceTools::Landmarks::NASAL_TIP));
-    const RFeatures::ObjModel::Ptr model = _omd->getObject();
-    RFeatures::ObjModelCropper::Ptr cropper = RFeatures::ObjModelCropper::create( model, fc, svidx);
-    cropper->adjustRadius( radius);
-
     // Cannot get boundary since boundary loop doesn't exist.
-    const IntSet* bverts = cropper->getBoundary();
-    if ( bverts->size() < 3)
+    if ( !bverts || bverts->size() < 3)
         return;
 
     const bool shown = isVisible();
@@ -114,25 +92,8 @@ void BoundaryView::reset()
     // Create new boundary
     _boundary = RVTK::VtkActorCreator::generateLinePairsActor( bpairs);
     _boundary->GetProperty()->SetRepresentationToWireframe();
+    _boundary->GetProperty()->SetLineWidth( 3.0);
+    _boundary->GetProperty()->SetColor( 0.4f, 0.2f, 0.8f);
 
-    setOptions( _opts); // Set actor visualisation options
     setVisible( shown, _viewer);   // Restore shown state with new boundary
-}   // end reset
-
-
-// public
-void BoundaryView::setOptions( const FaceTools::ModelOptions::Boundary& opts)
-{
-    double oldRad = _opts.cropFactor;
-    _opts = opts;
-    if ( !_boundary)
-        return;
-
-    if ( _opts.cropFactor != oldRad)
-        reset();    // Will recurse back into this function with same crop factor
-    else
-    {
-        _boundary->GetProperty()->SetLineWidth( 3.0);
-        _boundary->GetProperty()->SetColor( 0.4f, 0.2f, 0.8f);
-    }   // end else
-}   // end setOptions
+}   // end setBoundary

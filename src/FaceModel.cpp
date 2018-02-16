@@ -24,7 +24,8 @@ using RFeatures::ObjModel;
 
 
 // public
-FaceModel::FaceModel( ObjMetaData::Ptr md) : QObject(), _omd(md)
+FaceModel::FaceModel( ObjMetaData::Ptr md)
+: _omd(md), _cropRadiusFactor(1.0)
 {}   // end ctor
 
 
@@ -93,8 +94,40 @@ void FaceModel::updateLandmark( const FaceTools::Landmarks::Landmark& lmk)
 
 
 // public
+void FaceModel::setCroppingRadius( double cropRadiusFactor)
+{
+    _cropRadiusFactor = cropRadiusFactor;
+    if ( _cropper)
+    {
+        const double radius = FaceTools::calcFaceCropRadius( _omd, cropRadiusFactor);
+        if ( radius > 0)
+            _cropper->adjustRadius( radius);
+    }   // end if
+}   // end setCroppingRadius
+
+
+// public
+const IntSet* FaceModel::getCroppingBoundary() const
+{
+    if ( _cropper)
+        return _cropper->getBoundary();
+    return NULL;
+}   // end getCroppingBoundary
+
+
+// public
+size_t FaceModel::getCroppingRegion( IntSet& fids) const
+{
+    if ( _cropper)
+        return _cropper->getCroppedFaces( fids);
+    return 0;
+}   // end getCroppingRegion
+
+
+// public
 void FaceModel::updateMesh( const ObjModel::Ptr model)
 {
+    std::cerr << "[INFO] FaceTools::FaceModel::updateMesh: Updating mesh...";
     _facalc.reset();
     _udist = NULL;
     _cdist = NULL;
@@ -103,6 +136,7 @@ void FaceModel::updateMesh( const ObjModel::Ptr model)
     _cmetrics = NULL;
     buildCurvature();
     buildDistanceMaps();
+    std::cerr << " done" << std::endl;
     emit meshUpdated();
     emit metaUpdated();
 }   // end updateMesh
@@ -117,12 +151,18 @@ void FaceModel::buildCurvature()
     // If nosetip landmark available, update the curvature metrics
     if ( _omd->getObject() != NULL && _omd->hasLandmark( FaceTools::Landmarks::NASAL_TIP))
     {
+        const ObjModel::Ptr model = _omd->getObject();
         const cv::Vec3f& v = _omd->getLandmark( FaceTools::Landmarks::NASAL_TIP);
         const int vidx = _omd->getKDTree()->find( v);
+
         _omd->rebuildCurvatureMap( vidx);
         const RFeatures::ObjModelCurvatureMap::Ptr cmap = _omd->getCurvatureMap();
         assert( cmap != NULL);
         _cmetrics = RFeatures::ObjModelCurvatureMetrics::create( cmap);
+
+        const cv::Vec3f fc = FaceTools::calcFaceCentre( _omd);  // Face centre
+        _cropper = RFeatures::ObjModelCropper::create( model, fc, vidx);
+        setCroppingRadius( _cropRadiusFactor);
     }   // end if
 }   // end buildCurvature
 

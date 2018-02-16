@@ -19,8 +19,6 @@
 #define FACE_TOOLS_BOUNDARY_VIEW_H
 
 #include "ModelViewer.h"
-#include "ObjMetaData.h"
-#include "ModelOptions.h"
 
 namespace FaceTools
 {
@@ -28,21 +26,17 @@ namespace FaceTools
 class FaceTools_EXPORT BoundaryView
 {
 public:
-    explicit BoundaryView( const ObjMetaData::Ptr);
+    BoundaryView();
     virtual ~BoundaryView();
-
-    void reset();
 
     void setVisible( bool enable, ModelViewer* viewer);
     bool isVisible() const;
 
-    void setOptions( const ModelOptions::Boundary&);
+    void setBoundary( const RFeatures::ObjModel::Ptr, const IntSet* bverts); // (re)create the boundary actor
 
 private:
     ModelViewer *_viewer;
-    const ObjMetaData::Ptr _omd;
     bool _isshown;
-    ModelOptions::Boundary _opts;
     vtkSmartPointer<vtkActor> _boundary;
 
     BoundaryView( const BoundaryView&);   // No copy

@@ -53,7 +53,8 @@ SurfacePathDrawer::SurfacePathDrawer( FaceControl* fcont)
     _lenCaption->GetCaptionTextProperty()->ShadowOff();
     _lenCaption->GetCaptionTextProperty()->SetFontFamilyToCourier();
     _lenCaption->GetCaptionTextProperty()->SetFontSize(6);
-    _lenCaption->SetPickable( true);
+    _lenCaption->SetPickable( false);
+    _lenCaption->SetLayerNumber(1);
 }   // end ctor
 
 
