@@ -74,7 +74,7 @@ struct FaceTools_EXPORT ModelOptions
     QColor textColour;      // Text annotation colour
     bool showAxes;
     bool showCaptions;
-    double maxTriangleArea; // Not used
+    double maxEdgeLength;
     double smoothFactor;    // Not used
 };  // end struct
 
