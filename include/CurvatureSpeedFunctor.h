@@ -21,8 +21,7 @@
 #include "FaceTools_Export.h"
 #include <ObjModelTools.h>
 
-namespace FaceTools
-{
+namespace FaceTools {
 
 class FaceTools_EXPORT CurvatureSpeedFunctor : public RFeatures::ObjModelFastMarcher::SpeedFunctor
 {
@@ -32,7 +31,7 @@ public:
     virtual double operator()( int vidx) const { return _curvedness.at(vidx);}
 
 private:
-    boost::unordered_map<int, double> _curvedness;
+    std::unordered_map<int, double> _curvedness;
 };  // end class
 
 }   // end namespace

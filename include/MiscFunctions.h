@@ -27,8 +27,7 @@
 typedef unsigned char byte;
 
 
-namespace FaceTools
-{
+namespace FaceTools {
 
 // Removes all occurances of "(*)" in s (where * is any character).
 FaceTools_EXPORT void removeParentheticalContent( std::string& s);

@@ -20,14 +20,13 @@
 
 #include "FaceTools_Export.h"
 #include <string>
-#include <boost/unordered_map.hpp>
+#include <unordered_map>
 #include <vtkRenderer.h>
 #include <vtkSmartPointer.h>
 #include <vtkTextActor.h>
 #include <QObject>
 
-namespace FaceTools
-{
+namespace FaceTools {
 
 class FaceTools_EXPORT ModelViewerAnnotator : public QObject
 { Q_OBJECT
@@ -52,10 +51,9 @@ public slots:
 private:
     vtkSmartPointer<vtkRenderer> _renderer;
     struct Message;
-    boost::unordered_map<int, Message*> _messages;
+    std::unordered_map<int, Message*> _messages;
 };  // end class
 
 }   // end namespace
 
 #endif
-

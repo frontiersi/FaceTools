@@ -18,72 +18,57 @@
 #ifndef FACE_TOOLS_FACE_MODEL_H
 #define FACE_TOOLS_FACE_MODEL_H
 
-#include <ObjModelCurvatureMetrics.h>   // RFeatures
-#include <ObjModelFastMarcher.h>        // RFeatures
-#include <ObjModelCropper.h>            // RFeatures
-#include "ObjMetaData.h"                // FaceTools
-#include <QObject>
-#include <QMetaMethod>
+#include "LandmarkSet.h"
+#include <ObjModelTools.h>   // RFeatures
+#include <Orientation.h>     // RFeatures
 
-namespace FaceTools
+namespace FaceTools {
+class FaceControl;
+
+class FaceTools_EXPORT FaceModel
 {
-
-class FaceTools_EXPORT FaceModel : public QObject
-{ Q_OBJECT
 public:
-    // Client MUST call updateMesh after instantiation to initialise curvature etc.
-    explicit FaceModel( ObjMetaData::Ptr);
+    FaceModel(){}
+    virtual ~FaceModel(){}
 
-    ObjMetaData::Ptr getObjectMeta() const { return _omd;}
+    // Add/remove FaceControl instances associated with this model
+    void add( FaceControl*);
+    void remove( FaceControl*);
 
-    // Use these functions to set/get the filepath.
-    void setFilePath( const std::string&);  // Will cause metaUpdated to be emitted.
-    const std::string& getFilePath() const;
+    RFeatures::ObjModel::Ptr& model() { return _model;}
+    RFeatures::Orientation& orientation() { return _orientation;}
+    LandmarkSet& landmarks() { return _landmarks;}
+    std::string& description() { return _description;}
+    std::string& source() { return _source;}
 
-    const RFeatures::ObjModelCurvatureMetrics::Ptr getCurvatureMetrics() const; // May be NULL
-    const boost::unordered_map<int,double>* getUniformDistanceMap() const;  // May be NULL
-    const boost::unordered_map<int,double>* getCurvDistanceMap() const;  // May be NULL
+    const RFeatures::ObjModel::Ptr model() const { return _model;}
+    const RFeatures::Orientation& orientation() const { return _orientation;}
+    const LandmarkSet& landmarks() const { return _landmarks;}
+    const std::string& description() const { return _description;}
+    const std::string& source() const { return _source;}
 
-    void setCroppingRadius( double cropRadiusFactor);
-    const IntSet* getCroppingBoundary() const;  // Returns the cropping boundary vertex IDs
-    size_t getCroppingRegion( IntSet& fids) const;  // Set the IDs of the polygons within the cropping region
+    RFeatures::ObjModelKDTree::Ptr& kdtree() { return _kdtree;}
+    const RFeatures::ObjModelKDTree::Ptr kdtree() const { return _kdtree;}
 
-    // Update the model mesh. Resets mesh data. If the nasal tip is defined,
-    // rebuilds all curvature data (the distance maps are generated on demand).
-    void updateMesh( const RFeatures::ObjModel::Ptr);
-
-    // Add, remove, or reposition a landmark.
-    // Landmark is added if not present and pos != NULL.
-    // Landmark is repositioned if present and pos != NULL.
-    // Landmark is removed if present and pos == NULL.
-    // Returns false if landmark not present and pos == NULL.
-    bool updateLandmark( const std::string&, const cv::Vec3f*);
-
-    // Update the landmark data, overwritting the existing entry,
-    // or adding a new one of it doesn't already exist. To delete
-    // landmarks, use the above updateLandmark function.
-    void updateLandmark( const Landmarks::Landmark&);
-
-    // Update the distance maps. Returns true on success. If false returned,
-    // the NASAL_TIP landmark first needs to be provided so that a call to
-    // updateMesh causes the face angles to be calculated.
-    //bool updateDistanceMaps( const cv::Vec3f&);
-
-signals:
-    void metaUpdated();     // Emitted when the model is changed.
-    void meshUpdated();
+    // Transform all the data elements in space. Also rebuilds KD-tree if set.
+    void transform( const cv::Matx44d&);
 
 private:
-    ObjMetaData::Ptr _omd;
-    double _cropRadiusFactor;
+    std::string _description;   // Long form description
+    std::string _source;        // Data source info
+    RFeatures::Orientation _orientation;
+    FaceTools::LandmarkSet _landmarks;
+    RFeatures::ObjModel::Ptr _model;
+    std::unordered_set<FaceControl*> _fcs;  // FaceControl instances associated with this model.
+
+    RFeatures::ObjModelKDTree::Ptr _kdtree;
+    /*
+    RFeatures::ObjModelCurvatureMap::Ptr _cmap;
     RFeatures::ObjModelFaceAngleCalculator _facalc;
     RFeatures::ObjModelCurvatureMetrics::Ptr _cmetrics;
     RFeatures::ObjModelFastMarcher::Ptr _udist;
     RFeatures::ObjModelFastMarcher::Ptr _cdist;
-    RFeatures::ObjModelCropper::Ptr _cropper;
-
-    void buildCurvature();
-    void buildDistanceMaps();
+    */
 
     FaceModel( const FaceModel&);               // No copy
     FaceModel& operator=( const FaceModel&);    // No copy

@@ -20,12 +20,10 @@ using FaceTools::SurfaceMesher;
 using RFeatures::ObjModel;
 #include <cassert>
 #include <algorithm>
-#include <boost/foreach.hpp>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Advancing_front_surface_reconstruction.h>
 
-namespace _SMESH_
-{
+namespace {
 
 typedef CGAL::Exact_predicates_inexact_constructions_kernel KRN;
 typedef CGAL::cpp11::array<std::size_t,3> Facet;
@@ -40,7 +38,7 @@ struct MeshConstructor
         size_t i = 0;
         const IntSet& vidxs = model->getVertexIds();
         _points.resize( vidxs.size());
-        BOOST_FOREACH ( int vidx, vidxs)
+        for ( int vidx : vidxs)
         {
             const cv::Vec3f& v = model->vtx(vidx);
             _points[i] = KRN::Point_3( v[0], v[1], v[2]);
@@ -85,7 +83,6 @@ int SurfaceMesher::operator()()
     if ( _model->getNumVertices() < 3)
         return -2;
 
-    using _SMESH_::MeshConstructor;
     MeshConstructor meshConstructor(_model);
     meshConstructor.mesh();
 

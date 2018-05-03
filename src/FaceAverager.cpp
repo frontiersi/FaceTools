@@ -17,16 +17,14 @@
 
 #include <FaceAverager.h>
 #include <FaceTools.h>
-#include <Landmarks.h>
 #include <ObjModelEdgeFaceAdder.h>  // RFeatures
 #include <ObjModelRemesher.h>       // RFeatures
 #include <ObjModelHoleFiller.h>     // RFeatures
 #include <CpuTimer.h>       // rlib
 #include <cpd/nonrigid.hpp>    // Coherent Point Drift
+#include <iostream>
 using FaceTools::FaceAverager;
 using RFeatures::ObjModel;
-#include <iostream>
-#include <boost/foreach.hpp>
 
 
 FaceAverager::Ptr FaceAverager::create( int n) { return Ptr( new FaceAverager(n));}
@@ -59,7 +57,7 @@ int FaceAverager::add( const ObjModel::Ptr model)
 /*
 int FaceAverager::addLandmarks( const ObjMetaData::Ptr omd)
 {
-    boost::unordered_set<std::string> lnames;
+    std::unordered_set<std::string> lnames;
     const int n = (int)omd->getLandmarks( lnames);
     if ( n > 0)
     {
@@ -67,7 +65,7 @@ int FaceAverager::addLandmarks( const ObjMetaData::Ptr omd)
         cv::Vec3f sv;   // Projected surface vertex (not used)
         RFeatures::ObjModelSurfacePointFinder sfinder( _model);
         RFeatures::ObjModelKDTree::Ptr kdtree = RFeatures::ObjModelKDTree::create(_model);
-        BOOST_FOREACH ( const std::string& lname, lnames)
+        for ( const std::string& lname : lnames)
         {
             const cv::Vec3f& lv = omd->getLandmark(lname);
             lvidx = kdtree->find(lv); // Find the nearest vertex on the sample model
@@ -103,7 +101,7 @@ void FaceAverager::init( const ObjModel::Ptr model)
     // is much faster than FaceTools::SurfaceMesher even with cleaning and hole filling afterwards.
     // TODO, fix edge setting so cleaning and hole filling not needed!
     { rlib::CpuTimer cputimer( "[INFO] FaceTools::FaceAverager::init: Model meshing", std::cerr);
-        boost::unordered_map<int,IntSet> sedges;
+        std::unordered_map<int,IntSet> sedges;
         remesher->createSaddleEdges( sedges);
         RFeatures::ObjModelEdgeFaceAdder edgeAdder( _model);
         edgeAdder.addFaces( sedges);
@@ -124,15 +122,14 @@ void FaceAverager::init( const ObjModel::Ptr model)
     const IntSet& vidxs = _model->getVertexIds();
     //assert( vidxs.size() == (size_t)n);
     int i = 0;
-    BOOST_FOREACH ( int vidx, vidxs)
+    for ( int vidx : vidxs)
         crow[i++] = _model->vtx( vidx);
 }   // end init
 
 /*
 size_t FaceAverager::getLandmarks( std::vector<cv::Vec3f>& lmks) const
 {
-    typedef std::pair<std::string, int> LMPair;
-    BOOST_FOREACH ( const LMPair& lmpair, _lmks)
+    for ( const auto& lmpair : _lmks)
         lmks.push_back( _model->vtx( lmpair.second));
     return _lmks.size();
 }   // end getLandmarks

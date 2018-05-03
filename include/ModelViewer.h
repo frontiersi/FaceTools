@@ -18,29 +18,35 @@
 #ifndef FACE_TOOLS_MODEL_VIEWER_H
 #define FACE_TOOLS_MODEL_VIEWER_H
 
-/**
- * Simplified wrapper interface for QTools::VtkActorViewer.
- */
-
-#include "FaceTools_Export.h"
-#include <ObjModel.h>       // RFeatures
-#include <CameraParams.h>   // RFeatures
-#include <VtkActorViewer.h> // QTools
+#include <ModelViewerInteractor.h>
+#include <VtkViewerInteractorManager.h> // QTools
 #include <ScalarLegend.h>   // RVTK
 #include <Axes.h>           // RVTK
+#include <ObjModel.h>       // RFeatures
+#include <CameraParams.h>   // RFeatures
 #include <QColor>
+#include <unordered_map>
+#include <unordered_set>
 
-namespace FaceTools
-{
+namespace FaceTools {
 
 class FaceTools_EXPORT ModelViewer
 {
 public:
-    explicit ModelViewer( QTools::VtkActorViewer*); // Given VtkActorViewer must already have an interactor set!
     explicit ModelViewer( bool useFloodLights=true);
     virtual ~ModelViewer();
 
+    // Interactor::ModelViewerInteractor (MVI) calls the attach and detach functions - passing in themselves.
+    // Multiple different MVI instances (even of the same type) can be attached at once to this
+    // viewer, but each instance can only be attached to a single viewer.
+    bool attachInteractor( Interactor::MVI*);  // Attach interactor returning true if interactor wasn't previously attached (to any viewer).
+    bool detachInteractor( Interactor::MVI*);  // Detach an interactor returning true if it was present on this viewer and is now detached.
+    bool isAttached( Interactor::MVI*) const;  // Check if this viewer has the given interactor attached to it.
+
     void setSize( const cv::Size&);
+
+    void addToLayout( QLayout*);
+    void removeFromLayout( QLayout*);
 
     void show();
     void hide();
@@ -53,22 +59,33 @@ public:
     void enableFloodLights( bool);  // Set true for textured objects, false for surface.
     bool floodLightsEnabled() const;
 
+    // Set/get interaction mode.
+    void setInteractionMode( QTools::InteractionMode);
+    QTools::InteractionMode interactionMode() const;
+
+    // Lock/unlock camera/actor interaction.
+    void setInteractionLocked( bool);
+    bool isInteractionLocked() const;
+
+    QPoint getMouseCoords() const;
+    QPoint mapToGlobal( const QPoint&) const;
+
     enum Visualisation
     {
-        VisTexture = 1,
-        VisSurface,
-        VisPoints,
-        VisWireframe
+        TEXTURE_VISUALISATION = 1,
+        SURFACE_VISUALISATION,
+        POINTS_VISUALISATION,
+        WIREFRAME_VISUALISATION
     };  // end enum
 
     struct VisOptions
     {
-        VisOptions( Visualisation v=VisTexture, float rc=1.0f, float gc=1.0f, float bc=1.0f, float ac=1.0f,
+        VisOptions( Visualisation v=TEXTURE_VISUALISATION, float rc=1.0f, float gc=1.0f, float bc=1.0f, float ac=1.0f,
                                                 bool bf=false, float ps=1.0f, float lw=1.0f)
             : vis(v), r(rc),g(gc),b(bc),a(ac), backfaceCulling(bf), pointSize(ps), lineWidth(lw) {}
 
         VisOptions( float rc, float gc, float bc, float ac=1.0f, bool bf=false, float ps=1.0f, float lw=1.0f)
-            : vis(VisSurface), r(rc),g(gc),b(bc),a(ac), backfaceCulling(bf), pointSize(ps), lineWidth(lw) {}
+            : vis(SURFACE_VISUALISATION), r(rc),g(gc),b(bc),a(ac), backfaceCulling(bf), pointSize(ps), lineWidth(lw) {}
 
         VisOptions( Visualisation v, bool bf, float ps=1.0f, float lw=1.0f)
             : vis(v), r(1.0f), g(1.0f), b(1.0f), a(1.0f), backfaceCulling(bf), pointSize(ps), lineWidth(lw) {}
@@ -85,11 +102,11 @@ public:
     // Add an individual point (spherical).
     int addPoint( const cv::Vec3f&, const VisOptions&);
 
-    // Add a points actor in various formats. Note that using software rendering, the vtkProperty->SetRenderPointsAsSpheres(true)
-    // option is not working properly and may cause the app to crash. For portable spheres, use addPoint for each individual point.
+    // Add points actor in various formats. Using software rendering, the vtkProperty->SetRenderPointsAsSpheres(true)
+    // option is not working correctly (may cause app to crash). For portable spheres, use addPoint for each individual point.
     int addPoints( const std::vector<cv::Vec3f>& points, const VisOptions&, bool renderAsSpheres=false);
     int addPoints( const RFeatures::ObjModel::Ptr, const VisOptions&, bool renderAsSpheres=false);
-    int addPoints( const RFeatures::ObjModel::Ptr, const IntSet& vset, const VisOptions&, bool renderAsSpheres=false);
+    int addPoints( const RFeatures::ObjModel::Ptr, const std::unordered_set<int>& vset, const VisOptions&, bool renderAsSpheres=false);
 
     // Add a line actor (make a loop if joinEnds=true).
     int addLine( const std::vector<cv::Vec3f>&, bool joinEnds, const VisOptions&);
@@ -104,11 +121,11 @@ public:
 
     // Number of discrete colours to use
     void setLegendLookup( vtkMapper* mapper, const std::string& legendTitle, float minv, float maxv);
-    void setLegendColours( const cv::Vec3b& c0, const cv::Vec3b& c1, int ncolours=100);
-    void setLegendColours( const QColor& c0, const QColor& c1, int ncolours=100);
-    void setLegendColours( const cv::Vec3b& c0, const cv::Vec3b& c1, const cv::Vec3b& c2, int nc0, int nc1);
-    void setLegendColours( const QColor& c0, const QColor& c1, const QColor& c3, int nc0, int nc1);
-    int getNumLegendColours() const;
+    void setLegendColours( const cv::Vec3b& c0, const cv::Vec3b& c1, size_t ncolours=100);
+    void setLegendColours( const QColor& c0, const QColor& c1, size_t ncolours=100);
+    void setLegendColours( const cv::Vec3b& c0, const cv::Vec3b& c1, const cv::Vec3b& c2, size_t nc0, size_t nc1);
+    void setLegendColours( const QColor& c0, const QColor& c1, const QColor& c3, size_t nc0, size_t nc1);
+    size_t getNumLegendColours() const;
 
     vtkProp* getProp(int);
 
@@ -132,7 +149,7 @@ public:
     const vtkProp* getPointedAt( const QPoint&) const;
 
     // Returns true iff given coords pick out the given actor.
-    bool getPointedAt( const QPoint&, const vtkActor*) const;
+    bool getPointedAt( const QPoint*, const vtkActor*) const;
 
     // Project the given point to a world position on the given prop, returning true.
     // Return false if the point doesn't project onto the given prop. Out param wpos
@@ -157,24 +174,18 @@ public:
 
     void setCursor( QCursor);
 
-    // Updates the render and shows what's currently in the display as an OpenCV snapshot.
-    void showSnapshot( bool waitForInput=false);
-
-    // Allows user to save snapshot to file.
-    bool saveSnapshot() const;
-
-protected:
-    QTools::VtkActorViewer* _qviewer;
+    cv::Mat_<cv::Vec3b> grabImage() const;  // Retrieves what's currently being rendered as an OpenCV image matrix.
+    bool saveSnapshot() const;  // User save of grabImage to file.
 
 private:
-    RVTK::ScalarLegend* _scalarLegend;
-    RVTK::Axes* _axes;
-    bool _dodel;
+    QTools::VtkActorViewer *_qviewer;
+    QTools::VtkViewerInteractorManager *_interactor;
+    RVTK::ScalarLegend *_scalarLegend;
+    RVTK::Axes *_axes;
     bool _floodLightsEnabled;
     int _addedModelID;
-    boost::unordered_map<int, vtkProp*> _props;
+    std::unordered_map<int, vtkProp*> _props;
     int addPointsActor( vtkSmartPointer<vtkActor>, const VisOptions&, bool asSpheres);
-    void init();
     ModelViewer( const ModelViewer&);       // NO COPY
     void operator=( const ModelViewer&);    // NO COPY
 };  // end class
@@ -182,4 +193,3 @@ private:
 }   // end namespace
 
 #endif
-

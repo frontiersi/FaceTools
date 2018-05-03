@@ -16,432 +16,110 @@
  ************************************************************************/
 
 #include <FaceControl.h>
-#include <LegendRange.h>
-#include <BoundaryView.h>
-#include <OutlinesView.h>
-#include <LandmarkGroupView.h>
-#include <VisualisationAction.h>
-#include <InteractiveModelViewer.h>
-#include <vtkProperty.h>
-using FaceTools::InteractionInterface;
-using FaceTools::ModelOptions;
-using FaceTools::VisualisationAction;
-using FaceTools::LandmarkGroupView;
-using FaceTools::OutlinesView;
-using FaceTools::BoundaryView;
-using FaceTools::FaceControl;
-using FaceTools::LegendRange;
-using FaceTools::FaceAction;
+#include <FaceModel.h>
+#include <FaceView.h>
+#include <FaceModelViewer.h>
+#include <VtkTools.h>   // RVTK
 using FaceTools::FaceModel;
-using FaceTools::FaceView;
+using FaceTools::FaceControl;
+using FaceTools::FaceModelViewer;
+using FaceTools::Vis::FaceView;
 
 
 // public
-FaceControl::FaceControl( FaceModel* fmodel)
-    : InteractionInterface(), _viewer(NULL), _fmodel(fmodel),
-     _fview( new FaceView( fmodel->getObjectMeta()->getObject())),
-     _oview( new OutlinesView( fmodel->getObjectMeta()->getObject())),
-     _bview( new BoundaryView),
-     _lview( new LandmarkGroupView( fmodel->getObjectMeta())),
-     _legend( new LegendRange),
-     _curvis(NULL),
-     _modelHoverOld(false), _lmHoverOld(""), _controlled(false)
+FaceControl::FaceControl( FaceModel* fm) : _fdata(fm), _fview(NULL)
 {
-    connect( fmodel, &FaceModel::metaUpdated, this, &FaceControl::metaUpdated);
-    connect( fmodel, &FaceModel::meshUpdated, this, &FaceControl::doMeshUpdated);
+    _fview = new FaceView(this);
 }   // end ctor
 
 
 // public
 FaceControl::~FaceControl()
 {
-    foreach ( QAction* action, _actions) // Hide this interactor from all passed in actions.
-    {
-        FaceAction* faction = qobject_cast<FaceAction*>(action->parent());
-        faction->setControlled( this, false);
-        removeController(action);
-    }   // end foreach
-    delete _legend;
-    delete _lview;
-    delete _bview;
-    delete _oview;
     delete _fview;
-    if ( _viewer)
-        _viewer->updateRender();
 }   // end dtor
 
 
-// public
-void FaceControl::addController( QAction* action)
+void FaceControl::transform( const cv::Matx44d& m)
 {
-    if (_actions.count(action) > 0) // Don't add the same action more than once
-        return;
-    _actions.insert(action);
-    FaceAction* faction = qobject_cast<FaceAction*>(action->parent());
-    assert(faction);
-    faction->addController( this);
-}   // end addController
+    _fdata->transform(m);
+    vtkSmartPointer<vtkMatrix4x4> vm = RVTK::toVTK(m);
+    _fview->transform( vm);
+}   // end transform
 
 
-// public
-void FaceControl::removeController( QAction* action)
+void FaceControl::fixTransformFromView()
 {
-    _actions.erase(action);
-    FaceAction* faction = qobject_cast<FaceAction*>(action->parent());
-    assert(faction);
-    faction->removeController( this);
-}   // end removeController
+    const vtkMatrix4x4* m = _fview->transform(NULL);  // Transform according to user transform
+    assert(m);
+    cv::Matx44d cm = RVTK::toCV(m);
+    _fdata->transform(cm);
+}   // end fixTransformFromView
 
 
 // public
-void FaceControl::setControlled( bool enable)
+void FaceControl::setViewer( FaceModelViewer* v) { _fview->setViewer(v);}
+FaceModelViewer* FaceControl::viewer() const { return static_cast<FaceModelViewer*>(_fview->viewer());}
+
+
+/*
+// public
+int FaceControl::updateLandmark( const std::string& lm, const cv::Vec3f* pos)
 {
-    if ( enable != _controlled)
+    LandmarkSet* lset = _fdata->landmarks();
+    int id = -1;
+    if ( pos != NULL)
+        id = lset->set(lm, *pos);    // Set landmark with new position or add if not present
+    else if ( lset->has(lm))
     {
-        _controlled = enable;
-        // Tell all actions that this interactor is switching interactivity.
-        foreach ( QAction* action, _actions)
-        {
-            FaceAction* faction = qobject_cast<FaceAction*>(action->parent());
-            faction->setControlled( this, enable);
-        }   // end foreach
-    }   // end if
-}   // end setControlled
+        id = lset->get(lm)->id;    // Will be in invalid ID after deletion
+        lset->erase(lm);
+    }   // end else if
+    _lview->refreshLandmark(id);
+    return id;
+}   // end updateLandmark
 
 
 // public
-bool FaceControl::isControlled() const { return _controlled;}
-
-
-// public
-void FaceControl::setViewer( FaceTools::InteractiveModelViewer* viewer)
+bool FaceControl::updateLandmark( int id, const cv::Vec3f& v)
 {
-    _fview->setVisible( _fview->isVisible() && viewer, viewer);
-    _oview->setVisible( _oview->isVisible() && viewer, viewer);
-    _bview->setVisible( _bview->isVisible() && viewer, viewer);
-    _lview->setVisible( _lview->isVisible() && viewer, viewer);
-    if ( _viewer)
-        _viewer->updateRender();
-    _viewer = viewer;
-    if ( _viewer)
-        _viewer->updateRender();
-}   // end setViewer
-
-
-// private
-void FaceControl::setScalarVisualisation()
-{
-    std::string vname;
-    float fmin, fmax;
-    if ( _curvis->allowScalarVisualisation( fmin, fmax))
-    {
-        vname = _curvis->getDisplayName().toStdString();
-        if ( !_legend->gotMapping(vname))
-            _legend->setBounds( vname, fmin, fmax);
-    }   // end if
-    _legend->setActor( _fview->getSurfaceActor());
-    _legend->setVisible( vname, _viewer);
-}   // end setScalarVisualisation
-
-
-// public
-void FaceControl::setVisualisation( VisualisationAction* vaction)
-{
-    _curvis = vaction;
-    assert(vaction);
-    assert(vaction->isAvailable(this));
-
-    _curvis->mapActor(this);
-    _fview->setTexture( vaction->useTexture());
-    if ( _viewer)
-        _viewer->enableFloodLights( vaction->useTexture());
-
-    setScalarVisualisation();
-    _fview->setVisible( true, _viewer);
-
-    emit viewUpdated();
-    if ( _viewer)
-        _viewer->updateRender();
-}   // end setVisualisation
-
-
-// public
-void FaceControl::setOptions( const ModelOptions& vo)
-{
-    _opts = vo;
-    _fview->setOptions( _opts);
-
-    // Set legend visualisation options
-    if ( _curvis && _legend->gotMapping( _curvis->getDisplayName().toStdString()))
-    {
-        const QColor& mcol0 = _opts.model.surfaceColourMin;
-        const QColor& mcol1 = _opts.model.surfaceColourMid;
-        const QColor& mcol2 = _opts.model.surfaceColourMax;
-        _legend->setColours( mcol0, mcol1, mcol2);
-        _legend->setNumColours( _opts.model.numSurfaceColours);
-        _legend->setScalarMappingMinMax( _opts.model.minVisibleScalar, _opts.model.maxVisibleScalar);
-    }   // end if
-
-    _lview->setOptions( _opts);
-    _fmodel->setCroppingRadius( _opts.boundary.cropFactor);
-    _bview->setBoundary( _fmodel->getObjectMeta()->getObject(), _fmodel->getCroppingBoundary());
-}   // end setOptions
-
-
-// public
-bool FaceControl::belongs( const vtkProp* prop) const
-{
-    bool isprop = false;
-    if ( prop)
-    {
-        isprop = _fview->getActor() == prop || _lview->isLandmark(prop);
-        if ( !isprop)   // Check the temp members
-            isprop = isTempPropPointedAt( prop);
-    }   // end if
-    return isprop;
-}   // end belongs
-
-
-// public
-bool FaceControl::isPointedAt() const
-{
-    return belongs( _viewer->getPointedAt());
-}   // end isPointedAt
-
-
-// public
-void FaceControl::addTempMemberProp( const vtkProp* p)
-{
-    _tmpProps.insert(p);
-}   // end addTempMemberProp
-
-
-// public
-void FaceControl::removeTempMemberProp( const vtkProp* p)
-{
-    _tmpProps.erase(p);
-}   // end removeTempMemberProp
-
-
-// public
-std::string FaceControl::isLandmarkPointedAt( const QPoint* p) const
-{
-    return _lview->pointedAt( p ? *p : getMouseCoords());
-}   // end isLandmarkPointedAt
-
-
-// public
-bool FaceControl::isTempPropPointedAt( const vtkProp* prop) const
-{
-    if (!prop)
-        prop = _viewer->getPointedAt();
-    if ( !prop)
+    LandmarkSet* lset = _fdata->landmarks();
+    if ( !lset->has(id))
         return false;
+    lset->set( id, v);
+    _lview->refreshLandmark(id);
+    return true;
+}   // end updateLandmark
 
-    bool istmp = false;
-    foreach ( const vtkProp* tp, _tmpProps)
+
+// public
+bool FaceControl::changeLandmarkName( int id, const std::string& newName)
+{
+    bool changed = false;
+    LandmarkSet* lset = _fdata->landmarks();
+    if ( lset->has(id))
     {
-        if ( tp == prop)
-        {
-            istmp = true;
-            break;
-        }   // end if
-    }   // end foreach
-    return istmp;
-}   // end isTempPropPointedAt
-
-
-// protected virtual
-void FaceControl::leftButtonDown( const QPoint& p)
-{
-    if ( isPointedAt())
-        emit onLeftButtonDown(p);
-}   // end leftButtonDown
-
-
-void FaceControl::leftButtonUp( const QPoint& p)
-{
-    emit onLeftButtonUp(p);
-}   // end leftButtonUp
-
-
-void FaceControl::leftDoubleClick( const QPoint& p)
-{
-    if ( isPointedAt())
-        emit onLeftDoubleClick(p);
-}   // end leftDoubleClick
-
-
-void FaceControl::leftDrag( const QPoint& p)
-{
-    if ( isPointedAt() || isTempPropPointedAt())
-        emit onLeftDrag(p);
-}   // end leftDrag
-
-
-void FaceControl::mouseMove( const QPoint& p)
-{
-    const bool modelHoverNow = isPointedAt();
-    if ( modelHoverNow)
-        emit onMouseMove(p);
-
-    if ( _modelHoverOld && !modelHoverNow)
-        emit onExitingModel(p);
-
-    if ( modelHoverNow && areLandmarksShown()) // Check landmark entry/exit
-    {
-        const std::string lmHoverNow = isLandmarkPointedAt(&p);
-
-        if ( _lmHoverOld != lmHoverNow)
-        {
-            if ( !_lmHoverOld.empty())  // Transitioned from a different landmark
-                emit onExitingLandmark( _lmHoverOld, p);
-
-            if ( !lmHoverNow.empty())
-                emit onEnteringLandmark( lmHoverNow, p);
-        }   // end if
-
-        _lmHoverOld = lmHoverNow;
+        changed = lset->changeName( id, newName);
+        _lview->refreshLandmark(id);
     }   // end if
-
-    if ( !_modelHoverOld && modelHoverNow)
-        emit onEnteringModel(p);
-
-    _modelHoverOld = modelHoverNow;
-}   // end mouseMove
+    return changed;
+}   // end changeLandmarkName
 
 
 // public
-bool FaceControl::isSelected() const { return _oview->isVisible();}
-bool FaceControl::isBoundaryShown() const { return _bview->isVisible();}
-bool FaceControl::areLandmarksShown() const { return _lview->isVisible();}
-
-
-// public
-void FaceControl::showSelected( bool enable)
+bool FaceControl::changeLandmarkupdateLandmark( int id, bool visible, bool movable, bool deletable)
 {
-    // Move these details into FaceView at some point.
-    _oview->setVisible(enable, _viewer);
-    //const QColor& scol = _opts.model.surfaceColourMid;
-    //_fview->getSurfaceActor()->GetProperty()->SetColor( scol.redF(), scol.greenF(), scol.blueF());
-    //double alpha = _opts.model.opacity;
-    //if (!enable)
-    //    alpha /= 2.0;
-    //_fview->getSurfaceActor()->GetProperty()->SetOpacity( alpha);
-    if ( _viewer)
-        _viewer->updateRender();
-}   // end showSelected
-
-
-// public
-void FaceControl::showBoundary( bool enable)
-{
-    const bool changed = enable != _bview->isVisible();
-    _bview->setVisible(enable, _viewer);
-    if ( changed)
-        emit viewUpdated();
-    if ( _viewer)
-        _viewer->updateRender();
-}   // end showBoundary
-
-
-// public
-void FaceControl::showLandmarks( bool enable)
-{
-    const bool changed = enable != _lview->isVisible();
-    _lview->setVisible(enable, _viewer);
-    if ( changed)
-        emit viewUpdated();
-    if ( _viewer)
-        _viewer->updateRender();
-}   // end showLandmarks
-
-
-// public
-void FaceControl::showLandmark( bool enable, const std::string& lm)
-{
-    const bool changed = enable != _lview->isLandmarkVisible( lm);
-    _lview->showLandmark(enable, lm);
-    if ( changed)
-        emit viewUpdated();
-    if ( _viewer)
-        _viewer->updateRender();
-}   // end showLandmark
-
-
-// public
-void FaceControl::highlightLandmark( bool enable, const std::string& lm)
-{
-    _lview->highlightLandmark(enable, lm);
-    if ( _viewer)
-        _viewer->updateRender();
-}   // end highlightLandmark
-
-
-// public
-void FaceControl::updateLandmark( const std::string& lm, const cv::Vec3f* v, bool updateModel)
-{
-    if ( updateModel)
-        _fmodel->updateLandmark(lm, v);
-    _lview->updateLandmark(lm, v);
-    emit viewUpdated();
-    if ( _viewer)
-        _viewer->updateRender();
+    bool changed = false;
+    LandmarkSet* lset = _fdata->landmarks();
+    if ( lset->has(id))
+    {
+        FaceTools::Landmarks::Landmark* lmk = lset->get(id);
+        lmk->visible = visible;
+        lmk->movable = movable;
+        lmk->deletable = deletable;
+        _lview->refreshLandmark(id);
+    }   // end if
+    return changed;
 }   // end updateLandmark
 
-
-// public
-void FaceControl::updateLandmark( const FaceTools::Landmarks::Landmark& lmk)
-{
-    _fmodel->updateLandmark(lmk);
-    _lview->updateLandmark( lmk.name, &lmk.pos);
-    emit viewUpdated();
-    if ( _viewer)
-        _viewer->updateRender();
-}   // end updateLandmark
-
-
-// public
-void FaceControl::updateMesh( const RFeatures::ObjModel::Ptr model)
-{
-    _fmodel->updateMesh( model);
-    _fmodel->setCroppingRadius( _opts.boundary.cropFactor);
-}   // end updateMesh
-
-
-// public
-void FaceControl::resetVisualisation()
-{
-    _fview->reset(_fmodel->getObjectMeta()->getObject());
-    delete _legend;
-    _legend = new LegendRange;
-
-    const bool showingOutline = isSelected();
-    _oview->reset(_fmodel->getObjectMeta()->getObject());
-
-    std::vector<std::string> visibleLandmarks;
-    _lview->getVisibleLandmarks( visibleLandmarks);
-    _lview->reset();
-
-    const bool showingBoundary = _bview->isVisible();
-    _bview->setBoundary( _fmodel->getObjectMeta()->getObject(), _fmodel->getCroppingBoundary());
-
-    // Restore the views
-    showSelected( showingOutline);
-    _bview->setVisible( showingBoundary, _viewer);
-    _lview->setVisible( false, _viewer);
-    foreach ( const std::string& lm, visibleLandmarks)
-        _lview->showLandmark( true, lm);
-
-    setVisualisation( _curvis);
-}   // end resetVisualisation
-
-
-// private slot
-void FaceControl::doMeshUpdated()
-{
-    resetVisualisation();
-    emit meshUpdated();
-}   // end doMeshUpdated
-
-
+*/

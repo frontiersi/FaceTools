@@ -18,14 +18,15 @@
 #ifndef FACE_TOOLS_FACE_AVERAGER_H
 #define FACE_TOOLS_FACE_AVERAGER_H
 
+/**** TODO ****/
+
 #include <string>
 #include <vector>
 #include <ObjModel.h>   // RFeatures
 #include "FaceTools_Export.h"
 
 
-namespace FaceTools
-{
+namespace FaceTools {
 
 class FaceTools_EXPORT FaceAverager
 {

@@ -16,10 +16,16 @@
  ************************************************************************/
 
 #include <FaceTools.h>
-#include <Landmarks.h>
-using FaceTools::ObjMetaData;
-#include <AssetImporter.h>             // RModelIO
-#include <ObjModelBoundaryFinder2.h>
+#include <algorithm>
+#include <FaceShapeLandmarks2DDetector.h>   // namespace FaceTools::Landmarks
+#include <AssetImporter.h>                  // RModelIO
+#include <ObjModelBoundaryFinder2.h>        // RFeatures
+#include <ObjModelTriangleMeshParser.h>     // RFeatures
+#include <ObjModelRegionSelector.h>         // RFeatures
+#include <ObjModelTetrahedronReplacer.h>    // RFeatures
+#include <ObjModelIntegrityChecker.h>       // RFeatures
+#include <ObjModelCleaner.h>                // RFeatures
+#include <ObjModelCopier.h>                 // RFeatures
 using namespace RFeatures;
 
 
@@ -32,12 +38,11 @@ int FaceTools::findBoundaryLoops( const ObjModel::Ptr model, std::list<std::vect
     for ( int i = 0; i < nbs; ++i)
     {
         const std::list<int>& blist = bfinder.getBoundary(i);
-        //assert( model->getConnectedVertices( blist.back()).count( blist.front()) > 0); // Beginning of boundary must join end
+        //assert( model->getConnectedVertices( blist.back()).count( blist.front()) > 0); // Boundary start must join end
         //std::cerr << "  + boundary has " << blist.size() << " vertices" << std::endl;
         loops.resize( loops.size() + 1);
         std::vector<cv::Vec3f>& lvec = loops.back();
-        BOOST_FOREACH ( int b, blist)
-            lvec.push_back( model->vtx(b));
+        std::for_each( std::begin( blist), std::end(blist), [&](int b){ lvec.push_back( model->vtx(b));});
     }   // end for
     return nbs;
 }   // end findBoundaryLoops
@@ -54,10 +59,8 @@ ObjModel::Ptr FaceTools::getComponent( const ObjModel::Ptr model, int svidx)
     ObjModelTriangleMeshParser parser( model);
     parser.parse( *model->getFaceIds( svidx).begin());
     const IntSet& fids = parser.getParsedFaces();
-
     ObjModelCopier copier( model);
-    BOOST_FOREACH ( int fid, fids)
-        copier.addTriangle(fid);
+    std::for_each( std::begin(fids), std::end(fids), [&](int fid){ copier.addTriangle(fid);});
     return copier.getCopiedModel();
 }   // end getComponent
 
@@ -72,24 +75,25 @@ ObjModel::Ptr FaceTools::crop( const ObjModel::Ptr model, const cv::Vec3f& v, in
 
     if ( model->getFaceIds( svidx).empty())
     {
-        std::cerr << "[ERROR] FaceTools::crop: Given starting vertex is not used in any of the model's polygons!" << std::endl;
+        std::cerr << "[ERROR] FaceTools::crop: Given start vertex not used in any of the model's polygons!" << std::endl;
         return ObjModel::Ptr();
     }   // end if
 
-    ObjModelCropper::Ptr cropper = ObjModelCropper::create( model, v, svidx);
+    ObjModelRegionSelector::Ptr cropper = ObjModelRegionSelector::create( model, v, svidx);
     cropper->adjustRadius( radius);
     IntSet cfids;
-    cropper->getCroppedFaces( cfids);
+    cropper->getRegionFaces( cfids);
+    assert( !cfids.empty());
     return crop( model, cfids);
 }   // end crop
 
 
 ObjModel::Ptr FaceTools::crop( const ObjModel::Ptr model, const IntSet& cfids)
 {
+    assert( !cfids.empty());
     // Copy the subset of faces into a new model
     ObjModelCopier copier( model);
-    BOOST_FOREACH ( int fid, cfids)
-        copier.addTriangle(fid);
+    std::for_each( std::begin(cfids), std::end(cfids), [&](int fid){ copier.addTriangle(fid);});
     ObjModel::Ptr cmodel = copier.getCopiedModel();
 
     // Remove vertices (and attached faces) that connect to 2 or fewer polygons so the boundary is clean.
@@ -108,89 +112,27 @@ ObjModel::Ptr FaceTools::crop( const ObjModel::Ptr model, const IntSet& cfids)
 }   // end crop
 
 
-bool FaceTools::hasReqLandmarks( const ObjMetaData::Ptr omd)
+bool FaceTools::hasReqLandmarks( const LandmarkSet& lset)
 {
-    return omd &&
-           omd->hasLandmark( FaceTools::Landmarks::L_EYE_CENTRE) &&
-           omd->hasLandmark( FaceTools::Landmarks::R_EYE_CENTRE) &&
-           omd->hasLandmark( FaceTools::Landmarks::NASAL_TIP);
+    using namespace FaceTools::Landmarks;
+    return lset.has( L_EYE_CENTRE) && lset.has(R_EYE_CENTRE) && lset.has(NASAL_TIP);
 }   // end hasReqLandmarks
 
 
-cv::Vec3f FaceTools::calcFaceCentre( const ObjMetaData::Ptr omd)
+cv::Vec3f FaceTools::calcFaceCentre( const cv::Vec3f& upv, const cv::Vec3f& v0, const cv::Vec3f& v1, const cv::Vec3f& nt)
 {
-    assert(omd);
-    if ( !hasReqLandmarks(omd))
-    {
-        assert(false);
-        return cv::Vec3f(0,0,0);
-    }   // end if
-
-    cv::Vec3f nvec, uvec;
-    if ( !omd->getOrientation( nvec, uvec))
-    {
-        assert(false);
-        return cv::Vec3f(0,0,0);
-    }   // end if
-
-    const cv::Vec3f& v0 = omd->getLandmark( FaceTools::Landmarks::L_EYE_CENTRE);
-    const cv::Vec3f& v1 = omd->getLandmark( FaceTools::Landmarks::R_EYE_CENTRE);
-    const cv::Vec3f& nt = omd->getLandmark( FaceTools::Landmarks::NASAL_TIP);
-
     const cv::Vec3f midEye = (v0 + v1) * 0.5;
     const cv::Vec3f dvec = nt - midEye;
-
     cv::Vec3f downVec;
-    cv::normalize( -uvec, downVec);
+    cv::normalize( -upv, downVec);
     return midEye + (downVec.dot(dvec) * downVec);
 }   // end calcFaceCentre
 
 
-double FaceTools::calcFaceCropRadius( const ObjMetaData::Ptr omd, double G)
+double FaceTools::calcFaceCropRadius( const cv::Vec3f& fcentre, const cv::Vec3f& v0, const cv::Vec3f& v1, double G)
 {
-    assert(omd);
-    if ( !hasReqLandmarks(omd))
-        return -1;
-
-    const cv::Vec3f& v0 = omd->getLandmark( FaceTools::Landmarks::L_EYE_CENTRE);
-    const cv::Vec3f& v1 = omd->getLandmark( FaceTools::Landmarks::R_EYE_CENTRE);
-    const cv::Vec3f fcentre = calcFaceCentre( omd);
     return G * (cv::norm( fcentre - v0) + cv::norm( fcentre - v1))/2;
 }   // end calcFaceCropRadius
-
-
-bool FaceTools::transformToOrigin( ObjMetaData::Ptr omd, const cv::Vec3f* t)
-{
-    cv::Vec3f fc;
-    if ( t)
-        fc = *t;
-    else
-    {
-        if ( hasReqLandmarks( omd))
-            fc = calcFaceCentre( omd);
-        else
-            return false;
-    }   // end else
-
-    cv::Vec3f nvec, uvec;
-    if ( !omd->getOrientation( nvec, uvec))
-        return false;
-
-    fc = -fc;   // Subtract to origin
-
-    // Get complimentary axes coordinates for the normal and up vectors
-    nvec[0] = -nvec[0];
-    nvec[1] = -nvec[1];
-    uvec[0] = -uvec[0];
-    uvec[2] = -uvec[2];
-
-    RFeatures::ObjModelMover mover( nvec, uvec);
-    mover.prependTranslation( fc);
-    const cv::Matx44d tmat = mover();
-    omd->transform( tmat);
-
-    return true;
-}   // end transformToOrigin
 
 
 ObjModel::Ptr FaceTools::createFromVertices( const cv::Mat_<cv::Vec3f>& vrow)
@@ -208,33 +150,32 @@ ObjModel::Ptr FaceTools::createFromSubset( const ObjModel::Ptr smod, const IntSe
 {
     assert(smod);
     ObjModel::Ptr omod = ObjModel::create( smod->getSpatialPrecision());
-    BOOST_FOREACH ( int vidx, vidxs)
-        omod->addVertex( smod->vtx(vidx));
+    std::for_each( std::begin(vidxs), std::end(vidxs), [&](int vidx){ omod->addVertex( smod->vtx(vidx));});
     return omod;
 }   // end createFromSubset
 
 
 ObjModel::Ptr FaceTools::createFromTransformedSubset( const ObjModel::Ptr smod, const IntSet& vidxs, const cv::Matx44d& T,
-                                                      boost::unordered_map<int,int>* newVidxsToSource)
+                                                      std::unordered_map<int,int>* newVidxsToSource)
 {
     assert(smod);
     const RFeatures::ObjModelMover transformer(T);
     ObjModel::Ptr omod = ObjModel::create( smod->getSpatialPrecision());
-    BOOST_FOREACH ( int vidx, vidxs)
+    for ( int vidx : vidxs)
     {
         cv::Vec3f v = smod->vtx(vidx);
         transformer( v);
         const int nvidx = omod->addVertex(v);
         if ( newVidxsToSource)
             (*newVidxsToSource)[nvidx] = vidx;
-    }   // end foreach
+    }   // end for
     return omod;
 }   // end createFromTransformedSubset
 
 
 // Flatten m to XY plane and return it, also setting fmap to be the
 // vertex ID mapping from the returned flattened object to the original object m.
-ObjModel::Ptr FaceTools::makeFlattened( const ObjModel::Ptr m, boost::unordered_map<int,int>* fmap)
+ObjModel::Ptr FaceTools::makeFlattened( const ObjModel::Ptr m, std::unordered_map<int,int>* fmap)
 {
     assert(m);
     if ( fmap)
@@ -242,14 +183,14 @@ ObjModel::Ptr FaceTools::makeFlattened( const ObjModel::Ptr m, boost::unordered_
     const IntSet& vidxs = m->getVertexIds();
     int nvidx;
     ObjModel::Ptr fmod = ObjModel::create( m->getSpatialPrecision());
-    BOOST_FOREACH ( int vidx, vidxs)
+    for ( int vidx : vidxs)
     {
         cv::Vec3f v = m->vtx(vidx);
         v[2] = 0;
         nvidx = fmod->addVertex(v);
         if ( fmap)
             (*fmap)[nvidx] = vidx;
-    }   // end foreach
+    }   // end for
     // fmod is now a flattened version
     return fmod;
 }   // end makeFlattened
@@ -315,7 +256,8 @@ ObjModel::Ptr FaceTools::loadModel( const std::string& fname, bool useTexture, b
                 assert( ic.is2DManifold());
                 if ( !ic.is2DManifold())
                 {
-                    std::cerr << "[ERROR] FaceTools::loadModel: Unable to make 2D triangulated mesh from '" << fname << "'" << std::endl;
+                    std::cerr << "[ERROR] FaceTools::loadModel: Can't make triangulated mesh from \""
+                              << fname << "\"" << std::endl;
                     model.reset();
                 }   // end if
             }   // end if
@@ -324,22 +266,3 @@ ObjModel::Ptr FaceTools::loadModel( const std::string& fname, bool useTexture, b
 
     return model;
 }   // end loadModel
-
-
-bool FaceTools::loadModels( const std::vector<std::string>& fnames, std::vector<RFeatures::ObjModel::Ptr>& models, bool loadTexture, bool doClean)
-{
-    bool failed = false;
-    const int n = (int)fnames.size();
-    models.resize(n);
-    for ( int i = 0; i < n; ++i)
-    {
-        models[i] = loadModel( fnames[i], loadTexture, doClean);
-        if ( !models[i])
-        {
-            failed = true;
-            break;
-        }   // end if
-    }   // end for
-
-    return !failed;
-}   // end loadModels

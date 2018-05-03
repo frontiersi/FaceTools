@@ -4,7 +4,7 @@ set( CMAKE_VERBOSE_MAKEFILE FALSE)
 if(UNIX)
     set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wno-deprecated-declarations -Wno-error=unknown-pragmas")
 endif()
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 set( LIB_PRE_REQS "$ENV{INSTALL_PARENT_DIR}" CACHE PATH
     "Where library prerequisites are installed (if not in the standard system library locations).")

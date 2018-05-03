@@ -19,8 +19,8 @@
 #include <VtkTools.h>
 #include <vtkTextProperty.h>
 #include <vtkRendererCollection.h>
+#include <algorithm>
 using FaceTools::ModelViewerAnnotator;
-#include <map>
 
 struct ModelViewerAnnotator::Message
 {
@@ -73,9 +73,7 @@ ModelViewerAnnotator::ModelViewerAnnotator( vtkRenderer* ren)
 // public
 ModelViewerAnnotator::~ModelViewerAnnotator()
 {
-    typedef std::pair<int, Message*> MsgPair;
-    foreach ( const MsgPair& mp, _messages)
-        delete mp.second;
+    std::for_each(std::begin(_messages), std::end(_messages), []( const auto& mp){ delete mp.second;});
     _messages.clear();
 }   // end dtor
 
@@ -105,8 +103,6 @@ bool ModelViewerAnnotator::removeMessage( int msgID)
 // public
 void ModelViewerAnnotator::doOnUpdateMessagePositions()
 {
-    typedef std::pair<int, Message*> MsgPair;
-    foreach ( const MsgPair& mp, _messages)
-        mp.second->setInDisplay();
+    std::for_each(std::begin(_messages), std::end(_messages), []( auto& m){ m.second->setInDisplay();});
 }   // end doOnUpdateMessagePositions
 

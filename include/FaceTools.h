@@ -18,11 +18,10 @@
 #ifndef FACE_TOOLS_H
 #define FACE_TOOLS_H
 
-#include "ObjMetaData.h"
+#include "LandmarkSet.h"
 #include "MiscFunctions.h"
 
-namespace FaceTools
-{
+namespace FaceTools {
 
 // Get all boundary loops on the given object.
 FaceTools_EXPORT int findBoundaryLoops( const RFeatures::ObjModel::Ptr, std::list<std::vector<cv::Vec3f> > &loops);
@@ -31,9 +30,9 @@ FaceTools_EXPORT int findBoundaryLoops( const RFeatures::ObjModel::Ptr, std::lis
 // the single component that is contiguously connected by polygon edges to vidx.
 FaceTools_EXPORT RFeatures::ObjModel::Ptr getComponent( const RFeatures::ObjModel::Ptr, int vidx);
 
-// Checks if given model as the essential landmarks (eyes and nose tip) needed
-// for crop, calcFaceCentre, calcFaceCropRadius, transformToOrigin and others.
-FaceTools_EXPORT bool hasReqLandmarks( const ObjMetaData::Ptr);
+// Checks if the essential landmarks (eyes and nose tip) needed for crop,
+// calcFaceCropRadius, transformToOrigin and others are present in the given set of landmarks.
+FaceTools_EXPORT bool hasReqLandmarks( const LandmarkSet&);
 
 // Crop and copy the given model to be the part connected to vertex svid with a boundary of R from centre v.
 // The choice of svid allows the cropped part to be inside or outside the boundary. If svid is not a valid
@@ -44,22 +43,11 @@ FaceTools_EXPORT RFeatures::ObjModel::Ptr crop( const RFeatures::ObjModel::Ptr, 
 FaceTools_EXPORT RFeatures::ObjModel::Ptr crop( const RFeatures::ObjModel::Ptr, const IntSet& fids);
 
 // Calculate and return the centre of the face as the point directly behind the nose tip in the plane of the front of the eyes.
-// Requires the left and right eye centre landmarks, the nose tip landmark, and orientation vectors for calculation.
-FaceTools_EXPORT cv::Vec3f calcFaceCentre( const ObjMetaData::Ptr);
+// Requires the centre points of the eyes, the nose tip, and the *up* vector defining the proper upright position of the face.
+FaceTools_EXPORT cv::Vec3f calcFaceCentre( const cv::Vec3f& upVector, const cv::Vec3f& leye, const cv::Vec3f& reye, const cv::Vec3f& ntip);
 
-// Calculate the cropping radius for a face as G times the distance
-// from the face centre to the eye centre (average of both eyes used).
-// Returns < 0 if required landmarks are missing.
-FaceTools_EXPORT double calcFaceCropRadius( const ObjMetaData::Ptr, double G);
-
-// Transform and rotate (using the orientation vectors) the given object to the origin.
-// Object is translated by -(*t) so that t is incident with the world origin on return.
-// If t is not given, it is calculated as calcFaceCentre(omd).
-// Returns false if the orientation vectors on omd don't exist, or t is NULL and
-// the face centre can't be calculated. Returns true iff object was successfully transformed.
-// Note that this function will cause the object's internal KD tree to be reset
-// (call omd->rebuildKDTree() after this function if KD tree needed).
-FaceTools_EXPORT bool transformToOrigin( ObjMetaData::Ptr omd, const cv::Vec3f* t=NULL);
+// Calculate cropping radius for a face as G times the distance from the face centre to the point halfway between the eyes.
+FaceTools_EXPORT double calcFaceCropRadius( const cv::Vec3f& faceCentre, const cv::Vec3f& leye, const cv::Vec3f& reye, double G);
 
 // Create a vertices only ObjModel from the given row of points.
 FaceTools_EXPORT RFeatures::ObjModel::Ptr createFromVertices( const cv::Mat_<cv::Vec3f>& row);
@@ -72,11 +60,11 @@ FaceTools_EXPORT RFeatures::ObjModel::Ptr createFromSubset( const RFeatures::Obj
 // On return, if newVidxsToOld is not null, it is set with vertex mappings of the
 // new (returned) object to the given vertex indices on the source model (vidxs).
 FaceTools_EXPORT RFeatures::ObjModel::Ptr createFromTransformedSubset( const RFeatures::ObjModel::Ptr source, const IntSet& vidxs,
-                                                                       const cv::Matx44d& T, boost::unordered_map<int,int>* newVidxsToOld=NULL);
+                                                                       const cv::Matx44d& T, std::unordered_map<int,int>* newVidxsToOld=NULL);
 
 // Flatten the source face to be in the XY plane, and set entries in provided map (if given) to key the source vertices
 // from the new vertices in the returned (flattened) model.
-FaceTools_EXPORT RFeatures::ObjModel::Ptr makeFlattened( const RFeatures::ObjModel::Ptr source, boost::unordered_map<int,int>* newVidxsToOld=NULL);
+FaceTools_EXPORT RFeatures::ObjModel::Ptr makeFlattened( const RFeatures::ObjModel::Ptr source, std::unordered_map<int,int>* newVidxsToOld=NULL);
 
 // Clean the given model to ensure it's a triangulated manifold (wraps RFeatures::ObjModelCleaner).
 FaceTools_EXPORT void clean( RFeatures::ObjModel::Ptr);
@@ -85,13 +73,6 @@ FaceTools_EXPORT void clean( RFeatures::ObjModel::Ptr);
 FaceTools_EXPORT RFeatures::ObjModel::Ptr loadModel( const std::string& fname,
                                                      bool loadTexture=false, bool doClean=false);
 
-// Returns false if unable to load any
-FaceTools_EXPORT bool loadModels( const std::vector<std::string>& fnames,
-                                  std::vector<RFeatures::ObjModel::Ptr>& models,
-                                  bool loadTexture=false, bool doClean=false);
-
 }   // end namespace
 
 #endif
-
-

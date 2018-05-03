@@ -19,7 +19,7 @@
 using FaceTools::CurvatureSpeedFunctor;
 using RFeatures::ObjModelCurvatureMap;
 using RFeatures::ObjModel;
-#include <boost/foreach.hpp>
+#include <algorithm>
 #include <cassert>
 
 
@@ -32,7 +32,7 @@ CurvatureSpeedFunctor::CurvatureSpeedFunctor( const ObjModelCurvatureMap::Ptr om
     double kp1, kp2, c;
     std::vector<double> vals;
     const IntSet& vidxs = model->getVertexIds();
-    BOOST_FOREACH ( const int& vi, vidxs)
+    for ( int vi : vidxs)
     {
         omcm->getVertexPrincipalCurvature1( vi, kp1); // Magnitude of curvature in direction of max curvature
         omcm->getVertexPrincipalCurvature2( vi, kp2); // Magnitude of curvature in direction of minimum curvature
@@ -47,6 +47,5 @@ CurvatureSpeedFunctor::CurvatureSpeedFunctor( const ObjModelCurvatureMap::Ptr om
     const double threshold = meanCurvature + stddev;
 
     // Set the per vertex curvature function values
-    BOOST_FOREACH ( const int& vi, vidxs)
-        _curvedness[vi] = _curvedness[vi] > threshold ? 1.0 : 0.0;
+    std::for_each( std::begin(vidxs), std::end(vidxs), [&](int vi){ _curvedness[vi] = _curvedness[vi] > threshold ? 1.0 : 0.0;});
 }   // end ctor

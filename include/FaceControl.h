@@ -18,134 +18,57 @@
 #ifndef FACE_TOOLS_FACE_CONTROL_H
 #define FACE_TOOLS_FACE_CONTROL_H
 
-#include "InteractionInterface.h"
-#include "ModelOptions.h"
-#include "FaceModel.h"
-#include "FaceView.h"
-#include "Landmarks.h"
+/**
+ * Container that associates a model to a FaceView (and its visualisations).
+ * There can be many FaceControl instances associated with a single FaceModel.
+ * Provides convenience functions for coordinating transformations between
+ * the view and data models.
+ */
 
-namespace FaceTools
+#include "FaceTools_Export.h"
+#include <opencv2/opencv.hpp>
+
+namespace FaceTools {
+class FaceModelViewer;
+class FaceModel;
+
+namespace Vis {
+class FaceView;
+}   // end namespace
+
+class FaceTools_EXPORT FaceControl
 {
-
-class LegendRange;
-class BoundaryView;
-class OutlinesView;
-class LandmarkGroupView;
-class VisualisationAction;
-class InteractiveModelViewer;
-
-class FaceTools_EXPORT FaceControl : public InteractionInterface
-{ Q_OBJECT
 public:
     explicit FaceControl( FaceModel*);
-    ~FaceControl() override;
+    virtual ~FaceControl();
 
-    void setViewer( InteractiveModelViewer*);   // Originally NULL
-    InteractiveModelViewer* getViewer() const { return _viewer;}
+    // Transform both the data and the view actors in one go.
+    // This can be expensive in terms of data updates. For user interaction it is
+    // better to use a vtkInteractor (actor style) on the desired FaceView actors,
+    // then use the final transformation matrix to update the model once interactive
+    // movement of the vtkActor is finished (e.g. at the end of a mouse drag).
+    void transform( const cv::Matx44d&);
 
-    // Add/remove references to controller actions not provided in the constructor.
-    void addController( QAction*);
-    void removeController( QAction*);
+    // After moving the position of the actors in the FaceView around via some user
+    // interaction, it may be necessary to fix the position by updating the data in
+    // the vtkActors and the FaceModel (ObjModel). This can be achieved in one step
+    // by calling this function which calls FaceView::transform(NULL) to update the
+    // view models according to their internal transforms, and then uses the applied
+    // transform to update the FaceModel data. This function makes no changes if the
+    // view models still have the identity matrix as their internal transform matrix.
+    void fixTransformFromView();
 
-    // Cause connected actions to treat this model as currently being under
-    // control of the interface (default), or tell connected actions that
-    // this model is not currently under control (controlled=false).
-    // NB even if controlled=false, actions may still choose to act over
-    // their connected models if the nature of the action does not require
-    // the model to be under direct user control.
-    void setControlled( bool controlled=true);
-    bool isControlled() const;
+    // Convenience function to get/set viewer this FaceControl uses.
+    FaceModelViewer* viewer() const;
+    void setViewer( FaceModelViewer*);
 
-    void setVisualisation( VisualisationAction*);
-    VisualisationAction* getVisualisation() const { return _curvis;}
-
-    void setOptions( const ModelOptions&);
-    const ModelOptions& getOptions() const { return _opts;}
-
-    void showSelected( bool);    // viewUpdated NOT emitted for visualising the outline!
-    bool isSelected() const;
-
-    void showBoundary( bool);
-    bool isBoundaryShown() const;
-    void showLandmarks( bool);
-    bool areLandmarksShown() const; // Returns true iff at least one landmark visible
-    void showLandmark( bool, const std::string&);
-    void highlightLandmark( bool, const std::string&);
-
-    // Update landmarks. If making many updates in short succession, call with updateModel=false
-    // until the very last update so that the FaceModel does not signal listening clients more
-    // than necessary (clients may run long operations on response to a FaceModel metadata update).
-    void updateLandmark( const std::string&, const cv::Vec3f*, bool updateModel=true);
-    void updateLandmark( const Landmarks::Landmark&);   // Updates view and model
-    void updateMesh( const RFeatures::ObjModel::Ptr);   // Also calls resetVisualisation
-    FaceModel* getModel() const { return _fmodel;}
-    FaceView* getView() const { return _fview;}
-    LegendRange* getLegend() const { return _legend;}
-
-    bool belongs( const vtkProp*) const; // Returns true iff this model or one of its components is the given prop.
-    bool isPointedAt() const;   // Returns true iff model or any of its components are under mouse cursor.
-
-    // Add or remove props that are considered part of this model for mouse events.
-    void addTempMemberProp( const vtkProp*);
-    void removeTempMemberProp( const vtkProp*);
-
-    // Returns true iff one of the props added using addTempMemberProp matches
-    // the provided prop. If the provided prop is NULL, the prop currently being
-    // pointed to by the mouse is checked.
-    bool isTempPropPointedAt( const vtkProp* prop=NULL) const;
-
-    // Returns the name of any landmark under the given coordinates (or the current mouse coords if NULL).
-    // An empty string is returned if no landmarks owned by this model are under the given coordinates.
-    std::string isLandmarkPointedAt( const QPoint* p=NULL) const;
-
-    void resetVisualisation();    // Refresh from model (useful if multiple FaceControls on a FaceModel).
-
-signals:
-    void meshUpdated(); // Emitted when model geometry on underlying FaceModel changed.
-    void metaUpdated(); // Emitted when meta-data on underlying FaceModel changed.
-    void viewUpdated(); // Emitted when various view elements are added/removed EXCEPT viewing the outline.
-
-    void onEnteringModel( const QPoint&);
-    void onExitingModel( const QPoint&);
-    void onEnteringLandmark( const std::string&, const QPoint&);
-    void onExitingLandmark( const std::string&, const QPoint&);
-
-    // Emiited whether or not point is on the model's surface.
-    void onLeftButtonUp( const QPoint&);
-    // Emitted only if mouse on model or its elements.
-    void onLeftButtonDown( const QPoint&);
-    void onLeftDoubleClick( const QPoint&);
-    void onLeftDrag( const QPoint&);
-    void onMouseMove( const QPoint&);
-
-protected:
-    void leftButtonUp( const QPoint&) override;
-    void leftButtonDown( const QPoint&) override;
-    void leftDoubleClick( const QPoint&) override;
-    void leftDrag( const QPoint&) override;
-    void mouseMove( const QPoint&) override;
-
-private slots:
-    void doMeshUpdated();
+    FaceModel* data() const { return _fdata;}
+    Vis::FaceView* view() const { return _fview;}
 
 private:
-    InteractiveModelViewer *_viewer;
-    FaceModel* _fmodel;
-    FaceView* _fview;
-    OutlinesView* _oview;
-    BoundaryView* _bview;
-    LandmarkGroupView* _lview;
-    LegendRange* _legend;
-    VisualisationAction* _curvis;
-    ModelOptions _opts;
+    FaceModel *_fdata;
+    Vis::FaceView *_fview;
 
-    bool _modelHoverOld;
-    std::string _lmHoverOld;
-    bool _controlled;
-    boost::unordered_set<QAction*> _actions;
-    boost::unordered_set<const vtkProp*> _tmpProps;
-
-    void setScalarVisualisation();
     FaceControl( const FaceControl&);     // No copy
     void operator=( const FaceControl&);  // No copy
 };  // end class

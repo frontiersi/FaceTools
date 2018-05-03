@@ -3,5 +3,32 @@
     <file alias="CAMERA">res/icons/camera_64x64.png</file>
     <file alias="FULLSCREEN">res/icons/icons8-fit-to-width.png</file>
     <file alias="REORIENTATION">res/icons/axes_reorient_64x64.png</file>
+
+    <file alias="LIGHTS">res/icons/icons8-Illumination.png</file>
+    <file alias="SCREENSHOT">res/icons/icons8-Screenshot.png</file>
+    <file alias="RESET_CAMERA">res/icons/icons8-Aperture.png</file>
+    <file alias="ORIENT_CAMERA">res/icons/icons8-orient-camera.png</file>
+
+    <file alias="MOVE_LEFT">res/icons/icons8-sort-left-80.png</file>
+    <file alias="MOVE_RIGHT">res/icons/icons8-sort-right-80.png</file>
+    <file alias="COPY_LEFT">res/icons/icons8-new-copy-80.png</file>
+    <file alias="COPY_RIGHT">res/icons/icons8-new-copy-80.png</file>
+
+    <file alias="TRANSFORM">res/icons/icons8-gyroscope-80.png</file>
+    <file alias="DETECT_FACE">res/icons/icons8-detect-face.png</file>
+
+    <file alias="LOAD">res/icons/icons8-open.png</file>
+    <file alias="LOAD_DIR">res/icons/icons8-open_dir.png</file>
+    <file alias="SAVE">res/icons/icons8-save.png</file>
+    <file alias="SAVE_AS">res/icons/icons8-save_as.png</file>
+    <file alias="CLOSE">res/icons/icons8-save-close.png</file>
+
+    <file alias="TEXTURE_VIS">res/icons/icons8-cloth-80.png</file>
+    <file alias="SURFACE_VIS">res/icons/icons8-mesh-filled-80.png</file>
+    <file alias="WIREFRAME_VIS">res/icons/icons8-mesh-80.png</file>
+    <file alias="POINTS_VIS">res/icons/icons8-mesh-dots-80.png</file>
+
+    <file alias="LANDMARKS">res/icons/icons8-landmarks.png</file>
 </qresource>
 </RCC>
+

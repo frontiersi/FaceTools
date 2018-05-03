@@ -18,16 +18,20 @@
 #ifndef FACE_TOOLS_SURFACE_MESHER_H
 #define FACE_TOOLS_SURFACE_MESHER_H
 
+/**
+ * Take a point cloud object (only vertices - at least three), and generate
+ * a polygonal triangulated surface mesh for it.
+ */
+
 #include "FaceTools_Export.h"
 #include <ObjModel.h>   // RFeatures
 
-namespace FaceTools
-{
+namespace FaceTools {
 
 class FaceTools_EXPORT SurfaceMesher
 {
 public:
-    explicit SurfaceMesher( RFeatures::ObjModel::Ptr);
+    explicit SurfaceMesher( RFeatures::ObjModel::Ptr);  // Takes an object without polygons - just vertices.
     RFeatures::ObjModel::Ptr getObject() const { return _model;}
 
     // Remesh the object returning the number of triangles added.

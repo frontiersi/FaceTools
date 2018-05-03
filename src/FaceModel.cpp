@@ -16,41 +16,31 @@
  ************************************************************************/
 
 #include <FaceModel.h>
-#include <CurvatureSpeedFunctor.h>
 #include <FaceTools.h>
+#include <ObjModelMover.h>  // RFeatures
 using FaceTools::FaceModel;
-using FaceTools::ObjMetaData;
+using RFeatures::ObjModelMover;
+using RFeatures::ObjModelKDTree;
 using RFeatures::ObjModel;
 
 
-// public
-FaceModel::FaceModel( ObjMetaData::Ptr md)
-: _omd(md), _cropRadiusFactor(1.0)
-{}   // end ctor
+void FaceModel::add( FaceControl* fc) {}// _fcs.insert(fc);}
+void FaceModel::remove( FaceControl* fc) {}// _fcs.erase(fc);}
 
 
 // public
-void FaceModel::setFilePath( const std::string& fpath)
+void FaceModel::transform( const cv::Matx44d& m)
 {
-    std::string oldpath = getFilePath();
-    _omd->setObjectFile( fpath);
-    if ( oldpath != fpath)
-        emit metaUpdated();
-}   // end setFilePath
+    _orientation.rotate(m); // Just use the rotation sub-matrix
+    const ObjModelMover mover(m);
+    mover( _model); // Adjust vertices of the model in-place
+    _landmarks.transform(m);    // Transform the landmarks
+    if ( _kdtree)   // Rebuild the KDtree if need be
+        _kdtree = ObjModelKDTree::create(_model);
+}   // end transform
 
 
-// public
-const std::string& FaceModel::getFilePath() const
-{
-    return _omd->getObjectFile();
-}   // end getFilePath
-
-
-// public
-const RFeatures::ObjModelCurvatureMetrics::Ptr FaceModel::getCurvatureMetrics() const { return _cmetrics;}
-
-
-// public
+/*
 const boost::unordered_map<int,double>* FaceModel::getUniformDistanceMap() const
 {
     if ( _udist == NULL)
@@ -59,7 +49,6 @@ const boost::unordered_map<int,double>* FaceModel::getUniformDistanceMap() const
 }   // end getUniformDistanceMap
 
 
-// public
 const boost::unordered_map<int,double>* FaceModel::getCurvDistanceMap() const
 {
     if ( _cdist == NULL)
@@ -67,67 +56,8 @@ const boost::unordered_map<int,double>* FaceModel::getCurvDistanceMap() const
     return &_cdist->getCrossings();
 }   // end getCurvDistanceMap
 
-
-// public
-bool FaceModel::updateLandmark( const std::string& lm, const cv::Vec3f* pos)
-{
-    bool noerr = true;
-    if ( pos != NULL)
-        _omd->setLandmark(lm, *pos);    // Set landmark with new position or add if not present
-    else if ( _omd->hasLandmark(lm))
-        _omd->deleteLandmark(lm);
-    else
-        noerr = false;
-
-    if ( noerr)
-        emit metaUpdated();
-    return noerr;
-}   // end updateLandmark
-
-
-// public
-void FaceModel::updateLandmark( const FaceTools::Landmarks::Landmark& lmk)
-{
-    _omd->setLandmark(lmk);
-    emit metaUpdated();
-}   // end updateLandmark
-
-
-// public
-void FaceModel::setCroppingRadius( double cropRadiusFactor)
-{
-    _cropRadiusFactor = cropRadiusFactor;
-    if ( _cropper)
-    {
-        const double radius = FaceTools::calcFaceCropRadius( _omd, cropRadiusFactor);
-        if ( radius > 0)
-            _cropper->adjustRadius( radius);
-    }   // end if
-}   // end setCroppingRadius
-
-
-// public
-const IntSet* FaceModel::getCroppingBoundary() const
-{
-    if ( _cropper)
-        return _cropper->getBoundary();
-    return NULL;
-}   // end getCroppingBoundary
-
-
-// public
-size_t FaceModel::getCroppingRegion( IntSet& fids) const
-{
-    if ( _cropper)
-        return _cropper->getCroppedFaces( fids);
-    return 0;
-}   // end getCroppingRegion
-
-
-// public
 void FaceModel::updateMesh( const ObjModel::Ptr model)
 {
-    std::cerr << "[INFO] FaceTools::FaceModel::updateMesh: Updating mesh...";
     _facalc.reset();
     _udist = NULL;
     _cdist = NULL;
@@ -136,44 +66,36 @@ void FaceModel::updateMesh( const ObjModel::Ptr model)
     _cmetrics = NULL;
     buildCurvature();
     buildDistanceMaps();
-    std::cerr << " done" << std::endl;
     emit meshUpdated();
-    emit metaUpdated();
 }   // end updateMesh
 
 
-// private
 void FaceModel::buildCurvature()
 {
     if ( _omd->getCurvatureMap() != NULL)
         return;
 
     // If nosetip landmark available, update the curvature metrics
-    if ( _omd->getObject() != NULL && _omd->hasLandmark( FaceTools::Landmarks::NASAL_TIP))
+    if ( _omd->getObject() != NULL && _omd->landmarks()->hasLandmark( FaceTools::Landmarks::NASAL_TIP))
     {
         const ObjModel::Ptr model = _omd->getObject();
-        const cv::Vec3f& v = _omd->getLandmark( FaceTools::Landmarks::NASAL_TIP);
+        const cv::Vec3f& v = _omd->landmarks()->getLandmark( FaceTools::Landmarks::NASAL_TIP);
         const int vidx = _omd->getKDTree()->find( v);
 
         _omd->rebuildCurvatureMap( vidx);
         const RFeatures::ObjModelCurvatureMap::Ptr cmap = _omd->getCurvatureMap();
         assert( cmap != NULL);
         _cmetrics = RFeatures::ObjModelCurvatureMetrics::create( cmap);
-
-        const cv::Vec3f fc = FaceTools::calcFaceCentre( _omd);  // Face centre
-        _cropper = RFeatures::ObjModelCropper::create( model, fc, vidx);
-        setCroppingRadius( _cropRadiusFactor);
     }   // end if
 }   // end buildCurvature
 
 
-// private
 void FaceModel::buildDistanceMaps()
 {
-    if ( _omd->getObject() == NULL || !_omd->hasLandmark( FaceTools::Landmarks::NASAL_TIP))
+    if ( _omd->getObject() == NULL || !_omd->landmarks()->hasLandmark( FaceTools::Landmarks::NASAL_TIP))
         return;
 
-    const cv::Vec3f& nt = _omd->getLandmark( FaceTools::Landmarks::NASAL_TIP);
+    const cv::Vec3f& nt = _omd->landmarks()->getLandmark( FaceTools::Landmarks::NASAL_TIP);
     const int vidx = _omd->getKDTree()->find( nt);
     const ObjModel::Ptr model = _omd->getObject();
 
@@ -185,7 +107,7 @@ void FaceModel::buildDistanceMaps()
         tparser.parse( fidx, cv::Vec3f(0,0,1));
     }   // end if
 
-    /*
+#ifndef NDEBUG
     // Check the angles
     const RFeatures::FaceAngles& fangles = _facalc.getFaceAngles();
     const IntSet& fids = model->getFaceIds();
@@ -199,7 +121,7 @@ void FaceModel::buildDistanceMaps()
         if ( fabs(v0 + v1 + v2 - CV_PI) > 0.0000001)
             std::cerr << "F_" << fid << ") " << v0 << ", " << v1 << ", " << v2 << std::endl;
     }   // end foreach
-    */
+#endif
 
     // Propagate from nose tip
     const RFeatures::ObjModelFastMarcher::SpeedFunctor uniformSpeedFunctor;
@@ -210,3 +132,4 @@ void FaceModel::buildDistanceMaps()
     _cdist = RFeatures::ObjModelFastMarcher::create( model, &curvSpeedFunctor, &_facalc.getFaceAngles());
     _cdist->propagateFront( vidx);
 }   // end buildDistanceMaps
+*/

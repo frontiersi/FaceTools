@@ -17,20 +17,23 @@
 
 #include <ModelViewer.h>
 #include <MiscFunctions.h>
-#include <FeatureUtils.h>                       // RFeatures
-#include <VtkTools.h>                           // RVTK
-#include <VtkActorCreator.h>                    // RVTK
-#include <ImageGrabber.h>                       // RVTK
-#include <PointPlacer.h>                        // RVTK
-#include <QImageTools.h>                        // QTools
-#include <vtkInteractorStyleTrackballCamera.h>
+#include <FeatureUtils.h>         // RFeatures
+#include <VtkTools.h>             // RVTK
+#include <VtkActorCreator.h>      // RVTK
+#include <ImageGrabber.h>         // RVTK
+#include <PointPlacer.h>          // RVTK
+#include <QImageTools.h>          // QTools
 #include <vtkMapper.h>
 #include <vtkProperty.h>
 #include <vtkSphereSource.h>
-#include <boost/foreach.hpp>
+#include <algorithm>
+#include <QLayout>
 using FaceTools::ModelViewer;
 using RFeatures::ObjModel;
 using RFeatures::CameraParams;
+using FaceTools::Interactor::MVI;
+using QTools::VtkViewerInteractorManager;
+using QTools::InteractionMode;
 
 
 // public
@@ -55,38 +58,31 @@ bool ModelViewer::axesShown() const { return _axes->isVisible();}
 void ModelViewer::updateRender() { _qviewer->updateRender();}
 void ModelViewer::showLegend( bool enable) { _scalarLegend->setVisible(enable); }
 
+void ModelViewer::setInteractionMode( InteractionMode m) { _interactor->setInteractionMode( m);}
+InteractionMode ModelViewer::interactionMode() const { return _interactor->interactionMode();}
 
-// private
-void ModelViewer::init()
+void ModelViewer::setInteractionLocked( bool v) { _interactor->setInteractionLocked(v);}
+bool ModelViewer::isInteractionLocked() const { return _interactor->isInteractionLocked();}
+
+QPoint ModelViewer::getMouseCoords() const { return _interactor->getMouseCoords();}
+QPoint ModelViewer::mapToGlobal( const QPoint& p) const { return _qviewer->mapToGlobal(p);}
+
+
+// public
+ModelViewer::ModelViewer( bool floodFill)
+    : _qviewer( new QTools::VtkActorViewer( NULL)), _interactor(NULL), _scalarLegend(NULL), _axes(NULL),
+      _floodLightsEnabled(floodFill), _addedModelID(0)
 {
+    _interactor = new VtkViewerInteractorManager(_qviewer);   // Interactor management on _qviewer
     _scalarLegend = new RVTK::ScalarLegend( _qviewer->getRenderWindow()->GetInteractor());
     _axes = new RVTK::Axes( _qviewer->getRenderWindow()->GetInteractor());
     showAxes(false);
     showLegend(false);
     enableFloodLights( _floodLightsEnabled);
-}   // end init
 
-
-// public
-ModelViewer::ModelViewer( bool floodFill)
-    : _qviewer( new QTools::VtkActorViewer( NULL)), _scalarLegend(NULL), _axes(NULL),
-      _dodel(true), _floodLightsEnabled(floodFill), _addedModelID(0)
-{
-    vtkObject::GlobalWarningDisplayOff();   // Prevent GUI error warning pop-ups
     vtkSmartPointer<vtkRenderer> renderer = _qviewer->getRenderer();
     renderer->SetGradientBackground(false);
     renderer->SetBackground(0,0,0);
-    _qviewer->setInteractor( vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New());
-    init();
-}   // end ctor
-
-
-// public
-ModelViewer::ModelViewer( QTools::VtkActorViewer* viewer)
-    : _qviewer( viewer), _scalarLegend(NULL), _axes(NULL), _dodel(false),
-      _floodLightsEnabled(false), _addedModelID(0)
-{
-    init();
 }   // end ctor
 
 
@@ -95,9 +91,43 @@ ModelViewer::~ModelViewer()
 {
     delete _axes;
     delete _scalarLegend;
-    if ( _dodel)
-        delete _qviewer;
+    delete _interactor;
+    delete _qviewer;
 }   // end dtor
+
+
+// public
+bool ModelViewer::isAttached( MVI* iface) const
+{
+    return (iface->viewer() == this) && (_interactor->interactors().count(iface) > 0);
+}   // isAttached
+
+
+// public
+bool ModelViewer::attachInteractor( MVI* iface)
+{
+    assert( iface);
+    if ( iface->viewer() == NULL) // Interactors cannot be already attached elsewhere.
+        return false;
+    _interactor->addInteractor( iface);
+    return true;
+}   // end attachInteractor
+
+
+// public
+bool ModelViewer::detachInteractor( MVI* iface)
+{
+    assert( iface);
+    if ( !isAttached(iface))
+        return false;
+    _interactor->removeInteractor( iface);
+    return true;
+}   // end detachInteractor
+
+
+// public
+void ModelViewer::addToLayout( QLayout* layout) { layout->addWidget(_qviewer);}
+void ModelViewer::removeFromLayout( QLayout* layout) { layout->removeWidget(_qviewer);}
 
 
 // public
@@ -112,7 +142,7 @@ const vtkProp* ModelViewer::getPointedAt( const cv::Point& p) const { return _qv
 void ModelViewer::setCursor( QCursor cursor) { _qviewer->setCursor(cursor);}
 void ModelViewer::add( const vtkProp* prop) { _qviewer->add(prop);}
 void ModelViewer::remove( const vtkProp* prop) { _qviewer->remove(prop);}
-int ModelViewer::getNumLegendColours() const { return _scalarLegend->getNumColours();}
+size_t ModelViewer::getNumLegendColours() const { return _scalarLegend->getNumColours();}
 void ModelViewer::setCamera( const CameraParams& cp) { _qviewer->setCamera( cp);}
 size_t ModelViewer::getWidth() const { return _qviewer->getWidth();}
 size_t ModelViewer::getHeight() const { return _qviewer->getHeight();}
@@ -144,13 +174,13 @@ const vtkProp* ModelViewer::getPointedAt( const QPoint& q) const
 
 
 // public
-bool ModelViewer::getPointedAt( const QPoint& q, const vtkActor* actor) const
+bool ModelViewer::getPointedAt( const QPoint* q, const vtkActor* actor) const
 {
-    if ( !actor)
+    if ( !q || !actor)
         return false;
     std::vector<vtkActor*> pactors(1);
     pactors[0] = const_cast<vtkActor*>(actor);
-    const cv::Point p(q.x(), q.y());
+    const cv::Point p(q->x(), q->y());
     return _qviewer->pickActor( p, pactors) == actor;
 }   // end getPointedAt
 
@@ -187,15 +217,15 @@ int ModelViewer::add( const ObjModel::Ptr model, const ModelViewer::VisOptions& 
 {
     // If a textured model was selected but the model has no texture, set the wireframe visualisation instead.
     ModelViewer::Visualisation mvis = vo.vis;
-    if ( mvis == VisTexture && model->getNumMaterials() == 0)
+    if ( mvis == TEXTURE_VISUALISATION && model->getNumMaterials() == 0)
     {
         std::cerr << "ModelViewer: Texture visualisation requested but texture not present!" << std::endl;
-        mvis = VisWireframe;
+        mvis = WIREFRAME_VISUALISATION;
     }   // end if
 
     RVTK::VtkActorCreator actorCreator;
     vtkSmartPointer<vtkActor> actor;
-    if ( mvis == VisTexture)
+    if ( mvis == TEXTURE_VISUALISATION)
     {
         std::vector<vtkSmartPointer<vtkActor> > actors;
         actorCreator.generateTexturedActors( model, actors);
@@ -207,13 +237,13 @@ int ModelViewer::add( const ObjModel::Ptr model, const ModelViewer::VisOptions& 
         actor = actorCreator.generateSurfaceActor( model);
         switch ( mvis)
         {
-            case VisPoints:
+            case POINTS_VISUALISATION:
                 actor->GetProperty()->SetRepresentationToPoints();
                 break;
-            case VisWireframe:
+            case WIREFRAME_VISUALISATION:
                 actor->GetProperty()->SetRepresentationToWireframe();
                 break;
-            case VisSurface:
+            case SURFACE_VISUALISATION:
                 actor->GetProperty()->SetRepresentationToSurface();
                 break;
         }   // end switch
@@ -264,7 +294,7 @@ void ModelViewer::setLegendLookup( vtkMapper* mapper, const std::string& ltitle,
 
 
 // public
-void ModelViewer::setLegendColours( const cv::Vec3b& col0, const cv::Vec3b& col1, int ncols)
+void ModelViewer::setLegendColours( const cv::Vec3b& col0, const cv::Vec3b& col1, size_t ncols)
 {
     const vtkColor3ub minCol( col0[0], col0[1], col0[2]);
     const vtkColor3ub maxCol( col1[0], col1[1], col1[2]);
@@ -273,7 +303,7 @@ void ModelViewer::setLegendColours( const cv::Vec3b& col0, const cv::Vec3b& col1
 
 
 // public
-void ModelViewer::setLegendColours( const QColor& col0, const QColor& col1, int ncols)
+void ModelViewer::setLegendColours( const QColor& col0, const QColor& col1, size_t ncols)
 {
     const cv::Vec3b cvcol0( col0.red(), col0.green(), col0.blue());
     const cv::Vec3b cvcol1( col1.red(), col1.green(), col1.blue());
@@ -282,7 +312,7 @@ void ModelViewer::setLegendColours( const QColor& col0, const QColor& col1, int 
 
 
 // public
-void ModelViewer::setLegendColours( const cv::Vec3b& col0, const cv::Vec3b& col1, const cv::Vec3b& col2, int ncols0, int ncols1)
+void ModelViewer::setLegendColours( const cv::Vec3b& col0, const cv::Vec3b& col1, const cv::Vec3b& col2, size_t ncols0, size_t ncols1)
 {
     const vtkColor3ub c0( col0[0], col0[1], col0[2]);
     const vtkColor3ub c1( col1[0], col1[1], col1[2]);
@@ -292,7 +322,7 @@ void ModelViewer::setLegendColours( const cv::Vec3b& col0, const cv::Vec3b& col1
 
 
 // public
-void ModelViewer::setLegendColours( const QColor& col0, const QColor& col1, const QColor& col2, int ncols0, int ncols1)
+void ModelViewer::setLegendColours( const QColor& col0, const QColor& col1, const QColor& col2, size_t ncols0, size_t ncols1)
 {
     const vtkColor3ub c0( col0.red(), col0.green(), col0.blue());
     const vtkColor3ub c1( col1.red(), col1.green(), col1.blue());
@@ -305,7 +335,7 @@ void ModelViewer::setLegendColours( const QColor& col0, const QColor& col1, cons
 int ModelViewer::addPointsActor( vtkSmartPointer<vtkActor> actor, const ModelViewer::VisOptions& vo, bool asSpheres)
 {
     actor->GetProperty()->SetRepresentationToPoints();
-    actor->GetProperty()->SetRenderPointsAsSpheres( asSpheres && vo.pointSize >= 2.0f);
+    //actor->GetProperty()->SetRenderPointsAsSpheres( asSpheres && vo.pointSize >= 2.0f);
     actor->GetProperty()->SetPointSize( vo.pointSize);
     actor->GetProperty()->SetColor( vo.r, vo.g, vo.b);
     actor->GetProperty()->SetOpacity( vo.a);
@@ -351,12 +381,11 @@ int ModelViewer::addPoints( const ObjModel::Ptr model, const ModelViewer::VisOpt
 }   // end addPoints
 
 
-int ModelViewer::addPoints( const ObjModel::Ptr model, const IntSet& vidxs, const ModelViewer::VisOptions& vo, bool asSpheres)
+int ModelViewer::addPoints( const ObjModel::Ptr model, const std::unordered_set<int>& vidxs, const ModelViewer::VisOptions& vo, bool asSpheres)
 {
-    std::vector<cv::Vec3f> vpts(vidxs.size());
     int i = 0;
-    BOOST_FOREACH ( int vidx, vidxs)
-        vpts[i++] = model->vtx(vidx);
+    std::vector<cv::Vec3f> vpts(vidxs.size());
+    std::for_each( std::begin(vidxs), std::end(vidxs), [&](int vidx){ vpts[i++] = model->vtx(vidx);});
     return addPoints( vpts, vo, asSpheres);
 }   // end addPoints
 
@@ -414,9 +443,7 @@ bool ModelViewer::remove( int modelID)
 
 void ModelViewer::removeAll()
 {
-    typedef std::pair<int, vtkProp*> PPair;
-    BOOST_FOREACH ( PPair ppair, _props)
-        remove( ppair.second);
+    std::for_each( std::begin(_props), std::end(_props), [this]( auto& pp){ this->remove(pp.second);});
     _props.clear();
 }   // end removeAll
 
@@ -470,11 +497,7 @@ void ModelViewer::fitCamera( double radius)
 }   // end fitCamera
 
 
-void ModelViewer::showSnapshot( bool waitForInput)
+cv::Mat_<cv::Vec3b> ModelViewer::grabImage() const
 {
-    updateRender();
-    RVTK::ImageGrabber imgGrabber( _qviewer->GetRenderWindow());
-    imgGrabber.update();
-    RFeatures::showImage( imgGrabber.getColourMap(), "SNAPSHOT", waitForInput);
-}   // end showSnapshot
-
+    return RVTK::ImageGrabber( _qviewer->GetRenderWindow()).colour();
+}   // end grabImage
