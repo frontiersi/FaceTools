@@ -75,11 +75,11 @@ void FaceActionManager::connectActionPair( FaceAction* ract, FaceAction* cact)
 }   // end connectActionPair
 
 
-namespace {
-void printActionComms( const FaceAction* fa)
+// private
+void FaceActionManager::printActionComms( std::ostream& os, const FaceAction* fa) const
 {
-    std::cerr << std::endl;
-    std::cerr << " +++ \"" << fa->getDisplayName().remove(QChar('&')).toStdString() << "\" +++" << std::endl;
+    os << std::endl;
+    os << fa->debugActionName() << std::endl;
 
     const ChangeEventSet& re = fa->respondEvents();
     const ChangeEventSet& ce = fa->changeEvents();
@@ -99,10 +99,9 @@ void printActionComms( const FaceAction* fa)
             oss << " <";
         else
             oss << "  ";
-        std::cerr << std::setw(40) << oss.str() << std::endl;
+        os << std::setw(40) << oss.str() << std::endl;
     }   // end for
 }   // end printActionComms
-}   // end namespace
 
 
 // public
@@ -122,23 +121,29 @@ QAction* FaceActionManager::addAction( FaceAction* faction)
         connectActionPair(  action, faction);
     }   // end for
 
-    printActionComms( faction);
     _actions.insert( faction);
     return faction->qaction();
 }   // end addAction
 
 
+// public
+void FaceActionManager::printActionInfo( std::ostream& os) const
+{
+    std::for_each( std::begin(_actions), std::end(_actions), [&](auto a){ this->printActionComms(os, a);});
+}   // end printActionInfo
+
+
 // public slot
 void FaceActionManager::setSelected( FaceControl* fc, bool v)
 {
-    std::for_each( std::begin(_actions), std::end(_actions), [=]( FaceAction* a){ a->setSelected( fc, v);});
+    std::for_each( std::begin(_actions), std::end(_actions), [=](auto a){ a->setSelected( fc, v);});
 }   // end setSelected
 
 
 // public slot
 void FaceActionManager::remove( FaceControl* fc)
 {
-    std::for_each( std::begin(_actions), std::end(_actions), [=]( FaceAction* a){ a->burn( fc);});
+    std::for_each( std::begin(_actions), std::end(_actions), [=](auto a){ a->burn( fc);});
 }   // end remove
 
 
@@ -170,16 +175,16 @@ void FaceActionManager::doOnActionStarting( const FaceControlSet* workSet)
     assert(workSet);
     FaceAction* sending = qobject_cast<FaceAction*>(sender());
     assert(sending);
-    std::for_each( _actions.begin(), _actions.end(), [=]( auto a){ if ( a->isDisabledBeforeOther()) a->setEnabled(false);});
+    std::for_each( std::begin(_actions), std::end(_actions), [=](auto a){ if ( a->isDisabledBeforeOther()) a->setEnabled(false);});
     emit reportStarting( *sending, *workSet);
 }   // end doOnActionStarting
 
 
 // private slot
-void FaceActionManager::doOnActionFinished( const FaceControlSet* workedSet)
+void FaceActionManager::doOnActionFinished( const FaceControlSet* wset)
 {
-    if ( !workedSet)    // Don't do anything if the action cancelled, just re-enable others (don't check ready set membership)
-        std::for_each( std::begin(_actions), std::end(_actions), [=]( auto a){ a->setEnabled(a->testEnabled());});
+    if ( !wset)    // Don't do anything if the action cancelled, just re-enable others (don't check ready set membership)
+        std::for_each( std::begin(_actions), std::end(_actions), [=](auto a){ a->setEnabled(a->testEnabled());});
     else
     {
         FaceAction* sending = qobject_cast<FaceAction*>(sender());
@@ -189,8 +194,8 @@ void FaceActionManager::doOnActionFinished( const FaceControlSet* workedSet)
         for ( FaceAction* a : _actions)
         {
             if ( a != sending)  // Sending action rechecks its ready set first (see FaceAction::doOnActionFinished).
-                std::for_each( std::begin(*workedSet), std::end(*workedSet), [&]( auto fc){ a->setSelected( fc, true);});
+                std::for_each( std::begin(*wset), std::end(*wset), [&](auto fc){ a->setSelected( fc, true);});
         }   // end for
-        emit reportFinished( *sending, *workedSet);
+        emit reportFinished( *sending, *wset);
     }   // end else
 }   // end doOnActionFinished

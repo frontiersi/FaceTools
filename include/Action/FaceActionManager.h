@@ -58,6 +58,8 @@ public:
     QDialog* dialog() { return _pdialog;}   // Get a standard dialog which shows the loaded plugins.
     QAction* addAction( FaceAction*);       // Returns the added action's internal QAction if added okay (duplicate instances not allowed).
 
+    void printActionInfo( std::ostream& os) const;
+
 public slots:
     void setSelected( FaceControl*, bool);  // Forwards through to all actions - always call in GUI thread!
     void remove( FaceControl*);             // Cause all FaceActions to discard any data concerning the FaceControl.
@@ -82,6 +84,7 @@ private:
     QTools::PluginsDialog *_pdialog;
     std::unordered_set<FaceAction*> _actions;
     void connectActionPair( FaceAction*, FaceAction*);
+    void printActionComms( std::ostream&, const FaceAction*) const;
     FaceActionManager( const FaceActionManager&);   // No copy
     void operator=( const FaceActionManager&);      // No copy
 };  // end class
