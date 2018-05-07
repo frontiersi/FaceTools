@@ -21,24 +21,25 @@
 /**
  * Deals with messages relating to position of the mouse cursor as it moves over a face model.
  * Handy for actions needing to enable/disable themselves depending upon where the mouse is.
+ * This interactor should only be attached to FaceModelViewer types (not base ModelViewer
+ * types) - since it requires FaceModelViewer::attached.
  */
 
 #include "ModelViewerInteractor.h"
-#include <FaceModelViewer.h>
+#include <FaceControl.h>
 
 namespace FaceTools {
+class FaceModelViewer;
+
 namespace Interactor {
 
-class FaceTools_EXPORT FaceEntryExitInteractor : public QObject, public ModelViewerInteractor
+class FaceTools_EXPORT FaceEntryExitInteractor : public ModelViewerInteractor
 { Q_OBJECT
 public:
-    explicit FaceEntryExitInteractor( FaceModelViewer*);
+    FaceEntryExitInteractor();
 
-    // Model the cursor is currently over (NULL if none).
-    inline FaceControl* currentModel() const { return _mnow;}
-
-    // Landmark the cursor is currently over (-1 if none).
-    inline int currentLandmark() const { return _lnow;}
+    inline FaceControl* model() const { return _mnow;} // Model cursor is currently over (NULL if none).
+    inline int landmark() const { return _lnow;}       // Landmark cursor is over (-1 if none).
 
 signals:
     void onEnterModel( FaceControl*);
@@ -49,16 +50,23 @@ signals:
     void onEnterLandmark( FaceControl*, int lmkId);
     void onLeaveLandmark( FaceControl*, int lmkId);
 
+protected:
+    void onAttached() override;
+    void onDetached() override;
+
 private:
-    const FaceModelViewer* _viewer;
+    FaceModelViewer* _viewer;
     FaceControl* _mnow;
     int _lnow;
 
-    void mouseMove( const QPoint&) override;
-    void middleDrag( const QPoint&) override;
-    void rightDrag( const QPoint&) override;
-    void leftDrag( const QPoint&) override;
-    void testPoint( const QPoint&);
+    void testLeaveLandmark( FaceControl*, int);
+    void testLeaveModel();
+
+    bool mouseMove( const QPoint&) override;
+    bool middleDrag( const QPoint&) override;
+    bool rightDrag( const QPoint&) override;
+    bool leftDrag( const QPoint&) override;
+    bool testPoint( const QPoint&);
 };  // end class
 
 }   // end namespace

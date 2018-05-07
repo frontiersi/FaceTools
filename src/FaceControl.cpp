@@ -58,7 +58,12 @@ void FaceControl::fixTransformFromView()
 
 
 // public
-void FaceControl::setViewer( FaceModelViewer* v) { _fview->setViewer(v);}
+void FaceControl::setViewer( FaceModelViewer* v)
+{
+    _fview->setViewer(v);
+}   // end setViewer
+
+
 FaceModelViewer* FaceControl::viewer() const { return static_cast<FaceModelViewer*>(_fview->viewer());}
 
 

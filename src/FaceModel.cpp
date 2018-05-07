@@ -24,8 +24,13 @@ using RFeatures::ObjModelKDTree;
 using RFeatures::ObjModel;
 
 
-void FaceModel::add( FaceControl* fc) {}// _fcs.insert(fc);}
-void FaceModel::remove( FaceControl* fc) {}// _fcs.erase(fc);}
+// public
+void FaceModel::setModel( ObjModel::Ptr m)
+{
+    _model = m;
+    _kdtree = ObjModelKDTree::create(m);
+    FaceTools::translateLandmarksToSurface( _kdtree, _landmarks);   // Ensure landmarks remapped to surface
+}   // end setModel
 
 
 // public
@@ -35,8 +40,7 @@ void FaceModel::transform( const cv::Matx44d& m)
     const ObjModelMover mover(m);
     mover( _model); // Adjust vertices of the model in-place
     _landmarks.transform(m);    // Transform the landmarks
-    if ( _kdtree)   // Rebuild the KDtree if need be
-        _kdtree = ObjModelKDTree::create(_model);
+    setModel(_model);
 }   // end transform
 
 

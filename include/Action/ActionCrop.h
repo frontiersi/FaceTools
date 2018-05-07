@@ -15,35 +15,40 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_SAVE_AS_FACE_MODEL_H
-#define FACE_TOOLS_ACTION_SAVE_AS_FACE_MODEL_H
+#ifndef FACE_TOOLS_ACTION_CROP_H
+#define FACE_TOOLS_ACTION_CROP_H
 
-#include "FaceAction.h"
-#include <FaceModelManager.h>
-#include <QWidget>
+#include <ActionVisualise.h>
+#include <BoundaryVisualisation.h>
+#include <RadialSelectInteractor.h>
+#include <QStatusBar>
 
 namespace FaceTools {
 namespace Action {
 
-class FaceTools_EXPORT ActionSaveAsFaceModel : public FaceAction
+class FaceTools_EXPORT ActionCrop : public FaceAction
 { Q_OBJECT
 public:
-    ActionSaveAsFaceModel( FileIO::FaceModelManager*, QWidget *parent=NULL);
+    explicit ActionCrop( QStatusBar*);
+    ~ActionCrop() override;
 
-    QString getDisplayName() const override { return "Save &As";}
+    ActionVisualise* visualiser() { return _vact;}  // Return the visualisation action.
+
+    QString getDisplayName() const override { return "Crop";}
     const QIcon* getIcon() const override { return &_icon;}
 
 protected slots:
-    bool testEnabled() override { return readyCount() == 1;}    // Only enabled for a single selected FaceControl
-    bool doBeforeAction( FaceControlSet&) override;
+    bool testReady( FaceControl* fc) override;
+    bool testEnabled() const { return readyCount() == 1;}   // Only enabled for single selections
+    void tellReady( FaceControl*, bool) override;
     bool doAction( FaceControlSet&) override;
-    void doAfterAction( const FaceControlSet&, bool) override;
 
 private:
-    FileIO::FaceModelManager *_fmm;
-    QWidget *_parent;
     QIcon _icon;
-    std::string _filename;
+    QStatusBar *_sbar;
+    Vis::BoundaryVisualisation *_bvis;
+    ActionVisualise *_vact;
+    Interactor::RadialSelectInteractor *_interactor;
 };  // end class
 
 }   // end namespace

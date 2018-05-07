@@ -15,31 +15,32 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_SET_FOCUS_H
-#define FACE_TOOLS_ACTION_SET_FOCUS_H
+#include <ContextMenuInteractor.h>
+#include <ModelViewer.h>
+using FaceTools::Interactor::ContextMenuInteractor;
 
-#include "FaceAction.h"
-#include <FaceEntryExitInteractor.h>
 
-namespace FaceTools {
-namespace Action {
+// public
+ContextMenuInteractor::ContextMenuInteractor( QMenu* cm)
+{
+    setContextMenu(cm);
+}   // end ctor
 
-class FaceTools_EXPORT ActionSetFocus : public FaceAction
-{ Q_OBJECT
-public:
-    ActionSetFocus();
 
-    QString getDisplayName() const override { return "Set Focus";}
+void ContextMenuInteractor::setContextMenu( QMenu* cm) { _cmenu = cm;}
 
-protected slots:
-    bool testReady( FaceControl*) override;
-    bool doAction( FaceControlSet&) override;
 
-private:
-    Interactor::FaceEntryExitInteractor _interactor;
-};  // end class
-
-}   // end namespace
-}   // end namespace
-
-#endif
+bool ContextMenuInteractor::rightButtonDown( const QPoint& p)
+{
+    bool swallowed = false;
+    if ( _cmenu)
+    {
+        const vtkProp* prop = viewer()->getPointedAt(p);
+        if ( prop && const_cast<vtkProp*>(prop)->GetPickable())
+        {
+            swallowed = true;
+            _cmenu->exec( viewer()->mapToGlobal(p));
+        }   // end if
+    }   // end if
+    return swallowed;
+}   // end rightButtonDown

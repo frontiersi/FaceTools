@@ -27,7 +27,8 @@
 #include <vtkProperty.h>
 #include <vtkSphereSource.h>
 #include <algorithm>
-#include <QLayout>
+#include <cassert>
+#include <QVBoxLayout>
 using FaceTools::ModelViewer;
 using RFeatures::ObjModel;
 using RFeatures::CameraParams;
@@ -58,22 +59,12 @@ bool ModelViewer::axesShown() const { return _axes->isVisible();}
 void ModelViewer::updateRender() { _qviewer->updateRender();}
 void ModelViewer::showLegend( bool enable) { _scalarLegend->setVisible(enable); }
 
-void ModelViewer::setInteractionMode( InteractionMode m) { _interactor->setInteractionMode( m);}
-InteractionMode ModelViewer::interactionMode() const { return _interactor->interactionMode();}
-
-void ModelViewer::setInteractionLocked( bool v) { _interactor->setInteractionLocked(v);}
-bool ModelViewer::isInteractionLocked() const { return _interactor->isInteractionLocked();}
-
-QPoint ModelViewer::getMouseCoords() const { return _interactor->getMouseCoords();}
-QPoint ModelViewer::mapToGlobal( const QPoint& p) const { return _qviewer->mapToGlobal(p);}
-
 
 // public
-ModelViewer::ModelViewer( bool floodFill)
-    : _qviewer( new QTools::VtkActorViewer( NULL)), _interactor(NULL), _scalarLegend(NULL), _axes(NULL),
+ModelViewer::ModelViewer( QWidget* parent, bool floodFill)
+    : QWidget(parent), _qviewer( new QTools::VtkActorViewer( NULL)), _scalarLegend(NULL), _axes(NULL),
       _floodLightsEnabled(floodFill), _addedModelID(0)
 {
-    _interactor = new VtkViewerInteractorManager(_qviewer);   // Interactor management on _qviewer
     _scalarLegend = new RVTK::ScalarLegend( _qviewer->getRenderWindow()->GetInteractor());
     _axes = new RVTK::Axes( _qviewer->getRenderWindow()->GetInteractor());
     showAxes(false);
@@ -83,6 +74,10 @@ ModelViewer::ModelViewer( bool floodFill)
     vtkSmartPointer<vtkRenderer> renderer = _qviewer->getRenderer();
     renderer->SetGradientBackground(false);
     renderer->SetBackground(0,0,0);
+
+    setLayout(new QVBoxLayout);
+    layout()->setContentsMargins( QMargins(0,0,0,0));
+    addToLayout( layout());
 }   // end ctor
 
 
@@ -91,7 +86,6 @@ ModelViewer::~ModelViewer()
 {
     delete _axes;
     delete _scalarLegend;
-    delete _interactor;
     delete _qviewer;
 }   // end dtor
 
@@ -99,30 +93,51 @@ ModelViewer::~ModelViewer()
 // public
 bool ModelViewer::isAttached( MVI* iface) const
 {
-    return (iface->viewer() == this) && (_interactor->interactors().count(iface) > 0);
-}   // isAttached
+    bool attached = _interactors.count(iface) > 0;
+#ifndef NDEBUG
+    if (attached)
+    {
+        assert( iface->viewer() == this);
+        assert(_qviewer->isAttached(iface));
+    }   // end if
+    else
+    {
+        assert( iface->viewer() != this);
+        assert(!_qviewer->isAttached(iface));
+    }   // end else
+#endif
+    return attached;
+}   // end iface
 
 
-// public
-bool ModelViewer::attachInteractor( MVI* iface)
+size_t ModelViewer::transferInteractors( ModelViewer *tv)
 {
-    assert( iface);
-    if ( iface->viewer() == NULL) // Interactors cannot be already attached elsewhere.
-        return false;
-    _interactor->addInteractor( iface);
-    return true;
-}   // end attachInteractor
+    if ( tv == this)
+        return 0;
+    std::unordered_set<MVI*> cinteractors = _interactors;   // Copy out since moving
+    for ( MVI* mvi : cinteractors)
+        mvi->setViewer(tv);
+    return cinteractors.size();
+}   // end transferInteractors
 
 
-// public
-bool ModelViewer::detachInteractor( MVI* iface)
+// protected (called by MVI from calls to MVI::setViewer())
+bool ModelViewer::attach( MVI* iface)
 {
-    assert( iface);
-    if ( !isAttached(iface))
-        return false;
-    _interactor->removeInteractor( iface);
-    return true;
-}   // end detachInteractor
+    bool ok = _qviewer->attach(iface);
+    if ( ok)
+        _interactors.insert(iface);
+    return ok;
+}   // end attach
+
+
+bool ModelViewer::detach( MVI* iface)
+{
+    bool ok = _qviewer->detach(iface);
+    if ( ok)
+        _interactors.erase(iface);
+    return ok;
+}   // end detach
 
 
 // public

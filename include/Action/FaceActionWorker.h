@@ -23,6 +23,8 @@
 #include <QThread>
 
 namespace FaceTools {
+class FaceControlSet;
+
 namespace Action {
 
 class FaceAction;
@@ -30,7 +32,7 @@ class FaceAction;
 class FaceTools_EXPORT FaceActionWorker : public QThread
 { Q_OBJECT
 public:
-    explicit FaceActionWorker( FaceAction*);
+    FaceActionWorker( FaceAction*, FaceControlSet*);
     void run() override;
 
 signals:
@@ -38,6 +40,7 @@ signals:
 
 private:
     FaceAction* _worker;
+    FaceControlSet* _rset;
 };  // end class
 
 }   // end namespace

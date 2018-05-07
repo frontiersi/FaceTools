@@ -47,11 +47,9 @@ using RFeatures::Orientation;
 using RFeatures::ObjModelKDTree;
 using RVTK::ImageGrabber;
 
-/*
 #ifndef NDEBUG
 #define SHOW_DEBUG
 #endif
-*/
 
 namespace {
 
@@ -63,8 +61,7 @@ cv::Mat_<cv::Vec3b> snapshot( RVTK::Viewer::Ptr viewer, auto fpts)
     cv::Mat_<cv::Vec3b> cmap = snapshot(viewer);
     std::vector<cv::Point> pts;
     std::for_each( std::begin(fpts), std::end(fpts), [&](auto f){ pts.push_back( cv::Point(f.x*cmap.cols, f.y*cmap.rows));});
-    //std::for_each( std::begin(pts),  std::end(pts),  [&](auto p){ std::cerr << p << std::endl;});
-    RFeatures::drawPoly( pts, cmap, cv::Scalar(255,255,255));
+    RFeatures::drawPoly( pts, cmap, cv::Scalar(255,100,100));
     return cmap;
 }   // end snapshot
 
@@ -193,8 +190,8 @@ std::string findOrientationPoints( RVTK::Viewer::Ptr viewer, const ObjModelKDTre
         pts.push_back( rpicker.projectToImagePlane( m1->vtx(m1LeftEyeVidx)));
         pts.push_back( rpicker.projectToImagePlane( m1->vtx(m1RightEyeVidx)));
         pts.push_back( rpicker.projectToImagePlane( ntip));
-        RFeatures::drawPoly( pts, dmat, cv::Scalar(255,255,255));
-        RFeatures::showImage( dmat, "Discovered orientation points (key to continue)", true);
+        RFeatures::drawPoly( pts, dmat, cv::Scalar(100,100,255));
+        RFeatures::showImage( dmat, "Discovered orientation points", false);
 #endif
     }   // end if
     else
@@ -251,13 +248,11 @@ bool FaceDetector::detect( ObjModelKDTree::Ptr kdt, Orientation& on, LandmarkSet
     }   // end if
 
     _err = "";
-
     _viewer->setCamera( RFeatures::CameraParams( cv::Vec3f( 0, 0, _orng)));    // Default camera for detecting orientation
-
     RVTK::VtkActorCreator actorCreator;
-    std::vector<vtkSmartPointer<vtkActor> > actors;
-    actorCreator.generateTexturedActors( kdt->getObject(), actors);
-    std::for_each( std::begin(actors), std::end(actors), [this]( auto actor){ _viewer->addActor(actor);});
+    _actors.clear();
+    actorCreator.generateTexturedActors( kdt->getObject(), _actors);
+    std::for_each( std::begin(_actors), std::end(_actors), [this](auto a){ _viewer->addActor(a);});
     _viewer->resetClippingRange();
     _viewer->updateRender();
 
@@ -265,10 +260,7 @@ bool FaceDetector::detect( ObjModelKDTree::Ptr kdt, Orientation& on, LandmarkSet
     RFeatures::showImage( snapshot(_viewer), "Detection Image Pre Orientation Discovery", false);
 #endif
     if ( !findOrientation( kdt, on, lset))
-    {
-        std::cerr << _err << std::endl;
-        return false;
-    }   // end if
+        return cleanUp();
 
     using namespace FaceTools::Landmarks;
     // Update the view to focus on the identified face centre using the landmark detection range.
@@ -280,16 +272,24 @@ bool FaceDetector::detect( ObjModelKDTree::Ptr kdt, Orientation& on, LandmarkSet
     RFeatures::showImage( snapshot(_viewer), "Detection Image Post Orientation", false);
 #endif
     if ( !FaceShapeLandmarks2DDetector::detect( _viewer, lset))
-    {
-        _err = "Complete set of landmarks not found.";
-        std::cerr << _err << std::endl;
-        return false;
-    }   // end if
+        return cleanUp( "Complete set of landmarks not found.");
 
     // VTK's projection of landmarks to model surface is not very accurate, so shift them to be incident with the surface.
     FaceTools::translateLandmarksToSurface( kdt, lset);
-    return true;
+    return cleanUp();
 }   // end detect
+
+
+bool FaceDetector::cleanUp( std::string err)
+{
+    _err = err;
+    std::cerr << _err << std::endl;
+    std::for_each( std::begin(_actors), std::end(_actors), [this](auto a){ _viewer->removeActor(a);});
+    return err.empty();
+}   // end cleanUp
+
+
+bool FaceDetector::cleanUp() { return cleanUp(_err);}
 
 
 // static initialise

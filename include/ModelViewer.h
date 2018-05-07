@@ -19,7 +19,7 @@
 #define FACE_TOOLS_MODEL_VIEWER_H
 
 #include <ModelViewerInteractor.h>
-#include <VtkViewerInteractorManager.h> // QTools
+#include <VtkActorViewer.h> // QTools
 #include <ScalarLegend.h>   // RVTK
 #include <Axes.h>           // RVTK
 #include <ObjModel.h>       // RFeatures
@@ -30,18 +30,31 @@
 
 namespace FaceTools {
 
-class FaceTools_EXPORT ModelViewer
-{
+class FaceTools_EXPORT ModelViewer : public QWidget
+{ Q_OBJECT
 public:
-    explicit ModelViewer( bool useFloodLights=true);
+    ModelViewer( QWidget* parent=NULL, bool useFloodLights=true);
     virtual ~ModelViewer();
 
-    // Interactor::ModelViewerInteractor (MVI) calls the attach and detach functions - passing in themselves.
-    // Multiple different MVI instances (even of the same type) can be attached at once to this
-    // viewer, but each instance can only be attached to a single viewer.
-    bool attachInteractor( Interactor::MVI*);  // Attach interactor returning true if interactor wasn't previously attached (to any viewer).
-    bool detachInteractor( Interactor::MVI*);  // Detach an interactor returning true if it was present on this viewer and is now detached.
-    bool isAttached( Interactor::MVI*) const;  // Check if this viewer has the given interactor attached to it.
+    // Interactor::ModelViewerInteractor (MVI) calls the protected attach and detach functions. Multiple different
+    // MVI instances (even of the same type) can be attached at once to this viewer, but MVI instances can only
+    // belong to a single ModelViewer at a time.
+    bool isAttached( Interactor::MVI*) const;  // Returns whether the given MVI is attached.
+
+    // Transfer to parameter viewer all MVIs attached to this viewer (returns # moved).
+    // If the parameter viewer is the same as this one, nothing occurs and zero is returned.
+    size_t transferInteractors( ModelViewer*);
+
+    // Set/get interaction mode.
+    void setInteractionMode( QTools::InteractionMode m) { _qviewer->setInteractionMode(m);}
+    QTools::InteractionMode interactionMode() const { return _qviewer->interactionMode();}
+
+    // Lock/unlock camera/actor interaction.
+    void setInteractionLocked( bool v) { _qviewer->setInteractionLocked(v);}
+    bool isInteractionLocked() const { return _qviewer->isInteractionLocked();}
+
+    QPoint getMouseCoords() const { return _qviewer->getMouseCoords();}
+    QPoint mapToGlobal( const QPoint& p) const { return _qviewer->mapToGlobal(p);}
 
     void setSize( const cv::Size&);
 
@@ -58,17 +71,6 @@ public:
 
     void enableFloodLights( bool);  // Set true for textured objects, false for surface.
     bool floodLightsEnabled() const;
-
-    // Set/get interaction mode.
-    void setInteractionMode( QTools::InteractionMode);
-    QTools::InteractionMode interactionMode() const;
-
-    // Lock/unlock camera/actor interaction.
-    void setInteractionLocked( bool);
-    bool isInteractionLocked() const;
-
-    QPoint getMouseCoords() const;
-    QPoint mapToGlobal( const QPoint&) const;
 
     enum Visualisation
     {
@@ -177,14 +179,19 @@ public:
     cv::Mat_<cv::Vec3b> grabImage() const;  // Retrieves what's currently being rendered as an OpenCV image matrix.
     bool saveSnapshot() const;  // User save of grabImage to file.
 
+protected:
+    bool attach( Interactor::MVI*);  // Attach interactor returning false iff already attached.
+    bool detach( Interactor::MVI*);  // Detach interactor returning false iff already detached.
+    friend class Interactor::ModelViewerInteractor;    // Calls attach and detach passing in self as parameter.
+
 private:
     QTools::VtkActorViewer *_qviewer;
-    QTools::VtkViewerInteractorManager *_interactor;
     RVTK::ScalarLegend *_scalarLegend;
     RVTK::Axes *_axes;
     bool _floodLightsEnabled;
     int _addedModelID;
     std::unordered_map<int, vtkProp*> _props;
+    std::unordered_set<Interactor::MVI*> _interactors;
     int addPointsActor( vtkSmartPointer<vtkActor>, const VisOptions&, bool asSpheres);
     ModelViewer( const ModelViewer&);       // NO COPY
     void operator=( const ModelViewer&);    // NO COPY

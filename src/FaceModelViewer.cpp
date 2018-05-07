@@ -18,96 +18,53 @@
 #include <FaceModelViewer.h>
 #include <FaceControl.h>
 #include <FaceModel.h>
-#include <QVBoxLayout>
 #include <cassert>
 using FaceTools::FaceModelViewer;
 using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
-using FaceTools::Interactor::ModelSelectInteractor;
 
-// public
-FaceModelViewer::FaceModelViewer( QWidget *parent, bool exs)
-    : QWidget(parent), FaceTools::ModelViewer(), _selector( NULL)
+FaceModelViewer::FaceModelViewer( QWidget *parent) : ModelViewer(parent)
 {
-    setLayout( new QVBoxLayout);
-    layout()->setContentsMargins( QMargins(0,0,0,0));
-    addToLayout( layout());
-
     resetCamera();  // Default camera on instantiation
-    _selector = new ModelSelectInteractor( this, exs);
-    connect( _selector, &ModelSelectInteractor::onUserSelected, this, &FaceModelViewer::onUserSelected);
 }   // end ctor
 
 
-// public
-FaceModelViewer::~FaceModelViewer() { delete _selector;}
-
-
-// public slots
 void FaceModelViewer::saveScreenshot() const { saveSnapshot();}
 void FaceModelViewer::resetCamera() { resetDefaultCamera( 650.0f); updateRender();}
-// public
-const FaceControlSet& FaceModelViewer::selected() const { return _selector->selected();}
-const FaceControlSet& FaceModelViewer::attached() const { return _selector->available();}
-bool FaceModelViewer::isSelected( FaceControl* fc) const { return _selector->isSelected(fc);}
-bool FaceModelViewer::isAttached( FaceControl* fc) const { return _selector->isAvailable(fc);}
 
 
-// public
-bool FaceModelViewer::attach( FaceControl* fcont)
+bool FaceModelViewer::attach( FaceControl* fc)
 {
-    assert(fcont);
-    if ( _attached.count(fcont->data()) > 0) // Don't add view if its model is already in the viewer.
+    if ( _models.count(fc->data()) > 0) // Don't add view if its model is already in the viewer.
         return false;
     if ( _attached.empty())
         resetCamera();
-    _attached[fcont->data()] = fcont;
-    fcont->setViewer( this);
-    _selector->add(fcont);
-    emit onUserSelected( fcont, true);
+    _attached.insert(fc);
+    _models[fc->data()] = fc;
+    fc->setViewer( this);
     return true;
 }   // end attach
 
 
-// public
-bool FaceModelViewer::detach( FaceControl* fcont)
+bool FaceModelViewer::detach( FaceControl* fc)
 {
-    if ( fcont == NULL || _attached.count(fcont->data()) == 0)
+    if ( fc == NULL || !_attached.has(fc))
         return false;
-    _selector->remove(fcont);
-    emit onUserSelected( fcont, false);
-    _attached.erase(fcont->data());
-    fcont->setViewer(NULL);
+    _attached.erase(fc);
+    _models.erase(fc->data());
+    fc->setViewer(NULL);
     if ( _attached.empty())   // Reset camera to default if now empty
         resetCamera();
     return true;
 }   // end detach
 
 
-// public
-FaceControl* FaceModelViewer::get( FaceTools::FaceModel* fmodel) const
+FaceControl* FaceModelViewer::get( FaceTools::FaceModel* fm) const
 {
-    if ( _attached.count(fmodel) > 0)
-       return _attached.at(fmodel);
-    return NULL;
+    if ( _models.count(fm) == 0)
+        return NULL;
+    return _models.at(fm);
 }   // end get
-
-
-// public
-void FaceModelViewer::setSelected( FaceControl* fc, bool selected)
-{
-    assert(fc);
-    // Only FaceControl instances currently attached to this viewer may be selected.
-    if ( attached().count(fc) == 0)
-        return;
-
-    assert( _attached.count(fc->data()) > 0);
-    if ( isSelected(fc) != selected)    // Only change if needing to.
-    {
-        _selector->setSelected( fc, selected);
-        emit onUserSelected( fc, selected);
-    }   // end if
-}   // end setSelected
 
 
 // protected

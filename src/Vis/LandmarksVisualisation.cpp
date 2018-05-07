@@ -47,8 +47,8 @@ LandmarksVisualisation::LandmarksVisualisation( const QString& dname, const QIco
 
 LandmarksVisualisation::~LandmarksVisualisation()
 {
-    std::for_each( std::begin(_lviews), std::end(_lviews), [](auto f){ delete f.second;});
-    _lviews.clear();
+    while (!_lviews.empty())
+        burn(_lviews.begin()->first);
 }   // end dtor
 
 
@@ -122,12 +122,12 @@ void LandmarksVisualisation::setAction( ActionVisualise* av)
 // protected
 void LandmarksVisualisation::respondTo( const FaceControl* fc)
 {
-    assert(_lviews.count(fc) > 0);
-    _lviews.at(fc)->reset();
+    if ( _lviews.count(fc) > 0)
+        _lviews.at(fc)->reset();
 }   // end respondTo
 
 
-// protected
+// public
 bool LandmarksVisualisation::belongs( const vtkProp* p, const FaceControl* fc) const
 {
     assert(_lviews.count(fc) > 0);

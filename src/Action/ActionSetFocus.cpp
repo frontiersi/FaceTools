@@ -34,27 +34,18 @@ ActionSetFocus::ActionSetFocus() : FaceAction(true)
     addRespondTo( CAMERA_POSITION_CHANGED);
     addRespondTo( CAMERA_ORIENTATION_CHANGED);
     addChangeTo( CAMERA_FOCUS_CHANGED);
+    // Cause
+    connect( &_interactor, &FEEI::onEnterModel, this, &ActionSetFocus::respondToChange);
+    connect( &_interactor, &FEEI::onLeaveModel, this, &ActionSetFocus::respondToChange);
 }   // end ctor
 
 
-bool ActionSetFocus::addInteractor( FEEI* iface)
+bool ActionSetFocus::testReady( FaceControl *fc)
 {
-    if ( _interactors.count(iface) > 0)
-        return false;
-    connect( iface, &FEEI::onEnterModel, this, &ActionSetFocus::respondToChange);
-    connect( iface, &FEEI::onLeaveModel, this, &ActionSetFocus::respondToChange);
-    _interactors.insert(iface);
-    return true;
-}   // end addInteractor
-
-
-bool ActionSetFocus::testReady( FaceControl* fc)
-{
-    // If the given view is under the mouse cursor, this is the model to act on (can only be one)
-    for ( const FEEI* iface : _interactors)
-        if ( iface->currentModel() == fc)
-            return true;
-    return false;
+    bool ready = _interactor.model() == fc;
+    if ( ready)
+        _interactor.setViewer(fc->viewer());    // Detaches from previous if necessary
+    return ready;
 }   // end testReady
 
 

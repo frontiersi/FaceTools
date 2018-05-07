@@ -80,7 +80,7 @@ ObjModel::Ptr FaceTools::crop( const ObjModel::Ptr model, const cv::Vec3f& v, in
     }   // end if
 
     ObjModelRegionSelector::Ptr cropper = ObjModelRegionSelector::create( model, v, svidx);
-    cropper->adjustRadius( radius);
+    cropper->setRadius( radius);
     IntSet cfids;
     cropper->getRegionFaces( cfids);
     assert( !cfids.empty());

@@ -20,7 +20,7 @@
 
 /**
  * ModelSelectInteractor is an interaction handler that allows the user to select single or
- * multiple FaceControls with onUserSelected fired for (de)selection events. Select models with
+ * multiple FaceControls with onSelected fired for (de)selection events. Select models with
  * a right click or a double left click. Model selection can be temporarily enabled/disabled
  * with enableSelect (default true).
  */
@@ -31,13 +31,13 @@
 namespace FaceTools {
 namespace Interactor {
 
-class FaceTools_EXPORT ModelSelectInteractor : public QObject, public ModelViewerInteractor
+class FaceTools_EXPORT ModelSelectInteractor : public ModelViewerInteractor
 { Q_OBJECT
 public:
-    ModelSelectInteractor( ModelViewer*, bool exclusiveSelect=false);
+    explicit ModelSelectInteractor( bool exclusiveSelect=false);
 
     // Enable/disable user interaction (de)selection of models.
-    // Does NOT affect programmatic selection of models (e.g. using setSelected).
+    // Programmatic selection of models (e.g. using setSelected) NOT AFFECTED.
     void enableUserSelect( bool);
 
     // Initially a multi-model selector, call setExclusiveSelect(true) to set models to
@@ -45,10 +45,11 @@ public:
     void setExclusiveSelect( bool);
     bool isExclusiveSelect() const;
 
-    // The following functions change membership of the available and selected sets without firing onUserSelected.
-    void add( FaceControl*);    // Adds to available for selection and marks as selected.
-    void remove( FaceControl*); // Removes from available for selection and marks as deselected.
-    void setSelected( FaceControl*, bool);  // Mark given model as (de)selected.
+    void add( FaceControl*);    // Adds to available for selection and fires onSelected.
+    void remove( FaceControl*); // Removes from available for selection and fires onSelected then onRemoving.
+
+    void setSelected( FaceControl*, bool);  // Mark given model as (de)selected and fire onSelected.
+
     bool isSelected( FaceControl*) const;   // Returns true iff model is selected.
     bool isAvailable( FaceControl*) const;  // Returns true iff model was added and not yet removed.
 
@@ -56,15 +57,17 @@ public:
     const FaceControlSet& available() const { return _available;}   // Returns the view/control instances available to select.
 
 signals:
-    void onUserSelected( FaceControl*, bool);   // Fired only on user interaction for (de)selection of a model.
+    void onSelected( FaceControl*, bool);   // Fired selection / deselection of a model.
+    void onRemoving( FaceControl*);         // Fired after onSelected(fc,false) at end of remove().
 
 private:
     bool _exclusive;
     bool _enabled;
-    FaceControlSet _selected, _available;
+    FaceControlSet _selected;
+    FaceControlSet _available;
 
-    void rightButtonDown( const QPoint&) override;    // Overridden to fire onUserSelected
-    void leftDoubleClick( const QPoint&) override;    // Overridden to fire onUserSelected
+    bool rightButtonDown( const QPoint&) override;    // Overridden to fire onSelected and onRightButtonDown
+    bool leftDoubleClick( const QPoint&) override;    // Overridden to fire onSelected
     void deselectAll();
     void insertSelected( FaceControl*);
     void eraseSelected( FaceControl*);

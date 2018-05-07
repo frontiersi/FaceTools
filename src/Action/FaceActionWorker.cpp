@@ -19,15 +19,16 @@
 #include <FaceAction.h>
 using FaceTools::Action::FaceActionWorker;
 using FaceTools::Action::FaceAction;
+using FaceTools::FaceControlSet;
 
-FaceActionWorker::FaceActionWorker( FaceAction* worker)
-    : QThread(worker), _worker(worker)
+FaceActionWorker::FaceActionWorker( FaceAction* worker, FaceControlSet* rset)
+    : QThread(worker), _worker(worker), _rset(rset)
 {
 }   // end ctor
 
 void FaceActionWorker::run()
 {
-    const bool rv = _worker->doAction( _worker->readySet());
+    const bool rv = _worker->doAction( *_rset);
     emit workerFinished(rv);
 }   // end run
 

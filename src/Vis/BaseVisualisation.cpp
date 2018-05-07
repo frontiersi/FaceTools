@@ -61,6 +61,12 @@ BaseVisualisation::~BaseVisualisation()
 }   // end dtor
 
 
+bool BaseVisualisation::isApplied( const FaceControl* fc) const
+{
+    return fc && fc->view()->visualisations().count(const_cast<BaseVisualisation*>(this)) > 0;
+}   // end isApplied
+
+
 void SurfaceVisualisation::apply( const FaceControl* fc)
 {
     vtkActor* actor = fc->view()->surfaceActor();

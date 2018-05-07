@@ -44,8 +44,8 @@ FaceModel* readFaceModel( const PTree& rnode, std::string& objfilename)
 {
     FaceModel* fm = new FaceModel;
     objfilename = rnode.get<std::string>( "objfilename");  // Without path info
-    fm->description() = rnode.get<std::string>( "description");
-    fm->source() = rnode.get<std::string>( "source");
+    fm->setDescription( rnode.get<std::string>( "description"));
+    fm->setSource( rnode.get<std::string>( "source"));
     rnode >> fm->orientation();
     rnode >> fm->landmarks();
     return fm;
@@ -142,7 +142,7 @@ FaceModel* FaceModelXMLFileHandler::read( const QString& sfname)
             return NULL;
         }   // end if
 
-        fm->model() = model;
+        fm->setModel( model);
     }   // end try
     catch ( const boost::property_tree::ptree_bad_path& e)
     {

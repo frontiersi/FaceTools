@@ -16,7 +16,6 @@
  ************************************************************************/
 
 #include <LandmarkSetView.h>
-#include <LandmarkView.h>
 #include <VtkTools.h>   // RVTK
 #include <ObjModelMover.h>  // RFeatures
 #include <ModelViewer.h>
@@ -24,14 +23,14 @@
 #include <iostream>
 #include <cassert>
 using FaceTools::Vis::LandmarkSetView;
-using FaceTools::Vis::LandmarkView;
+using FaceTools::Vis::SphereView;
 using FaceTools::ModelViewer;
 using FaceTools::LandmarkSet;
 using FaceTools::Landmark;
 
 // public
-LandmarkSetView::LandmarkSetView( const LandmarkSet& lset)
-    : _lset(lset), _viewer(NULL)
+LandmarkSetView::LandmarkSetView( const LandmarkSet& lset, double r)
+    : _lset(lset), _lmrad(r), _viewer(NULL)
 {
     reset();
 }   // end ctor
@@ -56,13 +55,14 @@ void LandmarkSetView::erase()
 // public
 void LandmarkSetView::reset()
 {
+    std::cerr << " Resetting LandmarkSetView from data" << std::endl;
     const bool shown = isVisible();
     erase();
     for ( int lm : _lset.ids())
     {
         const Landmark* lmk = _lset.get(lm);
-        _lviews[lm] = new LandmarkView;
-        _lviews[lm]->set( lmk->name, lmk->pos);
+        _lviews[lm] = new SphereView( lmk->pos, _lmrad);
+        _lviews[lm]->setCaption( lmk->name);
     }   // end foreach
     setVisible(shown, _viewer);
 }   // end reset
@@ -123,6 +123,14 @@ void LandmarkSetView::highlightLandmark( bool enable, int lm)
 
 
 // public
+void LandmarkSetView::setLandmarkRadius( double r)
+{
+    std::for_each( std::begin(_lviews), std::end(_lviews), [&](const auto& p){ p.second->setRadius(r);});
+    _lmrad = r;
+}   // end setLandmarkRadius
+
+
+// public
 bool LandmarkSetView::isLandmarkHighlighted( int lm) const
 {
     const bool vis = _lviews.at(lm)->isHighlighted();
@@ -139,11 +147,11 @@ void LandmarkSetView::transform( const vtkMatrix4x4* vm)
 {
     cv::Matx44d m = RVTK::toCV(vm);
     RFeatures::ObjModelMover mover(m);
-    std::for_each(std::begin(_lviews), std::end(_lviews), [&](auto p)
+    std::for_each(std::begin(_lviews), std::end(_lviews), [&](const auto& p)
             {
-                cv::Vec3f npos = p.second->pos();
+                cv::Vec3f npos = p.second->centre();
                 mover( npos);
-                p.second->setPos(npos);
+                p.second->setCentre(npos);
             });
 }   // end transform
 
@@ -162,10 +170,11 @@ void LandmarkSetView::refreshLandmark( int lm)
     }   // end if
     else    // Landmark was added, or an existing landmark's position was changed.
     {
-        if ( _lviews.count(lm) == 0)    // Landmark was added
-            _lviews[lm] = new LandmarkView;
         const Landmark* lmk = _lset.get(lm);
-        _lviews[lm]->set( lmk->name, lmk->pos);
+        if ( _lviews.count(lm) == 0)    // Landmark was added
+            _lviews[lm] = new SphereView( lmk->pos, _lmrad);
+        _lviews[lm]->setCaption( lmk->name);
+        _lviews[lm]->setCentre( lmk->pos);
     }   // end if
 }   // end refreshLandmark 
 
@@ -195,9 +204,9 @@ bool LandmarkSetView::isLandmark( const vtkProp* prop) const
 
 
 // public
-const LandmarkView* LandmarkSetView::landmark( int lmid) const
+const SphereView* LandmarkSetView::landmark( int lmid) const
 {
-    const LandmarkView* lv = NULL;
+    const SphereView* lv = NULL;
     if ( _lviews.count(lmid) > 0)
         lv = _lviews.at(lmid);
     return lv;

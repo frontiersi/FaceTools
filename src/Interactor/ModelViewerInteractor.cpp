@@ -22,20 +22,34 @@ using FaceTools::Interactor::ModelViewerInteractor;
 using FaceTools::ModelViewer;
 
 ModelViewerInteractor::ModelViewerInteractor( ModelViewer* mv)
-    : _viewer(mv)
+    : _viewer(NULL)
 {
-    const bool rval = mv->attachInteractor(this);
-    assert(rval);
+    setViewer(mv);
 }   // end ctor
 
 
 ModelViewerInteractor::~ModelViewerInteractor()
 {
-    const bool rval = _viewer->detachInteractor(this);
-    assert(rval);
+    setViewer(NULL);
 }   // end dtor
 
 
-// protected
-void ModelViewerInteractor::setInteractionLocked( bool v) { _viewer->setInteractionLocked(v);}
-bool ModelViewerInteractor::isInteractionLocked() const { return _viewer->isInteractionLocked();}
+void ModelViewerInteractor::setViewer( ModelViewer* viewer)
+{
+    if ( viewer == _viewer)
+        return;
+
+    if ( _viewer)
+    {
+        _viewer->detach(this);
+        onDetached();
+    }   // end if
+
+    _viewer = viewer;
+
+    if ( _viewer)
+    {
+        _viewer->attach(this);
+        onAttached();
+    }   // end if
+}   // end setViewer

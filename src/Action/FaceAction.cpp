@@ -108,6 +108,8 @@ void FaceAction::progress( float propComplete)
 // protected
 void FaceAction::setSelected( FaceControl* fc, bool v)
 {
+    const bool wascontrolled = _controlled.has(fc);
+    const bool wasready = _ready.has(fc);
     _controlled.erase(fc);
     _ready.erase(fc);
     v = v && fc && fc->viewer();    // FaceControls without viewers can never be selected
@@ -120,7 +122,12 @@ void FaceAction::setSelected( FaceControl* fc, bool v)
 
     setEnabled( testEnabled());
     if ( fc)
-        this->tellSelected(fc, v);
+    {
+        if ( wascontrolled != _controlled.has(fc))  // Only call on change to controlled set membership
+            this->tellSelected( fc, v);
+        if ( wasready != _ready.has(fc))    // Only call on change to ready set membership
+            this->tellReady( fc, _ready.has(fc));
+    }   // end if
 }   // end setSelected
 
 
@@ -165,10 +172,11 @@ bool FaceAction::process()
         return false;
     }   // end if
 
+    const std::string dname = debugActionName();
     if ( displayDebugStatusProgression())
     {
         std::cerr << std::endl;
-        std::cerr << "==={ACTION}=== Starting     : \"" << getDisplayName().toStdString() << "\"" << std::endl;
+        std::cerr << "==={" << dname << "}=== STARTING" << std::endl;
     }   // end if
 
     setEnabled(false);
@@ -176,7 +184,7 @@ bool FaceAction::process()
     if ( !doBeforeAction( _ready))  // Always in the GUI thread
     {
         if ( displayDebugStatusProgression())
-            std::cerr << "==={ACTION}=== Cancelled    : \"" << getDisplayName().toStdString() << "\"" << std::endl << std::endl;
+            std::cerr << "___{" << dname << "}___ CANCELLED" << std::endl;
         setEnabled( testEnabled());
         emit reportFinished( NULL);
         return false;   // Test for cancelled action
@@ -186,15 +194,15 @@ bool FaceAction::process()
     if ( !_doasync)
     {
         if ( displayDebugStatusProgression())
-            std::cerr << "==={ACTION}=== Working      : \"" << getDisplayName().toStdString() << "\"" << std::endl;
+            std::cerr << "---{" << dname << "}--- WORKING" << std::endl;
         const bool rval = doAction( _ready);  // Blocks - doAction may change membership of _ready
         doOnActionFinished( rval);
     }   // end if
     else
     {
         if ( displayDebugStatusProgression())
-            std::cerr << "==={ACTION}=== Working (BG) : \"" << getDisplayName().toStdString() << "\"" << std::endl;
-        FaceActionWorker *worker = new FaceActionWorker( this);
+            std::cerr << "---{" << dname << "}--- WORKING (BG)" << std::endl;
+        FaceActionWorker *worker = new FaceActionWorker( this, &_ready);
         connect( worker, &FaceActionWorker::workerFinished, this, &FaceAction::doOnActionFinished);
         connect( worker, &FaceActionWorker::finished, worker, &QObject::deleteLater);
         worker->start();   // Asynchronous start
@@ -226,7 +234,10 @@ void FaceAction::doOnActionFinished( bool rval)
     for ( FaceControl* fc : oldrdy) // Allow "listening" FaceActions to update themselves on the affected FaceControls
         emit reportChanged( fc);
     if ( displayDebugStatusProgression())
-        std::cerr << "==={ACTION}=== Finished     : \"" << getDisplayName().toStdString() << "\"" << std::endl;
+    {
+        const std::string dname = debugActionName();
+        std::cerr << "___{" << dname << "}___ FINISHED" << std::endl;
+    }   // end if
     emit reportFinished( &oldrdy);   // Used by FaceActionManager to call setEnabled on all actions registered with it.
 }   // end doOnActionFinished
 

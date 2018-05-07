@@ -77,7 +77,7 @@ void setLandmarks( const RVTK::Viewer::Ptr viewer,
 
     lmids.push_back( lset.set( NASAL_ROOT, vpts[27]));
     // Nasal ridge (28,29) is best defined separately by looking at the shortest path between 27 and 30
-    lmids.push_back( lset.set( NASAL_TIP, vpts[30])); // Nasal tip (30) already defined
+    //lmids.push_back( lset.set( NASAL_TIP, vpts[30])); // Nasal tip (30) already defined
     lmids.push_back( lset.set( L_ALARE, vpts[31]));
     lmids.push_back( lset.set( L_PHILTRUM_T, vpts[32]));
     lmids.push_back( lset.set( SUBNASALE, vpts[33]));

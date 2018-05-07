@@ -39,7 +39,7 @@ FaceModel* FaceModelOBJFileHandler::read( const QString& fname)
     if ( model)
     {
         fm = new FaceModel;
-        fm->model() = model;
+        fm->setModel(model);
     }   // end if
     else
         _err = ("Failed to load object from \"" + fname.toStdString() + "\"").c_str();

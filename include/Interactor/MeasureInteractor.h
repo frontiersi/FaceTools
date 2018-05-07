@@ -31,7 +31,7 @@
 namespace FaceTools {
 namespace Interactor {
 
-class FaceTools_EXPORT MeasureInteractor : public QObject, public ModelViewerInteractor
+class FaceTools_EXPORT MeasureInteractor : public ModelViewerInteractor
 { Q_OBJECT
 public:
     explicit MeasureInteractor( SurfacePathSet*);

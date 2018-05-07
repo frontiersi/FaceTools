@@ -22,9 +22,8 @@
  * Provides an interface to a model viewer via VTK events on the underlying viewer.
  * Multiple ModelViewerInteractor instances can be active on a single viewer at once,
  * but a single ModelViewerInteractor can only be attached to one viewer.
- * Within its constructor, this interface attaches itself to a viewer using
- * ModelViewer::attachInterface( &VVI) and detaches itself on destruction with
- * ModelViewer::detachInterface( &VVI).
+ * This interface attaches itself to a viewer using ModelViewer::attachInterface( &MVI)
+ * and detaches itself on destruction with ModelViewer::detachInterface( &MVI).
  */
 
 #include "FaceTools_Export.h"
@@ -37,17 +36,23 @@ class ModelViewer;
 namespace Interactor {
 
 class FaceTools_EXPORT ModelViewerInteractor : public QTools::VVI
-{
+{ Q_OBJECT
 public:
-    explicit ModelViewerInteractor( ModelViewer*);
-    virtual ~ModelViewerInteractor();
+    explicit ModelViewerInteractor( ModelViewer *v=NULL);
+    virtual ~ModelViewerInteractor();       // Calls setViewer(NULL) to detach.
 
-    const ModelViewer* viewer() { return _viewer;}      // Get the attached viewer (or NULL)
+    void setViewer( ModelViewer *v=NULL);  // Attach to given viewer or detach from current (NULL).
+
+    ModelViewer* viewer() const { return _viewer;} // Get attached viewer.
 
 protected:
-    // Lock/unlock camera/actor interaction.
-    void setInteractionLocked( bool v);
-    bool isInteractionLocked() const;
+    // Called immediately after attaching self. Can be used by derived types to add
+    // other (composite) interactions for example (see RadialSelectInteractor).
+    virtual void onAttached(){}
+
+    // Called immediately after detaching self. Can be used by derived
+    // types to finish interactions (e.g. emit final signals).
+    virtual void onDetached(){}
 
 private:
     ModelViewer *_viewer;

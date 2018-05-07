@@ -42,8 +42,8 @@ ActionSaveAsFaceModel::ActionSaveAsFaceModel( FaceModelManager* fmm, QWidget *pa
     addRespondTo( FACE_NOTE_DELETED);
     addRespondTo( FACE_NOTE_CHANGED);
     addRespondTo( MODEL_ORIENTATION_CHANGED);
-    addRespondTo( FACE_DESCRIPTION_CHANGED);
-    addRespondTo( DATA_SOURCE_CHANGED);
+    addRespondTo( MODEL_DESCRIPTION_CHANGED);
+    addRespondTo( MODEL_SOURCE_CHANGED);
     setAsync(true);
 }   // end ctor
 

@@ -1,9 +1,9 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource prefix="/icons">
     <file alias="CAMERA">res/icons/camera_64x64.png</file>
-    <file alias="FULLSCREEN">res/icons/icons8-fit-to-width.png</file>
     <file alias="REORIENTATION">res/icons/axes_reorient_64x64.png</file>
 
+    <file alias="FULLSCREEN">res/icons/icons8-fit-to-width.png</file>
     <file alias="LIGHTS">res/icons/icons8-Illumination.png</file>
     <file alias="SCREENSHOT">res/icons/icons8-Screenshot.png</file>
     <file alias="RESET_CAMERA">res/icons/icons8-Aperture.png</file>
@@ -14,8 +14,15 @@
     <file alias="COPY_LEFT">res/icons/icons8-new-copy-80.png</file>
     <file alias="COPY_RIGHT">res/icons/icons8-new-copy-80.png</file>
 
+    <file alias="PLUGIN">res/icons/icons8-Plugin.png</file>
+
     <file alias="TRANSFORM">res/icons/icons8-gyroscope-80.png</file>
+    <file alias="BOUNDARY">res/icons/icons8-boundary-loop.png</file>
+    <file alias="CROP_FACE">res/icons/icons8-crop-80.png</file>
     <file alias="DETECT_FACE">res/icons/icons8-detect-face.png</file>
+    <file alias="CALIPERS">res/icons/icons8-calipers.png</file>
+    <file alias="PDF">res/icons/icons8-PDF.png</file>
+    <file alias="ALIGN_FACES">res/icons/icons8-team-80.png</file>
 
     <file alias="LOAD">res/icons/icons8-open.png</file>
     <file alias="LOAD_DIR">res/icons/icons8-open_dir.png</file>

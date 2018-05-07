@@ -15,35 +15,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_SAVE_AS_FACE_MODEL_H
-#define FACE_TOOLS_ACTION_SAVE_AS_FACE_MODEL_H
+#ifndef FACE_TOOLS_MODEL_VIEWER_ENTRY_EXIT_INTERACTOR_H
+#define FACE_TOOLS_MODEL_VIEWER_ENTRY_EXIT_INTERACTOR_H
 
-#include "FaceAction.h"
-#include <FaceModelManager.h>
-#include <QWidget>
+/**
+ * Signals onLeave and onEnter when leaving and entering respectively the attached ModelViewer.
+ */
+
+#include "ModelViewerInteractor.h"
 
 namespace FaceTools {
-namespace Action {
+namespace Interactor {
 
-class FaceTools_EXPORT ActionSaveAsFaceModel : public FaceAction
+class FaceTools_EXPORT ModelViewerEntryExitInteractor : public ModelViewerInteractor
 { Q_OBJECT
 public:
-    ActionSaveAsFaceModel( FileIO::FaceModelManager*, QWidget *parent=NULL);
+    explicit ModelViewerEntryExitInteractor( ModelViewer *v)
+        : ModelViewerInteractor(v) {}
 
-    QString getDisplayName() const override { return "Save &As";}
-    const QIcon* getIcon() const override { return &_icon;}
-
-protected slots:
-    bool testEnabled() override { return readyCount() == 1;}    // Only enabled for a single selected FaceControl
-    bool doBeforeAction( FaceControlSet&) override;
-    bool doAction( FaceControlSet&) override;
-    void doAfterAction( const FaceControlSet&, bool) override;
+signals:
+    void onLeave( const QPoint&);
+    void onEnter( const QPoint&);
 
 private:
-    FileIO::FaceModelManager *_fmm;
-    QWidget *_parent;
-    QIcon _icon;
-    std::string _filename;
+    bool mouseLeave( const QPoint& p) override { emit onLeave(p); return false;}
+    bool mouseEnter( const QPoint& p) override { emit onEnter(p); return false;}
 };  // end class
 
 }   // end namespace

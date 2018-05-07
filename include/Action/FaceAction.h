@@ -84,10 +84,6 @@ public:
     // See ChangeEvents.h for details of event types.
     const ChangeEventSet& respondEvents() const { return _revents;}
 
-    // The "ready" set; the set that at any point when process is called will be passed to the
-    // action functions doBeforeAction, doAction, and doAfterAction.
-    FaceControlSet& readySet() { return _ready;}
-
 public slots:
     // Function process() is the main entry point for clients to carry out this action. It can be called
     // explicitly whether or not this FaceAction is enabled, but is typically called via triggering the
@@ -167,30 +163,36 @@ protected slots:
     // subset of the controlled set where testReady() returned true.
     void setSelected( FaceControl*, bool);
 
-    // It is possible that a derived FaceAction may be interested in all calls to setSelected, and not
-    // just calls to testReady (which only occur when the the FaceControl is coming under control).
-    // Derived types can override the tellSelected function if interested in all calls to setSelected.
+    // Derived FaceAction types may be interested in all calls to setSelected, and not just calls to testReady
+    // (which is used to find out if a FaceControl under nominal control can be acted upon by the derived type).
+    // Functions tellSelected and tellReady are called for calls to setSelected that causes a change in membership
+    // of the controlled or ready sets (as such, these functions are not called for every call to setSelected).
+    // Function tellSelected passes the changed controlled state to the derived type, and tellReady passes the
+    // changed ready state of the FaceControl to the derived type. These functions are called *after* setEnabled
+    // is called on this action (i.e. testEnabled is called before tellReady).
     virtual void tellSelected( FaceControl*, bool) {}
+    virtual void tellReady( FaceControl*, bool) {}
 
-    // This function is called during the call to setSelected with true as its control parameter, and
-    // also when when needing to (re)check membership of the ready set. In particular, this function is
-    // called on FaceAction instances via the recheckReadySet() function when testing ready set membership
-    // after another FaceAction that it's interested in finishes its work.
-    // Whether or not a FaceAction is ready be be acted upon is at the discretion of the derived type,
-    // but by default all FaceControl instances set as controlled (parameter true) will be made part
-    // of the ready set (i.e. no further constraints on state are enforced). If overridden, this function
-    // should have very low complexity due to the potential for it to be called frequently.
+    // This function is called only if setSelected is called with true as its parameter. It is used to ask the
+    // derived type if the passed in FaceControl is in a legal state to be acted upon. Note that this function
+    // is NOT called if setSelected is called with false as its parameter (clients should override tellReady()
+    // if they need to know when a FaceControl switches legal state for being acted upon).
+    // Whether or not a FaceAction is ready be be acted upon is at the discretion of the derived type, but by
+    // default all FaceControl instances passed in to setControlled with a true parameter are added to the
+    // ready set. If overridden, this function's complexity should be low due to the frequent calls.
     virtual bool testReady( FaceControl*) { return true;}
 
-    // Discover if the given FaceControl is currently under control. Clients and derived types should
-    // not call this from within overrides of the tellSelected function. Note that a controlled
-    // FaceControl is not necessarily ready to be acted on (see testReady).
+    // Discover if the given FaceControl is currently under nominal control or is in the ready set.
     bool isSelected( FaceControl *fc) const { _controlled.count(fc) > 0;}
+    bool isReady( FaceControl* fc) const { _ready.count(fc) > 0;}
 
     // Retain in the "ready" set only those FaceControl instances for which calls to testReady()
     // still return true, returning the size of the modified set and test-setting the enabled state of
     // this action. Unless testReady() overridden, ready set will equal the controlled set.
     size_t recheckReadySet();
+
+    // Return the count of FaceControl instances in the ready set.
+    size_t readyCount() const { return _ready.size();}
 
     // For most actions, whether to enable or disable the action depends upon whether there are
     // entries in the ready set and this is the default implementation. However, some actions may
@@ -257,9 +259,12 @@ protected slots:
     void setVisible( bool b) { _action.setVisible(b);}
     void setEnabled( bool b) { _action.setEnabled(b);}
     void setCheckable( bool b, bool ival) { _action.setCheckable(b); _action.setChecked(ival);}
+    bool isCheckable() const { return _action.isCheckable();}
     void setChecked( bool b) { _action.setChecked(b);}
     bool isChecked() const { return _action.isChecked();}
     bool isEnabled() const { return _action.isEnabled();}
+
+    std::string debugActionName() const { return "\"" + getDisplayName().remove('&').toStdString() + "\"";}
 
     // For simple actions, may want to override this to false.
     virtual bool displayDebugStatusProgression() const { return true;}

@@ -25,9 +25,13 @@
 #include <QIcon>
 #include <cassert>
 #include <algorithm>
+using FaceTools::Interactor::ModelViewerEntryExitInteractor;
+using FaceTools::Interactor::ModelSelectInteractor;
 using FaceTools::MultiFaceModelViewer;
 using FaceTools::FaceModelViewer;
+using FaceTools::ModelViewer;
 using FaceTools::FaceControlSet;
+using FaceTools::FaceModelSet;
 using FaceTools::FaceControl;
 using FaceTools::FaceModel;
 
@@ -71,11 +75,20 @@ QToolButton* MultiFaceModelViewer::makeButton( QAction* action)
 
 
 // public
-MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent) : QWidget(parent)
+MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent)
+    : QWidget(parent), _selector(true)  /* exclusive select */
 {
     _v0 = new FaceModelViewer( this); // Left
     _v1 = new FaceModelViewer( this); // Middle
     _v2 = new FaceModelViewer( this); // Right
+    _selector.setViewer(_v1);   // Centre viewer is initial
+
+    _i0 = new ModelViewerEntryExitInteractor(_v0);
+    _i1 = new ModelViewerEntryExitInteractor(_v1);
+    _i2 = new ModelViewerEntryExitInteractor(_v2);
+    connect( _i0, &ModelViewerEntryExitInteractor::onEnter, this, &MultiFaceModelViewer::doOnViewerEntered);
+    connect( _i1, &ModelViewerEntryExitInteractor::onEnter, this, &MultiFaceModelViewer::doOnViewerEntered);
+    connect( _i2, &ModelViewerEntryExitInteractor::onEnter, this, &MultiFaceModelViewer::doOnViewerEntered);
 
     QVBoxLayout* v0layout = new QVBoxLayout;
     v0layout->setContentsMargins(0,0,0,0);
@@ -90,31 +103,32 @@ MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent) : QWidget(parent)
     QIcon copyRightIcon( ":/icons/COPY_RIGHT");
 
     // Left panel actions
-    _moveLeftToCentreAction = new QAction( goRightIcon, "Move Face(s) Right", this);
+    _moveLeftToCentreAction = new QAction( goRightIcon, "Move Right", this);
     connect( _moveLeftToCentreAction, &QAction::triggered, this, &MultiFaceModelViewer::moveLeftToCentre);
-    _copyLeftToCentreAction = new QAction( copyRightIcon, "Copy Face(s) Right", this);
+    _copyLeftToCentreAction = new QAction( copyRightIcon, "Copy Right", this);
     connect( _copyLeftToCentreAction, &QAction::triggered, this, &MultiFaceModelViewer::copyLeftToCentre);
 
     // Centre panel actions
-    _moveCentreToRightAction = new QAction( goRightIcon, "Move Face(s) Right", this);
+    _moveCentreToRightAction = new QAction( goRightIcon, "Move Right", this);
     connect( _moveCentreToRightAction, &QAction::triggered, this, &MultiFaceModelViewer::moveCentreToRight);
-    _copyCentreToRightAction = new QAction( copyRightIcon, "Copy Face(s) Right", this);
+    _copyCentreToRightAction = new QAction( copyRightIcon, "Copy Right", this);
     connect( _copyCentreToRightAction, &QAction::triggered, this, &MultiFaceModelViewer::copyCentreToRight);
-    _moveCentreToLeftAction = new QAction( goLeftIcon, "Move Face(s) Left", this);
+    _moveCentreToLeftAction = new QAction( goLeftIcon, "Move Left", this);
     connect( _moveCentreToLeftAction, &QAction::triggered, this, &MultiFaceModelViewer::moveCentreToLeft);
-    _copyCentreToLeftAction = new QAction( copyLeftIcon, "Copy Face(s) Left", this);
+    _copyCentreToLeftAction = new QAction( copyLeftIcon, "Copy Left", this);
     connect( _copyCentreToLeftAction, &QAction::triggered, this, &MultiFaceModelViewer::copyCentreToLeft);
 
     // Right panel actions
-    _moveRightToCentreAction = new QAction( goLeftIcon, "Move Face(s) Left", this);
+    _moveRightToCentreAction = new QAction( goLeftIcon, "Move Left", this);
     connect( _moveRightToCentreAction, &QAction::triggered, this, &MultiFaceModelViewer::moveRightToCentre);
-    _copyRightToCentreAction = new QAction( copyLeftIcon, "Copy Face(s) Left", this);
+    _copyRightToCentreAction = new QAction( copyLeftIcon, "Copy Left", this);
     connect( _copyRightToCentreAction, &QAction::triggered, this, &MultiFaceModelViewer::copyRightToCentre);
 
     // Left panel
     v0layout->addWidget(_v0);
     QHBoxLayout* h0blayout = new QHBoxLayout;
     h0blayout->setContentsMargins(0,0,0,0);
+    h0blayout->addStretch();
     addCommonButtons( h0blayout, _v0);
     h0blayout->addStretch();
     h0blayout->addWidget( makeButton( _copyLeftToCentreAction));
@@ -142,6 +156,7 @@ MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent) : QWidget(parent)
     h2blayout->addWidget( makeButton( _copyRightToCentreAction));
     h2blayout->addStretch();
     addCommonButtons( h2blayout, _v2);
+    h2blayout->addStretch();
     v2layout->addLayout(h2blayout);
 
     QWidget* w0 = new QWidget;
@@ -159,9 +174,8 @@ MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent) : QWidget(parent)
     setLayout( new QVBoxLayout);
     layout()->addWidget( _splitter);
 
-    connect( _v0, &FaceModelViewer::onUserSelected, this, &MultiFaceModelViewer::doOnLeftViewerSetSelected);
-    connect( _v1, &FaceModelViewer::onUserSelected, this, &MultiFaceModelViewer::doOnCentreViewerSetSelected);
-    connect( _v2, &FaceModelViewer::onUserSelected, this, &MultiFaceModelViewer::doOnRightViewerSetSelected);
+    connect( &_selector, &ModelSelectInteractor::onSelected, this, &MultiFaceModelViewer::doOnSelected);
+    connect( &_selector, &ModelSelectInteractor::onRemoving, this, &MultiFaceModelViewer::onRemoving);
 
     _splitter->setCollapsible(1,false);
     setLeftViewerVisible(false);
@@ -174,14 +188,54 @@ MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent) : QWidget(parent)
 // public
 MultiFaceModelViewer::~MultiFaceModelViewer()
 {
+    delete _i0;
+    delete _i1;
+    delete _i2;
     _v0->disconnect(this);
     _v1->disconnect(this);
     _v2->disconnect(this);
-    std::unordered_set<FaceModel*> fmodels; // Get all the FaceModels to remove...
-    std::for_each( std::begin(_fconts), std::end(_fconts), [&](FaceControl* fc){fmodels.insert(fc->data());});
-    // ... remove the models
-    std::for_each( std::begin(fmodels), std::end(fmodels), [this](FaceModel* fm){remove(fm);});
+    FaceModelSet fms = _selector.available().models();
+    std::for_each( std::begin(fms), std::end(fms), [this](auto fm){this->remove(fm);});
 }   // end dtor
+
+
+// public
+void MultiFaceModelViewer::addInteractor( FaceTools::Interactor::MVI* mvi)
+{
+    mvi->setViewer( _selector.viewer());
+}   // end addInteractor
+
+
+// private slot
+void MultiFaceModelViewer::doOnSelected( FaceControl* fc, bool v)
+{
+    assert( fc);
+    assert( fc->viewer());
+    activateViewer( fc->viewer());
+    emit onSelected( fc, v);
+}   // end doOnSelected
+
+
+// private slot
+void MultiFaceModelViewer::doOnViewerEntered()
+{
+    ModelViewerEntryExitInteractor* vi = qobject_cast<ModelViewerEntryExitInteractor*>( sender());
+    assert(vi);
+    ModelViewer* tv = vi->viewer();      // Target viewer (newly active)
+    assert(tv);
+    ModelViewer* sv = _selector.viewer();// Source viewer (previously active)
+    assert(sv);
+    const size_t mcount = sv->transferInteractors( tv); // Transfer interactors to target viewer
+
+    assert(tv == _selector.viewer());
+
+    if ( mcount > 0) // Transfer will have moved the fixed interactors that fired this view, so move them back.
+    {
+        _i0->setViewer(_v0);
+        _i1->setViewer(_v1);
+        _i2->setViewer(_v2);
+    }   // end if
+}   // end doOnViewerEntered
 
 
 // private
@@ -190,40 +244,34 @@ bool MultiFaceModelViewer::deleteFaceControl( FaceControl* fc)
     if ( !fc)
         return false;
 
-    FaceModel* fm = fc->data();
     FaceModelViewer* v = fc->viewer();
-    activateOnViewer( v, fc, false);    // Will cause onSelected(fc, false) to fire
-    emit onRemoving( fc);   // Allow others to remove themselves BEFORE the viewer is detached.
-    v->detach( fc);     // Sets viewer NULL in the FaceControl
+    _selector.remove( fc);  // Causes onSelected(false) followed by onRemoving to fire
+    v->detach( fc);         // Sets viewer NULL in the FaceControl
     delete fc;
-    fm->remove(fc);
-    _fconts.erase(fc);
     v->updateRender();
     if ( v == _v0)
-        setLeftViewerVisible( _v0->count() > 0);
+        setLeftViewerVisible( !_v0->attached().empty());
     else if ( v == _v2)
-        setRightViewerVisible( _v2->count() > 0);
+        setRightViewerVisible( !_v2->attached().empty());
     return true;
 }   // end deleteFaceControl
 
 
 // public slot
-void MultiFaceModelViewer::remove( FaceModel* fmodel)
+void MultiFaceModelViewer::remove( FaceModel* fm)
 {
-    deleteFaceControl( _v0->get(fmodel));
-    deleteFaceControl( _v1->get(fmodel));
-    deleteFaceControl( _v2->get(fmodel));
+    deleteFaceControl( _v0->get(fm));
+    deleteFaceControl( _v1->get(fm));
+    deleteFaceControl( _v2->get(fm));
 }   // end remove
 
 
 // public slot
-void MultiFaceModelViewer::insert( FaceModel* fmodel)
+void MultiFaceModelViewer::insert( FaceModel* fm)
 {
-    FaceControl* fcont = new FaceControl(fmodel);
-    fmodel->add(fcont);
-    _fconts.insert( fcont);
-    _v1->attach( fcont);
-    activateOnViewer( _v1, fcont, true);
+    FaceControl* fc = new FaceControl(fm);
+    _v1->attach(fc);
+    _selector.add(fc);
 }   // end insert
 
 
@@ -269,43 +317,38 @@ void MultiFaceModelViewer::saveScreenshot() const
 
 
 // private
-void MultiFaceModelViewer::moveViews( FaceModelViewer* sv, FaceModelViewer* tv)
+void MultiFaceModelViewer::moveViews( FaceModelViewer* tv)
 {
-    FaceControlSet fcs = sv->selected();    // Copy out
+    std::unordered_set<ModelViewer*> vwrs;
+    FaceControlSet fcs = _selector.selected();  // Copy out
     for ( FaceControl* fc : fcs)
     {
-        // If the target doesn't yet have the model, move it to the target viewer from the source viewer.
-        if ( !tv->isAttached(fc))
+        // If the target doesn't yet have the model, move it to the target viewer.
+        if ( tv->get(fc->data()) == NULL)
         {
-            sv->detach( fc);
-            activateOnViewer( sv, fc, false);
-            tv->attach( fc);
-            activateOnViewer( tv, fc, true);
+            vwrs.insert(fc->viewer());  // Collect viewer for update render
+            _selector.setSelected(fc,false);
+            fc->viewer()->detach(fc);   // Detach from source viewer
+            tv->attach( fc);            // Attach to target viewer
+            _selector.setSelected(fc,true);
         }   // end if
         else    // Otherwise, this is a duplicate model on the source viewer, so delete it.
-        {
-            deleteFaceControl( fc);  // No longer needed on the source viewer
-            tv->setSelected( fc, true);
-            emit onSelected( fc, true);         // Inform clients
-        }   // end else
+            deleteFaceControl( fc);
     }   // end foreach
-    sv->updateRender();
+    std::for_each(std::begin(vwrs), std::end(vwrs), [](auto v){v->updateRender();});
     tv->updateRender();
 }   // end moveViews
 
 
 // private
-void MultiFaceModelViewer::copyViews( FaceModelViewer* sv, FaceModelViewer* tv)
+void MultiFaceModelViewer::copyViews( FaceModelViewer* tv)
 {
-    FaceControlSet fcs;
-    canCopyTo( sv, tv, &fcs);
+    FaceControlSet fcs = _selector.selected();  // Copy out
     for ( FaceControl* fc : fcs)
     {
-        FaceControl* fcont = new FaceControl(fc->data());   // Create new view/control from source view/control's model
-        fc->data()->add( fcont);
-        _fconts.insert( fcont);
-        tv->attach( fcont);
-        activateOnViewer( tv, fcont, true);
+        FaceControl* fc2 = new FaceControl(fc->data());   // Create copy with same data
+        tv->attach( fc2);
+        _selector.add( fc2); // Causes onSelected to fire
     }   // end foreach
     tv->updateRender();
 }   // end copyViews
@@ -314,27 +357,26 @@ void MultiFaceModelViewer::copyViews( FaceModelViewer* sv, FaceModelViewer* tv)
 // private slot
 void MultiFaceModelViewer::moveLeftToCentre()
 {
-    moveViews( _v0, _v1);
+    moveViews( _v1);
     checkEnableLeftToCentre();
     checkEnableCentreToLeft();
     checkEnableCentreToRight();
-    setLeftViewerVisible( _v0->count() > 0);
+    setLeftViewerVisible( !_v0->attached().empty());
 }   // end moveLeftToCentre
 
 
 // private slot
 void MultiFaceModelViewer::copyLeftToCentre()
 {
-    copyViews( _v0, _v1);
+    copyViews( _v1);
     checkEnableLeftToCentre();
-    activateAllOnViewer( _v0, false);
 }   // end copyLeftToCentre
 
 
 // private slot
 void MultiFaceModelViewer::moveCentreToLeft()
 {
-    moveViews( _v1, _v0);
+    moveViews( _v0);
     checkEnableCentreToLeft();
     checkEnableCentreToRight();
     checkEnableLeftToCentre();
@@ -345,18 +387,17 @@ void MultiFaceModelViewer::moveCentreToLeft()
 // private slot
 void MultiFaceModelViewer::copyCentreToLeft()
 {
-    copyViews( _v1, _v0);
+    copyViews( _v0);
     checkEnableCentreToLeft();
     checkEnableCentreToRight();
     setLeftViewerVisible(true);
-    activateAllOnViewer( _v1, false);
 }   // end copyCentreToLeft
 
 
 // private slot
 void MultiFaceModelViewer::moveCentreToRight()
 {
-    moveViews( _v1, _v2);
+    moveViews( _v2);
     checkEnableCentreToLeft();
     checkEnableCentreToRight();
     checkEnableRightToCentre();
@@ -367,173 +408,131 @@ void MultiFaceModelViewer::moveCentreToRight()
 // private slot
 void MultiFaceModelViewer::copyCentreToRight()
 {
-    copyViews( _v1, _v2);
+    copyViews( _v2);
     checkEnableCentreToLeft();
     checkEnableCentreToRight();
     setRightViewerVisible(true);
-    activateAllOnViewer( _v1, false);
 }   // end copyCentreToRight
 
 
 // private slot
 void MultiFaceModelViewer::moveRightToCentre()
 {
-    moveViews( _v2, _v1);
+    moveViews( _v1);
     checkEnableRightToCentre();
     checkEnableCentreToLeft();
     checkEnableCentreToRight();
-    setRightViewerVisible( _v2->count() > 0);
+    setRightViewerVisible( !_v2->attached().empty());
 }   // moveRightToCentre
 
 
 // private slot
 void MultiFaceModelViewer::copyRightToCentre()
 {
-    copyViews( _v2, _v1);
+    copyViews( _v1);
     checkEnableRightToCentre();
-    activateAllOnViewer( _v2, false);
 }   // copyRightToCentre
 
 
 // private
-void MultiFaceModelViewer::activateAllOnViewer( FaceModelViewer* viewer, bool activate)
+void MultiFaceModelViewer::activateViewer( FaceModelViewer* v)
 {
-    const FaceControlSet* fcs = NULL;
-    FaceControlSet sfcs;
-    if ( activate)
-        fcs = &viewer->attached();
+    assert(v);
+    if ( v == _v0)
+        activateLeftViewer();
+    else if ( v == _v1)
+        activateCentreViewer();
     else
     {
-        sfcs = viewer->selected();    // Copy out
-        fcs = &sfcs;
-    }   // end if
-
-    std::for_each( std::begin(*fcs), std::end(*fcs), [&](FaceControl* fc){ activateOnViewer( viewer, fc, activate);});
-}   // end activateAllOnViewer
+        assert( v == _v2);
+        activateRightViewer();
+    }   // end else
+}   // end activateViewer
 
 
 // private
-void MultiFaceModelViewer::activateOnViewer( FaceModelViewer* viewer, FaceControl* fc, bool controlled)
-{
-    viewer->setSelected( fc, controlled);
-    if ( viewer == _v0)
-        doOnLeftViewerSetSelected( fc, controlled);
-    else if ( viewer == _v1)
-        doOnCentreViewerSetSelected( fc, controlled);
-    else
-    {
-        assert( viewer == _v2);
-        doOnRightViewerSetSelected( fc, controlled);
-    }   // end else
-}   // end activateOnViewer
-
-
-// private slot
-void MultiFaceModelViewer::doOnLeftViewerSetSelected( FaceControl* fcont, bool v)
+void MultiFaceModelViewer::activateLeftViewer()
 {
     checkEnableLeftToCentre();
-    if ( v) // Ensure that models in the other viewers are not controlled.
-    {
-        activateAllOnViewer( _v1, false);
-        activateAllOnViewer( _v2, false);
-    }   // end if
     checkEnableCentreToLeft();
     checkEnableCentreToRight();
     checkEnableRightToCentre();
-    emit onSelected( fcont, v);
-}   // end doOnLeftViewerSetSelected
+}   // end activateLeftViewer
 
 
-// private slot
-void MultiFaceModelViewer::doOnCentreViewerSetSelected( FaceControl* fcont, bool v)
+// private
+void MultiFaceModelViewer::activateCentreViewer()
 {
     checkEnableCentreToLeft();
     checkEnableCentreToRight();
-    if ( v) // Ensure that models in the other viewers are not controlled.
-    {
-        activateAllOnViewer( _v0, false);
-        activateAllOnViewer( _v2, false);
-    }   // end if
     checkEnableLeftToCentre();
     checkEnableRightToCentre();
-    emit onSelected( fcont, v);
-}   // end doOnCentreViewerSetSelected
+}   // end activateCentreViewer
 
 
-// private slot
-void MultiFaceModelViewer::doOnRightViewerSetSelected( FaceControl* fcont, bool v)
+// private
+void MultiFaceModelViewer::activateRightViewer()
 {
     checkEnableRightToCentre();
-    if ( v) // Ensure that models in the other viewers are not controlled.
-    {
-        activateAllOnViewer( _v0, false);
-        activateAllOnViewer( _v1, false);
-    }   // end if
     checkEnableCentreToRight();
     checkEnableCentreToLeft();
     checkEnableLeftToCentre();
-    emit onSelected( fcont, v);
-}   // end doOnRightViewerSetSelected
+}   // end activateRightViewer
 
 
 // private
 void MultiFaceModelViewer::checkEnableLeftToCentre()
 {
-    _moveLeftToCentreAction->setEnabled( !_v0->selected().empty());
-    _copyLeftToCentreAction->setEnabled( canCopyTo( _v0, _v1));
+    _moveLeftToCentreAction->setEnabled( canMoveFrom(_v0));
+    _copyLeftToCentreAction->setEnabled( canCopyTo(_v1));
 }   // end checkEnableLeftToCentre
 
 
 // private
 void MultiFaceModelViewer::checkEnableCentreToLeft()
 {
-    _moveCentreToLeftAction->setEnabled( !_v1->selected().empty());
-    _copyCentreToLeftAction->setEnabled( canCopyTo( _v1, _v0));
+    _moveCentreToLeftAction->setEnabled( canMoveFrom(_v1));
+    _copyCentreToLeftAction->setEnabled( canCopyTo(_v0));
 }   // end checkEnableCentreToLeft
 
 
 // private
 void MultiFaceModelViewer::checkEnableCentreToRight()
 {
-    _moveCentreToRightAction->setEnabled( !_v1->selected().empty());
-    _copyCentreToRightAction->setEnabled( canCopyTo( _v1, _v2));
+    _moveCentreToRightAction->setEnabled( canMoveFrom(_v1));
+    _copyCentreToRightAction->setEnabled( canCopyTo(_v2));
 }   // end checkEnableCentreToRight
 
 
 // private
 void MultiFaceModelViewer::checkEnableRightToCentre()
 {
-    _moveRightToCentreAction->setEnabled( !_v2->selected().empty());
-    _copyRightToCentreAction->setEnabled( canCopyTo( _v2, _v1));
+    _moveRightToCentreAction->setEnabled( canMoveFrom(_v2));
+    _copyRightToCentreAction->setEnabled( canCopyTo(_v1));
 }   // end checkEnableRightToCentre
 
 
 // private
-// Find the set of models than can go (move or copy) to tv from sv
-size_t MultiFaceModelViewer::canCopyTo( FaceModelViewer* sv, FaceModelViewer* tv, FaceControlSet* totv) const
+bool MultiFaceModelViewer::canCopyTo( FaceModelViewer* tv) const
 {
-    const FaceControlSet& fcs = sv->selected();
-    size_t totvCount = 0;
-
-    if ( totv)
+    const FaceControlSet& fcs = _selector.selected();
+    for ( FaceControl* fc : fcs)
     {
-        for ( FaceControl* fc : fcs)
-        {
-            if ( !tv->isAttached(fc))
-            {
-                totv->insert(fc);
-                totvCount++;
-            }   // end if
-        }   // end foreach
-    }   // end if
-    else
-    {
-        for ( FaceControl* fc : fcs)
-        {
-            if ( !tv->isAttached(fc))
-                totvCount++;
-        }   // end foreach
-    }   // end else
-
-    return totvCount;
+        if ( tv->get(fc->data()) == NULL)
+            return true;
+    }   // end foreach
+    return false;
 }   // end canCopyTo
+
+
+// private
+bool MultiFaceModelViewer::canMoveFrom( FaceModelViewer* sv) const
+{
+    const FaceControlSet& fcs = _selector.selected();
+    for ( FaceControl* fc : fcs)
+    {
+        if ( sv->get(fc->data()))
+            return true;
+    }   // end foreach
+    return false;
+}   // end canMoveFrom

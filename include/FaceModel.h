@@ -31,26 +31,30 @@ public:
     FaceModel(){}
     virtual ~FaceModel(){}
 
-    // Add/remove FaceControl instances associated with this model
-    void add( FaceControl*);
-    void remove( FaceControl*);
-
-    RFeatures::ObjModel::Ptr& model() { return _model;}
-    RFeatures::Orientation& orientation() { return _orientation;}
-    LandmarkSet& landmarks() { return _landmarks;}
-    std::string& description() { return _description;}
-    std::string& source() { return _source;}
-
-    const RFeatures::ObjModel::Ptr model() const { return _model;}
-    const RFeatures::Orientation& orientation() const { return _orientation;}
-    const LandmarkSet& landmarks() const { return _landmarks;}
-    const std::string& description() const { return _description;}
-    const std::string& source() const { return _source;}
-
-    RFeatures::ObjModelKDTree::Ptr& kdtree() { return _kdtree;}
+    // Set/get the model data. Ensure setModel is called after updating the model.
+    // It is not sufficient to update the model through the returned pointer without
+    // calling setModel since this function updates the KD-tree and the positions
+    // of other data that depend upon model surface coordinates.
+    void setModel( RFeatures::ObjModel::Ptr);
+    RFeatures::ObjModel::Ptr model() const { return _model;}
     const RFeatures::ObjModelKDTree::Ptr kdtree() const { return _kdtree;}
 
-    // Transform all the data elements in space. Also rebuilds KD-tree if set.
+    // Set/get orientation of the data.
+    void setOrientation( const RFeatures::Orientation& o) { _orientation = o;}
+    const RFeatures::Orientation& orientation() const { return _orientation;}
+    RFeatures::Orientation& orientation() { return _orientation;}   // Update orientation in-place
+
+    LandmarkSet& landmarks() { return _landmarks;}  // For making modifications
+    const LandmarkSet& landmarks() const { return _landmarks;}
+
+    // Set/get description of data.
+    void setDescription( const std::string& d) { _description = d;}
+    const std::string& description() const { return _description;}
+
+    const std::string& source() const { return _source;}
+    void setSource( const std::string& s) { _source = s;}
+
+    // Transform all the data by the given matrix.
     void transform( const cv::Matx44d&);
 
 private:
@@ -60,7 +64,6 @@ private:
     FaceTools::LandmarkSet _landmarks;
     RFeatures::ObjModel::Ptr _model;
     std::unordered_set<FaceControl*> _fcs;  // FaceControl instances associated with this model.
-
     RFeatures::ObjModelKDTree::Ptr _kdtree;
     /*
     RFeatures::ObjModelCurvatureMap::Ptr _cmap;

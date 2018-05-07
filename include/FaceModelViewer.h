@@ -24,47 +24,38 @@
  */
 
 #include "ModelViewer.h"
-#include <ModelSelectInteractor.h>
-#include <unordered_map>
+#include "FaceControlSet.h"
 
 namespace FaceTools {
 
 class FaceModel;
 
-class FaceTools_EXPORT FaceModelViewer : public QWidget, public ModelViewer
+class FaceTools_EXPORT FaceModelViewer : public ModelViewer
 { Q_OBJECT
 public:
-    FaceModelViewer( QWidget *parent=NULL, bool exclusiveSelect=true);  // Exclusive (single) model selection by default
-    ~FaceModelViewer() override;
+    explicit FaceModelViewer( QWidget *parent=NULL);
 
-    // Only models that are currently attached to this viewer may be (de)selected.
     bool attach( FaceControl*);
     bool detach( FaceControl*);
-    const FaceControlSet& attached() const; // The currently attached set.
-    bool isAttached( FaceControl*) const;   // Returns true iff model is attached to this viewer.
 
-    size_t count() const { return _attached.size();}  // Returns the count of the number of *attached* models in this viewer.
+    const FaceControlSet& attached() const { return _attached;}
+    bool isAttached( FaceControl *fc) const { return _attached.has(fc);}
 
-    FaceControl* get( FaceModel* fm) const; // Return pointer to view/control of given model or NULL if model not attached.
-
-    const FaceControlSet& selected() const; // The currently selected models (at most one member if exclusiveSelect).
-    void setSelected( FaceControl*, bool);  // Set the given FaceControl as selected (true) or deselected (false)
-    bool isSelected( FaceControl*) const;   // Returns true iff model is currently selected.
+    FaceControl* get( FaceModel* fm) const; // Pointer to view/control of given model or NULL if model not attached.
 
 public slots:
     void resetCamera();
     void saveScreenshot() const;
 
 signals:
-    void toggleZeroArea( bool);                 // When going from positve to zero viewing area (true) and back (false).
-    void onUserSelected( FaceControl*, bool);   // Fires when user changes selection 
+    void toggleZeroArea( bool);             // When going from positve to zero viewing area (true) and back (false).
 
 protected:
     void resizeEvent( QResizeEvent*) override;
 
 private:
-    std::unordered_map<FaceModel*, FaceControl*> _attached;
-    Interactor::ModelSelectInteractor* _selector;
+    FaceControlSet _attached; // All attached FaceControl instances
+    std::unordered_map<FaceModel*, FaceControl*> _models;
 };  // end class
 
 }   // end namespace

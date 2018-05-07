@@ -27,7 +27,7 @@
  * must coordinate updates of the view and the LandmarkSet.
  */
 
-#include "LandmarkView.h"
+#include "SphereView.h"
 #include <LandmarkSet.h>
 
 namespace FaceTools {
@@ -36,7 +36,7 @@ namespace Vis {
 class FaceTools_EXPORT LandmarkSetView
 {
 public:
-    LandmarkSetView( const LandmarkSet&);
+    LandmarkSetView( const LandmarkSet&, double lmrad=1.8);
     virtual ~LandmarkSetView();
 
     void erase();                                       // Remove existing landmark views.
@@ -53,9 +53,12 @@ public:
     bool isLandmarkHighlighted( int lmID) const;        // Returns true iff a particular landmark is highlighted
     const std::unordered_set<int>& highlighted() const; // IDs of the highlighted landmarks
 
+    void setLandmarkRadius( double);
+    double landmarkRadius() const { return _lmrad;}
+
     int pointedAt( const QPoint&) const;                // Returns ID of the landmark under the given coordinates or -1 if none.
     bool isLandmark( const vtkProp*) const;             // Returns true if given prop is a landmark AND the landmark is visible.
-    const LandmarkView* landmark( int lmID) const;      // Return the landmark view with this ID or NULL if not found.
+    const SphereView* landmark( int lmID) const;        // Return the landmark view with this ID or NULL if not found.
 
     // Transform the landmark views according to the given matrix.
     // This function does NOT change the real position of the landmark!
@@ -69,8 +72,9 @@ public:
 
 private:
     const LandmarkSet& _lset;
+    double _lmrad;
     ModelViewer *_viewer;
-    std::unordered_map<int, LandmarkView*> _lviews;
+    std::unordered_map<int, SphereView*> _lviews;
     std::unordered_set<int> _visible, _highlighted;
 
     LandmarkSetView( const LandmarkSetView&);   // No copy

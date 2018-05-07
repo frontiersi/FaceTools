@@ -27,11 +27,11 @@ set( SRC_DIR "${PROJECT_SOURCE_DIR}/src")
 set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionCloseAllFaceModels.h"
     "${INCLUDE_ACTION_DIR}/ActionCloseFaceModels.h"
+    "${INCLUDE_ACTION_DIR}/ActionCrop.h"
     "${INCLUDE_ACTION_DIR}/ActionDetectFace.h"
     "${INCLUDE_ACTION_DIR}/ActionLoadDirFaceModels.h"
     "${INCLUDE_ACTION_DIR}/ActionLoadFaceModels.h"
     "${INCLUDE_ACTION_DIR}/ActionOrientCameraToFace.h"
-    #"${INCLUDE_ACTION_DIR}/ActionRadialSelect.h"
     "${INCLUDE_ACTION_DIR}/ActionResetCamera.h"
     "${INCLUDE_ACTION_DIR}/ActionSaveScreenshot.h"
     "${INCLUDE_ACTION_DIR}/ActionSaveFaceModels.h"
@@ -55,15 +55,21 @@ set( QOBJECTS
     "${INCLUDE_FILEIO_DIR}/LoadFaceModelsHelper.h"
 
     "${INCLUDE_VIS_DIR}/BaseVisualisation.h"
+    "${INCLUDE_VIS_DIR}/BoundaryVisualisation.h"
     "${INCLUDE_VIS_DIR}/LandmarksVisualisation.h"
     "${INCLUDE_VIS_DIR}/VisualisationInterface.h"
     "${INCLUDE_VIS_DIR}/ScalarVisualisation.h"
 
-    "${INCLUDE_INT_DIR}/FaceEntryExitInteractor.h"
-    "${INCLUDE_INT_DIR}/ModelSelectInteractor.h"
     #"${INCLUDE_INT_DIR}/MeasureInteractor.h"
+    "${INCLUDE_INT_DIR}/ContextMenuInteractor.h"
+    "${INCLUDE_INT_DIR}/ModelViewerEntryExitInteractor.h"
+    "${INCLUDE_INT_DIR}/ModelSelectInteractor.h"
+    "${INCLUDE_INT_DIR}/ModelViewerInteractor.h"
+    "${INCLUDE_INT_DIR}/FaceEntryExitInteractor.h"
+    "${INCLUDE_INT_DIR}/RadialSelectInteractor.h"
 
     "${INCLUDE_DIR}/FaceModelViewer.h"
+    "${INCLUDE_DIR}/ModelViewer.h"
     "${INCLUDE_DIR}/ModelViewerAnnotator.h"
     "${INCLUDE_DIR}/MultiFaceModelViewer.h"
     )
@@ -86,15 +92,11 @@ set( INCLUDE_FILES
     "${INCLUDE_FILEIO_DIR}/FaceModelFileHandlerMap.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelManager.h"
 
-    "${INCLUDE_VIS_DIR}/BoundaryView.h"
     "${INCLUDE_VIS_DIR}/FaceView.h"
     "${INCLUDE_VIS_DIR}/LandmarkSetView.h"
-    "${INCLUDE_VIS_DIR}/LandmarkView.h"
     "${INCLUDE_VIS_DIR}/LegendScalarColourRangeMapper.h"
     "${INCLUDE_VIS_DIR}/OutlinesView.h"
-
-    "${INCLUDE_INT_DIR}/ModelViewerInteractor.h"
-    #"${INCLUDE_INT_DIR}/RadialSelectInteractor.h"
+    "${INCLUDE_VIS_DIR}/SphereView.h"
 
     #"${INCLUDE_DIR}/CorrespondenceFinder.h"
     "${INCLUDE_DIR}/CurvatureSpeedFunctor.h"
@@ -109,7 +111,6 @@ set( INCLUDE_FILES
     "${INCLUDE_DIR}/Landmark.h"
     "${INCLUDE_DIR}/LandmarkSet.h"
     "${INCLUDE_DIR}/MiscFunctions.h"
-    "${INCLUDE_DIR}/ModelViewer.h"
     "${INCLUDE_DIR}/SurfaceMesher.h"
     #"${INCLUDE_DIR}/SurfacePath.h"
     #"${INCLUDE_DIR}/SurfacePathSet.h"
@@ -117,15 +118,16 @@ set( INCLUDE_FILES
 
 set( SRC_FILES
     ${SRC_DIR}/${PROJECT_NAME}
+    ${SRC_DIR}/Action/ChangeEvents
     ${SRC_DIR}/Action/ActionCloseAllFaceModels
     ${SRC_DIR}/Action/ActionCloseFaceModels
+    ${SRC_DIR}/Action/ActionCrop
     ${SRC_DIR}/Action/ActionDetectFace
     ${SRC_DIR}/Action/ActionLoadDirFaceModels
     ${SRC_DIR}/Action/ActionLoadFaceModels
     ${SRC_DIR}/Action/ActionSaveFaceModels
     ${SRC_DIR}/Action/ActionSaveAsFaceModel
     ${SRC_DIR}/Action/ActionOrientCameraToFace
-    #${SRC_DIR}/Action/ActionRadialSelect
     ${SRC_DIR}/Action/ActionResetCamera
     ${SRC_DIR}/Action/ActionSaveScreenshot
     ${SRC_DIR}/Action/ActionSetFocus
@@ -157,20 +159,21 @@ set( SRC_FILES
     ${SRC_DIR}/FileIO/LoadFaceModelsHelper
 
     ${SRC_DIR}/Vis/BaseVisualisation
-    ${SRC_DIR}/Vis/BoundaryView
+    ${SRC_DIR}/Vis/BoundaryVisualisation
     ${SRC_DIR}/Vis/FaceView
     ${SRC_DIR}/Vis/LandmarkSetView
-    ${SRC_DIR}/Vis/LandmarkView
     ${SRC_DIR}/Vis/LandmarksVisualisation
     ${SRC_DIR}/Vis/OutlinesView
     ${SRC_DIR}/Vis/LegendScalarColourRangeMapper
     ${SRC_DIR}/Vis/ScalarVisualisation
+    ${SRC_DIR}/Vis/SphereView
 
+    ${SRC_DIR}/Interactor/ContextMenuInteractor
     ${SRC_DIR}/Interactor/ModelViewerInteractor
     ${SRC_DIR}/Interactor/FaceEntryExitInteractor
     #${SRC_DIR}/Interactor/MeasureInteractor
     ${SRC_DIR}/Interactor/ModelSelectInteractor
-    #${SRC_DIR}/Interactor/RadialSelectInteractor
+    ${SRC_DIR}/Interactor/RadialSelectInteractor
 
     #${SRC_DIR}/CorrespondenceFinder
     ${SRC_DIR}/CurvatureSpeedFunctor

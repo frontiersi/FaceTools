@@ -34,57 +34,90 @@ ActionVisualise::ActionVisualise( Vis::BaseVisualisation* vint, bool d)
     addChangeTo(  VISUALISATION_CHANGED);
     addRespondTo( VISUALISATION_CHANGED);
     addRespondTo( MODEL_GEOMETRY_CHANGED);
-    vint->setAction(this);  // Allows delegate to add its own ChangeEvents to this FaceAction.
     // Non-exclusive visualisations should not be the default!
     if ( _isdefault && !_vint->isExclusive())
         std::cerr << "[ERROR] FaceTools::Action::ActionVisualise: Making non-exclusive visualisation default!" << std::endl;
     assert( !_isdefault || _vint->isExclusive());
+    setCheckable( !_vint->isExclusive(), false);    // Non-exclusive visualisations are checkable
+    vint->setAction(this);  // Allows delegate to add its own ChangeEvents to this FaceAction.
 }   // end ctor
 
 
 bool ActionVisualise::testReady( FaceControl* fc)
 {
+    const std::string dname = debugActionName();
     const bool avail = _vint->isAvailable(fc->data());
     // If no visualisations have yet been applied to the face view, this action is the default
     // visualisation, and the visualisation is available for the model, then apply it.
     if ( fc->view()->visualisations().empty() && _isdefault && avail) // Set default initial visualisation
     {
+        std::cerr << " + Applying " << dname << " (default visualisation)" << std::endl;
         fc->view()->rebuild();
         fc->view()->apply( _vint);     // Applies visualisation post-processing and sets in viewer.
     }   // end if
 
-    if ( avail && fc->view()->visualisations().count(_vint) > 0)
+    const bool applied = _vint->isApplied(fc);
+    if ( avail && applied)
     { 
         _vint->onSelected(fc);
         fc->viewer()->updateRender();
     }   // end if
 
-    // Return ready only if visualisation available and is not currently set on the FaceControl
-    return avail && fc->view()->visualisations().count( _vint) == 0;
+    setChecked(applied);
+
+    // Return ready only if visualisation available and is not currently set on the FaceControl,
+    // unless this is a checkable visualisation (in which case running this action again when
+    // applied, removes the visualisation).
+    return avail && (isCheckable() || !applied);
 }   // end testReady
 
 
 bool ActionVisualise::doAction( FaceControlSet& s)
 {
     // Apply visualisation to each FaceControl. Default doAfterAction calls updateRender on viewers.
-    std::for_each( std::begin(s), std::end(s), [=]( auto fc){ fc->view()->apply( _vint);});
+    if ( !isCheckable() || isChecked())
+    {
+        std::cerr << " + Applying visualisation" << std::endl;
+        std::for_each( std::begin(s), std::end(s), [=]( auto fc){ fc->view()->apply( _vint);});
+    }   // end if
+    else
+    {
+        std::cerr << " - Removing visualisation" << std::endl;
+        std::for_each( std::begin(s), std::end(s), [=]( auto fc){ fc->view()->remove( _vint);});
+    }   // end else
     return true;
 }   // end doAction
 
 
 void ActionVisualise::respondToChange( FaceControl* fc)
 {
-    if ( fc->view()->visualisations().count(_vint) > 0)  // Refresh visualisation if this one?
+    const std::string dname = debugActionName();
+    const bool applied = _vint->isApplied(fc);
+    FaceAction* sending = qobject_cast<FaceAction*>(sender());
+
+    // Rebuild the visualisation models if the sending action may have changed
+    // the model's geometry, AND this is the applied exclusive visualisation.
+    if ( sending->changeEvents().count( MODEL_GEOMETRY_CHANGED))
     {
-        FaceAction* sending = qobject_cast<FaceAction*>(sender());
-        assert(sending);
-        // Only rebuild the visualisation model if the sending action changes the model's geometry.
-        if ( sending->changeEvents().count( MODEL_GEOMETRY_CHANGED))
-            fc->view()->rebuild();  // Also reapplies this visualisation
-        _vint->respondTo(fc);
-        fc->viewer()->updateRender();
+        if ( applied && _vint->isExclusive())
+        {
+            std::cerr << " Possible geometry change -> rebuilding view models from " << dname << std::endl;
+            fc->view()->rebuild();  // Also destroys and re-applies this visualisation
+        }   // end if
     }   // end if
-    FaceAction::respondToChange(fc);    // Test and set if this visualisation action should be enabled
+    else if ( sending->changeEvents().count( VISUALISATION_CHANGED) == 0)
+    { // Respond to other (non-destructive) ChangeEvents (not VISUALISATION_CHANGED) using delegate's respondTo function.
+        std::cerr << " ! " << dname << " visualisation responding to change" << std::endl;
+        _vint->respondTo(fc);
+    }   // end else
+
+    // Simply checks if this visualisation should be enabled.
+    FaceAction::respondToChange(fc);
+
+    // Only bother about updating the render if this visualisation is currently applied,
+    // otherwise render will be updated next time the action is applied in FaceAction::doAfterAction.
+    if ( applied)
+        fc->viewer()->updateRender();
 }   // end respondToChange
 
 

@@ -25,9 +25,8 @@ using FaceTools::FaceControl;
 
 
 // public
-ModelSelectInteractor::ModelSelectInteractor( ModelViewer* mv, bool ex)
-    : ModelViewerInteractor( mv),
-     _exclusive(ex), _enabled(true)
+ModelSelectInteractor::ModelSelectInteractor( bool ex)
+    : _exclusive(ex), _enabled(true)
 {}   // end ctor
 
 
@@ -38,115 +37,116 @@ bool ModelSelectInteractor::isExclusiveSelect() const { return _exclusive;}
 
 
 // public
-void ModelSelectInteractor::add( FaceControl* fcont)
+void ModelSelectInteractor::add( FaceControl* fc)
 {
-    assert( _selected.count(fcont) == 0);
-    assert( _available.count(fcont) == 0);
-    _available.insert(fcont);
-    setSelected( fcont, true);
+    assert( !isSelected(fc));
+    assert( !isAvailable(fc));
+    _available.insert(fc);
+    setSelected( fc, true);
 }   // end add
 
 
 // public
-void ModelSelectInteractor::remove( FaceControl* fcont)
+void ModelSelectInteractor::remove( FaceControl* fc)
 {
-    assert( _available.count(fcont) > 0);
-    setSelected( fcont, false);
-    _available.erase(fcont);
+    assert( isAvailable(fc));
+    _available.erase(fc);
+    setSelected( fc, false);
+    emit onRemoving( fc);
 }   // end remove
 
 
 // public
-void ModelSelectInteractor::setSelected( FaceControl* fcont, bool selected)
+void ModelSelectInteractor::setSelected( FaceControl* fc, bool selected)
 {
+    if ( isSelected(fc) == selected)    // Only change if needing to
+        return;
+
     if ( _exclusive)
-        _selected.clear();
+        deselectAll();
     else
-        _selected.erase(fcont);
+        eraseSelected(fc);
 
     if ( selected)
     {
-        assert( _available.count(fcont) > 0);
-        _selected.insert(fcont);
+        assert( _available.count(fc) > 0);
+        insertSelected(fc);
     }   // end if
 }   // end setSelected
 
 
 // public
-bool ModelSelectInteractor::isSelected( FaceControl* fc) const
-{
-    return _selected.count(fc) > 0;
-}   // end isSelected
-
-
-// public
-bool ModelSelectInteractor::isAvailable( FaceControl* fc) const
-{
-    return _available.count(fc) > 0;
-}   // end isAvailable
+bool ModelSelectInteractor::isSelected( FaceControl* fc) const { return _selected.count(fc) > 0;}
+bool ModelSelectInteractor::isAvailable( FaceControl* fc) const { return _available.count(fc) > 0;}
 
 
 // private
-void ModelSelectInteractor::eraseSelected( FaceControl* fcont)
+void ModelSelectInteractor::eraseSelected( FaceControl* fc)
 {
-    _selected.erase(fcont);
-    emit onUserSelected( fcont, false);
+    _selected.erase(fc);
+    emit onSelected( fc, false);
 }   // end eraseSelected
 
 
 // private
-void ModelSelectInteractor::insertSelected( FaceControl* fcont)
+void ModelSelectInteractor::insertSelected( FaceControl* fc)
 {
-    _selected.insert(fcont);
-    emit onUserSelected( fcont, true);
+    _selected.insert(fc);
+    emit onSelected( fc, true);
 }   // end insertSelected
 
 
-void ModelSelectInteractor::rightButtonDown( const QPoint& p)
+bool ModelSelectInteractor::rightButtonDown( const QPoint& p)
 {
-    if ( !_enabled)
-        return;
-
-    FaceControl* fcont = _available.find( viewer()->getPointedAt(p));
-    if ( fcont && _selected.count( fcont) == 0)
+    bool swallowed = false;
+    if ( _enabled)
     {
-        if ( _exclusive)    // signal to listeners that currently selected models are being deselected
-            deselectAll();
-        insertSelected( fcont);
+        FaceControl* fc = _available.find( viewer()->getPointedAt(p));
+        if ( fc && !isSelected(fc))
+        {
+            if ( _exclusive)    // signal to listeners that currently selected models are being deselected
+                deselectAll();
+            insertSelected( fc);
+            swallowed = true;
+        }   // end if
     }   // end if
+    return swallowed;
 }   // end rightButtonDown
 
 
-void ModelSelectInteractor::leftDoubleClick( const QPoint& p)
+bool ModelSelectInteractor::leftDoubleClick( const QPoint& p)
 {
-    if ( !_enabled)
-        return;
-
-    FaceControl* fcont = _available.find( viewer()->getPointedAt(p));
-    if ( fcont)
+    bool swallowed = false;
+    if ( _enabled)
     {
-        if ( _exclusive)
-            deselectAll();
-
-        if ( _selected.count(fcont) == 0)   // Select after double-clicking on a model
-            insertSelected( fcont);
-        else                                // Deselect after double-clicking on a model
-            eraseSelected( fcont);
-    }   // end if
-    else // Nothing double-clicked
-    {
-        if ( _exclusive || _selected.size() == _available.size())
-            deselectAll();
-        else
+        swallowed = true;   // All double clicks swallowed
+        FaceControl* fc = _available.find( viewer()->getPointedAt(p));
+        if ( fc)
         {
-            for ( FaceControl* fcont : _available)
+            if ( _exclusive)
+                deselectAll();
+
+            if ( !isSelected(fc))   // Select after double-clicking on a model
+                insertSelected( fc);
+            else                                // Deselect after double-clicking on a model
+                eraseSelected( fc);
+        }   // end if
+        else // Nothing double-clicked
+        {
+            if ( _exclusive || _selected.size() == _available.size())
+                deselectAll();
+            else
             {
-                if ( _selected.count(fcont) > 0)
-                    continue;
-                insertSelected( fcont);
-            }   // end foreach
+                for ( FaceControl* f : _available)
+                {
+                    if ( isSelected(f))
+                        continue;
+                    insertSelected( fc);
+                }   // end foreach
+            }   // end else
         }   // end else
-    }   // end else
+    }   // end if
+    return swallowed;
 }   // end leftDoubleClick
 
 

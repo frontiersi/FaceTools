@@ -55,7 +55,10 @@ private:
     float _orng, _drng;
     std::string _err;
     RVTK::Viewer::Ptr _viewer;
+    std::vector<vtkSmartPointer<vtkActor> > _actors;
 
+    bool cleanUp();
+    bool cleanUp( std::string);
     bool findOrientation( RFeatures::ObjModelKDTree::Ptr, RFeatures::Orientation&, LandmarkSet&);
     FaceDetector( const FaceDetector&);     // No copy
     void operator=( const FaceDetector&);   // No copy

@@ -15,16 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <LandmarkView.h>
+#include <SphereView.h>
 #include <vtkProperty.h>
 #include <vtkTextProperty.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkMapper.h>
-using FaceTools::Vis::LandmarkView;
+using FaceTools::Vis::SphereView;
 using FaceTools::ModelViewer;
 
 
-LandmarkView::LandmarkView()
+SphereView::SphereView( const cv::Vec3f& c, double r)
     : _viewer(NULL),
       _source( vtkSmartPointer<vtkSphereSource>::New()),
       _actor( vtkSmartPointer<vtkActor>::New()),
@@ -43,44 +43,61 @@ LandmarkView::LandmarkView()
     _caption->GetCaptionTextProperty()->SetFontSize(4);
     _caption->GetCaptionTextProperty()->SetUseTightBoundingBox(true);
     _caption->SetPickable(false);
+
+    setCentre(c);
+    setRadius(r);
 }   // end ctor
 
 
-LandmarkView::~LandmarkView()
+SphereView::~SphereView()
 {
     setVisible( false, NULL);
 }   // end dtor
 
 
 // public
-void LandmarkView::set( const std::string& lname, const cv::Vec3f& pos)
+void SphereView::setCaption( const std::string& lname)
 {
     _caption->SetCaption( lname.c_str());
-    setPos(pos);
-}   // end set
+}   // end setCaption
 
 
 // public
-void LandmarkView::setPos( const cv::Vec3f& pos)
+void SphereView::setCentre( const cv::Vec3f& pos)
 {
     _source->SetCenter( pos[0], pos[1], pos[2]);
     _source->Update();
     double attachPoint[3] = {pos[0], pos[1], pos[2]};
     _caption->SetAttachmentPoint( attachPoint);
-}   // end setPos
+}   // end setCentre
 
 
 // public
-cv::Vec3f LandmarkView::pos() const
+cv::Vec3f SphereView::centre() const
 {
     double vp[3];
     _source->GetCenter( vp);
     return cv::Vec3f( float(vp[0]), float(vp[1]), float(vp[2]));
-}   // end pos
+}   // end centre
 
 
 // public
-void LandmarkView::setVisible( bool enable, ModelViewer* viewer)
+void SphereView::setRadius( double r)
+{
+    _source->SetRadius(r);
+    _source->Update();
+}   // end setRadius
+
+
+// public
+double SphereView::radius() const
+{
+    return _source->GetRadius();
+}   // end radius
+
+
+// public
+void SphereView::setVisible( bool enable, ModelViewer* viewer)
 {
     if ( _viewer)
     {
@@ -88,39 +105,32 @@ void LandmarkView::setVisible( bool enable, ModelViewer* viewer)
         _viewer->remove(_caption);
     }   // end if
 
-    if ( viewer)
-    {
-        viewer->remove(_actor);
-        viewer->remove(_caption);
-    }   // end if
-
     _isshown = false;
     _ishighlighted = false;
     _viewer = viewer;
-    if ( enable && viewer)
+    if ( enable && _viewer)
     {
-        viewer->add(_actor);
+        _viewer->add(_actor);
         _isshown = true;
     }   // end if
 }   // end setVisible
 
 
 // public
-bool LandmarkView::isVisible() const { return _isshown;}
-bool LandmarkView::isHighlighted() const { return _ishighlighted;}
-bool LandmarkView::isProp( const vtkProp* prop) const { return _actor == prop;}
+bool SphereView::isVisible() const { return _isshown;}
+bool SphereView::isHighlighted() const { return _ishighlighted;}
+bool SphereView::isProp( const vtkProp* prop) const { return _actor == prop;}
 
 
 // public
-void LandmarkView::highlight( bool enable)
+void SphereView::highlight( bool enable)
 {
     double opacity = 1.0;
     _ishighlighted = enable && isVisible();
     if ( _ishighlighted)
         opacity = 0.4;
-    _actor->GetProperty()->SetColor( 1,1,1);
+    _actor->GetProperty()->SetColor( 0.7,1,1);
     _actor->GetProperty()->SetOpacity( opacity);
-    //_source->SetRadius( rad);
 
     _caption->GetCaptionTextProperty()->SetColor( 1,1,1);
     _caption->SetVisibility( true);
@@ -134,7 +144,7 @@ void LandmarkView::highlight( bool enable)
 }   // end highlight
 
 
-bool LandmarkView::pointedAt( const QPoint& p) const
+bool SphereView::pointedAt( const QPoint& p) const
 {
     bool pointedAt = false;
     if ( _viewer)

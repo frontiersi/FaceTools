@@ -57,6 +57,14 @@ public:
     bool isExclusive() const override { return true;}
     bool isAvailable( const FaceModel*) const override { return true;}
 
+    // Returns true iff this visualisation is currently applied in the given view.
+    bool isApplied( const FaceControl*) const;
+
+    // Return true iff the given prop relating to the given FaceControl belongs to
+    // this visualisation. Typically, visualisations do not define extra actors
+    // so the default implementation defaults to returning false.
+    virtual bool belongs( const vtkProp*, const FaceControl*) const { return false;}
+
     // Derived types still need to provide overrides for:
     // void apply( const FaceControl*)
     // void addActors( const FaceControl*)
@@ -84,18 +92,12 @@ protected:
     // changes to data).
     virtual void respondTo( const FaceControl*){}
 
-    // Return true iff the given prop relating to the given FaceControl belongs to
-    // this visualisation. Typically, visualisations do not define extra actors
-    // so the default implementation defaults to returning false.
-    virtual bool belongs( const vtkProp*, const FaceControl*) const { return false;}
-
     // Transform this visualisation's defined actors (if any) for the given FaceControl. Derived
     // types only need to override if they define vtkProp3D actors that must respond to movements
     // of the main FaceView actors in the given FaceControl.
     virtual void transform( const FaceControl*, const vtkMatrix4x4*){}
 
-    // Called by the containing ActionVisualise to remove cached data relating to the given
-    // FaceControl. Does nothing by default, but derived types can override if required.
+    // Destroy any cached data relating to the given FaceControl.
     virtual void burn( const FaceControl*){}
 
     friend class Action::ActionVisualise;

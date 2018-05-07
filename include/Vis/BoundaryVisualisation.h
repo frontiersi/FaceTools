@@ -15,53 +15,43 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_VIS_LANDMARKS_VISUALISATION_H
-#define FACE_TOOLS_VIS_LANDMARKS_VISUALISATION_H
+#ifndef FACE_TOOLS_VIS_BOUNDARY_VISUALISATION_H
+#define FACE_TOOLS_VIS_BOUNDARY_VISUALISATION_H
 
 #include "BaseVisualisation.h"
-#include "LandmarkSetView.h"
+#include "SphereView.h"
 
 namespace FaceTools {
 namespace Vis {
 
-class FaceTools_EXPORT LandmarksVisualisation : public BaseVisualisation
+class FaceTools_EXPORT BoundaryVisualisation : public BaseVisualisation
 { Q_OBJECT
 public:
-    LandmarksVisualisation( const QString &dname="Landmarks",
-                            const QIcon &icon=QIcon(":/icons/LANDMARKS"),
-                            const QKeySequence &keys=QKeySequence(Qt::Key_L));
-    ~LandmarksVisualisation() override;
+    BoundaryVisualisation( const QString& dname="Boundary",
+                           const QIcon& icon=QIcon(":/icons/BOUNDARY"));
+    ~BoundaryVisualisation() override;
 
     bool isExclusive() const override { return false;}
     bool isAvailable( const FaceModel*) const override;
-
-    bool belongs( const vtkProp*, const FaceControl*) const override;
 
     void apply( const FaceControl*) override;
     void addActors( const FaceControl*) override;
     void removeActors( const FaceControl*) override;
 
-    // Get the LandmarkSetView for the given FaceControl.
-    const LandmarkSetView* landmarks( const FaceControl*) const;
+    // Set/get a new radius of the boundary for the given FaceControl.
+    void setCentre( const FaceControl*, const cv::Vec3f&);
+    cv::Vec3f centre( const FaceControl*) const;
 
-public slots:
-    // Show or hide the given landmark across all views.
-    void setLandmarkVisible( int, bool);
-
-    // Set highlighted or not the given landmark across all views.
-    void setLandmarkHighlighted( int, bool);
-
-    // Refresh information about the given landmark from its set for the given FaceControl.
-    void refreshLandmark( const FaceControl*, int);
+    // Set/get a new boundary centre for the given FaceControl.
+    void setRadius( const FaceControl*, double);
+    double radius( const FaceControl*) const;
 
 protected:
-    void setAction( Action::ActionVisualise*) override;
-    void respondTo( const FaceControl*) override;
     void transform( const FaceControl*, const vtkMatrix4x4*) override;
     void burn( const FaceControl*) override;
 
 private:
-    std::unordered_map<const FaceControl*, LandmarkSetView*> _lviews;
+    std::unordered_map<const FaceControl*, SphereView*> _views;
 };  // end class
 
 }   // end namespace

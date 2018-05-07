@@ -38,6 +38,8 @@ ActionDetectFace::ActionDetectFace( const QString& haar, const QString& lmks, QW
 {
     addChangeTo( MODEL_TRANSFORMED);
     addChangeTo( MODEL_ORIENTATION_CHANGED);
+    addChangeTo( LANDMARK_ADDED);
+    addChangeTo( LANDMARK_CHANGED);
 
     // Default (parent) implementation of respondToChange adequate for these events.
     addRespondTo( LANDMARK_ADDED);
@@ -95,9 +97,6 @@ bool ActionDetectFace::doAction( FaceControlSet& rset)
     for ( FaceControl* fc : fset)
     {
         FaceModel* fm = fc->data();
-        if ( !fm->kdtree()) // Create the KD-tree if not present
-            fm->kdtree() = RFeatures::ObjModelKDTree::create(fm->model());
-
         RFeatures::Orientation& on = fm->orientation();
         FaceTools::LandmarkSet& lmks = fm->landmarks();
         if ( !_detector->detect( fm->kdtree(), on, lmks))

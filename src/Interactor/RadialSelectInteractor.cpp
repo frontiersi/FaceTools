@@ -16,54 +16,73 @@
  ************************************************************************/
 
 #include <RadialSelectInteractor.h>
+#include <FaceEntryExitInteractor.h>
+#include <BoundaryVisualisation.h>
 #include <FaceModelViewer.h>
+#include <FeatureUtils.h>   // RFeatures
 #include <cassert>
 using FaceTools::Interactor::RadialSelectInteractor;
-using FaceTools::Interactor::ModelViewerInteractor;
-using FaceTools::FaceModelViewer;
+using FaceTools::Interactor::FaceEntryExitInteractor;
+using FaceTools::Vis::BoundaryVisualisation;
 using FaceTools::FaceControl;
 
 
 // public
-RadialSelectInteractor::RadialSelectInteractor( FaceModelViewer* viewer)
-    : ModelViewerInteractor( viewer), _viewer(viewer), _onDownCamLocked(false)
+RadialSelectInteractor::RadialSelectInteractor( BoundaryVisualisation* bv)
+    : _bvis(bv), _feei( new FaceEntryExitInteractor)
 {
+    connect( _feei, &FaceEntryExitInteractor::onEnterModel, this, &RadialSelectInteractor::doOnEnterModel);
+    connect( _feei, &FaceEntryExitInteractor::onLeaveModel, this, &RadialSelectInteractor::doOnLeaveModel);
 }   // end ctor
 
 
-void RadialSelectInteractor::rightButtonDown( const QPoint&)
+// public
+RadialSelectInteractor::~RadialSelectInteractor() { delete _feei;}
+
+
+// private slot
+void RadialSelectInteractor::doOnEnterModel( FaceControl *fc)
 {
-}   // end rightButtonDown
+    if ( _bvis->isApplied(fc))
+        _fc = fc;
+}   // end doOnEnterModel
 
 
-void RadialSelectInteractor::leftDoubleClick( const QPoint&)
+// private slot
+void RadialSelectInteractor::doOnLeaveModel( FaceControl *fc){ _fc = NULL;}
+
+
+// protected
+void RadialSelectInteractor::onAttached() { _feei->setViewer(viewer());}
+void RadialSelectInteractor::onDetached() { _feei->setViewer(NULL);}
+
+
+bool RadialSelectInteractor::leftButtonDown( const QPoint& p) { return leftDrag(p);}
+bool RadialSelectInteractor::leftDrag( const QPoint& p)
 {
-}   // end leftDoubleClick
+    if ( !_fc)
+        return false;
 
-
-void RadialSelectInteractor::leftButtonDown( const QPoint& p)
-{
-    _onDownCamLocked = isCameraLocked();
-    setCameraLocked(true);
-    setCentre(p);
-}   // end leftButtonDown
-
-
-void RadialSelectInteractor::leftButtonUp( const QPoint&)
-{
-    setCameraLocked(_onDownCamLocked);
-}   // end leftButtonUp
-
-
-void RadialSelectInteractor::leftDrag( const QPoint&)
-{
+    cv::Vec3f v = viewer()->project(p);
+    _bvis->setCentre( _fc, v);
+    viewer()->updateRender();
+    emit onNewCentre( _fc, v);
+    return true;
 }   // end leftDrag
 
 
-// private
-void RadialSelectInteractor::setCentre( const QPoint& p)
+bool RadialSelectInteractor::rightButtonDown( const QPoint& p) { return rightDrag(p);}
+bool RadialSelectInteractor::rightDrag( const QPoint& p)
 {
-    const FaceControlSet& fcs = _viewer->selected();    // Only look at the selected models when setting the centre
-    FaceControl* fc = fcs.find( _viewer->getPointedAt( p));    // fc is a selected model
-}   // end setCentre
+    if ( !_fc)
+        return false;
 
+    // New radius as Euclidean distance of point from starting right click drag point.
+    cv::Vec3f v = _bvis->centre(_fc);
+    cv::Vec3f nv = viewer()->project(p);
+    double nrad = sqrt( RFeatures::l2sq(nv - v));
+    _bvis->setRadius(_fc, nrad);
+    viewer()->updateRender();
+    emit onNewRadius( _fc, nrad);
+    return true;
+}   // end rightDrag

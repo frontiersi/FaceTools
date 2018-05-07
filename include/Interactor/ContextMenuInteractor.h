@@ -15,35 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_BOUNDARY_VIEW_H
-#define FACE_TOOLS_BOUNDARY_VIEW_H
+#ifndef FACE_TOOLS_CONTEXT_MENU_INTERACTOR_H
+#define FACE_TOOLS_CONTEXT_MENU_INTERACTOR_H
 
-#include <FaceControl.h>
-#include <vtkSmartPointer.h>
-#include <vtkActor.h>
-#include <unordered_set>
+#include "ModelViewerInteractor.h"
+#include <QMenu>
 
 namespace FaceTools {
-namespace Vis {
+namespace Interactor {
 
-class FaceTools_EXPORT BoundaryView
-{
+class FaceTools_EXPORT ContextMenuInteractor : public ModelViewerInteractor
+{ Q_OBJECT
 public:
-    explicit BoundaryView( const FaceControl&);
-    virtual ~BoundaryView();
+    explicit ContextMenuInteractor( QMenu* cm=NULL);
 
-    bool isVisible() const { return _isshown;}
-    void setVisible( bool);
-
-    bool setBoundary( const std::unordered_set<int>* bverts);    // Update the boundary actor
+    void setContextMenu( QMenu*);
 
 private:
-    const FaceControl& _fcont;
-    bool _isshown;
-    vtkSmartPointer<vtkActor> _boundary;
-
-    BoundaryView( const BoundaryView&);   // No copy
-    void operator=( const BoundaryView&); // No copy
+    bool rightButtonDown( const QPoint&) override;
+    QMenu *_cmenu;
 };  // end class
 
 }   // end namespace

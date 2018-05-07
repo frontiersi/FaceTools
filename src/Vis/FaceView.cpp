@@ -62,14 +62,15 @@ void FaceView::rebuild()
     // Remove all actors first before building new ones
     if ( _viewer)
         std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](auto v){v->removeActors(_fc);});
+    std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](auto v){v->burn(_fc);});
 
     const ObjModel::Ptr model = _fc->data()->model();
     RVTK::VtkActorCreator ac;
     _fmap.clear();  // Create the surface actor
     ac.setObjToVTKUniqueFaceMap( &_fmap);
     _sactor = ac.generateSurfaceActor( model);
-
     _tactor = NULL;
+
     if ( model->getNumMaterials() == 1) // Create the textured actor
     {
         std::vector<vtkSmartPointer<vtkActor> > tactors;
@@ -259,8 +260,8 @@ const vtkMatrix4x4* FaceView::transform( const vtkMatrix4x4 *t)
             t = _tactor->GetMatrix();
     }   // end if
 
-    std::cerr << "Transform matrix:" << std::endl;
-    std::cerr << RVTK::toCV(t) << std::endl;
+    std::cerr << " Transforming visualisation layers with matrix:" << std::endl;
+    std::cerr << " " << RVTK::toCV(t) << std::endl;
 
     RVTK::transform(_sactor, t);
     if ( _tactor)

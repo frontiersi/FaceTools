@@ -18,36 +18,46 @@
 #ifndef FACE_TOOLS_RADIAL_SELECT_INTERACTOR_H
 #define FACE_TOOLS_RADIAL_SELECT_INTERACTOR_H
 
-// TODO
 /**
- * Provides for user definition of a radial region of a model.
- * Upon attaching to a viewer, interactor locks the camera to
- * ensure that normal camera navigation actions are ignored to
- * allow this interface to act on the viewer's contents.
+ * Provides for user definition of a radial region on a model. Uses FaceEntryExitInteractor
+ * so can only be attached to FaceModelViewer and not the base ModelViewer type.
  */
 
 #include "ModelViewerInteractor.h"
+#include <BoundaryVisualisation.h>
 
 namespace FaceTools {
 namespace Interactor {
-
-class FaceModelViewer;
+class FaceEntryExitInteractor;
 
 class FaceTools_EXPORT RadialSelectInteractor : public ModelViewerInteractor 
-{
+{ Q_OBJECT
 public:
-    explicit RadialSelectInteractor( FaceModelViewer*);
+    explicit RadialSelectInteractor( Vis::BoundaryVisualisation*);
+    ~RadialSelectInteractor() override;
+
+signals:
+    // Signals emitted after rendering update.
+    void onNewCentre( FaceControl*, const cv::Vec3f&);
+    void onNewRadius( FaceControl*, double);
+
+protected:
+    void onAttached() override;
+    void onDetached() override;
+
+private slots:
+    void doOnEnterModel( FaceControl*);
+    void doOnLeaveModel( FaceControl*);
 
 private:
-    void rightButtonDown( const QPoint&) override;
-    void leftDoubleClick( const QPoint&) override;
-    void leftDrag( const QPoint&) override;
-    void leftButtonDown( const QPoint&) override;
-    void leftButtonUp( const QPoint&) override;
+    bool leftButtonDown( const QPoint&) override;
+    bool rightButtonDown( const QPoint&) override;
+    bool leftDrag( const QPoint&) override;
+    bool rightDrag( const QPoint&) override;
 
-    FaceModelViewer* _viewer;
-    bool _onDownCamLocked;
-    void setCentre( const QPoint&);
+    Vis::BoundaryVisualisation *_bvis;
+    FaceEntryExitInteractor *_feei;
+    FaceControl *_fc;
 };  // end class
 
 }   // end namespace

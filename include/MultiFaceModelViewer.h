@@ -20,6 +20,8 @@
 
 #include "FaceModelViewer.h"
 #include "FaceControlSet.h"
+#include <ModelSelectInteractor.h>
+#include <ModelViewerEntryExitInteractor.h>
 #include <QToolButton>
 #include <QHBoxLayout>
 #include <QSplitter>
@@ -31,6 +33,9 @@ class FaceTools_EXPORT MultiFaceModelViewer : public QWidget
 public:
     explicit MultiFaceModelViewer( QWidget *parent=NULL);
     ~MultiFaceModelViewer() override;
+
+    // Add an interactor to be managed between the viewers.
+    void addInteractor( Interactor::MVI*);
 
 public slots:
     void insert( FaceModel*);   // Ensures model is shown in the centre panel and emits onSelected.
@@ -45,6 +50,7 @@ public slots:
 signals:
     void onSelected( FaceControl*, bool);   // Connect to FaceActionManager::setSelected
     void onRemoving( FaceControl*);         // Connect to FaceActionManager::remove
+    void onShowContext( const QPoint&);     // Provides global position for context menu.
 
 private slots:
     void moveLeftToCentre();
@@ -57,11 +63,17 @@ private slots:
     void copyCentreToRight();
     void copyRightToCentre();
 
-    void doOnLeftViewerSetSelected( FaceControl*, bool);
-    void doOnCentreViewerSetSelected( FaceControl*, bool);
-    void doOnRightViewerSetSelected( FaceControl*, bool);
+    void doOnSelected( FaceControl*, bool); // Activate viewer for selected FaceControl
+    void doOnViewerEntered();
 
 private:
+    Interactor::ModelSelectInteractor _selector;    // Transitions between FaceModelViewers
+
+    // Fixed ModelViewer interactors.
+    Interactor::ModelViewerEntryExitInteractor *_i0;
+    Interactor::ModelViewerEntryExitInteractor *_i1;
+    Interactor::ModelViewerEntryExitInteractor *_i2;
+
     QAction* _moveLeftToCentreAction;
     QAction* _copyLeftToCentreAction;
     QAction* _moveRightToCentreAction;
@@ -76,21 +88,24 @@ private:
     FaceModelViewer *_v1;
     FaceModelViewer *_v2;
     QSplitter *_splitter;
-    FaceControlSet _fconts;
 
-    void moveViews( FaceModelViewer*, FaceModelViewer*);
-    void copyViews( FaceModelViewer*, FaceModelViewer*);
+    void moveViews( FaceModelViewer*);
+    void copyViews( FaceModelViewer*);
     void removeViews( FaceModelViewer*);
 
     void checkEnableLeftToCentre();
     void checkEnableCentreToLeft();
     void checkEnableCentreToRight();
     void checkEnableRightToCentre();
-    size_t canCopyTo( FaceModelViewer*, FaceModelViewer*, FaceControlSet *fcs=NULL) const;
+    bool canCopyTo( FaceModelViewer*) const;
+    bool canMoveFrom( FaceModelViewer*) const;
 
     bool deleteFaceControl( FaceControl*);
-    void activateAllOnViewer( FaceModelViewer*, bool);
-    void activateOnViewer( FaceModelViewer*, FaceControl*, bool);
+    void activateViewer( FaceModelViewer*);
+    void activateLeftViewer();
+    void activateCentreViewer();
+    void activateRightViewer();
+
     void addCommonButtons( QLayout*, FaceModelViewer*);
     QToolButton* makeButton( QAction*);
 

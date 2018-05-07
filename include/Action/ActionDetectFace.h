@@ -50,6 +50,7 @@ public:
 
 public slots:
     bool testReady( FaceControl*) override;
+    bool testEnabled() override { return readyCount() == 1;}
     bool doBeforeAction( FaceControlSet&) override;   // Warn if overwriting
     bool doAction( FaceControlSet&) override;
     void doAfterAction( const FaceControlSet&, bool) override;

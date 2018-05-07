@@ -20,7 +20,9 @@
 #include <QApplication>
 #include <QString>
 #include <algorithm>
+#include <sstream>
 #include <cassert>
+#include <iomanip>
 using FaceTools::Action::FaceActionManager;
 using FaceTools::Action::FaceActionGroup;
 using FaceTools::Action::ChangeEventSet;
@@ -73,6 +75,36 @@ void FaceActionManager::connectActionPair( FaceAction* ract, FaceAction* cact)
 }   // end connectActionPair
 
 
+namespace {
+void printActionComms( const FaceAction* fa)
+{
+    std::cerr << std::endl;
+    std::cerr << " +++ \"" << fa->getDisplayName().remove(QChar('&')).toStdString() << "\" +++" << std::endl;
+
+    const ChangeEventSet& re = fa->respondEvents();
+    const ChangeEventSet& ce = fa->changeEvents();
+
+    ChangeEventSet events = re;
+    events.insert( ce.begin(), ce.end());
+
+    for ( auto c : events)
+    {
+        std::ostringstream oss;
+        if ( fa->changeEvents().count(c) > 0)
+            oss << "> ";
+        else
+            oss << "  ";
+        oss << c.description();
+        if ( fa->respondEvents().count(c) > 0)
+            oss << " <";
+        else
+            oss << "  ";
+        std::cerr << std::setw(40) << oss.str() << std::endl;
+    }   // end for
+}   // end printActionComms
+}   // end namespace
+
+
 // public
 QAction* FaceActionManager::addAction( FaceAction* faction)
 {
@@ -89,6 +121,8 @@ QAction* FaceActionManager::addAction( FaceAction* faction)
         connectActionPair( faction,  action);
         connectActionPair(  action, faction);
     }   // end for
+
+    printActionComms( faction);
     _actions.insert( faction);
     return faction->qaction();
 }   // end addAction
