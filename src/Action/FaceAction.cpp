@@ -215,7 +215,7 @@ bool FaceAction::process( bool checked)
 // public
 void FaceAction::execAfter( FaceAction* fa)
 {
-    _eacts.insert(fa);
+    _eacts.push_back(fa);
 }   // end execAfter
 
 

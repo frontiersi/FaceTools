@@ -113,10 +113,9 @@ public slots:
 
     // This function is used to add composite actions to this one that will be executed immediately after the
     // containing action's doAfterAction() function returns. This function can be called multiple times to add
-    // multiple actions, but the order of execution of those actions will be undefined. To ensure that actions
-    // {A,B,C} execute in the order: A-->B-->C, call A->execAfter(B) and B->execAfter(C). Calling A->execAfter(C)
-    // may result in C being called before B. The processing of an added action behaves like a composite "inner"
-    // function with it finishing (and potentially notifying clients) before the outer "calling" function.
+    // multiple actions that will execute in sequentially added order.
+    // The processing of an added action behaves like a composite "inner" function with it finishing
+    // (and potentially notifying clients) before the outer "calling" function.
     void execAfter( FaceAction*);
 
 signals:
@@ -282,7 +281,7 @@ private:
     FaceControlSet _controlled, _ready;
     ChangeEventSet _revents, _cevents;
     FaceControlSet _pready; // Pre-doAction caching of _ready
-    std::unordered_set<FaceAction*> _eacts;
+    std::list<FaceAction*> _eacts;
     void chain( const FaceControlSet&);
     FaceAction( const FaceAction&);     // No copy
     void operator=( const FaceAction&); // No copy
