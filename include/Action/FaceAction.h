@@ -87,7 +87,10 @@ public:
 public slots:
     // Function process() is the main entry point for clients to carry out this action. It can be called
     // explicitly whether or not this FaceAction is enabled, but is typically called via triggering the
-    // internal enabled QAction returned from qaction(). The following sequence of calls are made:
+    // internal enabled QAction returned from qaction(). When triggered, the checkAction parameter
+    // takes on the value of QAction::isChecked. When calling externally, the check state of the QAction
+    // will be set according to the parameter (true by default).
+    // The following sequence of calls are made:
     // 1) reportStarting
     // 2) doBeforeAction
     // 3) doAction
@@ -106,19 +109,15 @@ public slots:
     // with a call to setAsync() (typically within its constructor).
     //
     // True is returned from process() iff doAction was entered.
-    bool process();
+    bool process( bool checkAction=true);
 
-    // Process the given set of FaceControl instances by first erasing this action's controlled and
-    // ready sets and testing each member in the given set by called setSelected. This constructs
-    // a new ready set which is a subset of the provided set. Following this, the process function
-    // is immediately called to action these FaceControl instances according to this action's normal
-    // logic. This function is provided to allow actions to chain themselves together. This function
-    // should be called in a containing action's doAfterAction function. Note that processing of this
-    // action will behave like an "inner" function of a composite function with the outer (calling)
-    // action only returning from its doAfterAction function once this inner action has returned from
-    // its own doAfterAction. Note that this also means that external actions will be notified of
-    // the inner action finishing before the outer action finishes.
-    bool chain( const FaceControlSet&);
+    // This function is used to add composite actions to this one that will be executed immediately after the
+    // containing action's doAfterAction() function returns. This function can be called multiple times to add
+    // multiple actions, but the order of execution of those actions will be undefined. To ensure that actions
+    // {A,B,C} execute in the order: A-->B-->C, call A->execAfter(B) and B->execAfter(C). Calling A->execAfter(C)
+    // may result in C being called before B. The processing of an added action behaves like a composite "inner"
+    // function with it finishing (and potentially notifying clients) before the outer "calling" function.
+    void execAfter( FaceAction*);
 
 signals:
     void reportStarting( const FaceControlSet*);   // Emitted immediately before doBeforeAction executes.
@@ -245,7 +244,7 @@ protected slots:
     // passed in FaceControl's ready state and then call testAndSetEnabled(). If a derived type overrides
     // this function to (for example) enforce state, it should normally call this function as the last
     // line in the body of the overridden function (i.e. FaceAction::respondToChange).
-    virtual void respondToChange( FaceControl*);
+    virtual void respondToChange( FaceControl *fc=NULL);
 
     // Used by FaceActionManager to know if it should set this action to be disabled in response
     // to other FaceActions registered with it starting.
@@ -283,7 +282,8 @@ private:
     FaceControlSet _controlled, _ready;
     ChangeEventSet _revents, _cevents;
     FaceControlSet _pready; // Pre-doAction caching of _ready
-
+    std::unordered_set<FaceAction*> _eacts;
+    void chain( const FaceControlSet&);
     FaceAction( const FaceAction&);     // No copy
     void operator=( const FaceAction&); // No copy
 };  // end class

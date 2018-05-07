@@ -37,17 +37,14 @@ public:
     ~RadialSelectInteractor() override;
 
 signals:
-    // Signals emitted after rendering update.
-    void onNewCentre( FaceControl*, const cv::Vec3f&);
-    void onNewRadius( FaceControl*, double);
+    // Signals that notify client of the parameters needed to update
+    // the BoundaryVisualisation for the given FaceControl.
+    void onSetNewCentre( FaceControl*, const cv::Vec3f&);
+    void onSetNewRadius( FaceControl*, double);
 
 protected:
     void onAttached() override;
     void onDetached() override;
-
-private slots:
-    void doOnEnterModel( FaceControl*);
-    void doOnLeaveModel( FaceControl*);
 
 private:
     bool leftButtonDown( const QPoint&) override;

@@ -18,13 +18,7 @@
 #ifndef FACE_TOOLS_ACTION_DETECT_FACE_H
 #define FACE_TOOLS_ACTION_DETECT_FACE_H
 
-/**
- * Provides action for FaceTools::Detect::FaceDetector.
- * Also optionally includes transforming the face after
- * detection if ActionTransformToStandardPosition given.
- */
-
-#include "ActionTransformToStandardPosition.h"
+#include "FaceAction.h"
 
 namespace FaceTools {
 namespace Detect {
@@ -41,10 +35,6 @@ public:
                       QWidget *parent=NULL);
     ~ActionDetectFace() override;
 
-    // If desired, set a transformation action to be applied
-    // immediately after successful detection of a face.
-    void setTransformer( ActionTransformToStandardPosition* t) { _transformer = t;}
-   
     QString getDisplayName() const override { return "Detect Face";}
     const QIcon* getIcon() const override { return &_icon;}
 
@@ -59,7 +49,6 @@ private:
     const QIcon _icon;
     QWidget *_parent;
     Detect::FaceDetector *_detector;
-    ActionTransformToStandardPosition *_transformer;
     FaceControlSet _failSet;
 };  // end class
 

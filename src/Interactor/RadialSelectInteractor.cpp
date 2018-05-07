@@ -29,27 +29,15 @@ using FaceTools::FaceControl;
 
 // public
 RadialSelectInteractor::RadialSelectInteractor( BoundaryVisualisation* bv)
-    : _bvis(bv), _feei( new FaceEntryExitInteractor)
+    : _bvis(bv), _feei( new FaceEntryExitInteractor), _fc(NULL)
 {
-    connect( _feei, &FaceEntryExitInteractor::onEnterModel, this, &RadialSelectInteractor::doOnEnterModel);
-    connect( _feei, &FaceEntryExitInteractor::onLeaveModel, this, &RadialSelectInteractor::doOnLeaveModel);
+    connect( _feei, &FaceEntryExitInteractor::onEnterModel, [this](auto fc){ if (_bvis->isApplied(fc)) _fc = fc;});
+    connect( _feei, &FaceEntryExitInteractor::onLeaveModel, [this](){ _fc = NULL;});
 }   // end ctor
 
 
 // public
 RadialSelectInteractor::~RadialSelectInteractor() { delete _feei;}
-
-
-// private slot
-void RadialSelectInteractor::doOnEnterModel( FaceControl *fc)
-{
-    if ( _bvis->isApplied(fc))
-        _fc = fc;
-}   // end doOnEnterModel
-
-
-// private slot
-void RadialSelectInteractor::doOnLeaveModel( FaceControl *fc){ _fc = NULL;}
 
 
 // protected
@@ -62,11 +50,7 @@ bool RadialSelectInteractor::leftDrag( const QPoint& p)
 {
     if ( !_fc)
         return false;
-
-    cv::Vec3f v = viewer()->project(p);
-    _bvis->setCentre( _fc, v);
-    viewer()->updateRender();
-    emit onNewCentre( _fc, v);
+    emit onSetNewCentre( _fc, viewer()->project(p));
     return true;
 }   // end leftDrag
 
@@ -80,9 +64,6 @@ bool RadialSelectInteractor::rightDrag( const QPoint& p)
     // New radius as Euclidean distance of point from starting right click drag point.
     cv::Vec3f v = _bvis->centre(_fc);
     cv::Vec3f nv = viewer()->project(p);
-    double nrad = sqrt( RFeatures::l2sq(nv - v));
-    _bvis->setRadius(_fc, nrad);
-    viewer()->updateRender();
-    emit onNewRadius( _fc, nrad);
+    emit onSetNewRadius( _fc, sqrt( RFeatures::l2sq(nv - v)));
     return true;
 }   // end rightDrag

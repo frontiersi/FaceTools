@@ -31,12 +31,15 @@ public:
 
     QString getDisplayName() const override { return "Set Focus";}
 
+    Interactor::MVI* interactor() { return &_interactor;}
+
 protected slots:
-    bool testReady( FaceControl*) override;
+    bool testEnabled() override;
     bool doAction( FaceControlSet&) override;
 
 private:
     Interactor::FaceEntryExitInteractor _interactor;
+    FaceControl* _fcont;
 };  // end class
 
 }   // end namespace

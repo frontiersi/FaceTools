@@ -156,14 +156,14 @@ bool FaceAction::operator()(){ return process();}
 void FaceAction::respondToChange( FaceControl* fc)
 {
     _ready.erase(fc);
-    if ( isSelected(fc) && testReady(fc))
+    if ( fc && isSelected(fc) && testReady(fc))
         _ready.insert(fc);
     setEnabled( testEnabled());
 }   // end respondToChange
 
 
 // public slot
-bool FaceAction::process()
+bool FaceAction::process( bool checked)
 {
     if ( !_init)
     {
@@ -172,6 +172,7 @@ bool FaceAction::process()
         return false;
     }   // end if
 
+    setChecked(checked);
     const std::string dname = debugActionName();
     if ( displayDebugStatusProgression())
     {
@@ -211,14 +212,21 @@ bool FaceAction::process()
 }   // end process
 
 
-// public slot
-bool FaceAction::chain( const FaceControlSet& cset)
+// public
+void FaceAction::execAfter( FaceAction* fa)
+{
+    _eacts.insert(fa);
+}   // end execAfter
+
+
+// private
+void FaceAction::chain( const FaceControlSet& cset)
 {
     _controlled.clear();
     _ready.clear();
     for ( FaceControl* fc : cset)
         setSelected( fc, true);
-    return process();
+    process();  // Return value ignored
 }   // end chain
 
 
@@ -226,6 +234,7 @@ bool FaceAction::chain( const FaceControlSet& cset)
 void FaceAction::doOnActionFinished( bool rval)
 {
     doAfterAction( _ready, rval);   // Possible that _ready != _pready
+    std::for_each( std::begin(_eacts), std::end(_eacts), [&](auto a){ a->chain(_ready);}); // Chain to execAfter actions
     progress(1.0f);
     FaceControlSet oldrdy = _ready; // Copy out for reportChanged to potential listening actions
     _ready = _pready;               // Reinstate the old _ready set to allow rechecking.

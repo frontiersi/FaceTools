@@ -43,6 +43,10 @@ protected slots:
     void tellReady( FaceControl*, bool) override;
     bool doAction( FaceControlSet&) override;
 
+private slots:
+    void doOnSetNewCentre( FaceControl*, const cv::Vec3f&);
+    void doOnSetNewRadius( FaceControl*, double);
+
 private:
     QIcon _icon;
     QStatusBar *_sbar;

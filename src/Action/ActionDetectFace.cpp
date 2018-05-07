@@ -34,9 +34,8 @@ using FaceTools::Detect::FaceDetector;
 
 
 ActionDetectFace::ActionDetectFace( const QString& haar, const QString& lmks, QWidget *parent)
-    : FaceAction(true/*disable before other*/), _icon( ":/icons/DETECT_FACE"), _parent(parent), _detector(NULL), _transformer(NULL)
+    : FaceAction(true/*disable before other*/), _icon( ":/icons/DETECT_FACE"), _parent(parent), _detector(NULL)
 {
-    addChangeTo( MODEL_TRANSFORMED);
     addChangeTo( MODEL_ORIENTATION_CHANGED);
     addChangeTo( LANDMARK_ADDED);
     addChangeTo( LANDMARK_CHANGED);
@@ -119,9 +118,5 @@ void ActionDetectFace::doAfterAction( const FaceControlSet& rset, bool v)
         QMessageBox::warning(_parent, tr("Detection Failed!"), msg);
     }   // end if
     _failSet.clear();
-
     FaceAction::doAfterAction( rset, v);    // Update render
-
-    if ( !rset.empty() && _transformer) // Finally, transform if set in this action.
-        _transformer->chain(rset);
 }   // end doAfterAction

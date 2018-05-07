@@ -39,6 +39,8 @@ ActionCrop::ActionCrop( QStatusBar* sbar)
     _bvis = new BoundaryVisualisation( "Cropping Mode", *getIcon());
     _vact = new ActionVisualise( _bvis);
     _interactor = new RadialSelectInteractor( _bvis);
+    connect( _interactor, &RadialSelectInteractor::onSetNewCentre, this, &ActionCrop::doOnSetNewCentre);
+    connect( _interactor, &RadialSelectInteractor::onSetNewRadius, this, &ActionCrop::doOnSetNewRadius);
     addChangeTo( MODEL_GEOMETRY_CHANGED);
     addRespondTo( VISUALISATION_CHANGED);
 }   // end ctor
@@ -50,6 +52,23 @@ ActionCrop::~ActionCrop()
     delete _vact;
     delete _bvis;
 }   // end dtor
+
+
+// private slot
+void ActionCrop::doOnSetNewCentre( FaceControl* fc, const cv::Vec3f& v)
+{
+    _bvis->setCentre( fc, v);
+    fc->viewer()->updateRender();
+}   // end doOnSetNewCentre
+
+
+// private slot
+void ActionCrop::doOnSetNewRadius( FaceControl* fc, double r)
+{
+    // New radius as Euclidean distance of point from starting right click drag point.
+    _bvis->setRadius( fc, r);
+    fc->viewer()->updateRender();
+}   // end doOnSetNewRadius
 
 
 bool ActionCrop::testReady( FaceControl* fc)
@@ -88,3 +107,6 @@ bool ActionCrop::doAction( FaceControlSet& rset)
     fm->setModel(cmodel);
     return true;
 }   // end doAction
+
+
+

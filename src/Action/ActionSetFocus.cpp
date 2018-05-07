@@ -27,39 +27,31 @@ typedef FaceTools::Interactor::FaceEntryExitInteractor FEEI;
 
 
 // public
-ActionSetFocus::ActionSetFocus() : FaceAction(true)
+ActionSetFocus::ActionSetFocus() : FaceAction(true), _fcont(NULL)
 {
     addRespondTo( MODEL_GEOMETRY_CHANGED);
     addRespondTo( MODEL_TRANSFORMED);
     addRespondTo( CAMERA_POSITION_CHANGED);
     addRespondTo( CAMERA_ORIENTATION_CHANGED);
     addChangeTo( CAMERA_FOCUS_CHANGED);
-    // Cause
-    connect( &_interactor, &FEEI::onEnterModel, this, &ActionSetFocus::respondToChange);
-    connect( &_interactor, &FEEI::onLeaveModel, this, &ActionSetFocus::respondToChange);
+    connect( &_interactor, &FEEI::onEnterModel, [this](auto fc){ _fcont = fc; this->respondToChange();});
+    connect( &_interactor, &FEEI::onLeaveModel, [this](){ _fcont = NULL; this->respondToChange();});
 }   // end ctor
 
 
-bool ActionSetFocus::testReady( FaceControl *fc)
-{
-    bool ready = _interactor.model() == fc;
-    if ( ready)
-        _interactor.setViewer(fc->viewer());    // Detaches from previous if necessary
-    return ready;
-}   // end testReady
+bool ActionSetFocus::testEnabled() { return _fcont != NULL;}
 
 
-bool ActionSetFocus::doAction( FaceControlSet& fset)
+bool ActionSetFocus::doAction( FaceControlSet&)
 {
-    assert( fset.size() == 1);
-    FaceControl* fc = fset.first();
-    FaceTools::ModelViewer* mv = fc->viewer();
+    assert(_fcont);
+    FaceTools::ModelViewer* mv = _fcont->viewer();
     assert( mv);
     cv::Vec3f nf;
     const QPoint p = mv->getMouseCoords();
-    bool onModel = mv->calcSurfacePosition( fc->view()->surfaceActor(), p, nf);
+    bool onModel = mv->calcSurfacePosition( _fcont->view()->surfaceActor(), p, nf);
     if ( !onModel)
-        onModel = mv->calcSurfacePosition( fc->view()->textureActor(), p, nf);
+        onModel = mv->calcSurfacePosition( _fcont->view()->textureActor(), p, nf);
     assert(onModel);    // Must be or couldn't have been ready!
     mv->setFocus(nf);
     return true;

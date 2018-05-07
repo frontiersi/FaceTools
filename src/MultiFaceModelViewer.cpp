@@ -128,7 +128,6 @@ MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent)
     v0layout->addWidget(_v0);
     QHBoxLayout* h0blayout = new QHBoxLayout;
     h0blayout->setContentsMargins(0,0,0,0);
-    h0blayout->addStretch();
     addCommonButtons( h0blayout, _v0);
     h0blayout->addStretch();
     h0blayout->addWidget( makeButton( _copyLeftToCentreAction));
@@ -156,7 +155,6 @@ MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent)
     h2blayout->addWidget( makeButton( _copyRightToCentreAction));
     h2blayout->addStretch();
     addCommonButtons( h2blayout, _v2);
-    h2blayout->addStretch();
     v2layout->addLayout(h2blayout);
 
     QWidget* w0 = new QWidget;
@@ -281,7 +279,7 @@ void MultiFaceModelViewer::setLeftViewerVisible(bool visible)
     QList<int> widths = _splitter->sizes();
     int sum = widths[0] + widths[1] + widths[2];
     if ( visible && widths[0] == 0)
-        widths[0] = (int)(double(widths[1])/2);
+        widths[0] = widths[1];
     else if ( !visible && widths[0] > 0)
         widths[0] = 0;
     _splitter->setSizes( widths);
@@ -294,7 +292,7 @@ void MultiFaceModelViewer::setRightViewerVisible(bool visible)
     QList<int> widths = _splitter->sizes();
     int sum = widths[0] + widths[1] + widths[2];
     if ( visible && widths[2] == 0)
-        widths[2] = (int)(double(widths[1])/2);
+        widths[2] = widths[1];
     else if ( !visible && widths[2] > 0)
         widths[2] = 0;
     _splitter->setSizes( widths);
