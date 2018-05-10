@@ -46,7 +46,7 @@ public:
     bool isExclusiveSelect() const;
 
     void add( FaceControl*);    // Adds to available for selection and fires onSelected.
-    void remove( FaceControl*); // Removes from available for selection and fires onSelected then onRemoving.
+    void remove( FaceControl*); // Removes from available for selection and fires onSelected.
 
     void setSelected( FaceControl*, bool);  // Mark given model as (de)selected and fire onSelected.
 
@@ -58,7 +58,6 @@ public:
 
 signals:
     void onSelected( FaceControl*, bool);   // Fired selection / deselection of a model.
-    void onRemoving( FaceControl*);         // Fired after onSelected(fc,false) at end of remove().
 
 private:
     bool _exclusive;

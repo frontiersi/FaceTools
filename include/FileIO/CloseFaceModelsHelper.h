@@ -39,7 +39,7 @@ public:
     void close( const std::unordered_set<FaceModel*>& fset);    // Close a bunch
 
 signals:
-    void closingModel( FaceModel*); // Emitted just prior to closing the model.
+    void onClose( FaceModel*);  // Emitted just before closing using the FaceModelManager
 
 private:
     FaceModelManager *_fmm;

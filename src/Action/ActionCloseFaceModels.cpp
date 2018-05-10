@@ -17,6 +17,7 @@
 
 #include <ActionCloseFaceModels.h>
 #include <QMessageBox>
+#include <algorithm>
 using FaceTools::Action::ActionCloseFaceModels;
 using FaceTools::Action::FaceAction;
 using FaceTools::FileIO::CloseFaceModelsHelper;
@@ -28,34 +29,42 @@ ActionCloseFaceModels::ActionCloseFaceModels( CloseFaceModelsHelper* chelper)
     : FaceAction(true/*this action disabled on other actions executing*/),
       _chelper(chelper), _icon( ":/icons/CLOSE"), _scut( Qt::CTRL + Qt::Key_W)
 {
-    setAsync(true);
+    setAsync(false);
 }   // end ctor
 
 
 bool ActionCloseFaceModels::doBeforeAction( FaceControlSet& fset)
 {
-    for ( FaceControl* fc : fset)
+    FaceModelSet fms = fset.models();
+    for ( FaceModel* fm : fms)
     {
-        FaceModel* fm = fc->data();
-        _cset.insert(fm);
         // If the FaceModel hasn't been saved and the user doesn't want to close it (after prompting), remove from the action set.
-        if ( !_chelper->isSaved(fm))
+        bool doclose = false;
+        if ( _chelper->isSaved(fm))
+            doclose = true;
+        else
         {
             const std::string& fname = _chelper->filepath(fm);
-            if ( QMessageBox::No == QMessageBox::question( _chelper->parentWidget(), tr(("Unsaved changes on \"" + fname + "\"").c_str()),
+            if ( QMessageBox::Yes == QMessageBox::question( _chelper->parentWidget(),
+                                                tr(("Unsaved changes on \"" + fname + "\"").c_str()),
                                                 tr("Model has unsaved changes! Close without saving anyway?"),
                                                 QMessageBox::Yes | QMessageBox::No, QMessageBox::No))
             {
-                _cset.erase(fm);
+                doclose = true;
             }   // end if
         }   // end if
+
+        if ( doclose)
+            _cset.insert(fm);
     }   // end for
     return !_cset.empty();
 }   // end doBeforeAction
 
 
-bool ActionCloseFaceModels::doAction( FaceControlSet&)
+bool ActionCloseFaceModels::doAction( FaceControlSet& rset)
 {
+    // Remove all entries in rset that will be closed (nominally all of them)
+    std::for_each(std::begin(_cset), std::end(_cset), [&](auto fm){rset.erase(fm);});
     _chelper->close( _cset);
     _cset.clear();
     return true;

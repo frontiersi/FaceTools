@@ -27,6 +27,7 @@
 
 #include "FaceTools_Export.h"
 #include <opencv2/opencv.hpp>
+#include <vtkMatrix4x4.h>
 
 namespace FaceTools {
 class FaceModelViewer;
@@ -42,21 +43,21 @@ public:
     explicit FaceControl( FaceModel*);
     virtual ~FaceControl();
 
-    // Transform both the data and the view actors in one go.
-    // This can be expensive in terms of data updates. For user interaction it is
-    // better to use a vtkInteractor (actor style) on the desired FaceView actors,
-    // then use the final transformation matrix to update the model once interactive
-    // movement of the vtkActor is finished (e.g. at the end of a mouse drag).
+    // Transform both the data and ALL FaceControl instances attached to the data (not just this one).
+    // This can be expensive in terms of data updates. For user interaction it is better to use a
+    // vtkInteractor (actor style) on the desired FaceView actors, then use the final transformation
+    // matrix to update the model once interactive movement of the vtkActor is finished (e.g. at the end of a mouse drag).
     void transform( const cv::Matx44d&);
 
-    // After moving the position of the actors in the FaceView around via some user
-    // interaction, it may be necessary to fix the position by updating the data in
-    // the vtkActors and the FaceModel (ObjModel). This can be achieved in one step
-    // by calling this function which calls FaceView::transform(NULL) to update the
-    // view models according to their internal transforms, and then uses the applied
-    // transform to update the FaceModel data. This function makes no changes if the
-    // view models still have the identity matrix as their internal transform matrix.
-    void fixTransformFromView();
+    // Hard transform the view models without changing the data (FaceModel).
+    // Afterwards, the user transform for the view will be the identity matrix.
+    void transformView( const vtkMatrix4x4*);
+
+    // After moving the actors in the FaceView via interaction, fix the position of this view and
+    // every view attached to this FaceControl's associated FaceModel. This function calls transform
+    // with the user transform returned from the associated FaceView. On return, the user transform
+    // for all associated views will be the identity matrix.
+    void transformFromView();
 
     // Convenience function to get/set viewer this FaceControl uses.
     FaceModelViewer* viewer() const;

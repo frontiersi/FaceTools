@@ -27,15 +27,18 @@ using FaceTools::Action::ActionDetectFace;
 using FaceTools::Action::FaceAction;
 using FaceTools::FaceModelViewer;
 using FaceTools::FaceControlSet;
+using FaceTools::FaceModelSet;
 using FaceTools::FaceControl;
 using FaceTools::FaceModel;
 
 using FaceTools::Detect::FaceDetector;
 
 
-ActionDetectFace::ActionDetectFace( const QString& haar, const QString& lmks, QWidget *parent)
-    : FaceAction(true/*disable before other*/), _icon( ":/icons/DETECT_FACE"), _parent(parent), _detector(NULL)
+ActionDetectFace::ActionDetectFace( const QString& haar, const QString& lmks, QWidget *parent, QProgressBar* pb)
+    : FaceAction(true/*disable before other*/), _icon( ":/icons/DETECT_FACE"),
+      _parent(parent), _detector(NULL)
 {
+    addChangeTo( MODEL_GEOMETRY_CHANGED);
     addChangeTo( MODEL_ORIENTATION_CHANGED);
     addChangeTo( LANDMARK_ADDED);
     addChangeTo( LANDMARK_CHANGED);
@@ -49,6 +52,9 @@ ActionDetectFace::ActionDetectFace( const QString& haar, const QString& lmks, QW
         _detector = new FaceDetector;
     else
         std::cerr << "[WARNING] FaceTools::Action::ActionDetectFace: Failed to initialise FaceTools::Detect::FaceDetector!" << std::endl;
+
+    if ( pb)
+        setAsync( true, QTools::QProgressUpdater::create(pb));
 }   // end ctor
 
 
@@ -57,9 +63,6 @@ ActionDetectFace::~ActionDetectFace()
     if ( _detector)
         delete _detector;
 }   // end dtor
-
-
-bool ActionDetectFace::testReady( FaceControl*) { return _detector;}
 
 
 bool ActionDetectFace::doBeforeAction( FaceControlSet& rset)
@@ -92,16 +95,13 @@ bool ActionDetectFace::doBeforeAction( FaceControlSet& rset)
 bool ActionDetectFace::doAction( FaceControlSet& rset)
 {
     _failSet.clear();
-    FaceControlSet fset = rset; // Copy out
-    for ( FaceControl* fc : fset)
+    FaceModelSet fms = rset.models();   // Copy out
+    for ( FaceModel* fm : fms)
     {
-        FaceModel* fm = fc->data();
-        RFeatures::Orientation& on = fm->orientation();
-        FaceTools::LandmarkSet& lmks = fm->landmarks();
-        if ( !_detector->detect( fm->kdtree(), on, lmks))
+        if ( !_detector->detect( fm->kdtree(), fm->orientation(), fm->landmarks()))
         {
-            _failSet.insert(fc);
-            rset.erase(fc);
+            _failSet.insert(fm);
+            rset.erase(fm);
         }   // end if
     }   // end for
     return !rset.empty();   // Success if at least one detection

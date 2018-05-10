@@ -29,7 +29,7 @@ using FaceTools::FaceControl;
 
 // public
 RadialSelectInteractor::RadialSelectInteractor( BoundaryVisualisation* bv)
-    : _bvis(bv), _feei( new FaceEntryExitInteractor), _fc(NULL)
+    : _bvis(bv), _feei( new FaceEntryExitInteractor), _fc(NULL), _move(false)
 {
     connect( _feei, &FaceEntryExitInteractor::onEnterModel, [this](auto fc){ if (_bvis->isApplied(fc)) _fc = fc;});
     connect( _feei, &FaceEntryExitInteractor::onLeaveModel, [this](){ _fc = NULL;});
@@ -45,25 +45,42 @@ void RadialSelectInteractor::onAttached() { _feei->setViewer(viewer());}
 void RadialSelectInteractor::onDetached() { _feei->setViewer(NULL);}
 
 
-bool RadialSelectInteractor::leftButtonDown( const QPoint& p) { return leftDrag(p);}
+bool RadialSelectInteractor::leftDoubleClick( const QPoint& p)
+{
+    _move = true;
+    return leftDrag(p);
+}   // end leftDoubleClick
+
+
 bool RadialSelectInteractor::leftDrag( const QPoint& p)
 {
-    if ( !_fc)
+    if ( !_fc || !_move)
         return false;
     emit onSetNewCentre( _fc, viewer()->project(p));
     return true;
 }   // end leftDrag
 
 
-bool RadialSelectInteractor::rightButtonDown( const QPoint& p) { return rightDrag(p);}
-bool RadialSelectInteractor::rightDrag( const QPoint& p)
+bool RadialSelectInteractor::leftButtonUp( const QPoint&)
+{
+    _move = false;
+    return false;
+}   // end leftButtonUp
+
+
+bool RadialSelectInteractor::mouseWheelForward( const QPoint& p)
 {
     if ( !_fc)
         return false;
-
-    // New radius as Euclidean distance of point from starting right click drag point.
-    cv::Vec3f v = _bvis->centre(_fc);
-    cv::Vec3f nv = viewer()->project(p);
-    emit onSetNewRadius( _fc, sqrt( RFeatures::l2sq(nv - v)));
+    emit onSetNewRadius( _fc, _bvis->radius(_fc)+1);
     return true;
-}   // end rightDrag
+}   // end mouseWheelForward
+
+
+bool RadialSelectInteractor::mouseWheelBackward( const QPoint& p)
+{
+    if ( !_fc)
+        return false;
+    emit onSetNewRadius( _fc, _bvis->radius(_fc)-1);
+    return true;
+}   // end mouseWheeBackward

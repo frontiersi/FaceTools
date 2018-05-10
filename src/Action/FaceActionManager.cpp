@@ -141,10 +141,10 @@ void FaceActionManager::setSelected( FaceControl* fc, bool v)
 
 
 // public slot
-void FaceActionManager::remove( FaceControl* fc)
+void FaceActionManager::purge( FaceControl* fc)
 {
     std::for_each( std::begin(_actions), std::end(_actions), [=](auto a){ a->burn( fc);});
-}   // end remove
+}   // end purge
 
 
 // private slot
@@ -189,13 +189,16 @@ void FaceActionManager::doOnActionFinished( const FaceControlSet* wset)
     {
         FaceAction* sending = qobject_cast<FaceAction*>(sender());
         assert(sending);
-        // Allow all the other actions to recheck if the objects in the worked over set
-        // should be part of their ready sets.
-        for ( FaceAction* a : _actions)
+        // Allow all other actions to recheck if objects in worked over set should be part of their ready sets.
+        _actions.erase(sending);
+        if ( wset->empty())
+            std::for_each( std::begin(_actions), std::end(_actions), [=](auto a){ a->setEnabled(a->testEnabled());});
+        else
         {
-            if ( a != sending)  // Sending action rechecks its ready set first (see FaceAction::doOnActionFinished).
+            for ( FaceAction* a : _actions)
                 std::for_each( std::begin(*wset), std::end(*wset), [&](auto fc){ a->setSelected( fc, true);});
-        }   // end for
+        }   // end else
+        _actions.insert(sending);
         emit reportFinished( *sending, *wset);
     }   // end else
 }   // end doOnActionFinished

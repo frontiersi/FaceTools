@@ -38,7 +38,7 @@
 
 namespace FaceTools {
 namespace Action {
-class ChangeEvent;
+struct ChangeEvent;
 }   // end namespace
 }   // end namespace
 
@@ -68,6 +68,7 @@ enum ChangeID
     MODEL_SOURCE_CHANGED,
     // Visualisation
     VISUALISATION_CHANGED,          // Visualisation changed (any)
+    SURFACE_METRICS_CALCULATED,     // Metric data about the surface recalculated
 };  // end enum
 
 

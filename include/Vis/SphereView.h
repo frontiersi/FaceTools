@@ -29,8 +29,17 @@ namespace Vis {
 class FaceTools_EXPORT SphereView
 {
 public:
-    SphereView( const cv::Vec3f& centre, double radius);
+    SphereView( const cv::Vec3f& centre, double radius, bool pickable=true);
     virtual ~SphereView();
+
+    void setResolution( int);   // Default 8
+    int resolution() const;
+
+    void setPickable( bool);
+    bool pickable() const;
+
+    void setOpacity( double);
+    double opacity() const;
 
     void setCentre( const cv::Vec3f&);                  // Update position of actor.
     cv::Vec3f centre() const;                           // Return this view's position.

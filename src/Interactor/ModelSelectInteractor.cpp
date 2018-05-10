@@ -52,7 +52,6 @@ void ModelSelectInteractor::remove( FaceControl* fc)
     assert( isAvailable(fc));
     _available.erase(fc);
     setSelected( fc, false);
-    emit onRemoving( fc);
 }   // end remove
 
 
@@ -69,15 +68,15 @@ void ModelSelectInteractor::setSelected( FaceControl* fc, bool selected)
 
     if ( selected)
     {
-        assert( _available.count(fc) > 0);
+        assert( _available.has(fc));
         insertSelected(fc);
     }   // end if
 }   // end setSelected
 
 
 // public
-bool ModelSelectInteractor::isSelected( FaceControl* fc) const { return _selected.count(fc) > 0;}
-bool ModelSelectInteractor::isAvailable( FaceControl* fc) const { return _available.count(fc) > 0;}
+bool ModelSelectInteractor::isSelected( FaceControl* fc) const { return _selected.has(fc);}
+bool ModelSelectInteractor::isAvailable( FaceControl* fc) const { return _available.has(fc);}
 
 
 // private

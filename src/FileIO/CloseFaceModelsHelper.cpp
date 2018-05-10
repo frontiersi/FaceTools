@@ -17,8 +17,9 @@
 
 #include <CloseFaceModelsHelper.h>
 #include <algorithm>
-using FaceTools::FileIO::FaceModelManager;
 using FaceTools::FileIO::CloseFaceModelsHelper;
+using FaceTools::FileIO::FaceModelManager;
+using FaceTools::FaceModel;
 
 
 CloseFaceModelsHelper::CloseFaceModelsHelper( FaceModelManager* fmm, QWidget *parent)
@@ -28,7 +29,7 @@ CloseFaceModelsHelper::CloseFaceModelsHelper( FaceModelManager* fmm, QWidget *pa
 
 void CloseFaceModelsHelper::close( FaceModel* fm)
 {
-    emit closingModel(fm);
+    emit onClose(fm);
     _fmm->close(fm);
 }   // end close
 

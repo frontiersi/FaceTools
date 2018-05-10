@@ -32,6 +32,7 @@ public:
     QString getDisplayName() const override { return "Close All";}
 
 protected slots:
+    bool testEnabled() override;
     bool doBeforeAction( FaceControlSet&) override;
     bool doAction( FaceControlSet&) override;
 

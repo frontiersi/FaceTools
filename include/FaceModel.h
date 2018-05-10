@@ -54,7 +54,7 @@ public:
     const std::string& source() const { return _source;}
     void setSource( const std::string& s) { _source = s;}
 
-    // Transform all the data by the given matrix.
+    // Transform all the data by the given matrix and then transform all associated views.
     void transform( const cv::Matx44d&);
 
 private:
@@ -65,14 +65,14 @@ private:
     RFeatures::ObjModel::Ptr _model;
     std::unordered_set<FaceControl*> _fcs;  // FaceControl instances associated with this model.
     RFeatures::ObjModelKDTree::Ptr _kdtree;
+
     /*
-    RFeatures::ObjModelCurvatureMap::Ptr _cmap;
     RFeatures::ObjModelFaceAngleCalculator _facalc;
-    RFeatures::ObjModelCurvatureMetrics::Ptr _cmetrics;
     RFeatures::ObjModelFastMarcher::Ptr _udist;
     RFeatures::ObjModelFastMarcher::Ptr _cdist;
     */
-
+    void updateData( RFeatures::ObjModel::Ptr);
+    friend class FaceControl;
     FaceModel( const FaceModel&);               // No copy
     FaceModel& operator=( const FaceModel&);    // No copy
 };  // end class

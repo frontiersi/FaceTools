@@ -246,19 +246,28 @@ void FaceView::setBackfaceCulling( bool v)
 }   // end setBackfaceCulling
 
 
-const vtkMatrix4x4* FaceView::transform( const vtkMatrix4x4 *t)
+// public
+vtkSmartPointer<vtkMatrix4x4> FaceView::userTransform() const
 {
-    if ( !_sactor)  // Return identity matrix if no actors built yet
-        return NULL;
-
-    if ( !t)
+    vtkSmartPointer<vtkMatrix4x4> umat = vtkSmartPointer<vtkMatrix4x4>::New();
+    umat->Identity();   // Make identity
+    if ( _sactor)  // Return identity matrix if no actors built yet
     {
         // Find out which actor has been moved and apply its transformation to the other actor.
         if ( !_sactor->GetIsIdentity())
-            t = _sactor->GetMatrix();
+            umat = _sactor->GetMatrix();
         else if ( _tactor && !_tactor->GetIsIdentity())
-            t = _tactor->GetMatrix();
+            umat = _tactor->GetMatrix();
     }   // end if
+    return umat;
+}   // end userTransform
+
+
+void FaceView::transform( const vtkMatrix4x4* t)
+{
+    assert(t);
+    if ( !_sactor)
+        return;
 
     std::cerr << " Transforming visualisation layers with matrix:" << std::endl;
     std::cerr << " " << RVTK::toCV(t) << std::endl;
@@ -266,8 +275,6 @@ const vtkMatrix4x4* FaceView::transform( const vtkMatrix4x4 *t)
     RVTK::transform(_sactor, t);
     if ( _tactor)
         RVTK::transform(_tactor, t);
-
     // Apply the transform to applied visualisation layers.
     std::for_each( std::begin(_vlayers), std::end(_vlayers), [=](auto v){ v->transform( _fc, t);});
-    return t;
 }   // end transform

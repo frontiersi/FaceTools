@@ -32,6 +32,7 @@ using FaceTools::Vis::SphereView;
 using FaceTools::LandmarkSet;
 using FaceTools::ModelViewer;
 using FaceTools::FaceControl;
+using FaceTools::FaceModel;
 using FaceTools::Action::ActionVisualise;
 
 
@@ -54,7 +55,11 @@ bool BoundaryVisualisation::isAvailable( const FaceModel* fm) const { return fm-
 void BoundaryVisualisation::apply( const FaceControl* fc)
 {
     if ( _views.count(fc) == 0)
-        _views[fc] = new SphereView( fc->data()->landmarks().pos( FaceTools::Landmarks::NASAL_TIP), 20);
+    {
+        _views[fc] = new SphereView( fc->data()->landmarks().pos( FaceTools::Landmarks::NASAL_TIP), 40, false);
+        _views[fc]->setResolution(201);
+        _views[fc]->setOpacity(0.4);
+    }   // end if
 }   // end apply
 
 

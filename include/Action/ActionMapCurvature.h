@@ -15,48 +15,38 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_RADIAL_SELECTOR_H
-#define FACE_TOOLS_ACTION_RADIAL_SELECTOR_H
-
-/**
- * A checkable action that enables an interface to select radial regions
- * on models. Once checked, the interface changes to the radial selection
- * tool which causes a selected radial area to be indicated centred around
- * the mouse cursor. 
- */
+#ifndef FACE_TOOLS_ACTION_MAP_CURVATURE_H
+#define FACE_TOOLS_ACTION_MAP_CURVATURE_H
 
 #include "FaceAction.h"
-#include <BoundaryView.h>
-#include <ObjModelRegionSelector.h>    // RFeatures
+#include <QStatusBar>
+#include <ObjModelCurvatureMetrics.h>   // RFeatures
 
 namespace FaceTools {
 namespace Action {
 
-class ActionRadialSelector : public FaceAction
+class FaceTools_EXPORT ActionMapCurvature : public FaceAction
 { Q_OBJECT
 public:
-    explicit ActionRadialSelector( const char* icon=":/icons/circle.png");
+    explicit ActionMapCurvature( QProgressBar* pb=NULL);    // Async if pb not NULL
+    ~ActionMapCurvature() override;
 
-    QString getDisplayName() const override { return "Select Region";}
+    QString getDisplayName() const override { return "Compute Curvature";}
     const QIcon* getIcon() const override { return &_icon;}
 
-    void setControlled( FaceControl*, bool) override;
+    // Returns the metrics for the given FaceControl. If not already cached, the data
+    // are computed but only if testReady(fc) returns true for given FaceControl fc.
+    RFeatures::ObjModelCurvatureMetrics::Ptr metrics( FaceControl*);
 
-signals:
-    //void selectedRegion( FaceControl*
-
-public slots:
-    bool doAction() override;
+protected slots:
+    bool testReady( FaceControl*) override;
+    bool doAction( FaceControlSet&) override;
+    void respondToChange( FaceControl*) override;
+    void burn( const FaceControl*) override;
 
 private:
-    const QIcon _icon;
-    RFeatures::ObjModelRegionSelector::Ptr _cropper;
-    RFeatures::ObjModel::Ptr _cobj; // The finished crop on the current object
-
-    boost::unordered_set<FaceControl*> _fconts;
-    BoundaryView *_bview;
-
-    void setCropRadius( double);
+    QIcon _icon;
+    std::unordered_map<const FaceModel*, RFeatures::ObjModelCurvatureMetrics::Ptr> _cmaps;
 };  // end class
 
 }   // end namespace

@@ -22,14 +22,14 @@
 #include "Hashing.h"
 #include <vtkProp.h>
 #include <unordered_set>
+#include <unordered_map>
 
 namespace FaceTools {
 
 class FaceModelViewer;
 class FaceControl;
 class FaceModel;
-
-typedef std::unordered_set<FaceModel*> FaceModelSet;
+typedef std::unordered_set<FaceModel*>       FaceModelSet;
 typedef std::unordered_set<FaceModelViewer*> FaceViewerSet;
 
 class FaceTools_EXPORT FaceControlSet
@@ -39,36 +39,39 @@ public:
     FaceControlSet( const FaceControlSet&);
     FaceControlSet& operator=( const FaceControlSet&);
 
-    FaceControlSet& operator+( const FaceControlSet&); // Add the given set to this set (union)
-    FaceControlSet& operator-( const FaceControlSet&); // Remove the given set from this set (difference)
-    FaceControlSet& operator/( const FaceControlSet&); // Remove from this set those NOT in given set (intersection)
+    FaceControlSet& operator+( const FaceControlSet&);  // Add the given set to this set (union)
+    FaceControlSet& operator-( const FaceControlSet&);  // Remove the given set from this set (difference)
+    FaceControlSet& operator/( const FaceControlSet&);  // Remove from this set those NOT in given set (intersection)
+    FaceControlSet operator()( const FaceModel*) const; // Return the set of FaceControls matching the given model.
 
-    bool insert( FaceControl*);         // Returns true on successful insert
-    bool erase( FaceControl*);          // Returns true on successful erasure
-    bool has( FaceControl*) const;      // Returns true iff present
-    size_t count( FaceControl*) const;  // Returns 1 iff present, else 0.
-    size_t size() const;                // How many members.
-    bool empty() const;                 // True iff empty.
-    void clear();                       // Clear contents.
-    FaceControl* first() const;         // Returns *_fcs.begin() or NULL if empty set.
+    bool insert( FaceControl*);             // Returns true on successful insert.
+    bool erase( FaceControl*);              // Returns true on successful erasure.
+    bool erase( const FaceModel*);          // Erase all FaceControl instances that have the given FaceModel as their data.
+    void clear();                           // Clear contents.
+
+    bool has( FaceControl*) const;          // Returns true iff FaceControl present.
+    bool has( const FaceModel*) const;      // Returns true iff at least one FaceControl with the given data is present.
+    size_t size() const;                    // How many FaceControl instances.
+    size_t size( const FaceModel*) const;   // Returns the number of FaceControl instances that map to the given FaceModel.
+    bool empty() const;                     // True iff empty.
+    FaceControl* first() const;             // Returns *_fcs.begin() or NULL if empty set.
+
+    FaceViewerSet viewers() const;          // Return the set of viewers used at this moment by the FaceControl instances.
+    const FaceModelSet& models() const;     // Return the set of models (FaceControl::data) from the set.
+
+    // Given a prop, returns the associated FaceControl where FaceControl::belongs returns true or NULL if not present.
+    // Currently does a linear lookup. TODO make hashable.
+    FaceControl* find( const vtkProp*) const;
 
     std::unordered_set<FaceControl*>::iterator begin() { return _fcs.begin();}
     std::unordered_set<FaceControl*>::const_iterator begin() const { return _fcs.begin();}
     std::unordered_set<FaceControl*>::iterator end() { return _fcs.end();}
     std::unordered_set<FaceControl*>::const_iterator end() const { return _fcs.end();}
 
-    // Given a prop, returns the associated FaceControl where FaceControl::belongs returns true or NULL if not present.
-    // Currently does a linear lookup. TODO make hashable.
-    FaceControl* find( const vtkProp*) const;
-
-    // Convenience function to return the set of models (FaceControl::data) from the set.
-    FaceModelSet models() const;
-
-    // Convenience function to return the set of viewers.
-    FaceViewerSet viewers() const;
-
 private:
     std::unordered_set<FaceControl*> _fcs;
+    std::unordered_map<const FaceModel*, std::unordered_set<FaceControl*> > _fmm;
+    FaceModelSet _fms;
 };  // end class
 
 

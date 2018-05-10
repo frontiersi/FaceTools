@@ -15,10 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_DETECT_FACE_H
-#define FACE_TOOLS_ACTION_DETECT_FACE_H
+#ifndef FACE_TOOLS_ACTION_GET_FACE_COMPONENT_H
+#define FACE_TOOLS_ACTION_GET_FACE_COMPONENT_H
 
 #include "FaceAction.h"
+#include <QProgressUpdater.h>
 
 namespace FaceTools {
 namespace Detect {
@@ -27,28 +28,21 @@ class FaceDetector;
 
 namespace Action {
 
-class FaceTools_EXPORT ActionDetectFace : public FaceAction
+class FaceTools_EXPORT ActionGetFaceComponent : public FaceAction
 { Q_OBJECT
 public:
-    ActionDetectFace( const QString& haarCascadesModelDir,
-                      const QString& faceShapeLandmarksDat,
-                      QWidget *parent=NULL, QProgressBar* pb=NULL);
-    ~ActionDetectFace() override;
+    ActionGetFaceComponent( QString dname="", QIcon icon=QIcon());
 
-    QString getDisplayName() const override { return "Detect Face";}
+    QString getDisplayName() const override { return _dname;}
     const QIcon* getIcon() const override { return &_icon;}
 
 public slots:
-    bool testEnabled() override { return _detector && (readyCount() == 1);}
-    bool doBeforeAction( FaceControlSet&) override;   // Warn if overwriting
+    bool testReady( FaceControl* fc) override;
     bool doAction( FaceControlSet&) override;
-    void doAfterAction( const FaceControlSet&, bool) override;
 
 private:
+    const QString _dname;
     const QIcon _icon;
-    QWidget *_parent;
-    Detect::FaceDetector *_detector;
-    FaceModelSet _failSet;
 };  // end class
 
 }   // end namespace

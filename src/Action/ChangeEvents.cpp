@@ -17,6 +17,8 @@
 
 #include <ChangeEvents.h>
 using FaceTools::Action::ChangeEvent;
+using FaceTools::Action::ChangeID;
+
 
 std::unordered_map<int, std::string> ChangeEvent::s_descs;
 
@@ -25,26 +27,27 @@ void ChangeEvent::s_init()
     if ( !s_descs.empty())
         return;
 
-    s_descs[CAMERA_FOCUS_CHANGED] = "Camera focus changed";
-    s_descs[CAMERA_POSITION_CHANGED] = "Camera position changed";
-    s_descs[CAMERA_ORIENTATION_CHANGED] = "Camera orientation changed";
+    s_descs[CAMERA_FOCUS_CHANGED] = "Camera Focus Changed";
+    s_descs[CAMERA_POSITION_CHANGED] = "Camera Position Changed";
+    s_descs[CAMERA_ORIENTATION_CHANGED] = "Camera Orientation Changed";
 
-    s_descs[LANDMARK_ADDED] = "Landmark added";
-    s_descs[LANDMARK_DELETED] = "Landmark deleted";
-    s_descs[LANDMARK_CHANGED] = "Landmark changed";
+    s_descs[LANDMARK_ADDED] = "Landmark Added";
+    s_descs[LANDMARK_DELETED] = "Landmark Deleted";
+    s_descs[LANDMARK_CHANGED] = "Landmark Changed";
 
-    s_descs[FACE_NOTE_ADDED] = "Face-note added";
-    s_descs[FACE_NOTE_DELETED] = "Face-note deleted";
-    s_descs[FACE_NOTE_CHANGED] = "Face-note changed";
+    s_descs[FACE_NOTE_ADDED] = "Face-note Added";
+    s_descs[FACE_NOTE_DELETED] = "Face-note Deleted";
+    s_descs[FACE_NOTE_CHANGED] = "Face-note Changed";
 
-    s_descs[MODEL_TEXTURE_CHANGED] = "Model texture changed";
-    s_descs[MODEL_GEOMETRY_CHANGED] = "Model geometry changed";
-    s_descs[MODEL_TRANSFORMED] = "Model transformed";
-    s_descs[MODEL_ORIENTATION_CHANGED] = "Model orientation changed";
-    s_descs[MODEL_DESCRIPTION_CHANGED] = "Model description changed";
-    s_descs[MODEL_SOURCE_CHANGED] = "Model source changed";
+    s_descs[MODEL_TEXTURE_CHANGED] = "Model Texture Changed";
+    s_descs[MODEL_GEOMETRY_CHANGED] = "Model Geometry Changed";
+    s_descs[MODEL_TRANSFORMED] = "Model Transformed";
+    s_descs[MODEL_ORIENTATION_CHANGED] = "Model Orientation Changed";
+    s_descs[MODEL_DESCRIPTION_CHANGED] = "Model Description Changed";
+    s_descs[MODEL_SOURCE_CHANGED] = "Model Source Changed";
 
-    s_descs[VISUALISATION_CHANGED] = "Visualisation changed";
+    s_descs[VISUALISATION_CHANGED] = "Visualisation Changed";
+    s_descs[SURFACE_METRICS_CALCULATED] = "Surface Metrics Calculated";
 }   // end s_init
 
 

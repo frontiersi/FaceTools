@@ -39,7 +39,7 @@ protected slots:
 
 private:
     FileIO::CloseFaceModelsHelper* _chelper;
-    std::unordered_set<FaceModel*> _cset;
+    FaceModelSet _cset;
     QIcon _icon;
     QKeySequence _scut;
 };  // end class

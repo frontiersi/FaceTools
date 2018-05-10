@@ -15,40 +15,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_DETECT_FACE_H
-#define FACE_TOOLS_ACTION_DETECT_FACE_H
+#ifndef FACE_TOOLS_ACTION_CLEAN_H
+#define FACE_TOOLS_ACTION_CLEAN_H
 
 #include "FaceAction.h"
 
 namespace FaceTools {
-namespace Detect {
-class FaceDetector;
-}   // end namespace
-
 namespace Action {
 
-class FaceTools_EXPORT ActionDetectFace : public FaceAction
+class FaceTools_EXPORT ActionClean : public FaceAction
 { Q_OBJECT
 public:
-    ActionDetectFace( const QString& haarCascadesModelDir,
-                      const QString& faceShapeLandmarksDat,
-                      QWidget *parent=NULL, QProgressBar* pb=NULL);
-    ~ActionDetectFace() override;
+    ActionClean( QWidget* parent, QProgressBar* pb=NULL);   // Is async if pb not NULL
+    ~ActionClean() override;
 
-    QString getDisplayName() const override { return "Detect Face";}
+    QString getDisplayName() const override { return "Clean Mesh";}
     const QIcon* getIcon() const override { return &_icon;}
 
-public slots:
-    bool testEnabled() override { return _detector && (readyCount() == 1);}
-    bool doBeforeAction( FaceControlSet&) override;   // Warn if overwriting
+protected slots:
+    bool testReady( FaceControl*) override;
     bool doAction( FaceControlSet&) override;
     void doAfterAction( const FaceControlSet&, bool) override;
+    void respondToChange( FaceControl*) override;
+    void burn( const FaceControl*) override;
 
 private:
-    const QIcon _icon;
+    QIcon _icon;
     QWidget *_parent;
-    Detect::FaceDetector *_detector;
-    FaceModelSet _failSet;
+    std::unordered_map<const FaceModel*, bool> _clean;
+    std::unordered_set<const FaceModel*> _failset;
+    bool checkClean( const FaceModel*);
+    void showCleaningError() const;
 };  // end class
 
 }   // end namespace

@@ -17,6 +17,7 @@
 
 #include <ActionCloseAllFaceModels.h>
 #include <QMessageBox>
+#include <algorithm>
 using FaceTools::Action::ActionCloseAllFaceModels;
 using FaceTools::Action::FaceAction;
 using FaceTools::FileIO::CloseFaceModelsHelper;
@@ -27,8 +28,14 @@ using FaceTools::FaceModel;
 ActionCloseAllFaceModels::ActionCloseAllFaceModels( CloseFaceModelsHelper* chelper)
     : FaceAction(true/*action disabled on other actions executing*/), _chelper(chelper)
 {
-    setAsync(true);
+    setAsync(false);
 }   // end ctor
+
+
+bool ActionCloseAllFaceModels::testEnabled()
+{
+    return !_chelper->opened().empty();
+}   // end testEnabled
 
 
 bool ActionCloseAllFaceModels::doBeforeAction( FaceControlSet&)
@@ -52,9 +59,10 @@ bool ActionCloseAllFaceModels::doBeforeAction( FaceControlSet&)
 }   // end doBeforeAction
 
 
-bool ActionCloseAllFaceModels::doAction( FaceControlSet&)
+bool ActionCloseAllFaceModels::doAction( FaceControlSet &rset)
 {
-    std::unordered_set<FaceModel*> opened = _chelper->opened(); // Copy out
-    _chelper->close( opened);
+    FaceModelSet cset = _chelper->opened(); // Copy out
+    std::for_each(std::begin(cset), std::end(cset), [&](auto fm){rset.erase(fm);});
+    _chelper->close( cset);
     return true;
 }   // end doAction

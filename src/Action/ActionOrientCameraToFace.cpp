@@ -44,16 +44,16 @@ bool ActionOrientCameraToFace::testReady( FaceControl* fc) { return FaceTools::h
 bool ActionOrientCameraToFace::doAction( FaceControlSet& fset)
 {
     using namespace FaceTools::Landmarks;
-    for ( const FaceControl* fc : fset)
+    const FaceModelSet& fms = fset.models();
+    for ( const FaceModel* fm : fms)
     {
-        const FaceModel* fmodel = fc->data();
-        const cv::Vec3f& uvec = fmodel->orientation().up();
-        const cv::Vec3f& nvec = fmodel->orientation().norm();
-        const cv::Vec3f& leye = fmodel->landmarks().pos( L_EYE_CENTRE);
-        const cv::Vec3f& reye = fmodel->landmarks().pos( R_EYE_CENTRE);
-        const cv::Vec3f& ntip = fmodel->landmarks().pos( NASAL_TIP);
+        const cv::Vec3f& uvec = fm->orientation().up();
+        const cv::Vec3f& nvec = fm->orientation().norm();
+        const cv::Vec3f& leye = fm->landmarks().pos( L_EYE_CENTRE);
+        const cv::Vec3f& reye = fm->landmarks().pos( R_EYE_CENTRE);
+        const cv::Vec3f& ntip = fm->landmarks().pos( NASAL_TIP);
         const cv::Vec3f focus = FaceTools::calcFaceCentre( uvec, leye, reye, ntip);
-        fc->viewer()->setCamera( focus, nvec, uvec, 500.0f);
-    }   // end foreach
+        fset(fm).first()->viewer()->setCamera( focus, nvec, uvec, 480.0f);
+    }   // end for
     return true;
 }   // end doAction

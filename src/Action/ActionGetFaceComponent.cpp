@@ -15,55 +15,44 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionShowFaceCropper.h>
+#include <ActionGetFaceComponent.h>
 #include <FaceShapeLandmarks2DDetector.h>   // FaceTools::Landmarks
-#include <ObjModelMover.h>  // RFeatures
 #include <FaceControl.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
-#include <FaceView.h>
-#include <VtkTools.h>
-using FaceTools::Action::ActionShowFaceCropper;
+using FaceTools::Action::ActionGetFaceComponent;
 using FaceTools::Action::FaceAction;
-using FaceTools::Action::ActionCrop;
 using FaceTools::FaceModelViewer;
 using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
 using FaceTools::FaceModel;
 
 
-ActionShowFaceCropper::ActionShowFaceCropper( ActionCrop* cropper)
-    : FaceAction(true/*disable before other*/), _icon( cropper->getIcon()), _cropper(cropper)
+ActionGetFaceComponent::ActionGetFaceComponent( QString dn, QIcon icon)
+    : FaceAction(true/*disable before other*/), _dname(dn), _icon(icon)
 {
+    addChangeTo( MODEL_GEOMETRY_CHANGED);
     addRespondTo( LANDMARK_ADDED);
     addRespondTo( LANDMARK_DELETED);
     addRespondTo( LANDMARK_CHANGED);
 }   // end ctor
 
 
-bool ActionShowFaceCropper::testReady( FaceControl* fc)
+bool ActionGetFaceComponent::testReady( FaceControl* fc)
 {
-    return FaceTools::hasReqLandmarks( fc->data()->landmarks());
+    return fc->data()->landmarks().has( FaceTools::Landmarks::NASAL_TIP);
 }   // end testReady
 
 
-bool ActionShowFaceCropper::doAction( FaceControlSet& rset)
+bool ActionGetFaceComponent::doAction( FaceControlSet& rset)
 {
-    FaceModelSet tset;
-    for ( FaceControl* fc : rset)
+    const FaceModelSet& fms = rset.models();
+    for ( FaceModel* fm : fms)
     {
-        FaceModel* fm = fc->data();
-        const RFeatures::Orientation& on = fm->orientation();
-        const FaceTools::LandmarkSet& lmks = fm->landmarks();
-        using namespace FaceTools::Landmarks;
-        cv::Vec3f c = FaceTools::calcFaceCentre( on.up(), lmks.pos(L_EYE_CENTRE), lmks.pos(R_EYE_CENTRE), lmks.pos(NASAL_TIP));
-        cv::Matx44d m = RFeatures::toStandardPosition( on, c);
-        if ( tset.count(fm) == 0)   // Transform the model if not done already
-        {
-            fm->transform(m);
-            tset.insert(fm);
-        }   // end if
-        fc->view()->transform( RVTK::toVTK(m)); // Transform the visualisations
+        // Get the single component attached to the face and set back in the model.
+        int svidx = fm->kdtree()->find( fm->landmarks().pos( FaceTools::Landmarks::NASAL_TIP));
+        RFeatures::ObjModel::Ptr face = FaceTools::getComponent( fm->model(), svidx);
+        fm->setModel(face);
     }   // end for
     return true;
 }   // end doAction

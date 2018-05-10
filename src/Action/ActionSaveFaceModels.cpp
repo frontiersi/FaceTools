@@ -58,8 +58,8 @@ bool ActionSaveFaceModels::testReady( FaceControl* fc)
 
 bool ActionSaveFaceModels::doAction( FaceControlSet& fset)
 {
-    std::unordered_set<FaceModel*> rset = fset.models();
-    for ( FaceModel* fm : rset)
+    const FaceModelSet& fms =fset.models();
+    for ( FaceModel* fm : fms)
     {
         std::string filepath;   // Will be the last saved filepath
         if ( !_fmm->write( fm, &filepath))  // Save using current filepath for the model

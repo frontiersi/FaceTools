@@ -20,50 +20,44 @@
 #include <FaceView.h>
 #include <FaceModelViewer.h>
 #include <VtkTools.h>   // RVTK
+#include <iomanip>
 using FaceTools::FaceModel;
 using FaceTools::FaceControl;
 using FaceTools::FaceModelViewer;
 using FaceTools::Vis::FaceView;
 
 
-// public
 FaceControl::FaceControl( FaceModel* fm) : _fdata(fm), _fview(NULL)
 {
     _fview = new FaceView(this);
+    _fdata->_fcs.insert(this);
 }   // end ctor
 
 
-// public
 FaceControl::~FaceControl()
 {
+    _fdata->_fcs.erase(this);
     delete _fview;
 }   // end dtor
 
 
 void FaceControl::transform( const cv::Matx44d& m)
 {
-    _fdata->transform(m);
-    vtkSmartPointer<vtkMatrix4x4> vm = RVTK::toVTK(m);
-    _fview->transform( vm);
+    _fdata->transform(m);   // Will call transformView
 }   // end transform
 
 
-void FaceControl::fixTransformFromView()
+void FaceControl::transformView( const vtkMatrix4x4* vm) { _fview->transform(vm);}
+
+
+void FaceControl::transformFromView()
 {
-    const vtkMatrix4x4* m = _fview->transform(NULL);  // Transform according to user transform
-    assert(m);
-    cv::Matx44d cm = RVTK::toCV(m);
-    _fdata->transform(cm);
-}   // end fixTransformFromView
+    vtkSmartPointer<vtkMatrix4x4> m = _fview->userTransform();
+    _fdata->transform( RVTK::toCV(m));  // Will cause transformView to be called
+}   // end transformFromView
 
 
-// public
-void FaceControl::setViewer( FaceModelViewer* v)
-{
-    _fview->setViewer(v);
-}   // end setViewer
-
-
+void FaceControl::setViewer( FaceModelViewer* v) { _fview->setViewer(v);}
 FaceModelViewer* FaceControl::viewer() const { return static_cast<FaceModelViewer*>(_fview->viewer());}
 
 

@@ -52,21 +52,15 @@ bool ActionTransformToStandardPosition::testReady( FaceControl* fc)
 
 bool ActionTransformToStandardPosition::doAction( FaceControlSet& rset)
 {
-    FaceModelSet tset;
-    for ( FaceControl* fc : rset)
+    using namespace FaceTools::Landmarks;
+    const FaceModelSet& fms = rset.models();
+    for ( FaceModel* fm : fms)
     {
-        FaceModel* fm = fc->data();
         const RFeatures::Orientation& on = fm->orientation();
         const FaceTools::LandmarkSet& lmks = fm->landmarks();
-        using namespace FaceTools::Landmarks;
-        cv::Vec3f c = FaceTools::calcFaceCentre( on.up(), lmks.pos(L_EYE_CENTRE), lmks.pos(R_EYE_CENTRE), lmks.pos(NASAL_TIP));
+        const cv::Vec3f c = FaceTools::calcFaceCentre( on.up(), lmks.pos(L_EYE_CENTRE), lmks.pos(R_EYE_CENTRE), lmks.pos(NASAL_TIP));
         cv::Matx44d m = RFeatures::toStandardPosition( on, c);
-        if ( tset.count(fm) == 0)   // Transform the model if not done already
-        {
-            fm->transform(m);
-            tset.insert(fm);
-        }   // end if
-        fc->view()->transform( RVTK::toVTK(m)); // Transform the visualisations
+        fm->transform(m);   // Transform the data - will cause all associated views to update
     }   // end for
     return true;
 }   // end doAction

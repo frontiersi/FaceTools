@@ -111,6 +111,11 @@ public slots:
     // True is returned from process() iff doAction was entered.
     bool process( bool checkAction=true);
 
+    // These two versions of process first cache the existing controlled and ready sets on this action then
+    // call process(true) using the provided sets, before restoring the old controlled and ready sets.
+    bool process( const FaceControlSet&);
+    bool process( FaceControl*);
+
     // This function is used to add composite actions to this one that will be executed immediately after the
     // containing action's doAfterAction() function returns. This function can be called multiple times to add
     // multiple actions that will execute in sequentially added order.
@@ -143,7 +148,7 @@ protected slots:
     // Set asynchronous execution or not on the next call to process. Default is synchronous (blocking calls).
     // Optionally set a progress updater which must be updated by derived type's implementation of doAction();
     // derived type should make regular calls to progress().
-    void setAsync( bool, QTools::QProgressUpdater* pupdater=NULL);
+    void setAsync( bool, QTools::QProgressUpdater::Ptr pupdater=QTools::QProgressUpdater::Ptr());
 
     // If wanting to provide progress updates for long running actions that may be asynchronous, derived
     // type should regularly call this function to provide progress updates. This function first checks
@@ -181,8 +186,8 @@ protected slots:
     virtual bool testReady( FaceControl*) { return true;}
 
     // Discover if the given FaceControl is currently under nominal control or is in the ready set.
-    bool isSelected( FaceControl *fc) const { _controlled.count(fc) > 0;}
-    bool isReady( FaceControl* fc) const { _ready.count(fc) > 0;}
+    bool isSelected( FaceControl *fc) const { return _controlled.has(fc);}
+    bool isReady( FaceControl* fc) const { return _ready.has(fc);}
 
     // Retain in the "ready" set only those FaceControl instances for which calls to testReady()
     // still return true, returning the size of the modified set and test-setting the enabled state of
@@ -277,12 +282,10 @@ private:
     bool _disableBeforeOther;
     QAction _action;
     bool _doasync;
-    QTools::QProgressUpdater* _pupdater;
+    QTools::QProgressUpdater::Ptr _pupdater;
     FaceControlSet _controlled, _ready;
     ChangeEventSet _revents, _cevents;
-    FaceControlSet _pready; // Pre-doAction caching of _ready
     std::list<FaceAction*> _eacts;
-    void chain( const FaceControlSet&);
     FaceAction( const FaceAction&);     // No copy
     void operator=( const FaceAction&); // No copy
 };  // end class

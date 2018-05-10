@@ -23,6 +23,11 @@
     <file alias="CALIPERS">res/icons/icons8-calipers.png</file>
     <file alias="PDF">res/icons/icons8-PDF.png</file>
     <file alias="ALIGN_FACES">res/icons/icons8-team-80.png</file>
+    <file alias="FILL_HOLES">res/icons/icons8-cheese-80.png</file>
+    <file alias="CLEAN">res/icons/icons8-bucket-and-broom-80.png</file>
+    <file alias="ANGLES">res/icons/icons8-trigonometry-80.png</file>
+    <file alias="MOVIE">res/icons/icons8-popcorn-time-48.png</file>
+    <file alias="FILM">res/icons/icons8-film-reel-80.png</file>
 
     <file alias="LOAD">res/icons/icons8-open.png</file>
     <file alias="LOAD_DIR">res/icons/icons8-open_dir.png</file>

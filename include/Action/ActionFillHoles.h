@@ -15,40 +15,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_DETECT_FACE_H
-#define FACE_TOOLS_ACTION_DETECT_FACE_H
+#ifndef FACE_TOOLS_ACTION_FILL_HOLES_H
+#define FACE_TOOLS_ACTION_FILL_HOLES_H
 
 #include "FaceAction.h"
 
 namespace FaceTools {
-namespace Detect {
-class FaceDetector;
-}   // end namespace
-
 namespace Action {
 
-class FaceTools_EXPORT ActionDetectFace : public FaceAction
+class FaceTools_EXPORT ActionFillHoles : public FaceAction
 { Q_OBJECT
 public:
-    ActionDetectFace( const QString& haarCascadesModelDir,
-                      const QString& faceShapeLandmarksDat,
-                      QWidget *parent=NULL, QProgressBar* pb=NULL);
-    ~ActionDetectFace() override;
+    explicit ActionFillHoles( QProgressBar* pb=NULL);   // Async if pb not NULL
 
-    QString getDisplayName() const override { return "Detect Face";}
+    QString getDisplayName() const override { return "Fill Holes";}
     const QIcon* getIcon() const override { return &_icon;}
 
-public slots:
-    bool testEnabled() override { return _detector && (readyCount() == 1);}
-    bool doBeforeAction( FaceControlSet&) override;   // Warn if overwriting
+protected slots:
+    bool testReady( FaceControl* fc) override;
+    bool testEnabled() const { return readyCount() == 1;}   // Only enabled for single selections
     bool doAction( FaceControlSet&) override;
-    void doAfterAction( const FaceControlSet&, bool) override;
 
 private:
-    const QIcon _icon;
-    QWidget *_parent;
-    Detect::FaceDetector *_detector;
-    FaceModelSet _failSet;
+    QIcon _icon;
 };  // end class
 
 }   // end namespace

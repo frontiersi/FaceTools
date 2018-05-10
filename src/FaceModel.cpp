@@ -16,8 +16,13 @@
  ************************************************************************/
 
 #include <FaceModel.h>
+#include <FaceControl.h>
 #include <FaceTools.h>
+#include <FaceView.h>
 #include <ObjModelMover.h>  // RFeatures
+#include <VtkTools.h>       // RVTK
+#include <algorithm>
+
 using FaceTools::FaceModel;
 using RFeatures::ObjModelMover;
 using RFeatures::ObjModelKDTree;
@@ -27,9 +32,9 @@ using RFeatures::ObjModel;
 // public
 void FaceModel::setModel( ObjModel::Ptr m)
 {
-    _model = m;
-    _kdtree = ObjModelKDTree::create(m);
-    FaceTools::translateLandmarksToSurface( _kdtree, _landmarks);   // Ensure landmarks remapped to surface
+    updateData(m);
+    // Update all attached views
+    std::for_each( std::begin(_fcs), std::end(_fcs), [&](auto fc){ fc->view()->rebuild();});
 }   // end setModel
 
 
@@ -40,8 +45,20 @@ void FaceModel::transform( const cv::Matx44d& m)
     const ObjModelMover mover(m);
     mover( _model); // Adjust vertices of the model in-place
     _landmarks.transform(m);    // Transform the landmarks
-    setModel(_model);
+    updateData(_model);
+    // Update all attached views
+    vtkSmartPointer<vtkMatrix4x4> vm = RVTK::toVTK(m);
+    std::for_each( std::begin(_fcs), std::end(_fcs), [&](auto fc){ fc->transformView(vm);});
 }   // end transform
+
+
+// private
+void FaceModel::updateData( ObjModel::Ptr m)
+{
+    _model = m;
+    _kdtree = ObjModelKDTree::create(m);
+    FaceTools::translateLandmarksToSurface( _kdtree, _landmarks);   // Ensure landmarks remapped to surface
+}   // end updateData
 
 
 /*
@@ -74,26 +91,6 @@ void FaceModel::updateMesh( const ObjModel::Ptr model)
 }   // end updateMesh
 
 
-void FaceModel::buildCurvature()
-{
-    if ( _omd->getCurvatureMap() != NULL)
-        return;
-
-    // If nosetip landmark available, update the curvature metrics
-    if ( _omd->getObject() != NULL && _omd->landmarks()->hasLandmark( FaceTools::Landmarks::NASAL_TIP))
-    {
-        const ObjModel::Ptr model = _omd->getObject();
-        const cv::Vec3f& v = _omd->landmarks()->getLandmark( FaceTools::Landmarks::NASAL_TIP);
-        const int vidx = _omd->getKDTree()->find( v);
-
-        _omd->rebuildCurvatureMap( vidx);
-        const RFeatures::ObjModelCurvatureMap::Ptr cmap = _omd->getCurvatureMap();
-        assert( cmap != NULL);
-        _cmetrics = RFeatures::ObjModelCurvatureMetrics::create( cmap);
-    }   // end if
-}   // end buildCurvature
-
-
 void FaceModel::buildDistanceMaps()
 {
     if ( _omd->getObject() == NULL || !_omd->landmarks()->hasLandmark( FaceTools::Landmarks::NASAL_TIP))
@@ -110,22 +107,6 @@ void FaceModel::buildDistanceMaps()
         const int fidx = *model->getFaceIds(vidx).begin();  // Get connected polygon to nose tip
         tparser.parse( fidx, cv::Vec3f(0,0,1));
     }   // end if
-
-#ifndef NDEBUG
-    // Check the angles
-    const RFeatures::FaceAngles& fangles = _facalc.getFaceAngles();
-    const IntSet& fids = model->getFaceIds();
-    foreach ( int fid, fids)
-    {
-        const RFeatures::VertexAngles& va = fangles.at(fid);
-        const int* vidxs = model->getFaceVertices(fid);
-        const double v0 = va.at(vidxs[0]);
-        const double v1 = va.at(vidxs[1]);
-        const double v2 = va.at(vidxs[2]);
-        if ( fabs(v0 + v1 + v2 - CV_PI) > 0.0000001)
-            std::cerr << "F_" << fid << ") " << v0 << ", " << v1 << ", " << v2 << std::endl;
-    }   // end foreach
-#endif
 
     // Propagate from nose tip
     const RFeatures::ObjModelFastMarcher::SpeedFunctor uniformSpeedFunctor;

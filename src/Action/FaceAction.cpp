@@ -25,6 +25,9 @@ using FaceTools::Action::FaceActionInterface;
 using FaceTools::Action::FaceActionWorker;
 using FaceTools::FaceModelViewer;
 using FaceTools::FaceControlSet;
+using FaceTools::FaceControl;
+using FaceTools::Action::ChangeEvent;
+using QTools::QProgressUpdater;
 
 
 // public
@@ -73,7 +76,7 @@ QAction* FaceAction::qaction()
 // protected
 void FaceAction::init() // Called by FaceActionManager
 {
-    connect( &_action, &QAction::triggered, this, &FaceAction::process);
+    connect( &_action, &QAction::triggered, this, static_cast<bool (FaceAction::*)(bool)>(&FaceAction::process));
     _action.setText( getDisplayName());
     _action.setToolTip( getToolTip());
     const QIcon* icon = getIcon();
@@ -88,7 +91,7 @@ void FaceAction::init() // Called by FaceActionManager
 
 
 // protected
-void FaceAction::setAsync( bool enable, QTools::QProgressUpdater* pupdater)
+void FaceAction::setAsync( bool enable, QProgressUpdater::Ptr pupdater)
 {
     _doasync = enable;
     _pupdater = pupdater;
@@ -155,6 +158,8 @@ bool FaceAction::operator()(){ return process();}
 // protected
 void FaceAction::respondToChange( FaceControl* fc)
 {
+    if ( !fc)
+        return;
     _ready.erase(fc);
     if ( fc && isSelected(fc) && testReady(fc))
         _ready.insert(fc);
@@ -191,7 +196,6 @@ bool FaceAction::process( bool checked)
         return false;   // Test for cancelled action
     }   // end if
 
-    _pready = _ready;   // Cache the _ready set going in to the action - finished action will need to recheck this one.
     if ( !_doasync)
     {
         if ( displayDebugStatusProgression())
@@ -215,39 +219,55 @@ bool FaceAction::process( bool checked)
 // public
 void FaceAction::execAfter( FaceAction* fa)
 {
+    assert(fa);
     _eacts.push_back(fa);
 }   // end execAfter
 
 
-// private
-void FaceAction::chain( const FaceControlSet& cset)
-{
+// public
+bool FaceAction::process( const FaceControlSet& cset)
+{ 
+    FaceControlSet rc = _controlled;    // Copy out
+    FaceControlSet rr = _ready;         // Copy out
+
     _controlled.clear();
     _ready.clear();
     for ( FaceControl* fc : cset)
         setSelected( fc, true);
-    process();  // Return value ignored
-}   // end chain
+    bool v = process();
+
+    // Restore the old controlled and ready sets
+    _controlled = rc;
+    _ready = rr;
+    return v;
+}   // end process
+
+
+// public
+bool FaceAction::process( FaceControl* fc)
+{
+    FaceControlSet fcs;
+    fcs.insert(fc);
+    return process( fcs);
+}   // end process
 
 
 // private slot
 void FaceAction::doOnActionFinished( bool rval)
 {
-    doAfterAction( _ready, rval);   // Possible that _ready != _pready
-    std::for_each( std::begin(_eacts), std::end(_eacts), [&](auto a){ a->chain(_ready);}); // Chain to execAfter actions
+    doAfterAction( _ready, rval);   // _ready membership may have changed
+    std::for_each( std::begin(_eacts), std::end(_eacts), [&](auto a){ a->process(_ready);}); // Chain to execAfter actions
     progress(1.0f);
-    FaceControlSet oldrdy = _ready; // Copy out for reportChanged to potential listening actions
-    _ready = _pready;               // Reinstate the old _ready set to allow rechecking.
-    _pready.clear();                // Pre-action ready no longer needed.
+    FaceControlSet frdy = _ready;   // Copy out the "finished" ready set for reportChanged to potential listening actions
     recheckReadySet();              // Allows this action to enable/disable itself first
-    for ( FaceControl* fc : oldrdy) // Allow "listening" FaceActions to update themselves on the affected FaceControls
+    for ( FaceControl* fc : frdy)   // Allow "listening" FaceActions to update themselves on the affected FaceControls
         emit reportChanged( fc);
     if ( displayDebugStatusProgression())
     {
         const std::string dname = debugActionName();
         std::cerr << "___{" << dname << "}___ FINISHED" << std::endl;
     }   // end if
-    emit reportFinished( &oldrdy);   // Used by FaceActionManager to call setEnabled on all actions registered with it.
+    emit reportFinished( &frdy);   // Used by FaceActionManager to call setEnabled on all actions registered with it.
 }   // end doOnActionFinished
 
 

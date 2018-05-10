@@ -25,9 +25,10 @@
 #include <cassert>
 using FaceTools::Vis::LandmarksVisualisation;
 using FaceTools::Vis::LandmarkSetView;
+using FaceTools::Action::ActionVisualise;
 using FaceTools::ModelViewer;
 using FaceTools::FaceControl;
-using FaceTools::Action::ActionVisualise;
+using FaceTools::FaceModel;
 
 namespace {
 void updateRender( const std::unordered_map<const FaceControl*, LandmarkSetView*>& lviews)

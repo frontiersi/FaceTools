@@ -56,7 +56,7 @@ namespace {
 cv::Mat_<cv::Vec3b> snapshot( RVTK::Viewer::Ptr v) { return ImageGrabber(v).colour();}
 
 
-cv::Mat_<cv::Vec3b> snapshot( RVTK::Viewer::Ptr viewer, auto fpts)
+cv::Mat_<cv::Vec3b> snapshot( RVTK::Viewer::Ptr viewer, const std::vector<cv::Point2f>& fpts)
 {
     cv::Mat_<cv::Vec3b> cmap = snapshot(viewer);
     std::vector<cv::Point> pts;

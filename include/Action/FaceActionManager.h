@@ -62,7 +62,7 @@ public:
 
 public slots:
     void setSelected( FaceControl*, bool);  // Forwards through to all actions - always call in GUI thread!
-    void remove( FaceControl*);             // Cause all FaceActions to discard any data concerning the FaceControl.
+    void purge( FaceControl*);              // Cause all FaceActions to discard any data concerning the FaceControl.
 
 signals:
     // Signal that the given action is about to start or has just finished

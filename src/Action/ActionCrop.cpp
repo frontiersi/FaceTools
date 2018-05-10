@@ -65,7 +65,6 @@ void ActionCrop::doOnSetNewCentre( FaceControl* fc, const cv::Vec3f& v)
 // private slot
 void ActionCrop::doOnSetNewRadius( FaceControl* fc, double r)
 {
-    // New radius as Euclidean distance of point from starting right click drag point.
     _bvis->setRadius( fc, r);
     fc->viewer()->updateRender();
 }   // end doOnSetNewRadius

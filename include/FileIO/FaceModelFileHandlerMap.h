@@ -34,6 +34,10 @@ namespace FaceTools {
 namespace FileIO {
 
 class FaceModelManager;
+class FaceModelFileHandlerMap;
+
+// Prints the IO formats to given stream.
+FaceTools_EXPORT std::ostream& operator<<( std::ostream&, const FaceModelFileHandlerMap&);
 
 class FaceTools_EXPORT FaceModelFileHandlerMap
 {
@@ -63,16 +67,12 @@ private:
     std::unordered_map<QString, QStringSet> _exportDescExtMap; // Maps descriptions to extensions
     QString _primaryExt;
 
-    friend std::ostream& operator<<( std::ostream&, const FaceModelFileHandlerMap&);
+    friend std::ostream& FaceTools::FileIO::operator<<( std::ostream&, const FaceModelFileHandlerMap&);
     friend class FaceModelManager;
     FaceModelFileHandlerMap(){}
     FaceModelFileHandlerMap( const FaceModelFileHandlerMap&);   // No copy
     void operator=( const FaceModelFileHandlerMap&);            // No copy
 };  // end class
-
-
-// Prints the IO formats to given stream.
-FaceTools_EXPORT std::ostream& operator<<( std::ostream&, const FaceModelFileHandlerMap&);
 
 }   // end namespace
 }   // end namespace

@@ -24,7 +24,7 @@ using FaceTools::Vis::SphereView;
 using FaceTools::ModelViewer;
 
 
-SphereView::SphereView( const cv::Vec3f& c, double r)
+SphereView::SphereView( const cv::Vec3f& c, double r, bool p)
     : _viewer(NULL),
       _source( vtkSmartPointer<vtkSphereSource>::New()),
       _actor( vtkSmartPointer<vtkActor>::New()),
@@ -46,6 +46,7 @@ SphereView::SphereView( const cv::Vec3f& c, double r)
 
     setCentre(c);
     setRadius(r);
+    setPickable(p);
 }   // end ctor
 
 
@@ -55,12 +56,25 @@ SphereView::~SphereView()
 }   // end dtor
 
 
-// public
-void SphereView::setCaption( const std::string& lname)
+void SphereView::setResolution( int t)
 {
-    _caption->SetCaption( lname.c_str());
-}   // end setCaption
+    t = std::max<int>(t,8);
+    _source->SetPhiResolution(t);
+    _source->SetThetaResolution((int)(double(t+1)/2));
+}   // end setResolution
 
+
+int SphereView::resolution() const { return _source->GetPhiResolution();}
+
+
+// public
+void SphereView::setPickable( bool v) { _actor->SetPickable(v);}
+bool SphereView::pickable() const { return _actor->GetPickable();}
+double SphereView::opacity() const { return _actor->GetProperty()->GetOpacity();}
+void SphereView::setOpacity( double v) { _actor->GetProperty()->SetOpacity( v);}
+double SphereView::radius() const { return _source->GetRadius();}
+
+void SphereView::setCaption( const std::string& lname) { _caption->SetCaption( lname.c_str());}
 
 // public
 void SphereView::setCentre( const cv::Vec3f& pos)
@@ -87,13 +101,6 @@ void SphereView::setRadius( double r)
     _source->SetRadius(r);
     _source->Update();
 }   // end setRadius
-
-
-// public
-double SphereView::radius() const
-{
-    return _source->GetRadius();
-}   // end radius
 
 
 // public
@@ -125,13 +132,8 @@ bool SphereView::isProp( const vtkProp* prop) const { return _actor == prop;}
 // public
 void SphereView::highlight( bool enable)
 {
-    double opacity = 1.0;
     _ishighlighted = enable && isVisible();
-    if ( _ishighlighted)
-        opacity = 0.4;
     _actor->GetProperty()->SetColor( 0.7,1,1);
-    _actor->GetProperty()->SetOpacity( opacity);
-
     _caption->GetCaptionTextProperty()->SetColor( 1,1,1);
     _caption->SetVisibility( true);
 

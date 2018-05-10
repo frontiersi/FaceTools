@@ -49,8 +49,7 @@ public slots:
 
 signals:
     void onSelected( FaceControl*, bool);   // Connect to FaceActionManager::setSelected
-    void onRemoving( FaceControl*);         // Connect to FaceActionManager::remove
-    void onShowContext( const QPoint&);     // Provides global position for context menu.
+    void onRemove( FaceControl*);
 
 private slots:
     void moveLeftToCentre();

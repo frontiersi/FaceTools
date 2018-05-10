@@ -173,7 +173,6 @@ MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent)
     layout()->addWidget( _splitter);
 
     connect( &_selector, &ModelSelectInteractor::onSelected, this, &MultiFaceModelViewer::doOnSelected);
-    connect( &_selector, &ModelSelectInteractor::onRemoving, this, &MultiFaceModelViewer::onRemoving);
 
     _splitter->setCollapsible(1,false);
     setLeftViewerVisible(false);
@@ -243,7 +242,8 @@ bool MultiFaceModelViewer::deleteFaceControl( FaceControl* fc)
         return false;
 
     FaceModelViewer* v = fc->viewer();
-    _selector.remove( fc);  // Causes onSelected(false) followed by onRemoving to fire
+    _selector.remove( fc);  // Causes onSelected(false)
+    emit onRemove(fc);
     v->detach( fc);         // Sets viewer NULL in the FaceControl
     delete fc;
     v->updateRender();

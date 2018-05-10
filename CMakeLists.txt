@@ -27,10 +27,14 @@ set( SRC_DIR "${PROJECT_SOURCE_DIR}/src")
 set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionCloseAllFaceModels.h"
     "${INCLUDE_ACTION_DIR}/ActionCloseFaceModels.h"
+    "${INCLUDE_ACTION_DIR}/ActionClean.h"
     "${INCLUDE_ACTION_DIR}/ActionCrop.h"
     "${INCLUDE_ACTION_DIR}/ActionDetectFace.h"
+    "${INCLUDE_ACTION_DIR}/ActionFillHoles.h"
+    "${INCLUDE_ACTION_DIR}/ActionGetFaceComponent.h"
     "${INCLUDE_ACTION_DIR}/ActionLoadDirFaceModels.h"
     "${INCLUDE_ACTION_DIR}/ActionLoadFaceModels.h"
+    "${INCLUDE_ACTION_DIR}/ActionMapCurvature.h"
     "${INCLUDE_ACTION_DIR}/ActionOrientCameraToFace.h"
     "${INCLUDE_ACTION_DIR}/ActionResetCamera.h"
     "${INCLUDE_ACTION_DIR}/ActionSaveScreenshot.h"
@@ -121,10 +125,14 @@ set( SRC_FILES
     ${SRC_DIR}/Action/ChangeEvents
     ${SRC_DIR}/Action/ActionCloseAllFaceModels
     ${SRC_DIR}/Action/ActionCloseFaceModels
+    ${SRC_DIR}/Action/ActionClean
     ${SRC_DIR}/Action/ActionCrop
     ${SRC_DIR}/Action/ActionDetectFace
+    ${SRC_DIR}/Action/ActionFillHoles
+    ${SRC_DIR}/Action/ActionGetFaceComponent
     ${SRC_DIR}/Action/ActionLoadDirFaceModels
     ${SRC_DIR}/Action/ActionLoadFaceModels
+    ${SRC_DIR}/Action/ActionMapCurvature
     ${SRC_DIR}/Action/ActionSaveFaceModels
     ${SRC_DIR}/Action/ActionSaveAsFaceModel
     ${SRC_DIR}/Action/ActionOrientCameraToFace

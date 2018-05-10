@@ -100,17 +100,14 @@ public:
     bool backfaceCulling() const;
 
     // Transform the actors and any visualisations using the given matrix. This is a "hard"
-    // transform in that it updates the poly data underlying the actors. If the given matrix
-    // is NULL, the transform will use the actor's current user transform which is nominally
-    // the identity matrix unless the actors have been moved around (typically via interactor).
-    // The returned matrix will be a copy of the actor's user transformation matrix prior
-    // to applying the transform to the data.
-    //
-    // If the given matrix is NOT null, the actor's internal transformation matrix will be
-    // ignored and the poly data filtered to update according to the provided matrix. In
-    // this case, the returned matrix will simply be a copy of the provided matrix.
+    // transform in that it updates the poly data underlying the actors. The actor's internal
+    // transformation matrix is ignored and the actor's poly data updated using the given matrix.
     // On return, the actor's user transformation matrix will be the identity matrix.
-    const vtkMatrix4x4* transform( const vtkMatrix4x4 *t=NULL);
+    void transform( const vtkMatrix4x4*);
+
+    // Return the actor's current user transform which is the identity matrix unless
+    // the actors have been moved around (typically via interactor).
+    vtkSmartPointer<vtkMatrix4x4> userTransform() const;
 
 private:
     const FaceControl *_fc;

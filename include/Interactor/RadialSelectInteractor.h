@@ -47,14 +47,16 @@ protected:
     void onDetached() override;
 
 private:
-    bool leftButtonDown( const QPoint&) override;
-    bool rightButtonDown( const QPoint&) override;
+    bool leftDoubleClick( const QPoint&) override;
     bool leftDrag( const QPoint&) override;
-    bool rightDrag( const QPoint&) override;
+    bool leftButtonUp( const QPoint&) override;
+    bool mouseWheelForward( const QPoint&) override;
+    bool mouseWheelBackward( const QPoint&) override;
 
     Vis::BoundaryVisualisation *_bvis;
     FaceEntryExitInteractor *_feei;
     FaceControl *_fc;
+    bool _move;
 };  // end class
 
 }   // end namespace
