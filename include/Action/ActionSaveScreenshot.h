@@ -27,16 +27,12 @@ namespace Action {
 class FaceTools_EXPORT ActionSaveScreenshot : public FaceAction
 { Q_OBJECT
 public:
-    explicit ActionSaveScreenshot( const MultiFaceModelViewer*);
+    ActionSaveScreenshot( const QString& dname, const QIcon& icon, const MultiFaceModelViewer*);
    
-    QString getDisplayName() const override { return "Save Combo Screenshot";}
-    const QIcon* getIcon() const override { return &_icon;}
-
 public slots:
     bool doAction( FaceControlSet&) override;
 
 private:
-    const QIcon _icon;
     const MultiFaceModelViewer* _mviewer;
 };  // end class
 

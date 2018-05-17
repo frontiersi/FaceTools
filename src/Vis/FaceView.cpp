@@ -64,7 +64,7 @@ void FaceView::rebuild()
         std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](auto v){v->removeActors(_fc);});
     std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](auto v){v->burn(_fc);});
 
-    const ObjModel::Ptr model = _fc->data()->model();
+    const ObjModel* model = _fc->data()->cmodel();
     RVTK::VtkActorCreator ac;
     _fmap.clear();  // Create the surface actor
     ac.setObjToVTKUniqueFaceMap( &_fmap);
@@ -90,7 +90,10 @@ void FaceView::rebuild()
 
     std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](auto v){v->apply(_fc);});     // Re-apply
     if ( _viewer)   // Re-add if a viewer set
+    {
         std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](auto v){v->addActors(_fc);}); // Re-add
+        _viewer->updateRender();
+    }   // end if
 }   // end rebuild
 
 
@@ -277,4 +280,6 @@ void FaceView::transform( const vtkMatrix4x4* t)
         RVTK::transform(_tactor, t);
     // Apply the transform to applied visualisation layers.
     std::for_each( std::begin(_vlayers), std::end(_vlayers), [=](auto v){ v->transform( _fc, t);});
+    if ( _viewer)
+        _viewer->updateRender();
 }   // end transform

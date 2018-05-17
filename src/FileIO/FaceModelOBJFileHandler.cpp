@@ -35,11 +35,16 @@ FaceModel* FaceModelOBJFileHandler::read( const QString& fname)
 {
     _err = "";
     FaceModel* fm = NULL;
-    const RFeatures::ObjModel::Ptr model = _importer.load( fname.toStdString());
+    RFeatures::ObjModel::Ptr model = _importer.load( fname.toStdString());
     if ( model)
     {
         fm = new FaceModel;
-        fm->setModel(model);
+        if ( !fm->updateData( model))
+        {
+            delete fm;
+            fm = NULL;
+            _err = ("Failed to clean object loaded from \"" + fname.toStdString() + "\"").c_str();
+        }   // end if
     }   // end if
     else
         _err = ("Failed to load object from \"" + fname.toStdString() + "\"").c_str();
@@ -51,7 +56,7 @@ bool FaceModelOBJFileHandler::write( const FaceModel* fm, const QString& qfname)
 {
     _err = "";
     const std::string fname = qfname.toStdString();
-    const RFeatures::ObjModel::Ptr model = fm->model();
+    const RFeatures::ObjModel* model = fm->cmodel();
     std::cerr << "[STATUS] FaceTools::FileIO::FaceModelOBJFileHandler::write: Saving model to \"" << fname << "\"" << std::endl;
     if ( _exporter.save( model, fname))
         std::cerr << "[STATUS] FaceTools::FileIO::FaceModelOBJFileHandler::write: Saved model to \"" << fname << "\"" << std::endl;

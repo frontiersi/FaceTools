@@ -51,16 +51,27 @@ class FaceTools_EXPORT FaceAction : public FaceActionInterface
 public:
     // Assuming this FaceAction is registered with the FaceActionManager, by setting disableBeforeOther to
     // true, this action will disable itself (setEnabled(false)) prior to the execution of any other action.
-    explicit FaceAction( bool disableBeforeOther=false);
-    ~FaceAction() override {}
+    // In general this should be true because other (unknown) actions may concurrently update the data this
+    // action expects to be working on.
+    explicit FaceAction( bool disableBeforeOther=true);
 
-    // Connect the provided buttons to this action.
-    void connectToolButton( QToolButton*);
-    void connectButton( QPushButton*);
+    // Constructor versions that take a display name, icon, and triggering key sequence.
+    FaceAction( const QString& displayName, bool disableBeforeOther=true);
+    FaceAction( const QString& displayName, const QIcon& icon, bool disableBeforeOther=true);
+    FaceAction( const QString& displayName, const QIcon& icon, const QKeySequence&, bool disableBeforeOther=true);
+
+    QString getDisplayName() const override;
+    const QIcon* getIcon() const override;
+    const QKeySequence* getShortcut() const override;
 
     // Returns the QAction as long as this action had init() called on it by child class.
     // Triggering the action calls this action's process function.
     QAction* qaction();
+
+    // Utility functions to connect the provided buttons to this action.
+    void connectToolButton( QToolButton*);
+    void connectButton( QPushButton*);
+
 
     bool operator()();  // Synonymous with process (see below).
 
@@ -278,6 +289,9 @@ private slots:
     void doOnActionFinished( bool);
 
 private:
+    QString _dname;
+    QIcon _icon;
+    QKeySequence _keys;
     bool _init;
     bool _disableBeforeOther;
     QAction _action;

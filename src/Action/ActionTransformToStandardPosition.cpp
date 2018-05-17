@@ -17,7 +17,7 @@
 
 #include <ActionTransformToStandardPosition.h>
 #include <FaceShapeLandmarks2DDetector.h>   // FaceTools::Landmarks
-#include <ObjModelMover.h>  // RFeatures
+#include <Transformer.h>  // RFeatures
 #include <FaceControl.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
@@ -25,14 +25,13 @@
 #include <VtkTools.h>
 using FaceTools::Action::ActionTransformToStandardPosition;
 using FaceTools::Action::FaceAction;
-using FaceTools::FaceModelViewer;
 using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
 using FaceTools::FaceModel;
 
 
-ActionTransformToStandardPosition::ActionTransformToStandardPosition()
-    : FaceAction(true/*disable before other*/), _icon( ":/icons/TRANSFORM")
+ActionTransformToStandardPosition::ActionTransformToStandardPosition( const QString &dn, const QIcon& ico)
+    : FaceAction( dn, ico, true/*disable before other*/)
 {
     addChangeTo( MODEL_TRANSFORMED);
     addChangeTo( MODEL_ORIENTATION_CHANGED);

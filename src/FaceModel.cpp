@@ -19,46 +19,60 @@
 #include <FaceControl.h>
 #include <FaceTools.h>
 #include <FaceView.h>
-#include <ObjModelMover.h>  // RFeatures
 #include <VtkTools.h>       // RVTK
 #include <algorithm>
-
 using FaceTools::FaceModel;
-using RFeatures::ObjModelMover;
+using RFeatures::Transformer;
 using RFeatures::ObjModelKDTree;
+using RFeatures::ObjModelInfo;
 using RFeatures::ObjModel;
 
 
 // public
-void FaceModel::setModel( ObjModel::Ptr m)
+FaceModel::FaceModel() : _flagViewUpdate(false) {}
+
+
+// public
+bool FaceModel::updateData( ObjModel::Ptr m)
 {
-    updateData(m);
-    // Update all attached views
-    std::for_each( std::begin(_fcs), std::end(_fcs), [&](auto fc){ fc->view()->rebuild();});
-}   // end setModel
+    if ( m)
+    {
+        _minfo = ObjModelInfo::create(m);
+        if ( _minfo)
+        {
+            if ( m->getNumMaterials() > 1) // Merge materials if more than 1 texture map
+            {
+                std::cerr << "[INFO] FaceTools::FaceModel::updateData: Merged materials" << std::endl;
+                m->mergeMaterials();
+            }   // end if
+        }   // end if
+    }   // end if
+
+    _kdtree = NULL;
+    if ( _minfo)
+    {
+        _kdtree = ObjModelKDTree::create( _minfo->model().get());
+        FaceTools::translateLandmarksToSurface( kdtree(), _landmarks);   // Ensure landmarks remapped to surface
+    }   // end if
+
+    _flagViewUpdate = true; // Will cause FaceActions to propagate data changes to all associated FaceControls
+    return _minfo != NULL;
+}   // end updateData
 
 
 // public
 void FaceModel::transform( const cv::Matx44d& m)
 {
-    _orientation.rotate(m); // Just use the rotation sub-matrix
-    const ObjModelMover mover(m);
-    mover( _model); // Adjust vertices of the model in-place
-    _landmarks.transform(m);    // Transform the landmarks
-    updateData(_model);
-    // Update all attached views
-    vtkSmartPointer<vtkMatrix4x4> vm = RVTK::toVTK(m);
-    std::for_each( std::begin(_fcs), std::end(_fcs), [&](auto fc){ fc->transformView(vm);});
+    _orientation.rotate( m);     // Just use the rotation sub-matrix
+    Transformer(m).transform( _minfo->model()); // Adjust vertices of the model in-place
+    _landmarks.transform(m);     // Transform the landmarks
+    updateData();
 }   // end transform
 
 
-// private
-void FaceModel::updateData( ObjModel::Ptr m)
-{
-    _model = m;
-    _kdtree = ObjModelKDTree::create(m);
-    FaceTools::translateLandmarksToSurface( _kdtree, _landmarks);   // Ensure landmarks remapped to surface
-}   // end updateData
+// public
+const ObjModelKDTree& FaceModel::kdtree() const { return *_kdtree.get();}
+const ObjModelInfo& FaceModel::info() const { return *_minfo.get();}
 
 
 /*
@@ -76,19 +90,6 @@ const boost::unordered_map<int,double>* FaceModel::getCurvDistanceMap() const
         return NULL;
     return &_cdist->getCrossings();
 }   // end getCurvDistanceMap
-
-void FaceModel::updateMesh( const ObjModel::Ptr model)
-{
-    _facalc.reset();
-    _udist = NULL;
-    _cdist = NULL;
-    _omd->setObject(model); // Rebuilds internal kd-tree and resets curvature map to NULL (landmark info not changed!)
-    _omd->shiftLandmarksToSurface();    // Ensures landmarks stay at surface
-    _cmetrics = NULL;
-    buildCurvature();
-    buildDistanceMaps();
-    emit meshUpdated();
-}   // end updateMesh
 
 
 void FaceModel::buildDistanceMaps()

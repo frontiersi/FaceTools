@@ -27,7 +27,7 @@ typedef FaceTools::Interactor::FaceEntryExitInteractor FEEI;
 
 
 // public
-ActionSetFocus::ActionSetFocus() : FaceAction(true), _fcont(NULL)
+ActionSetFocus::ActionSetFocus( const QString& dn) : FaceAction( dn, true), _fcont(NULL)
 {
     addRespondTo( MODEL_GEOMETRY_CHANGED);
     addRespondTo( MODEL_TRANSFORMED);

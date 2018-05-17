@@ -21,6 +21,7 @@
 #include <FaceTools.h>
 #include <FaceModelViewer.h>
 #include <ObjModelHoleFiller.h>
+#include <algorithm>
 using FaceTools::Action::ActionFillHoles;
 using FaceTools::Action::FaceAction;
 using FaceTools::FaceControlSet;
@@ -28,8 +29,8 @@ using FaceTools::FaceControl;
 using FaceTools::FaceModel;
 
 
-ActionFillHoles::ActionFillHoles( QProgressBar* pb)
-    : FaceAction(true/*disable before other*/), _icon( ":/icons/FILL_HOLES")
+ActionFillHoles::ActionFillHoles( const QString& dn, const QIcon& ico, QProgressBar* pb)
+    : FaceAction(dn, ico, true/*disable before other*/)
 {
     addChangeTo( MODEL_GEOMETRY_CHANGED);
     addRespondTo( LANDMARK_ADDED);
@@ -40,20 +41,33 @@ ActionFillHoles::ActionFillHoles( QProgressBar* pb)
 }   // end ctor
 
 
-bool ActionFillHoles::testReady( FaceControl* fc) { return FaceTools::hasReqLandmarks(fc->data()->landmarks());}
-
-
 bool ActionFillHoles::doAction( FaceControlSet& rset)
 {
     assert(rset.size() == 1);
     FaceControl* fc = rset.first();
     FaceModel* fm = fc->data();
 
-    const int nfilled = RFeatures::ObjModelHoleFiller::fillHoles( fm->model()) - 1;
-    if ( nfilled > 0)
-        std::cerr << nfilled << " holes filled" << std::endl;
-    else
-        std::cerr << "No holes found!" << std::endl;
-    fm->setModel(fm->model());
+    const RFeatures::ObjModelInfo& info = fm->info();
+    RFeatures::ObjModelHoleFiller hfiller( fm->model());
+    int nc = (int)info.components().size();
+    for ( int c = 0; c < nc; ++c)
+    {
+        const IntSet* bidxs = info.components().cboundaries(c);
+        if ( bidxs == NULL) // Cannot fill holes on a component without boundaries
+            continue;
+
+        IntSet hbs = *bidxs;   // Copy out the boundary indices for the component
+        hbs.erase( info.components().lboundary(c));    // Erase the longest boundary (which is very likely the outer boundary)
+
+        for ( int i : hbs)
+        {
+            const std::list<int>& blist = info.boundaries().boundary(i);
+            IntSet newPolys;
+            hfiller.fillHole( blist, &newPolys);
+            std::cerr << " Filled hole (boundary " << i << ") on component " << c << " with " << newPolys.size() << " polygons" << std::endl;
+        }   // end for
+    }   // end for
+
+    fm->updateData(fm->model());  // Destructive update
     return true;
 }   // end doAction

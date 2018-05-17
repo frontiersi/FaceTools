@@ -43,7 +43,7 @@ QString FaceModelU3DFileHandler::getFileDescription() const
 bool FaceModelU3DFileHandler::write( const FaceModel* fm, const QString& fname)
 {
     _err = "";
-    if ( !_exporter.save( fm->model(), fname.toStdString()))
+    if ( !_exporter.save( fm->cmodel(), fname.toStdString()))
         _err = _exporter.err().c_str();
     return _err.isEmpty();
 }   // end write

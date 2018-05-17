@@ -27,11 +27,8 @@ namespace Action {
 class FaceTools_EXPORT ActionCloseFaceModels : public FaceAction
 { Q_OBJECT
 public:
-    explicit ActionCloseFaceModels( FileIO::CloseFaceModelsHelper*);
-
-    QString getDisplayName() const override { return "Close";}
-    const QIcon* getIcon() const override { return &_icon;}
-    const QKeySequence* getShortcut() const override { return &_scut;}
+    ActionCloseFaceModels( const QString& dname, const QIcon&, const QKeySequence&,
+                           FileIO::CloseFaceModelsHelper*);
 
 protected slots:
     bool doBeforeAction( FaceControlSet&) override;
@@ -40,8 +37,6 @@ protected slots:
 private:
     FileIO::CloseFaceModelsHelper* _chelper;
     FaceModelSet _cset;
-    QIcon _icon;
-    QKeySequence _scut;
 };  // end class
 
 }   // end namespace

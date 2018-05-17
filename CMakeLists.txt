@@ -13,12 +13,14 @@ set( INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
 set( INCLUDE_ACTION_DIR "${INCLUDE_DIR}/Action")
 set( INCLUDE_DETECT_DIR "${INCLUDE_DIR}/Detect")
 set( INCLUDE_FILEIO_DIR "${INCLUDE_DIR}/FileIO")
+set( INCLUDE_REPORT_DIR "${INCLUDE_DIR}/Report")
 set( INCLUDE_VIS_DIR "${INCLUDE_DIR}/Vis")
 set( INCLUDE_INT_DIR "${INCLUDE_DIR}/Interactor")
 include_directories( ${INCLUDE_DIR})
 include_directories( ${INCLUDE_ACTION_DIR})
 include_directories( ${INCLUDE_DETECT_DIR})
 include_directories( ${INCLUDE_FILEIO_DIR})
+include_directories( ${INCLUDE_REPORT_DIR})
 include_directories( ${INCLUDE_VIS_DIR})
 include_directories( ${INCLUDE_INT_DIR})
 include_directories( ${PROJECT_BINARY_DIR})
@@ -27,14 +29,15 @@ set( SRC_DIR "${PROJECT_SOURCE_DIR}/src")
 set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionCloseAllFaceModels.h"
     "${INCLUDE_ACTION_DIR}/ActionCloseFaceModels.h"
-    "${INCLUDE_ACTION_DIR}/ActionClean.h"
     "${INCLUDE_ACTION_DIR}/ActionCrop.h"
     "${INCLUDE_ACTION_DIR}/ActionDetectFace.h"
+    #"${INCLUDE_ACTION_DIR}/ActionExportPDF.h"
     "${INCLUDE_ACTION_DIR}/ActionFillHoles.h"
-    "${INCLUDE_ACTION_DIR}/ActionGetFaceComponent.h"
+    "${INCLUDE_ACTION_DIR}/ActionGetComponent.h"
     "${INCLUDE_ACTION_DIR}/ActionLoadDirFaceModels.h"
     "${INCLUDE_ACTION_DIR}/ActionLoadFaceModels.h"
-    "${INCLUDE_ACTION_DIR}/ActionMapCurvature.h"
+    "${INCLUDE_ACTION_DIR}/ActionMapSurfaceData.h"
+    "${INCLUDE_ACTION_DIR}/ActionMarquee.h"
     "${INCLUDE_ACTION_DIR}/ActionOrientCameraToFace.h"
     "${INCLUDE_ACTION_DIR}/ActionResetCamera.h"
     "${INCLUDE_ACTION_DIR}/ActionSaveScreenshot.h"
@@ -44,6 +47,7 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionShowSelected.h"
     "${INCLUDE_ACTION_DIR}/ActionTransformToStandardPosition.h"
     "${INCLUDE_ACTION_DIR}/ActionVisualise.h"
+    "${INCLUDE_ACTION_DIR}/CameraWorker.h"
     "${INCLUDE_ACTION_DIR}/FaceAction.h"
     "${INCLUDE_ACTION_DIR}/FaceActionGroup.h"
     "${INCLUDE_ACTION_DIR}/FaceActionManager.h"
@@ -57,6 +61,9 @@ set( QOBJECTS
     "${INCLUDE_FILEIO_DIR}/FaceModelU3DFileHandler.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelXMLFileHandler.h"
     "${INCLUDE_FILEIO_DIR}/LoadFaceModelsHelper.h"
+
+    #"${INCLUDE_REPORT_DIR}/BaseReportTemplate.h"
+    "${INCLUDE_REPORT_DIR}/ReportInterface.h"
 
     "${INCLUDE_VIS_DIR}/BaseVisualisation.h"
     "${INCLUDE_VIS_DIR}/BoundaryVisualisation.h"
@@ -86,7 +93,7 @@ set( INCLUDE_FILES
 
     "${INCLUDE_DETECT_DIR}/FaceDetector.h"
     "${INCLUDE_DETECT_DIR}/FaceFinder2D.h"
-    "${INCLUDE_DETECT_DIR}/FaceOrienter.h"
+    "${INCLUDE_DETECT_DIR}/FacialOrientation.h"
     "${INCLUDE_DETECT_DIR}/FaceShapeLandmarks2DDetector.h"
     "${INCLUDE_DETECT_DIR}/FeaturesDetector.h"
     "${INCLUDE_DETECT_DIR}/NoseFinder.h"
@@ -105,7 +112,7 @@ set( INCLUDE_FILES
     #"${INCLUDE_DIR}/CorrespondenceFinder.h"
     "${INCLUDE_DIR}/CurvatureSpeedFunctor.h"
     "${INCLUDE_DIR}/CurvatureVariableSpeedFunctor.h"
-    "${INCLUDE_DIR}/FaceAverager.h"
+    #"${INCLUDE_DIR}/FaceAverager.h"
     "${INCLUDE_DIR}/FaceControl.h"
     "${INCLUDE_DIR}/FaceControlSet.h"
 
@@ -125,14 +132,15 @@ set( SRC_FILES
     ${SRC_DIR}/Action/ChangeEvents
     ${SRC_DIR}/Action/ActionCloseAllFaceModels
     ${SRC_DIR}/Action/ActionCloseFaceModels
-    ${SRC_DIR}/Action/ActionClean
     ${SRC_DIR}/Action/ActionCrop
     ${SRC_DIR}/Action/ActionDetectFace
+    #${SRC_DIR}/Action/ActionExportPDF
     ${SRC_DIR}/Action/ActionFillHoles
-    ${SRC_DIR}/Action/ActionGetFaceComponent
+    ${SRC_DIR}/Action/ActionGetComponent
     ${SRC_DIR}/Action/ActionLoadDirFaceModels
     ${SRC_DIR}/Action/ActionLoadFaceModels
-    ${SRC_DIR}/Action/ActionMapCurvature
+    ${SRC_DIR}/Action/ActionMapSurfaceData
+    ${SRC_DIR}/Action/ActionMarquee
     ${SRC_DIR}/Action/ActionSaveFaceModels
     ${SRC_DIR}/Action/ActionSaveAsFaceModel
     ${SRC_DIR}/Action/ActionOrientCameraToFace
@@ -142,6 +150,7 @@ set( SRC_FILES
     ${SRC_DIR}/Action/ActionShowSelected
     ${SRC_DIR}/Action/ActionTransformToStandardPosition
     ${SRC_DIR}/Action/ActionVisualise
+    ${SRC_DIR}/Action/CameraWorker
     ${SRC_DIR}/Action/FaceAction
     ${SRC_DIR}/Action/FaceActionGroup
     ${SRC_DIR}/Action/FaceActionManager
@@ -149,7 +158,7 @@ set( SRC_FILES
 
     ${SRC_DIR}/Detect/FaceDetector
     ${SRC_DIR}/Detect/FaceFinder2D
-    ${SRC_DIR}/Detect/FaceOrienter
+    ${SRC_DIR}/Detect/FacialOrientation
     ${SRC_DIR}/Detect/FaceShapeLandmarks2DDetector
     ${SRC_DIR}/Detect/FeaturesDetector
     ${SRC_DIR}/Detect/NoseFinder 
@@ -165,6 +174,8 @@ set( SRC_FILES
     ${SRC_DIR}/FileIO/FaceModelXMLFileHandler
     ${SRC_DIR}/FileIO/FaceModelU3DFileHandler
     ${SRC_DIR}/FileIO/LoadFaceModelsHelper
+
+    #${SRC_DIR}/Report/BaseReportTemplate
 
     ${SRC_DIR}/Vis/BaseVisualisation
     ${SRC_DIR}/Vis/BoundaryVisualisation
@@ -186,7 +197,7 @@ set( SRC_FILES
     #${SRC_DIR}/CorrespondenceFinder
     ${SRC_DIR}/CurvatureSpeedFunctor
     ${SRC_DIR}/CurvatureVariableSpeedFunctor
-    ${SRC_DIR}/FaceAverager
+    #${SRC_DIR}/FaceAverager
     ${SRC_DIR}/FaceControl
     ${SRC_DIR}/FaceControlSet
 
@@ -204,7 +215,7 @@ set( SRC_FILES
     #${SRC_DIR}/SurfacePathSet
     )
 
-set( RESOURCE_FILE "res.qrc")
+set( RESOURCE_FILE "FaceTools_res.qrc")
 
 #qt5_wrap_ui( FORM_HEADERS ${FORMS})
 qt5_wrap_cpp( QOBJECT_MOCS ${QOBJECTS})

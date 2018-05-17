@@ -27,9 +27,10 @@ using FaceTools::FaceControl;
 using FaceTools::FaceModel;
 
 
-ActionSaveFaceModels::ActionSaveFaceModels( FaceModelManager* fmm, QWidget *parent)
-    : FaceAction(true/*this action disabled on other actions executing*/),
-      _fmm(fmm), _parent(parent), _icon( ":/icons/SAVE"), _scut( Qt::CTRL + Qt::Key_S)
+ActionSaveFaceModels::ActionSaveFaceModels( const QString& dn, const QIcon& ico, const QKeySequence& ks,
+                                            FaceModelManager* fmm, QWidget *parent)
+    : FaceAction( dn, ico, ks, true/*this action disabled on other actions executing*/),
+      _fmm(fmm), _parent(parent)
 {
     addRespondTo( MODEL_GEOMETRY_CHANGED);
     addRespondTo( MODEL_TRANSFORMED);

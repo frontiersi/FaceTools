@@ -28,11 +28,7 @@ namespace Action {
 class FaceTools_EXPORT ActionSaveFaceModels : public FaceAction
 { Q_OBJECT
 public:
-    ActionSaveFaceModels( FileIO::FaceModelManager*, QWidget *parent=NULL);
-
-    QString getDisplayName() const override { return "&Save";}
-    const QIcon* getIcon() const override { return &_icon;}
-    const QKeySequence* getShortcut() const override { return &_scut;}
+    ActionSaveFaceModels( const QString& dname, const QIcon&, const QKeySequence&, FileIO::FaceModelManager*, QWidget *parent=NULL);
 
 protected slots:
     bool testReady( FaceControl*) override;
@@ -42,8 +38,6 @@ protected slots:
 private:
     FileIO::FaceModelManager *_fmm;
     QWidget *_parent;
-    QIcon _icon;
-    QKeySequence _scut;
     std::unordered_map<std::string, QStringList> _fails;    // Error messages --> filenames
 };  // end class
 

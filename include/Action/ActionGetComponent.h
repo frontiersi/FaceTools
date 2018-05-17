@@ -15,38 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_MAP_CURVATURE_H
-#define FACE_TOOLS_ACTION_MAP_CURVATURE_H
+#ifndef FACE_TOOLS_ACTION_GET_COMPONENT_H
+#define FACE_TOOLS_ACTION_GET_COMPONENT_H
 
 #include "FaceAction.h"
-#include <QStatusBar>
-#include <ObjModelCurvatureMetrics.h>   // RFeatures
 
 namespace FaceTools {
 namespace Action {
 
-class FaceTools_EXPORT ActionMapCurvature : public FaceAction
+class FaceTools_EXPORT ActionGetComponent : public FaceAction
 { Q_OBJECT
 public:
-    explicit ActionMapCurvature( QProgressBar* pb=NULL);    // Async if pb not NULL
-    ~ActionMapCurvature() override;
+    ActionGetComponent( const QString& dname="Get Face Component", const QIcon& icon=QIcon());
 
-    QString getDisplayName() const override { return "Compute Curvature";}
-    const QIcon* getIcon() const override { return &_icon;}
+    // TODO Currently requires the nose landmark to get the face but should make generic for any component.
 
-    // Returns the metrics for the given FaceControl. If not already cached, the data
-    // are computed but only if testReady(fc) returns true for given FaceControl fc.
-    RFeatures::ObjModelCurvatureMetrics::Ptr metrics( FaceControl*);
-
-protected slots:
-    bool testReady( FaceControl*) override;
+public slots:
+    bool testReady( FaceControl* fc) override;
     bool doAction( FaceControlSet&) override;
-    void respondToChange( FaceControl*) override;
-    void burn( const FaceControl*) override;
-
-private:
-    QIcon _icon;
-    std::unordered_map<const FaceModel*, RFeatures::ObjModelCurvatureMetrics::Ptr> _cmaps;
 };  // end class
 
 }   // end namespace

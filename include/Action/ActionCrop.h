@@ -29,13 +29,10 @@ namespace Action {
 class FaceTools_EXPORT ActionCrop : public FaceAction
 { Q_OBJECT
 public:
-    explicit ActionCrop( QStatusBar*);
+    ActionCrop( const QString& dname, const QIcon& icon, QStatusBar*);
     ~ActionCrop() override;
 
     ActionVisualise* visualiser() { return _vact;}  // Return the visualisation action.
-
-    QString getDisplayName() const override { return "Crop";}
-    const QIcon* getIcon() const override { return &_icon;}
 
 protected slots:
     bool testReady( FaceControl* fc) override;
@@ -48,7 +45,6 @@ private slots:
     void doOnSetNewRadius( FaceControl*, double);
 
 private:
-    QIcon _icon;
     QStatusBar *_sbar;
     Vis::BoundaryVisualisation *_bvis;
     ActionVisualise *_vact;

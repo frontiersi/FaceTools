@@ -18,25 +18,62 @@
 #include <FaceAction.h>
 #include <FaceActionWorker.h>
 #include <FaceModelViewer.h>
+#include <FaceModel.h>
+#include <FaceView.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Action::FaceAction;
-using FaceTools::Action::FaceActionInterface;
 using FaceTools::Action::FaceActionWorker;
 using FaceTools::FaceModelViewer;
 using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
+using FaceTools::FaceModel;
 using FaceTools::Action::ChangeEvent;
 using QTools::QProgressUpdater;
 
 
 // public
 FaceAction::FaceAction( bool dbo)
-    : FaceActionInterface(),
-    _init(false), _disableBeforeOther(dbo),
-    _action(this), _doasync(false), _pupdater(NULL)
+    : _dname(""), _icon(), _init(false), _disableBeforeOther(dbo),
+      _action(this), _doasync(false), _pupdater(NULL)
 {
 }   // end ctor
+
+
+// public
+FaceAction::FaceAction( const QString& dname, bool dbo)
+    : _dname(dname), _icon(), _keys(), _init(false), _disableBeforeOther(dbo),
+      _action(this), _doasync(false), _pupdater(NULL)
+{
+}   // end ctor
+
+
+// public
+FaceAction::FaceAction( const QString& dname, const QIcon& ico, bool dbo)
+    : _dname(dname), _icon(ico), _keys(), _init(false), _disableBeforeOther(dbo),
+      _action(this), _doasync(false), _pupdater(NULL)
+{
+}   // end ctor
+
+
+// public
+FaceAction::FaceAction( const QString& dname, const QIcon& ico, const QKeySequence& ks, bool dbo)
+    : _dname(dname), _icon(ico), _keys(ks), _init(false), _disableBeforeOther(dbo),
+      _action(this), _doasync(false), _pupdater(NULL)
+{
+}   // end ctor
+
+
+// public
+QString FaceAction::getDisplayName() const { return _dname.isEmpty() ? QTools::PluginInterface::getDisplayName() : _dname; }
+
+
+// public
+const QIcon* FaceAction::getIcon() const { return _icon.isNull() ? NULL : &_icon;}
+
+
+// public
+const QKeySequence* FaceAction::getShortcut() const { return _keys.isEmpty() ? NULL : &_keys;}
 
 
 // public
@@ -274,7 +311,24 @@ void FaceAction::doOnActionFinished( bool rval)
 // protected
 void FaceAction::doAfterAction( const FaceControlSet& fst, bool)
 {
-    std::unordered_set<FaceModelViewer*> vws;   // Collect viewers for calls to updateRender
-    std::for_each( std::begin(fst), std::end(fst), [&]( auto f){ vws.insert(f->viewer());});
-    std::for_each( std::begin(vws), std::end(vws), [&]( auto v){ v->updateRender();});
+    const FaceModelSet& fms = fst.models(); // The models
+    FaceViewerSet vws;
+    // Models with a view update flagged need the views updating across all their associated FaceControls.
+    for ( FaceModel* fm : fms)
+    {
+        if ( fm->_flagViewUpdate)
+        {
+            std::for_each( std::begin( fm->_fcs), std::end( fm->_fcs),
+                    [&](FaceControl* fc){
+                        fc->view()->rebuild();      // Rebuild views
+                        vws.insert(fc->viewer());   // Ensure reference to viewer is collected for updateRender
+                        });
+            fm->_flagViewUpdate = false;
+        }   // end if
+    }   // end for
+
+    // Update rendering on all viewers.
+    if (vws.empty())
+        vws = fst.viewers();
+    std::for_each( std::begin(vws), std::end(vws), [](auto v){ v->updateRender();});
 }   // end doAfterAction

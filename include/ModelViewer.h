@@ -107,8 +107,8 @@ public:
     // Add points actor in various formats. Using software rendering, the vtkProperty->SetRenderPointsAsSpheres(true)
     // option is not working correctly (may cause app to crash). For portable spheres, use addPoint for each individual point.
     int addPoints( const std::vector<cv::Vec3f>& points, const VisOptions&, bool renderAsSpheres=false);
-    int addPoints( const RFeatures::ObjModel::Ptr, const VisOptions&, bool renderAsSpheres=false);
-    int addPoints( const RFeatures::ObjModel::Ptr, const std::unordered_set<int>& vset, const VisOptions&, bool renderAsSpheres=false);
+    int addPoints( const RFeatures::ObjModel*, const VisOptions&, bool renderAsSpheres=false);
+    int addPoints( const RFeatures::ObjModel*, const std::unordered_set<int>& vset, const VisOptions&, bool renderAsSpheres=false);
 
     // Add a line actor (make a loop if joinEnds=true).
     int addLine( const std::vector<cv::Vec3f>&, bool joinEnds, const VisOptions&);
@@ -116,7 +116,7 @@ public:
     // Add line segments specified as endpoint pairs (lp.size() must be even).
     int addLinePairs( const std::vector<cv::Vec3f>& lp, const VisOptions&);
 
-    int add( const RFeatures::ObjModel::Ptr, const VisOptions& vo=VisOptions());
+    int add( const RFeatures::ObjModel*, const VisOptions& vo=VisOptions());
 
     // Add custom surface actor. Set metric value colour mapping with setLegendColours.
     int add( vtkSmartPointer<vtkActor>, const std::string& legendTitle, float minv, float maxv);    // Calls setLegendLookup
@@ -167,6 +167,7 @@ public:
     void setCamera( const cv::Vec3f& focus, const cv::Vec3f& normal, const cv::Vec3f& upvector, float camRng=650.0f);
     void setFocus( const cv::Vec3f&);
     RFeatures::CameraParams getCamera() const;
+    float cameraDistance() const;   // Distance between position and focus
 
     size_t getWidth() const;    // Return the width of the viewport in pixels
     size_t getHeight() const;   // Return the height of the viewport in pixels

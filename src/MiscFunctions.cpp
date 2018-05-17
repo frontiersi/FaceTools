@@ -20,7 +20,7 @@
 #include <FeatureUtils.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/foreach.hpp>
+#include <algorithm>
 using RFeatures::ObjModel;
 
 
@@ -179,8 +179,7 @@ cv::Point2f FaceTools::calcMid( const cv::Point2f& p0, const cv::Point2f& p1)
 cv::Vec3f FaceTools::calcSum( const std::vector<cv::Vec3f>& vs)
 {
     cv::Vec3f m(0,0,0);
-    BOOST_FOREACH ( const cv::Vec3f& v, vs)
-        m += v;
+    std::for_each( std::begin(vs), std::end(vs), [&](const auto& v){ m += v;});
     return m;
 }   // end calcSum
 
@@ -202,11 +201,11 @@ double FaceTools::calcLength( const std::vector<cv::Vec3f>& vs)
 }   // end calcLength
 
 
-double FaceTools::calcLength( const ObjModel::Ptr model, const std::vector<int>& vidxs)
+double FaceTools::calcLength( const ObjModel* model, const std::vector<int>& vidxs)
 {
     double len = 0;
     int pvidx = vidxs.front();
-    BOOST_FOREACH ( int vidx, vidxs)
+    for ( int vidx : vidxs)
     {
         len += cv::norm( model->vtx(vidx) - model->vtx(pvidx), cv::NORM_L2);
         pvidx = vidx;
@@ -215,7 +214,7 @@ double FaceTools::calcLength( const ObjModel::Ptr model, const std::vector<int>&
 }   // end calcLength
 
 
-double FaceTools::getEquidistant( const ObjModel::Ptr model, const std::vector<int>& gpath, int j, int H, std::vector<int>& ev)
+double FaceTools::getEquidistant( const ObjModel* model, const std::vector<int>& gpath, int j, int H, std::vector<int>& ev)
 {
     assert( H > 0);
     const double glen = calcLength( model, gpath);
@@ -314,7 +313,7 @@ cv::RotatedRect FaceTools::toProportion( const cv::RotatedRect& r, const cv::Siz
 }   // end toProportion
 
 
-void FaceTools::getVertices( const ObjModel::Ptr m, const std::vector<int>& uvids, std::vector<cv::Vec3f>& path)
+void FaceTools::getVertices( const ObjModel* m, const std::vector<int>& uvids, std::vector<cv::Vec3f>& path)
 {
     const int nvs = (int)uvids.size();
     path.resize(nvs);
@@ -323,7 +322,7 @@ void FaceTools::getVertices( const ObjModel::Ptr m, const std::vector<int>& uvid
 }   // end getVertices
 
 
-bool FaceTools::getVertexIndices( const ObjModel::Ptr m, const std::vector<cv::Vec3f>& vs, std::vector<int>& vidxs)
+bool FaceTools::getVertexIndices( const ObjModel* m, const std::vector<cv::Vec3f>& vs, std::vector<int>& vidxs)
 {
     const int nvs = (int)vs.size();
     vidxs.resize(nvs);
@@ -342,7 +341,7 @@ bool FaceTools::getVertexIndices( const ObjModel::Ptr m, const std::vector<cv::V
 
 void FaceTools::findNearestVertexIndices( const RFeatures::ObjModelKDTree& kdtree, const std::vector<cv::Vec3f>& vs, std::vector<int>& vidxs)
 {
-    const ObjModel::Ptr m = kdtree.getObject();
+    const ObjModel* m = kdtree.model();
     const int nvs = (int)vs.size();
     vidxs.resize(nvs);
     int vidx;
@@ -479,7 +478,7 @@ cv::Mat FaceTools::rotateUpright( const cv::Mat& img, const cv::RotatedRect& rr)
 }   // end rotateUpright
 
 
-int FaceTools::findMidway( const ObjModel::Ptr model, const std::vector<int>& spidxs)
+int FaceTools::findMidway( const ObjModel* model, const std::vector<int>& spidxs)
 {
     const int nidxs = (int)spidxs.size();
     assert( nidxs > 0);
@@ -508,7 +507,7 @@ int FaceTools::findMidway( const ObjModel::Ptr model, const std::vector<int>& sp
 }   // end findMidway
 
 
-cv::Vec3f FaceTools::getShortestPath( const ObjModel::Ptr m, int v0, int v1, std::vector<int>& uvidxs)
+cv::Vec3f FaceTools::getShortestPath( const ObjModel* m, int v0, int v1, std::vector<int>& uvidxs)
 {
     RFeatures::DijkstraShortestPathFinder dspf( m);
     dspf.setEndPointVertexIndices( v0, v1);
@@ -533,7 +532,7 @@ cv::Vec3f FaceTools::calcDirectionVectorFromBase( const cv::Vec3f& v0, const cv:
 }   // end calcDirectionVectorFromBase
 
 
-int FaceTools::growOut( const ObjModel::Ptr model, const cv::Vec3f& growVec, int vi)
+int FaceTools::growOut( const ObjModel* model, const cv::Vec3f& growVec, int vi)
 {
     double growth, maxGrowth;
     int ni = vi;
@@ -544,7 +543,7 @@ int FaceTools::growOut( const ObjModel::Ptr model, const cv::Vec3f& growVec, int
         // Find the connected vertex that maximises the distance along the growth vector from bv.
         const cv::Vec3f& bv = model->getVertex(vi);
         const IntSet& conns = model->getConnectedVertices(vi);
-        BOOST_FOREACH ( const int& ci, conns)
+        for ( int ci : conns)
         {
             const cv::Vec3f& cv = model->getVertex(ci);
             growth = (cv - bv).dot(growVec);

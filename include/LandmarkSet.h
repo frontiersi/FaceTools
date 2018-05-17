@@ -81,7 +81,7 @@ private:
 
 // Translate each landmark in the set to be incident with the closest part of the given object's surface.
 // Returns the mean positional difference between the old and new landmark positions.
-FaceTools_EXPORT double translateLandmarksToSurface( const RFeatures::ObjModelKDTree::Ptr, LandmarkSet&);
+FaceTools_EXPORT double translateLandmarksToSurface( const RFeatures::ObjModelKDTree&, LandmarkSet&);
 
 
 FaceTools_EXPORT PTree& operator<<( PTree&, const LandmarkSet&);        // Write out the set of landmarks

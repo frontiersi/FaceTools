@@ -17,7 +17,7 @@
 
 #include <LandmarkSetView.h>
 #include <VtkTools.h>   // RVTK
-#include <ObjModelMover.h>  // RFeatures
+#include <Transformer.h>  // RFeatures
 #include <ModelViewer.h>
 #include <algorithm>
 #include <iostream>
@@ -146,13 +146,9 @@ bool LandmarkSetView::isLandmarkHighlighted( int lm) const
 void LandmarkSetView::transform( const vtkMatrix4x4* vm)
 {
     cv::Matx44d m = RVTK::toCV(vm);
-    RFeatures::ObjModelMover mover(m);
+    RFeatures::Transformer mover(m);
     std::for_each(std::begin(_lviews), std::end(_lviews), [&](const auto& p)
-            {
-                cv::Vec3f npos = p.second->centre();
-                mover( npos);
-                p.second->setCentre(npos);
-            });
+            { p.second->setCentre( mover.transform( p.second->centre())); });
 }   // end transform
 
 

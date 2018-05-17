@@ -20,32 +20,46 @@
 
 #include "LandmarkSet.h"
 #include <ObjModelTools.h>   // RFeatures
-#include <Orientation.h>     // RFeatures
 
 namespace FaceTools {
+namespace Action {
+class FaceAction;
+}   // end namespace
+
 class FaceControl;
 
 class FaceTools_EXPORT FaceModel
 {
 public:
-    FaceModel(){}
+    FaceModel();
     virtual ~FaceModel(){}
 
-    // Set/get the model data. Ensure setModel is called after updating the model.
-    // It is not sufficient to update the model through the returned pointer without
-    // calling setModel since this function updates the KD-tree and the positions
-    // of other data that depend upon model surface coordinates.
-    void setModel( RFeatures::ObjModel::Ptr);
-    RFeatures::ObjModel::Ptr model() const { return _model;}
-    const RFeatures::ObjModelKDTree::Ptr kdtree() const { return _kdtree;}
+    // Pass in a new ObjModel to make destructive changes i.e., rebuilding all info including
+    // boundary and component info. New ObjModels are cleaned before setting. If the model
+    // cannot be cleaned, false is returned and no changes are made. If no ObjModel is
+    // supplied, the existing model is presumed to have been changed and data are repropagated
+    // internally. Surface data are updated (including landmarks and KD-tree), but model
+    // orientation is not (must be set separately).
+    bool updateData( RFeatures::ObjModel::Ptr=NULL);
+
+    // For making linear changes to the model that can be expressed using a matrix.
+    // Transform the model, the orientation, and the landmarks using the given matrix
+    // and then propagate changes via an internal call to updateData.
+    void transform( const cv::Matx44d&);
+
+    RFeatures::ObjModel::Ptr model() const { return _minfo->model();}
+    const RFeatures::ObjModel* cmodel() const { return _minfo->model().get();}
+
+    // Get constant references to the model's KD-tree and info.
+    const RFeatures::ObjModelKDTree& kdtree() const;
+    const RFeatures::ObjModelInfo& info() const;
+
+    LandmarkSet& landmarks() { return _landmarks;}  // For making modifications
+    const LandmarkSet& landmarks() const { return _landmarks;}
 
     // Set/get orientation of the data.
     void setOrientation( const RFeatures::Orientation& o) { _orientation = o;}
     const RFeatures::Orientation& orientation() const { return _orientation;}
-    RFeatures::Orientation& orientation() { return _orientation;}   // Update orientation in-place
-
-    LandmarkSet& landmarks() { return _landmarks;}  // For making modifications
-    const LandmarkSet& landmarks() const { return _landmarks;}
 
     // Set/get description of data.
     void setDescription( const std::string& d) { _description = d;}
@@ -54,25 +68,18 @@ public:
     const std::string& source() const { return _source;}
     void setSource( const std::string& s) { _source = s;}
 
-    // Transform all the data by the given matrix and then transform all associated views.
-    void transform( const cv::Matx44d&);
-
 private:
     std::string _description;   // Long form description
     std::string _source;        // Data source info
-    RFeatures::Orientation _orientation;
     FaceTools::LandmarkSet _landmarks;
-    RFeatures::ObjModel::Ptr _model;
-    std::unordered_set<FaceControl*> _fcs;  // FaceControl instances associated with this model.
+    RFeatures::Orientation _orientation;
+    RFeatures::ObjModelInfo::Ptr _minfo;
     RFeatures::ObjModelKDTree::Ptr _kdtree;
+    std::unordered_set<FaceControl*> _fcs;  // Associated FaceControls
+    bool _flagViewUpdate;
 
-    /*
-    RFeatures::ObjModelFaceAngleCalculator _facalc;
-    RFeatures::ObjModelFastMarcher::Ptr _udist;
-    RFeatures::ObjModelFastMarcher::Ptr _cdist;
-    */
-    void updateData( RFeatures::ObjModel::Ptr);
     friend class FaceControl;
+    friend class Action::FaceAction;
     FaceModel( const FaceModel&);               // No copy
     FaceModel& operator=( const FaceModel&);    // No copy
 };  // end class

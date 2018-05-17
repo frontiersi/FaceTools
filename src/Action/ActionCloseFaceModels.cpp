@@ -25,11 +25,10 @@ using FaceTools::FaceControlSet;
 using FaceTools::FaceModel;
 
 
-ActionCloseFaceModels::ActionCloseFaceModels( CloseFaceModelsHelper* chelper)
-    : FaceAction(true/*this action disabled on other actions executing*/),
-      _chelper(chelper), _icon( ":/icons/CLOSE"), _scut( Qt::CTRL + Qt::Key_W)
+ActionCloseFaceModels::ActionCloseFaceModels( const QString& dname, const QIcon& ico, const QKeySequence& keys, CloseFaceModelsHelper* chelper)
+    : FaceAction( dname, ico, keys, true/*this action disabled on other actions executing*/),
+      _chelper(chelper)
 {
-    setAsync(false);
 }   // end ctor
 
 

@@ -25,10 +25,9 @@ using FaceTools::FaceControlSet;
 using FaceTools::FaceModel;
 
 
-ActionCloseAllFaceModels::ActionCloseAllFaceModels( CloseFaceModelsHelper* chelper)
-    : FaceAction(true/*action disabled on other actions executing*/), _chelper(chelper)
+ActionCloseAllFaceModels::ActionCloseAllFaceModels( const QString& dname, CloseFaceModelsHelper* chelper)
+    : FaceAction( dname, true/*action disabled on other actions executing*/), _chelper(chelper)
 {
-    setAsync(false);
 }   // end ctor
 
 

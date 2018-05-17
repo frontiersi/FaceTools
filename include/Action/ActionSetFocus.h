@@ -27,9 +27,7 @@ namespace Action {
 class FaceTools_EXPORT ActionSetFocus : public FaceAction
 { Q_OBJECT
 public:
-    ActionSetFocus();
-
-    QString getDisplayName() const override { return "Set Focus";}
+    explicit ActionSetFocus( const QString& dname="Set Focus");
 
     Interactor::MVI* interactor() { return &_interactor;}
 

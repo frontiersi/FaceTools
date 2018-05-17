@@ -46,8 +46,12 @@ FaceModel* readFaceModel( const PTree& rnode, std::string& objfilename)
     objfilename = rnode.get<std::string>( "objfilename");  // Without path info
     fm->setDescription( rnode.get<std::string>( "description"));
     fm->setSource( rnode.get<std::string>( "source"));
-    rnode >> fm->orientation();
+
+    RFeatures::Orientation on;
+    rnode >> on;
+    fm->setOrientation(on);
     rnode >> fm->landmarks();
+
     return fm;
 }   // end readFaceModel
 
@@ -132,7 +136,7 @@ FaceModel* FaceModelXMLFileHandler::read( const QString& sfname)
         importer.enableFormat(fext);
         const std::string modelfile = (boost::filesystem::path(fname).parent_path() / objfilename).string();
         std::cerr << "[STATUS] FaceTools::FileIO::FaceModelXMLFileHandler::read: Loading model from \"" << modelfile << "\"" << std::endl;
-        const RFeatures::ObjModel::Ptr model = importer.load( modelfile);   // Doesn't merge materials or clean!
+        RFeatures::ObjModel::Ptr model = importer.load( modelfile);   // Doesn't merge materials or clean!
         if ( !model)
         {
             std::ostringstream serr;
@@ -142,7 +146,14 @@ FaceModel* FaceModelXMLFileHandler::read( const QString& sfname)
             return NULL;
         }   // end if
 
-        fm->setModel( model);
+        if (!fm->updateData( model))
+        {
+            std::ostringstream serr;
+            serr << "Failed to clean object loaded from \"" << modelfile << "\"";
+            _err = serr.str().c_str();
+            delete fm;
+            return NULL;
+        }   // end if
     }   // end try
     catch ( const boost::property_tree::ptree_bad_path& e)
     {
@@ -191,7 +202,7 @@ bool FaceModelXMLFileHandler::write( const FaceModel* fm, const QString& sfname)
         // Write out the model geometry itself into .obj format.
         RModelIO::OBJExporter exporter;
         const std::string modfile = boost::filesystem::path(fname).replace_extension( "obj").string();
-        RFeatures::ObjModel::Ptr model = fm->model();
+        const RFeatures::ObjModel* model = fm->cmodel();
         std::cerr << "[STATUS] FaceTools::FileIO::FaceModelXMLFileHandler::write: Exporting model to " << modfile << std::endl;
         if ( !exporter.save( model, modfile))
         {

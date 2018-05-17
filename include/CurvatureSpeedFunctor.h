@@ -28,7 +28,7 @@ class FaceTools_EXPORT CurvatureSpeedFunctor : public RFeatures::ObjModelFastMar
 public:
     CurvatureSpeedFunctor( const RFeatures::ObjModelCurvatureMap::Ptr omcm);
 
-    virtual double operator()( int vidx) const { return _curvedness.at(vidx);}
+    double operator()( int vidx) const override { return _curvedness.at(vidx);}
 
 private:
     std::unordered_map<int, double> _curvedness;

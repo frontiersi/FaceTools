@@ -15,37 +15,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_DETECT_FACE_H
-#define FACE_TOOLS_ACTION_DETECT_FACE_H
+#ifndef FACE_TOOLS_ACTION_MARQUEE_H
+#define FACE_TOOLS_ACTION_MARQUEE_H
 
 #include "FaceAction.h"
+#include "CameraWorker.h"
 
 namespace FaceTools {
-namespace Detect {
-class FaceDetector;
-}   // end namespace
-
 namespace Action {
 
-class FaceTools_EXPORT ActionDetectFace : public FaceAction
+class FaceTools_EXPORT ActionMarquee : public FaceAction
 { Q_OBJECT
 public:
-    ActionDetectFace( const QString& dname, const QIcon& icon,
-                      const QString& haarCascadesModelDir,
-                      const QString& faceShapeLandmarksDat,
-                      QWidget *parent=NULL, QProgressBar* pb=NULL);
-    ~ActionDetectFace() override;
+    ActionMarquee( const QString& dname="Marquee (Demo)", const QIcon& icon=QIcon());
+    ~ActionMarquee() override;
 
-public slots:
-    bool testEnabled() override { return _detector && (readyCount() == 1);}
-    bool doBeforeAction( FaceControlSet&) override;   // Warn if overwriting
+    void addViewer( FaceModelViewer*);  // Add a viewer that marquee mode will be applied to
+
+protected slots:
+    bool testEnabled() override;
     bool doAction( FaceControlSet&) override;
-    void doAfterAction( const FaceControlSet&, bool) override;
 
 private:
-    QWidget *_parent;
-    Detect::FaceDetector *_detector;
-    FaceModelSet _failSet;
+    std::unordered_set<CameraWorker*> _workers;
+    void stop();
 };  // end class
 
 }   // end namespace

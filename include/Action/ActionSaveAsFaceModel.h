@@ -28,10 +28,7 @@ namespace Action {
 class FaceTools_EXPORT ActionSaveAsFaceModel : public FaceAction
 { Q_OBJECT
 public:
-    ActionSaveAsFaceModel( FileIO::FaceModelManager*, QWidget *parent=NULL);
-
-    QString getDisplayName() const override { return "Save &As";}
-    const QIcon* getIcon() const override { return &_icon;}
+    ActionSaveAsFaceModel( const QString& dname, const QIcon&, FileIO::FaceModelManager*, QWidget *parent=NULL);
 
 protected slots:
     bool testEnabled() override { return readyCount() == 1;}    // Only enabled for a single selected FaceControl
@@ -42,7 +39,6 @@ protected slots:
 private:
     FileIO::FaceModelManager *_fmm;
     QWidget *_parent;
-    QIcon _icon;
     std::string _filename;
 };  // end class
 

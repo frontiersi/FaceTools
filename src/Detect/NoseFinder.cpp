@@ -16,14 +16,14 @@
  ************************************************************************/
 
 #include <NoseFinder.h>
-#include <FaceOrienter.h>
+#include <FacialOrientation.h>
 #include <MiscFunctions.h>
+#include <DijkstraShortestPathFinder.h> // RFeatures
+#include <FeatureUtils.h>               // RFeatures
 #include <cassert>
 #include <numeric>
-#include <DijkstraShortestPathFinder.h> // RFeatures
 using RFeatures::ObjModel;
 using FaceTools::Detect::NoseFinder;
-using FaceTools::Detect::FaceOrienter;
 
 /*
 #include <SobelMaker.h>
@@ -67,8 +67,8 @@ cv::Mat_<byte> makeBinaryEdgeMap( const cv::Mat_<float>& rawzd)
 
 
 // public
-NoseFinder::NoseFinder( const RFeatures::ObjModelCurvatureMap::Ptr cm, int e0, int e1)
-    : _curvMap(cm), _model(cm->getObject()), _e0(e0), _e1(e1), _midEyes(0,0,0), _nbridge(0,0,0), _ntip(0,0,0)
+NoseFinder::NoseFinder( const ObjModel* m, int e0, int e1)
+    : _model(m), _e0(e0), _e1(e1), _midEyes(0,0,0), _nbridge(0,0,0), _ntip(0,0,0)
 {}   // end ctor
 
 
@@ -249,11 +249,9 @@ bool NoseFinder::find()
     // only needed to help define a search cone with relatively wide radius.
     const int midEyesVidx = FaceTools::findMidway( _model, spidxs);
     _midEyes = _model->getVertex( midEyesVidx);
-    const cv::Vec3d& onorm = _curvMap->getVertexNormal( midEyesVidx);
     const cv::Vec3d leftVec = ve0 - _midEyes;  // Points left from midpoint
     const cv::Vec3d rightVec = ve1 - _midEyes; // Points right from midpoint
-    cv::Vec3d dvec; // Calculate down vector estimate
-    cv::normalize( onorm.cross( leftVec) + rightVec.cross(onorm), dvec);
+    cv::Vec3d dvec(0,-1,0); // Initial down vector
 
     // Allow for possible vertices to be grown down from the centre point
     // within a 90 degree cone centred on dvec. dvec must have unit length.
@@ -271,8 +269,8 @@ bool NoseFinder::find()
     // points, and the eye vector. This vector will point in the direction of
     // growth we want the final nose tip to be in. We iteratively find vertices
     // that grow in this direction until no closer vertex can be found.
-    const cv::Vec3f upv = FaceOrienter::calcUp( _nbridge, ve0, ve1);
-    cv::Vec3f growVec0 = FaceOrienter::calcNormal( upv, ve0, ve1);
+    const cv::Vec3f upv = FaceTools::Detect::calcUp( _nbridge, ve0, ve1);
+    cv::Vec3f growVec0 = FaceTools::Detect::calcNormal( upv, ve0, ve1);
     cv::Vec3f growVec;
     float NR_WEIGHT = 0.0005f; // How much of the normal defined by the nose ridge to use
     const cv::Vec3f& ntv = _model->getVertex( ntip);

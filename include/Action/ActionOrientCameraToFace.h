@@ -26,17 +26,11 @@ namespace Action {
 class FaceTools_EXPORT ActionOrientCameraToFace : public FaceAction
 { Q_OBJECT
 public:
-    ActionOrientCameraToFace();
+    ActionOrientCameraToFace( const QString& dname="Orient Camera to Face", const QIcon& icon=QIcon());
    
-    QString getDisplayName() const override { return "Orient Camera to Face";}
-    const QIcon* getIcon() const override { return &_icon;}
-
 public slots:
     bool testReady( FaceControl*);
     bool doAction( FaceControlSet&) override;
-
-private:
-    const QIcon _icon;
 };  // end class
 
 }   // end namespace

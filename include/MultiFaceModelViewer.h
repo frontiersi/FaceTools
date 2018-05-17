@@ -37,6 +37,10 @@ public:
     // Add an interactor to be managed between the viewers.
     void addInteractor( Interactor::MVI*);
 
+    FaceModelViewer* leftViewer() { return _v0;}
+    FaceModelViewer* centreViewer() { return _v1;}
+    FaceModelViewer* rightViewer() { return _v2;}
+
 public slots:
     void insert( FaceModel*);   // Ensures model is shown in the centre panel and emits onSelected.
     void remove( FaceModel*);   // Remove all views for the given model and does NOT emit onSelected.
@@ -62,8 +66,8 @@ private slots:
     void copyCentreToRight();
     void copyRightToCentre();
 
-    void doOnSelected( FaceControl*, bool); // Activate viewer for selected FaceControl
     void doOnViewerEntered();
+    void doOnSelected( FaceControl*, bool); // Activate viewer for selected FaceControl
 
 private:
     Interactor::ModelSelectInteractor _selector;    // Transitions between FaceModelViewers
@@ -96,14 +100,10 @@ private:
     void checkEnableCentreToLeft();
     void checkEnableCentreToRight();
     void checkEnableRightToCentre();
-    bool canCopyTo( FaceModelViewer*) const;
     bool canMoveFrom( FaceModelViewer*) const;
+    bool canCopyTo( FaceModelViewer*) const;
 
     bool deleteFaceControl( FaceControl*);
-    void activateViewer( FaceModelViewer*);
-    void activateLeftViewer();
-    void activateCentreViewer();
-    void activateRightViewer();
 
     void addCommonButtons( QLayout*, FaceModelViewer*);
     QToolButton* makeButton( QAction*);

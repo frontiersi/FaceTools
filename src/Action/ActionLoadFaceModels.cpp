@@ -25,9 +25,8 @@ using FaceTools::FaceControlSet;
 using FaceTools::FaceModel;
 
 
-ActionLoadFaceModels::ActionLoadFaceModels( LoadFaceModelsHelper* lhelper)
-    : FaceAction( true), _loadHelper( lhelper),
-      _icon( ":/icons/LOAD"), _scut( Qt::CTRL + Qt::Key_O)
+ActionLoadFaceModels::ActionLoadFaceModels( const QString& dn, const QIcon& ico, const QKeySequence& ks, LoadFaceModelsHelper* lhelper)
+    : FaceAction( dn, ico, ks, true), _loadHelper( lhelper)
 {
     setAsync(true);
 }   // end ctor

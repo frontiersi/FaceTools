@@ -46,7 +46,7 @@ public:
 
     // Find orientation and landmarks on the face ObjModel attached to the kd-tree.
     // Returns false if detection fails (use err() to get the error message).
-    bool detect( RFeatures::ObjModelKDTree::Ptr, RFeatures::Orientation&, LandmarkSet&);
+    bool detect( const RFeatures::ObjModelKDTree&, RFeatures::Orientation&, LandmarkSet&);
 
     const std::string& err() const { return _err;} // Error message relating to last call to detect()
 
@@ -59,7 +59,6 @@ private:
 
     bool cleanUp();
     bool cleanUp( std::string);
-    bool findOrientation( RFeatures::ObjModelKDTree::Ptr, RFeatures::Orientation&, LandmarkSet&);
     FaceDetector( const FaceDetector&);     // No copy
     void operator=( const FaceDetector&);   // No copy
 };  // end class

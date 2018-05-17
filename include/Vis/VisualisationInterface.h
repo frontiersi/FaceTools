@@ -31,7 +31,6 @@
 namespace FaceTools {
 class FaceModel;
 class FaceControl;
-class ModelViewer;
 
 namespace Vis {
 

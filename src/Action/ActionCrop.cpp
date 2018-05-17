@@ -22,21 +22,21 @@
 #include <VtkTools.h>
 #include <FaceModelViewer.h>
 #include <ObjModelRegionSelector.h>
+#include <ObjModelCopier.h>
 using FaceTools::Action::ActionCrop;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionVisualise;
 using FaceTools::Vis::BoundaryVisualisation;
 using FaceTools::Interactor::RadialSelectInteractor;
-using FaceTools::FaceModelViewer;
 using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
 using FaceTools::FaceModel;
 
 
-ActionCrop::ActionCrop( QStatusBar* sbar)
-    : FaceAction(true/*disable before other*/), _icon( ":/icons/CROP_FACE"), _sbar(sbar)
+ActionCrop::ActionCrop( const QString& dn, const QIcon& ico, QStatusBar* sbar)
+    : FaceAction(dn, ico, true/*disable before other*/), _sbar(sbar)
 {
-    _bvis = new BoundaryVisualisation( "Cropping Mode", *getIcon());
+    _bvis = new BoundaryVisualisation( dn, ico);
     _vact = new ActionVisualise( _bvis);
     _interactor = new RadialSelectInteractor( _bvis);
     connect( _interactor, &RadialSelectInteractor::onSetNewCentre, this, &ActionCrop::doOnSetNewCentre);
@@ -98,14 +98,23 @@ bool ActionCrop::doAction( FaceControlSet& rset)
 {
     assert(rset.size() == 1);
     FaceControl* fc = rset.first();
+    FaceModel* fm = fc->data();
+
     double rad = _bvis->radius( fc);
     cv::Vec3f v = _bvis->centre( fc);
-    FaceModel* fm = fc->data();
-    int s = fm->kdtree()->find(v);
-    RFeatures::ObjModel::Ptr cmodel = FaceTools::crop( fm->model(), v, s, rad); // Single connected component
-    fm->setModel(cmodel);
+    int s = fm->kdtree().find(v);
+
+    using namespace RFeatures;
+    const ObjModel* model = fm->cmodel();
+    ObjModelRegionSelector::Ptr cropper = ObjModelRegionSelector::create( model, v, s);
+    cropper->setRadius( rad);
+    IntSet cfids;
+    cropper->getRegionFaces( cfids);
+    assert( !cfids.empty());
+
+    // Copy the subset of faces into a new model
+    ObjModelCopier copier( model);
+    std::for_each( std::begin(cfids), std::end(cfids), [&](int fid){ copier.addTriangle(fid);});
+    fm->updateData( copier.getCopiedModel());
     return true;
 }   // end doAction
-
-
-

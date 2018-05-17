@@ -109,8 +109,8 @@ void BoundaryVisualisation::setRadius( const FaceControl* fc, double nrad)
 void BoundaryVisualisation::transform( const FaceControl* fc, const vtkMatrix4x4* vm)
 {
     cv::Vec3f npos = centre(fc);
-    RFeatures::ObjModelMover mover( RVTK::toCV(vm));
-    mover( npos);   // Transform position
+    RFeatures::Transformer mover( RVTK::toCV(vm));
+    mover.transform( npos);   // Transform position
     setCentre( fc, npos);   // Set back
 }   // end transform
 

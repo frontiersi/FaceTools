@@ -18,7 +18,6 @@
 #include <ActionDetectFace.h>
 #include <FaceDetector.h>   // FaceTools
 #include <FaceShapeLandmarks2DDetector.h>   // FaceTools::Landmarks
-#include <ObjModelMover.h>  // RFeatures
 #include <FaceControl.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
@@ -34,8 +33,9 @@ using FaceTools::FaceModel;
 using FaceTools::Detect::FaceDetector;
 
 
-ActionDetectFace::ActionDetectFace( const QString& haar, const QString& lmks, QWidget *parent, QProgressBar* pb)
-    : FaceAction(true/*disable before other*/), _icon( ":/icons/DETECT_FACE"),
+ActionDetectFace::ActionDetectFace( const QString& dn, const QIcon& icon,
+        const QString& haar, const QString& lmks, QWidget *parent, QProgressBar* pb)
+    : FaceAction(dn, icon, true/*disable before other*/),
       _parent(parent), _detector(NULL)
 {
     addChangeTo( MODEL_GEOMETRY_CHANGED);
@@ -98,11 +98,15 @@ bool ActionDetectFace::doAction( FaceControlSet& rset)
     FaceModelSet fms = rset.models();   // Copy out
     for ( FaceModel* fm : fms)
     {
-        if ( !_detector->detect( fm->kdtree(), fm->orientation(), fm->landmarks()))
+        RFeatures::Orientation on = fm->orientation();
+        LandmarkSet &lmks = fm->landmarks();    // Updated in place
+        if ( _detector->detect( fm->kdtree(), on, lmks))
+            fm->setOrientation(on);
+        else
         {
             _failSet.insert(fm);
             rset.erase(fm);
-        }   // end if
+        }   // end else
     }   // end for
     return !rset.empty();   // Success if at least one detection
 }   // end doAction

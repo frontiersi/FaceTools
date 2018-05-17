@@ -25,8 +25,8 @@ using FaceTools::FaceControlSet;
 using FaceTools::FaceModel;
 
 
-ActionLoadDirFaceModels::ActionLoadDirFaceModels( LoadFaceModelsHelper* lhelper)
-    : FaceAction(true), _loadHelper( lhelper), _icon( ":/icons/LOAD_DIR")
+ActionLoadDirFaceModels::ActionLoadDirFaceModels( const QString& dn, const QIcon& ico, LoadFaceModelsHelper* lhelper)
+    : FaceAction( dn, ico, true), _loadHelper( lhelper)
 {
     setAsync(true);
 }   // end ctor
@@ -43,8 +43,11 @@ bool ActionLoadDirFaceModels::doBeforeAction( FaceControlSet&)
                                                        tr("Select directory containing models"), "",
                                                        QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly);
     // Get list of filenames from directory
-    QStringList fnames = QDir(dname).entryList( _loadHelper->createSimpleImportFilters());
-    return _loadHelper->setFilteredFilenames( fnames) > 0;
+    QDir qdir(dname);
+    QStringList fnames = qdir.entryList( _loadHelper->createSimpleImportFilters());
+    std::for_each( std::begin(fnames), std::end(fnames), [&](auto& fn){ fn = QDir::cleanPath( qdir.filePath(fn));});
+    size_t nfiles = _loadHelper->setFilteredFilenames( fnames);
+    return nfiles > 0;
 }   // end doBeforeAction
 
 

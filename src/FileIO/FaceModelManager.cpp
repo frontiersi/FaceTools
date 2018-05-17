@@ -26,35 +26,6 @@ using FaceTools::FileIO::FaceModelManager;
 using FaceTools::FaceModel;
 
 
-namespace {
-
-std::string postProcess( RFeatures::ObjModel::Ptr model)
-{
-    // Don't want models to have more than 1 texture map
-    if ( model->getNumMaterials() > 1)
-    {
-        std::cerr << "[STATUS] FaceTools::FileIO::FaceModelManager::read: Combining Textures" << std::endl;
-        model->mergeMaterials();
-    }   // end if
-
-    // Clean the model - make a triangulated manifold.
-    RFeatures::ObjModelIntegrityChecker ic( model);
-    if ( !ic.checkIntegrity())
-        return "Loaded model has internally invalid geometry!";
-    else if ( !ic.is2DManifold())
-    {
-        std::cerr << "[STATUS] FaceTools::FileIO::FaceModelManager::read: Cleaning Model" << std::endl;
-        FaceTools::clean(model);
-        ic.checkIntegrity();
-        if ( !ic.is2DManifold())
-            return "Unable to generate a triangulated manifold(s) from the loaded model!";
-    }   // end if
-    return "";
-}   // end postProcess
-
-}   // end namespace
-
-
 // public
 FaceModelManager::FaceModelManager( FaceModelFileHandler* fii, size_t llimit)
     : _loadLimit(llimit)
@@ -147,11 +118,6 @@ FaceModel* FaceModelManager::read( const std::string& fname)
         _err = "Cannot read from " + fileio->getFileDescription().toStdString() + " files!";
     else if ( (fm = fileio->read( QString( fname.c_str()))) == NULL)
         _err = fileio->error().toStdString();
-    else if (!( _err = postProcess( fm->model())).empty())
-    {
-        delete fm;
-        fm = NULL;
-    }   // end else if
     else
         setModelData( fm, fname);
 

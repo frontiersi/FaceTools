@@ -27,9 +27,7 @@ namespace Action {
 class FaceTools_EXPORT ActionCloseAllFaceModels : public FaceAction
 { Q_OBJECT
 public:
-    explicit ActionCloseAllFaceModels( FileIO::CloseFaceModelsHelper*);
-
-    QString getDisplayName() const override { return "Close All";}
+    ActionCloseAllFaceModels( const QString& dname, FileIO::CloseFaceModelsHelper*);
 
 protected slots:
     bool testEnabled() override;

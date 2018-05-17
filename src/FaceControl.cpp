@@ -41,19 +41,10 @@ FaceControl::~FaceControl()
 }   // end dtor
 
 
-void FaceControl::transform( const cv::Matx44d& m)
-{
-    _fdata->transform(m);   // Will call transformView
-}   // end transform
-
-
-void FaceControl::transformView( const vtkMatrix4x4* vm) { _fview->transform(vm);}
-
-
 void FaceControl::transformFromView()
 {
     vtkSmartPointer<vtkMatrix4x4> m = _fview->userTransform();
-    _fdata->transform( RVTK::toCV(m));  // Will cause transformView to be called
+    _fdata->transform( RVTK::toCV(m));  // Will cause view()->rebuild to be called
 }   // end transformFromView
 
 

@@ -18,8 +18,13 @@
 #ifndef FACE_TOOLS_OUTLINES_VIEW_H
 #define FACE_TOOLS_OUTLINES_VIEW_H
 
+/**
+ * Creates outline actors for a model's boundaries.
+ */
+
 #include <ModelViewer.h>
 #include <Hashing.h>
+#include <ObjModelInfo.h>   // RFeatures
 
 namespace FaceTools {
 namespace Vis {
@@ -27,9 +32,8 @@ namespace Vis {
 class FaceTools_EXPORT OutlinesView
 {
 public:
-    // Outlines extracted on creation. If model changes, create a new OutlinesView.
-    OutlinesView( const RFeatures::ObjModel::Ptr,
-            float lineWidth=5.0f, float red=1.0f, float green=0.3f, float blue=0.1f);
+    OutlinesView( const RFeatures::ObjModelInfo&,
+            float lineWidth=4.0f, float red=1.0f, float green=0.2f, float blue=0.2f);
     ~OutlinesView();
 
     bool isVisible() const { return _visible;}

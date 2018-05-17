@@ -26,16 +26,10 @@ namespace Action {
 class FaceTools_EXPORT ActionResetCamera : public FaceAction
 { Q_OBJECT
 public:
-    ActionResetCamera();
+    ActionResetCamera( const QString& dname="Reset Camera", const QIcon& ico=QIcon());
    
-    QString getDisplayName() const override { return "Reset Camera";}
-    const QIcon* getIcon() const override { return &_icon;}
-
 public slots:
     bool doAction( FaceControlSet&) override;
-
-private:
-    const QIcon _icon;
 };  // end class
 
 }   // end namespace

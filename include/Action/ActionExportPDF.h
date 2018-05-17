@@ -15,37 +15,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_DETECT_FACE_H
-#define FACE_TOOLS_ACTION_DETECT_FACE_H
+#ifndef FACE_TOOLS_ACTION_EXPORT_PDF_H
+#define FACE_TOOLS_ACTION_EXPORT_PDF_H
 
 #include "FaceAction.h"
+#include <boost/filesystem/path.hpp>
 
-namespace FaceTools {
-namespace Detect {
-class FaceDetector;
-}   // end namespace
-
+namespace FaceApp {
 namespace Action {
 
-class FaceTools_EXPORT ActionDetectFace : public FaceAction
+class FaceTools_EXPORT ActionExportPDF : public FaceAction
 { Q_OBJECT
 public:
-    ActionDetectFace( const QString& dname, const QIcon& icon,
-                      const QString& haarCascadesModelDir,
-                      const QString& faceShapeLandmarksDat,
-                      QWidget *parent=NULL, QProgressBar* pb=NULL);
-    ~ActionDetectFace() override;
+    ActionExportPDF( Report::BaseReportTemplate*, QWidget*, QProgressBar* pb=NULL);  // Is async if pb not NULL
 
-public slots:
-    bool testEnabled() override { return _detector && (readyCount() == 1);}
-    bool doBeforeAction( FaceControlSet&) override;   // Warn if overwriting
+    QWidget* getWidget() const override { return _template->getWidget();}
+
+protected slots:
+    bool testReady( FaceControl*) override;
+    bool testEnabled() override;
+    bool doBeforeAction( FaceControlSet&) override;
     bool doAction( FaceControlSet&) override;
     void doAfterAction( const FaceControlSet&, bool) override;
 
 private:
+    Report::BaseReportTemplate *_template;
     QWidget *_parent;
-    Detect::FaceDetector *_detector;
-    FaceModelSet _failSet;
+
+    boost::filesystem::path _workdir;
+    boost::filesystem::path _logopath;
+    std::string _pdffile;
+    std::string _err;
 };  // end class
 
 }   // end namespace

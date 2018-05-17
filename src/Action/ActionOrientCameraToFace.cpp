@@ -29,8 +29,8 @@ using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
 
 
-ActionOrientCameraToFace::ActionOrientCameraToFace()
-    : FaceAction(true), _icon( ":/icons/ORIENT_CAMERA")
+ActionOrientCameraToFace::ActionOrientCameraToFace( const QString& dn, const QIcon& ico)
+    : FaceAction( dn, ico, true)
 {
     addRespondTo(LANDMARK_ADDED);
     addRespondTo(LANDMARK_DELETED);

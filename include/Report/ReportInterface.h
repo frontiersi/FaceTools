@@ -15,37 +15,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_GET_FACE_COMPONENT_H
-#define FACE_TOOLS_ACTION_GET_FACE_COMPONENT_H
+#ifndef FACE_TOOLS_REPORT_INTERFACE_H
+#define FACE_TOOLS_REPORT_INTERFACE_H
 
-#include "FaceAction.h"
-#include <QProgressUpdater.h>
+#include <FaceTools_Export.h>
+#include <PluginInterface.h>    // QTools
 
 namespace FaceTools {
-namespace Detect {
-class FaceDetector;
-}   // end namespace
+class FaceModel;
 
-namespace Action {
+namespace Report {
 
-class FaceTools_EXPORT ActionGetFaceComponent : public FaceAction
+// ReportInterface is pure virtual to allow it to be a plugin type.
+class FaceTools_EXPORT ReportInterface : public QTools::PluginInterface
 { Q_OBJECT
 public:
-    ActionGetFaceComponent( QString dname="", QIcon icon=QIcon());
-
-    QString getDisplayName() const override { return _dname;}
-    const QIcon* getIcon() const override { return &_icon;}
-
-public slots:
-    bool testReady( FaceControl* fc) override;
-    bool doAction( FaceControlSet&) override;
-
-private:
-    const QString _dname;
-    const QIcon _icon;
+    virtual bool isAvailable( const FaceModel*) const = 0;  // If the data for this report are available.
 };  // end class
 
 }   // end namespace
 }   // end namespace
+
+#define FaceToolsPluginReportReportInterface_iid "com.github.richeytastic.FaceTools.v030.Report.ReportInterface"
+Q_DECLARE_INTERFACE( FaceTools::Report::ReportInterface, FaceToolsPluginReportReportInterface_iid)
 
 #endif

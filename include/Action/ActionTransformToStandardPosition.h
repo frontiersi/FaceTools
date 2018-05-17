@@ -26,17 +26,12 @@ namespace Action {
 class FaceTools_EXPORT ActionTransformToStandardPosition : public FaceAction
 { Q_OBJECT
 public:
-    ActionTransformToStandardPosition();
-
-    QString getDisplayName() const override { return "Transform to Standard Position";}
-    const QIcon* getIcon() const override { return &_icon;}
+    ActionTransformToStandardPosition( const QString& dname="Transform to Standard Position",
+                                       const QIcon& icon=QIcon());
 
 protected slots:
     bool testReady( FaceControl*) override;
     bool doAction( FaceControlSet&) override;
-
-private:
-    QIcon _icon;
 };  // end class
 
 }   // end namespace

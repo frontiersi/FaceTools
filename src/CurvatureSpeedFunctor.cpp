@@ -18,24 +18,19 @@
 #include <CurvatureSpeedFunctor.h>
 using FaceTools::CurvatureSpeedFunctor;
 using RFeatures::ObjModelCurvatureMap;
-using RFeatures::ObjModel;
 #include <algorithm>
-#include <cassert>
 
 
 CurvatureSpeedFunctor::CurvatureSpeedFunctor( const ObjModelCurvatureMap::Ptr omcm)
 {
-    assert( omcm);
-    const ObjModel::Ptr model = omcm->getObject();
     double meanCurvature = 0.0;
-
     double kp1, kp2, c;
     std::vector<double> vals;
-    const IntSet& vidxs = model->getVertexIds();
+    const IntSet& vidxs = omcm->model()->getVertexIds();
     for ( int vi : vidxs)
     {
-        omcm->getVertexPrincipalCurvature1( vi, kp1); // Magnitude of curvature in direction of max curvature
-        omcm->getVertexPrincipalCurvature2( vi, kp2); // Magnitude of curvature in direction of minimum curvature
+        omcm->vertexPC1( vi, kp1); // Magnitude of curvature in direction of max curvature
+        omcm->vertexPC2( vi, kp2); // Magnitude of curvature in direction of minimum curvature
         c = sqrt((pow(kp1,2) + pow(kp2,2))/2);
         _curvedness[vi] = c;
         vals.push_back(c);

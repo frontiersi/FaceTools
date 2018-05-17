@@ -15,37 +15,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_CLEAN_H
-#define FACE_TOOLS_ACTION_CLEAN_H
+#ifndef FACE_TOOLS_ACTION_MAP_SURFACE_DATA_H
+#define FACE_TOOLS_ACTION_MAP_SURFACE_DATA_H
 
 #include "FaceAction.h"
+#include <QStatusBar>
+#include <ObjModelCurvatureMetrics.h>   // RFeatures
 
 namespace FaceTools {
 namespace Action {
 
-class FaceTools_EXPORT ActionClean : public FaceAction
+class FaceTools_EXPORT ActionMapSurfaceData : public FaceAction
 { Q_OBJECT
 public:
-    ActionClean( QWidget* parent, QProgressBar* pb=NULL);   // Is async if pb not NULL
-    ~ActionClean() override;
+    ActionMapSurfaceData( const QString& dname, const QIcon&, QProgressBar* pb=NULL);    // Async if pb not NULL
+    ~ActionMapSurfaceData() override;
 
-    QString getDisplayName() const override { return "Clean Mesh";}
-    const QIcon* getIcon() const override { return &_icon;}
+    // Returns surface data for the given FaceControl (produces if not already cached).
+    const RFeatures::ObjModelCurvatureMetrics& metrics( const FaceControl*);
+    const RFeatures::ObjModelCurvatureMap& curvature( const FaceControl*);
+    const RFeatures::ObjModelNormals& normals( const FaceControl*);
 
 protected slots:
     bool testReady( FaceControl*) override;
     bool doAction( FaceControlSet&) override;
-    void doAfterAction( const FaceControlSet&, bool) override;
     void respondToChange( FaceControl*) override;
     void burn( const FaceControl*) override;
 
 private:
-    QIcon _icon;
-    QWidget *_parent;
-    std::unordered_map<const FaceModel*, bool> _clean;
-    std::unordered_set<const FaceModel*> _failset;
-    bool checkClean( const FaceModel*);
-    void showCleaningError() const;
+    struct SurfaceData;
+    std::unordered_map<const FaceModel*, SurfaceData*> _cmaps;
+    void ensureProcessed( const FaceControl*);
 };  // end class
 
 }   // end namespace

@@ -28,9 +28,9 @@ using FaceTools::FaceControlSet;
 using FaceTools::FaceModel;
 
 
-ActionSaveAsFaceModel::ActionSaveAsFaceModel( FaceModelManager* fmm, QWidget *parent)
-    : FaceAction(true/*this action disabled on other actions executing*/),
-      _fmm(fmm), _parent(parent), _icon( ":/icons/SAVE_AS")
+ActionSaveAsFaceModel::ActionSaveAsFaceModel( const QString& dn, const QIcon& ico, FaceModelManager* fmm, QWidget *parent)
+    : FaceAction( dn, ico, true/*this action disabled on other actions executing*/),
+      _fmm(fmm), _parent(parent)
 {
     addRespondTo( MODEL_GEOMETRY_CHANGED);
     addRespondTo( MODEL_TRANSFORMED);
@@ -84,7 +84,7 @@ bool ActionSaveAsFaceModel::doAction( FaceControlSet& fset)
 {
     assert(fset.size() == 1);
     assert( !_filename.empty());
-    return !_fmm->write( fset.first()->data(), &_filename); // Save by specifying new filename
+    return _fmm->write( fset.first()->data(), &_filename); // Save by specifying new filename
 }   // end doAction
 
 

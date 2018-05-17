@@ -19,7 +19,7 @@
 #define FACE_TOOLS_DETECT_NOSE_FINDER_H
 
 #include "FaceTools_Export.h"
-#include <ObjModelTools.h>  // RFeatures
+#include <ObjModel.h>  // RFeatures
 
 namespace FaceTools {
 namespace Detect {
@@ -27,9 +27,8 @@ namespace Detect {
 class FaceTools_EXPORT NoseFinder
 {
 public:
-    // Provide the model curvature map and the vertex indices of the eyes.
-    NoseFinder( const RFeatures::ObjModelCurvatureMap::Ptr,
-                int leftEyeVertexId, int rightEyeVertexId);
+    // Provide the model and the vertex indices of the eyes.
+    NoseFinder( const RFeatures::ObjModel*, int lvidx, int rvidx);
 
     bool find();
     cv::Vec3f getMidEyesPoint() const { return _midEyes;}
@@ -38,8 +37,7 @@ public:
     const std::vector<int>& getNoseRidgePath() const { return _noseRidgePath;}
 
 private:
-    const RFeatures::ObjModelCurvatureMap::Ptr _curvMap;
-    const RFeatures::ObjModel::Ptr _model;
+    const RFeatures::ObjModel* _model;
     const int _e0, _e1;   // Left and right eye centres
     cv::Vec3f _midEyes;   // Vertex midway between the eyes
     cv::Vec3f _nbridge;   // Vertex for nose bridge

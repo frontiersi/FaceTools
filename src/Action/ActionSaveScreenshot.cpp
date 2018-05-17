@@ -23,8 +23,8 @@ using FaceTools::FaceControlSet;
 using FaceTools::MultiFaceModelViewer;
 
 
-ActionSaveScreenshot::ActionSaveScreenshot( const MultiFaceModelViewer* v)
-    : FaceAction(true), _icon( ":/icons/SCREENSHOT"), _mviewer(v)
+ActionSaveScreenshot::ActionSaveScreenshot( const QString& dn, const QIcon& ico, const MultiFaceModelViewer* v)
+    : FaceAction( dn, ico, true), _mviewer(v)
 {
 }   // end ctor
 

@@ -27,11 +27,7 @@ namespace Action {
 class FaceTools_EXPORT ActionLoadFaceModels : public FaceAction
 { Q_OBJECT
 public:
-    explicit ActionLoadFaceModels( FileIO::LoadFaceModelsHelper*);
-
-    QString getDisplayName() const override { return "&Open";}
-    const QIcon* getIcon() const override { return &_icon;}
-    const QKeySequence* getShortcut() const override { return &_scut;}
+    ActionLoadFaceModels( const QString& dname, const QIcon& icon, const QKeySequence& keys, FileIO::LoadFaceModelsHelper*);
 
 protected slots:
     bool testEnabled() override;
@@ -41,8 +37,6 @@ protected slots:
 
 private:
     FileIO::LoadFaceModelsHelper *_loadHelper;
-    QIcon _icon;
-    QKeySequence _scut;
 };  // end class
 
 }   // end namespace

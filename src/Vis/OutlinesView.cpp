@@ -26,16 +26,22 @@ using FaceTools::ModelViewer;
 
 
 // public
-OutlinesView::OutlinesView( const RFeatures::ObjModel::Ptr model, float lw, float r, float g, float b)
+OutlinesView::OutlinesView( const RFeatures::ObjModelInfo& minfo, float lw, float r, float g, float b)
     : _viewer(NULL), _visible(false)
 {
-    std::list<std::vector<cv::Vec3f> > loops;
-    FaceTools::findBoundaryLoops( model, loops);
+    const int nbs = (int)minfo.boundaries().size();
+    assert( nbs > 0);
+    const RFeatures::ObjModel* model = minfo.model().get();
 
-    // Create the actors
-    for ( const auto& loop : loops)
+    for ( int i = 0; i < nbs; ++i)
     {
-        vtkSmartPointer<vtkActor> actor = RVTK::VtkActorCreator::generateLineActor( loop, true);  // Joins ends
+        // Get the vertex data for boundary i.
+        const std::list<int>& loop = minfo.boundaries().boundary(i);
+        std::vector<cv::Vec3f> line;
+        std::for_each( std::begin(loop), std::end(loop), [&](int v){ line.push_back(model->vtx(v));});
+
+        // Create an actor for the outer boundary on the model.
+        vtkSmartPointer<vtkActor> actor = RVTK::VtkActorCreator::generateLineActor( line, true);  // Joins ends
         actor->GetProperty()->SetRepresentationToWireframe();
         actor->GetProperty()->SetRenderLinesAsTubes(false);
         actor->GetProperty()->SetLineWidth( lw);

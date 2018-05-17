@@ -16,7 +16,7 @@
  ************************************************************************/
 
 #include <LandmarkSet.h>
-#include <ObjModelMover.h>  // RFeatures
+#include <Transformer.h>  // RFeatures
 #include <ObjModelSurfacePointFinder.h>
 using FaceTools::LandmarkSet;
 using FaceTools::Landmark;
@@ -160,23 +160,22 @@ void LandmarkSet::translate( const cv::Vec3f& t)
 
 void LandmarkSet::transform( const cv::Matx44d& T)
 {
-    const RFeatures::ObjModelMover mover(T);
-    std::for_each( std::begin(_ids), std::end(_ids), [&](int id){ mover( get(id)->pos);});  // Move in place
+    const RFeatures::Transformer mover(T);
+    std::for_each( std::begin(_ids), std::end(_ids), [&](int id){ mover.transform( get(id)->pos);});  // Move in place
 }   // end transform
 
 
-double FaceTools::translateLandmarksToSurface( const RFeatures::ObjModelKDTree::Ptr kdt, LandmarkSet &lset)
+double FaceTools::translateLandmarksToSurface( const RFeatures::ObjModelKDTree& kdt, LandmarkSet &lset)
 {
     double sdiff = 0;
-    const RFeatures::ObjModel::Ptr model = kdt->getObject();
-    const RFeatures::ObjModelSurfacePointFinder spfinder( model);
+    const RFeatures::ObjModelSurfacePointFinder spfinder( kdt.model());
 
     cv::Vec3f fv;
     int notused, vidx;
     for ( int lmkid : lset.ids())
     {
         const cv::Vec3f& v = lset.pos( lmkid);  // Current position of landmark
-        vidx = kdt->find( v);   // Closest vertex to landmark
+        vidx = kdt.find( v);   // Closest vertex to landmark
 
         // Project v onto the model's surface. Choose from all the polygons connected to vertex vidx the
         // projection into the plane of a polygon that gives the smallest difference in position.

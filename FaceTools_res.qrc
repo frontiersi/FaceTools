@@ -14,27 +14,6 @@
     <file alias="COPY_LEFT">res/icons/icons8-new-copy-80.png</file>
     <file alias="COPY_RIGHT">res/icons/icons8-new-copy-80.png</file>
 
-    <file alias="PLUGIN">res/icons/icons8-Plugin.png</file>
-
-    <file alias="TRANSFORM">res/icons/icons8-gyroscope-80.png</file>
-    <file alias="BOUNDARY">res/icons/icons8-boundary-loop.png</file>
-    <file alias="CROP_FACE">res/icons/icons8-crop-80.png</file>
-    <file alias="DETECT_FACE">res/icons/icons8-detect-face.png</file>
-    <file alias="CALIPERS">res/icons/icons8-calipers.png</file>
-    <file alias="PDF">res/icons/icons8-PDF.png</file>
-    <file alias="ALIGN_FACES">res/icons/icons8-team-80.png</file>
-    <file alias="FILL_HOLES">res/icons/icons8-cheese-80.png</file>
-    <file alias="CLEAN">res/icons/icons8-bucket-and-broom-80.png</file>
-    <file alias="ANGLES">res/icons/icons8-trigonometry-80.png</file>
-    <file alias="MOVIE">res/icons/icons8-popcorn-time-48.png</file>
-    <file alias="FILM">res/icons/icons8-film-reel-80.png</file>
-
-    <file alias="LOAD">res/icons/icons8-open.png</file>
-    <file alias="LOAD_DIR">res/icons/icons8-open_dir.png</file>
-    <file alias="SAVE">res/icons/icons8-save.png</file>
-    <file alias="SAVE_AS">res/icons/icons8-save_as.png</file>
-    <file alias="CLOSE">res/icons/icons8-save-close.png</file>
-
     <file alias="TEXTURE_VIS">res/icons/icons8-cloth-80.png</file>
     <file alias="SURFACE_VIS">res/icons/icons8-mesh-filled-80.png</file>
     <file alias="WIREFRAME_VIS">res/icons/icons8-mesh-80.png</file>

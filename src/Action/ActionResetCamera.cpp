@@ -25,8 +25,8 @@ using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
 
 
-ActionResetCamera::ActionResetCamera()
-    : FaceAction(true), _icon( ":/icons/RESET_CAMERA")
+ActionResetCamera::ActionResetCamera( const QString& dn, const QIcon& ico)
+    : FaceAction( dn, ico, true)
 {
     addChangeTo(CAMERA_POSITION_CHANGED);
     addChangeTo(CAMERA_ORIENTATION_CHANGED);

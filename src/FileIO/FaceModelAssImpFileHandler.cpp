@@ -41,8 +41,12 @@ FaceModel* FaceModelAssImpFileHandler::read( const QString& qfname)
     if ( model)
     {
         fm = new FaceModel;
-        fm->model() = model;
-        // Everything else default!
+        if ( !fm->updateData( model))
+        {
+            _err = tr("Failed to clean object loaded from \"") + fname.c_str() + tr("\"");
+            delete fm;
+            fm = NULL;
+        }   // end if
     }   // end if
     else
         _err = _importer->err().c_str();

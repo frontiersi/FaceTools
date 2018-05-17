@@ -27,10 +27,7 @@ namespace Action {
 class FaceTools_EXPORT ActionLoadDirFaceModels : public FaceAction
 { Q_OBJECT
 public:
-    explicit ActionLoadDirFaceModels( FileIO::LoadFaceModelsHelper*);
-
-    QString getDisplayName() const override { return "Open &Dir";}
-    const QIcon* getIcon() const override { return &_icon;}
+    ActionLoadDirFaceModels( const QString&, const QIcon&, FileIO::LoadFaceModelsHelper*);
 
 protected slots:
     bool testEnabled() override;
@@ -40,7 +37,6 @@ protected slots:
 
 private:
     FileIO::LoadFaceModelsHelper *_loadHelper;
-    QIcon _icon;
 };  // end class
 
 }   // end namespace

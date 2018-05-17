@@ -228,7 +228,7 @@ bool ModelViewer::calcSurfacePosition( const vtkProp *prop, const cv::Point2f& p
 
 
 // public
-int ModelViewer::add( const ObjModel::Ptr model, const ModelViewer::VisOptions& vo)
+int ModelViewer::add( const ObjModel* model, const ModelViewer::VisOptions& vo)
 {
     // If a textured model was selected but the model has no texture, set the wireframe visualisation instead.
     ModelViewer::Visualisation mvis = vo.vis;
@@ -390,13 +390,13 @@ int ModelViewer::addPoints( const std::vector<cv::Vec3f>& vpts, const ModelViewe
 }   // end addPoints
 
 
-int ModelViewer::addPoints( const ObjModel::Ptr model, const ModelViewer::VisOptions& vo, bool asSpheres)
+int ModelViewer::addPoints( const ObjModel* model, const ModelViewer::VisOptions& vo, bool asSpheres)
 {
     return addPointsActor( RVTK::VtkActorCreator::generatePointsActor( model), vo, asSpheres);
 }   // end addPoints
 
 
-int ModelViewer::addPoints( const ObjModel::Ptr model, const std::unordered_set<int>& vidxs, const ModelViewer::VisOptions& vo, bool asSpheres)
+int ModelViewer::addPoints( const ObjModel* model, const std::unordered_set<int>& vidxs, const ModelViewer::VisOptions& vo, bool asSpheres)
 {
     int i = 0;
     std::vector<cv::Vec3f> vpts(vidxs.size());
@@ -482,6 +482,13 @@ void ModelViewer::resetDefaultCamera( float camRng)
     cp.pos[2] += camRng; // Set the camera position to be directly infront of the focus
     setCamera(cp);
 }   // end resetDefaultCamera
+
+
+float ModelViewer::cameraDistance() const
+{
+    CameraParams cp = getCamera();
+    return cv::norm( cp.pos - cp.focus);
+}   // end cameraDistance
 
 
 void ModelViewer::setCamera( const cv::Vec3f& focus, const cv::Vec3f& nvec, const cv::Vec3f& uvec, float camRng)

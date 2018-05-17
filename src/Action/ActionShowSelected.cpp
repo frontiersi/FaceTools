@@ -39,7 +39,7 @@ void ActionShowSelected::tellSelected( FaceControl* fc, bool enable)
 {
     FaceModel* fm = fc->data();
     if ( _outlines.count(fm) == 0)  // Generate an outline if one not available
-        _outlines[fm] = new OutlinesView( fm->model());
+        _outlines[fm] = new OutlinesView( fm->info());
     _outlines.at(fm)->setVisible( enable, fc->viewer());
 }   // end tellSelected
 
@@ -53,6 +53,6 @@ void ActionShowSelected::respondToChange( FaceControl* fc)
         vis = _outlines.at(fm)->isVisible();
         delete _outlines.at(fm);    // Destructor removes from associated viewers
     }   // end if
-    _outlines[fm] = new OutlinesView( fm->model());
+    _outlines[fm] = new OutlinesView( fm->info());
     _outlines.at(fm)->setVisible( vis, fc->viewer());
 }   // end respondToChange
