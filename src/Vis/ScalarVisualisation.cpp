@@ -17,28 +17,35 @@
 
 #include <ScalarVisualisation.h>
 #include <LegendScalarColourRangeMapper.h>
+#include <ActionMapSurfaceData.h>
 #include <FaceControl.h>
 #include <FaceModelViewer.h>
 #include <FaceView.h>
+#include <vtkDataSetAttributes.h>
+#include <vtkCellData.h>
 #include <vtkProperty.h>
 #include <vtkMapper.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Vis::SurfaceVisualisation;
 using FaceTools::Vis::ScalarVisualisation;
+using FaceTools::Vis::FaceView;
+using FaceTools::Action::ActionMapSurfaceData;
+using FaceTools::Action::FaceAction;
 using FaceTools::FaceControl;
 using FaceTools::ModelViewer;
 using QTools::ColourMappingWidget;
 typedef FaceTools::Vis::LegendScalarColourRangeMapper LSCRM;
 
+
 ScalarVisualisation::ScalarVisualisation( const QString& d, const QIcon& i, const QKeySequence& k)
-    : SurfaceVisualisation(d,i,k) {}   // end ctor
+    : SurfaceVisualisation(d,i,k), _msd(NULL) {}   // end ctor
 
 ScalarVisualisation::ScalarVisualisation( const QString& d, const QIcon& i)
-    : SurfaceVisualisation(d,i) {}   // end ctor
+    : SurfaceVisualisation(d,i), _msd(NULL) {}   // end ctor
 
 ScalarVisualisation::ScalarVisualisation( const QString& d)
-    : SurfaceVisualisation(d) {}   // end ctor
+    : SurfaceVisualisation(d), _msd(NULL) {}   // end ctor
 
 
 ScalarVisualisation::~ScalarVisualisation()
@@ -50,20 +57,26 @@ ScalarVisualisation::~ScalarVisualisation()
 
 void ScalarVisualisation::apply( const FaceControl* fc)
 {
+    assert(_msd);
+    mapSurfaceActor( _msd, fc);   // Map data to actor
     vtkActor* actor = fc->view()->surfaceActor();
+    const std::string vname = getDisplayName().toStdString();
     if ( _lranges.count(fc) == 0)
-    {
-        LSCRM* leg = _lranges[fc] = new LSCRM( actor, false/*don't auto-remap*/);
-        leg->setRangeLimits( getDisplayName().toStdString(), rangeMin(), rangeMax()); // set defaults
-    }   // end if
-    mapSurfaceActor( fc);   // Apply visualisation to the LSCRM
-    actor->GetMapper()->SetScalarVisibility(true);
+        _lranges[fc] = new LSCRM( actor, false/*don't auto-remap*/);
+    _lranges[fc]->setRangeLimits( vname, rangeMin(), rangeMax()); // set defaults
 }   // end apply
 
 
 void ScalarVisualisation::addActors( const FaceControl* fc)
 {
     SurfaceVisualisation::addActors(fc);
+    // Set the active scalar mapping on the surface actor
+    vtkActor* actor = fc->view()->surfaceActor();
+    actor->GetProperty()->SetRepresentationToSurface();
+    vtkDataSetAttributes *da = RVTK::getPolyData( actor)->GetCellData();
+    const std::string vname = getDisplayName().toStdString();
+    da->SetActiveScalars( vname.c_str());
+    actor->GetMapper()->SetScalarVisibility(true);
     onSelected(fc);
 }   // end addActors
 
@@ -80,19 +93,28 @@ void ScalarVisualisation::onSelected( const FaceControl* fc)
     assert(fc);
     assert(_lranges.count(fc) > 0);
     // Ensure the legend mapping is selected for display in the corresponding viewer's scalar legend.
-    std::string nm = getDisplayName().toStdString();
-    _lranges.at(fc)->setVisible( nm, fc->viewer());
+    _lranges.at(fc)->setVisible( getDisplayName().toStdString(), fc->viewer());
+    SurfaceVisualisation::onSelected(fc);   // Set lighting
 }   // end onSelected
 
 
-void ScalarVisualisation::burn( const FaceControl* fc)
+void ScalarVisualisation::respondTo( const FaceAction* fa, const FaceControl* fc)
+{
+    if ( _msd == NULL)
+        _msd = qobject_cast<const ActionMapSurfaceData*>(fa);
+    assert(_msd);
+    apply(fc);  // Cause the surface to be remapped with the new data and update the range limits.
+}   // end respondTo
+
+
+void ScalarVisualisation::purge( const FaceControl* fc)
 {
     if (_lranges.count(fc) > 0)
     {
         delete _lranges.at(fc);
         _lranges.erase(fc);
     }   // end if
-}   // end burn
+}   // end purge
 
 
 bool ScalarVisualisation::updateColourMapping( const FaceControl* fc, const ColourMappingWidget* w)

@@ -18,6 +18,11 @@
 #ifndef FACE_TOOLS_SURFACE_MESHER_H
 #define FACE_TOOLS_SURFACE_MESHER_H
 
+// Disable warnings about long function names being replaced.
+#ifdef _WIN32
+#pragma warning( disable : 4503)
+#endif
+
 /**
  * Take a point cloud object (only vertices - at least three), and generate
  * a polygonal triangulated surface mesh for it.

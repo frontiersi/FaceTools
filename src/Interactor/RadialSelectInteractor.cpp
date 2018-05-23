@@ -17,18 +17,18 @@
 
 #include <RadialSelectInteractor.h>
 #include <FaceEntryExitInteractor.h>
-#include <BoundaryVisualisation.h>
+#include <BoundingVisualisation.h>
 #include <FaceModelViewer.h>
 #include <FeatureUtils.h>   // RFeatures
 #include <cassert>
 using FaceTools::Interactor::RadialSelectInteractor;
 using FaceTools::Interactor::FaceEntryExitInteractor;
-using FaceTools::Vis::BoundaryVisualisation;
+using FaceTools::Vis::BoundingVisualisation;
 using FaceTools::FaceControl;
 
 
 // public
-RadialSelectInteractor::RadialSelectInteractor( BoundaryVisualisation* bv)
+RadialSelectInteractor::RadialSelectInteractor( BoundingVisualisation* bv)
     : _bvis(bv), _feei( new FaceEntryExitInteractor), _fc(NULL), _move(false)
 {
     connect( _feei, &FaceEntryExitInteractor::onEnterModel, [this](auto fc){ if (_bvis->isApplied(fc)) _fc = fc;});

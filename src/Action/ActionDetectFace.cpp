@@ -38,16 +38,7 @@ ActionDetectFace::ActionDetectFace( const QString& dn, const QIcon& icon,
     : FaceAction(dn, icon, true/*disable before other*/),
       _parent(parent), _detector(NULL)
 {
-    addChangeTo( MODEL_GEOMETRY_CHANGED);
-    addChangeTo( MODEL_ORIENTATION_CHANGED);
-    addChangeTo( LANDMARK_ADDED);
-    addChangeTo( LANDMARK_CHANGED);
-
-    // Default (parent) implementation of respondToChange adequate for these events.
-    addRespondTo( LANDMARK_ADDED);
-    addRespondTo( LANDMARK_DELETED);
-    addRespondTo( LANDMARK_CHANGED);
-
+    addChangeTo( DATA_CHANGE);
     if ( FaceDetector::initialise( haar.toStdString(), lmks.toStdString()))
         _detector = new FaceDetector;
     else

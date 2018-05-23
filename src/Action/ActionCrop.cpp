@@ -26,7 +26,7 @@
 using FaceTools::Action::ActionCrop;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionVisualise;
-using FaceTools::Vis::BoundaryVisualisation;
+using FaceTools::Vis::BoundingVisualisation;
 using FaceTools::Interactor::RadialSelectInteractor;
 using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
@@ -36,13 +36,13 @@ using FaceTools::FaceModel;
 ActionCrop::ActionCrop( const QString& dn, const QIcon& ico, QStatusBar* sbar)
     : FaceAction(dn, ico, true/*disable before other*/), _sbar(sbar)
 {
-    _bvis = new BoundaryVisualisation( dn, ico);
+    _bvis = new BoundingVisualisation( dn, ico);
     _vact = new ActionVisualise( _bvis);
     _interactor = new RadialSelectInteractor( _bvis);
     connect( _interactor, &RadialSelectInteractor::onSetNewCentre, this, &ActionCrop::doOnSetNewCentre);
     connect( _interactor, &RadialSelectInteractor::onSetNewRadius, this, &ActionCrop::doOnSetNewRadius);
-    addChangeTo( MODEL_GEOMETRY_CHANGED);
-    addRespondTo( VISUALISATION_CHANGED);
+    addChangeTo( DATA_CHANGE);
+    addRespondTo( VIEW_CHANGE); // The view change being responded to is the application of the associated BoundingVisualiation
 }   // end ctor
 
 

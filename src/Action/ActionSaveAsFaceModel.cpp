@@ -32,18 +32,7 @@ ActionSaveAsFaceModel::ActionSaveAsFaceModel( const QString& dn, const QIcon& ic
     : FaceAction( dn, ico, true/*this action disabled on other actions executing*/),
       _fmm(fmm), _parent(parent)
 {
-    addRespondTo( MODEL_GEOMETRY_CHANGED);
-    addRespondTo( MODEL_TRANSFORMED);
-    addRespondTo( MODEL_TEXTURE_CHANGED);
-    addRespondTo( LANDMARK_ADDED);
-    addRespondTo( LANDMARK_DELETED);
-    addRespondTo( LANDMARK_CHANGED);
-    addRespondTo( FACE_NOTE_ADDED);
-    addRespondTo( FACE_NOTE_DELETED);
-    addRespondTo( FACE_NOTE_CHANGED);
-    addRespondTo( MODEL_ORIENTATION_CHANGED);
-    addRespondTo( MODEL_DESCRIPTION_CHANGED);
-    addRespondTo( MODEL_SOURCE_CHANGED);
+    addRespondTo( DATA_CHANGE);
     setAsync(true);
 }   // end ctor
 

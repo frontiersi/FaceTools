@@ -19,7 +19,6 @@
 #define FACE_TOOLS_ACTION_MAP_SURFACE_DATA_H
 
 #include "FaceAction.h"
-#include <QStatusBar>
 #include <ObjModelCurvatureMetrics.h>   // RFeatures
 
 namespace FaceTools {
@@ -28,24 +27,23 @@ namespace Action {
 class FaceTools_EXPORT ActionMapSurfaceData : public FaceAction
 { Q_OBJECT
 public:
-    ActionMapSurfaceData( const QString& dname, const QIcon&, QProgressBar* pb=NULL);    // Async if pb not NULL
+    explicit ActionMapSurfaceData( const QString& dname);  // Asynchronous
     ~ActionMapSurfaceData() override;
 
-    // Returns surface data for the given FaceControl (produces if not already cached).
-    const RFeatures::ObjModelCurvatureMetrics& metrics( const FaceControl*);
-    const RFeatures::ObjModelCurvatureMap& curvature( const FaceControl*);
-    const RFeatures::ObjModelNormals& normals( const FaceControl*);
+    // Returns surface data for the given FaceControl (data must already be present!).
+    const RFeatures::ObjModelCurvatureMetrics* metrics( const FaceControl*);
+    const RFeatures::ObjModelCurvatureMap* curvature( const FaceControl*);
+    const RFeatures::ObjModelNormals* normals( const FaceControl*);
 
 protected slots:
     bool testReady( FaceControl*) override;
     bool doAction( FaceControlSet&) override;
-    void respondToChange( FaceControl*) override;
-    void burn( const FaceControl*) override;
+    void respondTo( const FaceAction*, const ChangeEventSet*, FaceControl*) override;
+    void purge( const FaceControl*) override;
 
 private:
     struct SurfaceData;
     std::unordered_map<const FaceModel*, SurfaceData*> _cmaps;
-    void ensureProcessed( const FaceControl*);
 };  // end class
 
 }   // end namespace

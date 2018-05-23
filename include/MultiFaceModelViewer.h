@@ -20,8 +20,8 @@
 
 #include "FaceModelViewer.h"
 #include "FaceControlSet.h"
-#include <ModelSelectInteractor.h>
 #include <ModelViewerEntryExitInteractor.h>
+#include <ActionSelect.h>
 #include <QToolButton>
 #include <QHBoxLayout>
 #include <QSplitter>
@@ -31,29 +31,21 @@ namespace FaceTools {
 class FaceTools_EXPORT MultiFaceModelViewer : public QWidget
 { Q_OBJECT
 public:
-    explicit MultiFaceModelViewer( QWidget *parent=NULL);
+    MultiFaceModelViewer( Action::ActionSelect* selector, QWidget *parent=NULL);
     ~MultiFaceModelViewer() override;
-
-    // Add an interactor to be managed between the viewers.
-    void addInteractor( Interactor::MVI*);
 
     FaceModelViewer* leftViewer() { return _v0;}
     FaceModelViewer* centreViewer() { return _v1;}
     FaceModelViewer* rightViewer() { return _v2;}
 
 public slots:
-    void insert( FaceModel*);   // Ensures model is shown in the centre panel and emits onSelected.
-    void remove( FaceModel*);   // Remove all views for the given model and does NOT emit onSelected.
+    void remove( FaceModel*);   // Remove all views for the given model
 
     // Toggle visibility of left/right viewers
     void setLeftViewerVisible(bool);
     void setRightViewerVisible(bool);
 
     void saveScreenshot() const;    // Horizontally concatenates images from the three viewers
-
-signals:
-    void onSelected( FaceControl*, bool);   // Connect to FaceActionManager::setSelected
-    void onRemove( FaceControl*);
 
 private slots:
     void moveLeftToCentre();
@@ -67,10 +59,10 @@ private slots:
     void copyRightToCentre();
 
     void doOnViewerEntered();
-    void doOnSelected( FaceControl*, bool); // Activate viewer for selected FaceControl
+    void doOnSelect( FaceControl*, bool);
 
 private:
-    Interactor::ModelSelectInteractor _selector;    // Transitions between FaceModelViewers
+    Action::ActionSelect *_selector;
 
     // Fixed ModelViewer interactors.
     Interactor::ModelViewerEntryExitInteractor *_i0;

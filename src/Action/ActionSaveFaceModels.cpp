@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionSaveFaceModels;
+using FaceTools::Action::ChangeEventSet;
 using FaceTools::Action::FaceAction;
 using FaceTools::FileIO::FaceModelManager;
 using FaceTools::FaceControlSet;
@@ -32,18 +33,7 @@ ActionSaveFaceModels::ActionSaveFaceModels( const QString& dn, const QIcon& ico,
     : FaceAction( dn, ico, ks, true/*this action disabled on other actions executing*/),
       _fmm(fmm), _parent(parent)
 {
-    addRespondTo( MODEL_GEOMETRY_CHANGED);
-    addRespondTo( MODEL_TRANSFORMED);
-    addRespondTo( MODEL_TEXTURE_CHANGED);
-    addRespondTo( LANDMARK_ADDED);
-    addRespondTo( LANDMARK_DELETED);
-    addRespondTo( LANDMARK_CHANGED);
-    addRespondTo( FACE_NOTE_ADDED);
-    addRespondTo( FACE_NOTE_DELETED);
-    addRespondTo( FACE_NOTE_CHANGED);
-    addRespondTo( MODEL_ORIENTATION_CHANGED);
-    addRespondTo( MODEL_DESCRIPTION_CHANGED);
-    addRespondTo( MODEL_SOURCE_CHANGED);
+    addRespondTo( DATA_CHANGE);
     setAsync(true);
 }   // end ctor
 
@@ -53,13 +43,15 @@ bool ActionSaveFaceModels::testReady( FaceControl* fc)
     FaceModel* fm = fc->data();
     // Add to potential save set if FaceControl is under control, has undergone
     // changes since last save, and is currently saved in the preferred format.
-    return !_fmm->isSaved( fm) && _fmm->hasPreferredFileFormat( fm);
+    const bool isSaved = _fmm->isSaved( fm);
+    const bool hasPreferredFormat = _fmm->hasPreferredFileFormat( fm);
+    return !isSaved && hasPreferredFormat;
 }   // end testReady
 
 
 bool ActionSaveFaceModels::doAction( FaceControlSet& fset)
 {
-    const FaceModelSet& fms =fset.models();
+    const FaceModelSet& fms = fset.models();
     for ( FaceModel* fm : fms)
     {
         std::string filepath;   // Will be the last saved filepath
@@ -80,3 +72,10 @@ void ActionSaveFaceModels::doAfterAction( const FaceControlSet&, bool)
     }   // end for
     _fails.clear(); // Ensure the fail set is cleared
 }   // end doAfterAction
+
+
+void ActionSaveFaceModels::respondTo( const FaceAction* a, const ChangeEventSet* c, FaceControl* fc)
+{
+    _fmm->setUnsaved(fc->data());
+    FaceAction::respondTo( a, c, fc);
+}   // end respondTo

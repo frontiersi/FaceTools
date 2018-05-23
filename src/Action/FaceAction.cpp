@@ -29,39 +29,61 @@ using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
 using FaceTools::FaceModel;
 using FaceTools::Action::ChangeEvent;
+using FaceTools::Action::ChangeEventSet;
 using QTools::QProgressUpdater;
 
 
 // public
 FaceAction::FaceAction( bool dbo)
-    : _dname(""), _icon(), _init(false), _disableBeforeOther(dbo),
-      _action(this), _doasync(false), _pupdater(NULL)
-{
-}   // end ctor
-
+    : _dname(""), _icon(),
+      _init(false), _disableBeforeOther(dbo), _externalSelect(true), _reportChanges(true),
+      _action(this), _doasync(false), _pupdater(NULL) { }   // end ctor
 
 // public
 FaceAction::FaceAction( const QString& dname, bool dbo)
-    : _dname(dname), _icon(), _keys(), _init(false), _disableBeforeOther(dbo),
-      _action(this), _doasync(false), _pupdater(NULL)
-{
-}   // end ctor
-
+    : _dname(dname), _icon(), _keys(),
+      _init(false), _disableBeforeOther(dbo), _externalSelect(true), _reportChanges(true),
+      _action(this), _doasync(false), _pupdater(NULL) { }   // end ctor
 
 // public
 FaceAction::FaceAction( const QString& dname, const QIcon& ico, bool dbo)
-    : _dname(dname), _icon(ico), _keys(), _init(false), _disableBeforeOther(dbo),
-      _action(this), _doasync(false), _pupdater(NULL)
-{
-}   // end ctor
+    : _dname(dname), _icon(ico), _keys(),
+      _init(false), _disableBeforeOther(dbo), _externalSelect(true), _reportChanges(true),
+      _action(this), _doasync(false), _pupdater(NULL) { }   // end ctor
 
+// public
+FaceAction::FaceAction( const QString& dname, const QIcon* ico, bool dbo)
+    : _dname(dname), _icon(ico ? *ico : QIcon()), _keys(),
+      _init(false), _disableBeforeOther(dbo), _externalSelect(true), _reportChanges(true),
+      _action(this), _doasync(false), _pupdater(NULL) { }   // end ctor
 
 // public
 FaceAction::FaceAction( const QString& dname, const QIcon& ico, const QKeySequence& ks, bool dbo)
-    : _dname(dname), _icon(ico), _keys(ks), _init(false), _disableBeforeOther(dbo),
-      _action(this), _doasync(false), _pupdater(NULL)
-{
-}   // end ctor
+    : _dname(dname), _icon(ico), _keys(ks),
+      _init(false), _disableBeforeOther(dbo), _externalSelect(true), _reportChanges(true),
+      _action(this), _doasync(false), _pupdater(NULL) {}   // end ctor
+
+// public
+FaceAction::FaceAction( const QString& dname, const QIcon* ico, const QKeySequence& ks, bool dbo)
+    : _dname(dname), _icon(ico ? *ico : QIcon()), _keys(ks),
+      _init(false), _disableBeforeOther(dbo), _externalSelect(true), _reportChanges(true),
+      _action(this), _doasync(false), _pupdater(NULL) {}   // end ctor
+
+// public
+FaceAction::FaceAction( const QString& dname, const QIcon& ico, const QKeySequence* ks, bool dbo)
+    : _dname(dname), _icon(ico), _keys(ks ? *ks : QKeySequence()),
+      _init(false), _disableBeforeOther(dbo), _externalSelect(true), _reportChanges(true),
+      _action(this), _doasync(false), _pupdater(NULL) {}   // end ctor
+
+// public
+FaceAction::FaceAction( const QString& dname, const QIcon* ico, const QKeySequence* ks, bool dbo)
+    : _dname(dname), _icon(ico ? *ico : QIcon()), _keys(ks ? *ks : QKeySequence()),
+      _init(false), _disableBeforeOther(dbo), _externalSelect(true), _reportChanges(true),
+      _action(this), _doasync(false), _pupdater(NULL) {}   // end ctor
+
+
+// protected
+void FaceAction::setExternalSelect( bool v) { _externalSelect = v;}
 
 
 // public
@@ -132,7 +154,7 @@ void FaceAction::setAsync( bool enable, QProgressUpdater::Ptr pupdater)
 {
     _doasync = enable;
     _pupdater = pupdater;
-    if ( !_doasync) // Ignore the progress updater if not async
+    if ( !isAsync()) // Ignore the progress updater if not async
         _pupdater = NULL;
 }   // end setAsync
 
@@ -148,42 +170,23 @@ void FaceAction::progress( float propComplete)
 // protected
 void FaceAction::setSelected( FaceControl* fc, bool v)
 {
-    const bool wascontrolled = _controlled.has(fc);
-    const bool wasready = _ready.has(fc);
-    _controlled.erase(fc);
+    assert(fc);
+    assert(fc->viewer());
+
+    setChecked( testChecked(fc));
+
+    if ( v == _ready.has(fc))   // Don't adjust the ready set unless a change will be made
+        return;
+
     _ready.erase(fc);
-    v = v && fc && fc->viewer();    // FaceControls without viewers can never be selected
-    if ( fc && v)
-    {
-        _controlled.insert(fc);
-        if ( testReady(fc))
-            _ready.insert(fc);
-    }   // end if
+    if ( v && testReady(fc))
+        _ready.insert(fc);
 
     setEnabled( testEnabled());
-    if ( fc)
-    {
-        if ( wascontrolled != _controlled.has(fc))  // Only call on change to controlled set membership
-            this->tellSelected( fc, v);
-        if ( wasready != _ready.has(fc))    // Only call on change to ready set membership
-            this->tellReady( fc, _ready.has(fc));
-    }   // end if
+
+    this->tellSelected( fc, v);
+    this->tellReady( fc, _ready.has(fc));
 }   // end setSelected
-
-
-// protected
-size_t FaceAction::recheckReadySet()
-{
-    FaceControlSet nset;
-    for ( FaceControl* fc : _ready)
-    {
-        if ( testReady(fc))
-            nset.insert(fc);
-    }   // end for
-    _ready = nset;
-    setEnabled( testEnabled());
-    return _ready.size();
-}   // end recheckReadySet
 
 
 // public
@@ -192,91 +195,89 @@ void FaceAction::addRespondTo( const ChangeEvent& r) { _revents.insert(r);}
 bool FaceAction::operator()(){ return process();}
 
 
+// public
+void FaceAction::execAfter( FaceAction* fa)
+{
+    assert(fa);
+    if ( fa->isAsync())
+        _aacts.insert(fa);
+    else
+        _sacts.push_back(fa);
+}   // end execAfter
+
+
 // protected
-void FaceAction::respondToChange( FaceControl* fc)
+void FaceAction::respondTo( const FaceAction*, const ChangeEventSet*, FaceControl* fc)
 {
     if ( !fc)
         return;
-    _ready.erase(fc);
-    if ( fc && isSelected(fc) && testReady(fc))
+    if ( testReady(fc))
         _ready.insert(fc);
+    else
+        _ready.erase(fc);
     setEnabled( testEnabled());
-}   // end respondToChange
+}   // end respondTo
 
 
 // public slot
 bool FaceAction::process( bool checked)
 {
-    if ( !_init)
-    {
-        std::cerr << "[ERROR] FaceTools::Action::FaceAction::process: FaceAction::init() not called!" << std::endl;
-        assert(_init);
-        return false;
-    }   // end if
-
+    _wmutex.lock();
+    assert(_init);
     setChecked(checked);
     const std::string dname = debugActionName();
     if ( displayDebugStatusProgression())
     {
         std::cerr << std::endl;
-        std::cerr << "==={" << dname << "}=== STARTING" << std::endl;
+        std::cerr << "=== " << dname << " === STARTING" << std::endl;
     }   // end if
 
+    bool rv = true;
     setEnabled(false);
     emit reportStarting( &_ready);
     if ( !doBeforeAction( _ready))  // Always in the GUI thread
     {
         if ( displayDebugStatusProgression())
-            std::cerr << "___{" << dname << "}___ CANCELLED" << std::endl;
+            std::cerr << "=== " << dname << " === CANCELLED" << std::endl;
         setEnabled( testEnabled());
-        emit reportFinished( NULL);
-        return false;   // Test for cancelled action
-    }   // end if
-
-    if ( !_doasync)
-    {
-        if ( displayDebugStatusProgression())
-            std::cerr << "---{" << dname << "}--- WORKING" << std::endl;
-        const bool rval = doAction( _ready);  // Blocks - doAction may change membership of _ready
-        doOnActionFinished( rval);
+        emit reportFinished();
+        rv = false;
+        _wmutex.unlock();
     }   // end if
     else
     {
-        if ( displayDebugStatusProgression())
-            std::cerr << "---{" << dname << "}--- WORKING (BG)" << std::endl;
-        FaceActionWorker *worker = new FaceActionWorker( this, &_ready);
-        connect( worker, &FaceActionWorker::workerFinished, this, &FaceAction::doOnActionFinished);
-        connect( worker, &FaceActionWorker::finished, worker, &QObject::deleteLater);
-        worker->start();   // Asynchronous start
+        if ( !isAsync())
+        {
+            if ( displayDebugStatusProgression())
+                std::cerr << "--- " << dname << " --- WORKING" << std::endl;
+            const bool rval = doAction( _ready);  // Blocks - doAction may change membership of _ready
+            doOnActionFinished( rval);
+        }   // end if
+        else
+        {
+            if ( displayDebugStatusProgression())
+                std::cerr << "--- " << dname << " --- WORKING (BG)" << std::endl;
+            FaceActionWorker *worker = new FaceActionWorker( this, &_ready);
+            connect( worker, &FaceActionWorker::workerFinished, this, &FaceAction::doOnActionFinished);
+            connect( worker, &FaceActionWorker::finished, worker, &QObject::deleteLater);
+            worker->start();   // Asynchronous start
+        }   // end else
     }   // end else
-    return true;
+
+    return rv;
 }   // end process
-
-
-// public
-void FaceAction::execAfter( FaceAction* fa)
-{
-    assert(fa);
-    _eacts.push_back(fa);
-}   // end execAfter
 
 
 // public
 bool FaceAction::process( const FaceControlSet& cset)
 { 
-    FaceControlSet rc = _controlled;    // Copy out
-    FaceControlSet rr = _ready;         // Copy out
-
-    _controlled.clear();
-    _ready.clear();
+    _ready.clear(); // Reset the ready set to that given
     for ( FaceControl* fc : cset)
-        setSelected( fc, true);
-    bool v = process();
-
-    // Restore the old controlled and ready sets
-    _controlled = rc;
-    _ready = rr;
-    return v;
+    {
+        if ( testReady(fc))
+            _ready.insert(fc);
+    }   // end for
+    return process();
 }   // end process
 
 
@@ -289,26 +290,93 @@ bool FaceAction::process( FaceControl* fc)
 }   // end process
 
 
+// private
+bool FaceAction::checkSequenceActions( std::unordered_set<const FaceAction*>& acts) const
+{
+    // If this action is already in the given set, the sequence of actions to be executed
+    // must have cycles which is not allowed.
+    if ( acts.count(this) > 0)
+    {
+        std::cerr << "[ERROR] FaceTools::Action::FaceAction::checkSequenceActions: "
+                  << "Sequence of actions to be executed contains more than one instance of "
+                  << debugActionName() << std::endl;
+        return false;
+    }   // end if
+
+    acts.insert(this);
+    bool rv = true;
+    for ( FaceAction* a : _sacts) // Consolidate sequence actions from this action.
+    {
+        rv = a->checkSequenceActions( acts);
+        if ( !rv)
+            break;
+    }   // end for
+    return rv;
+}   // end checkSequenceActions
+
+
+// private
+void FaceAction::collectChangeEvents( ChangeEventSet& ces)
+{
+    assert( _reportChanges);
+    _reportChanges = false;
+    ces.insert( _cevents.begin(), _cevents.end());
+    for ( FaceAction* a : _sacts)   // Collect change events (and set reporting to false) on child actions.
+        a->collectChangeEvents( ces);
+}   // end collectChangeEvents
+
+
 // private slot
 void FaceAction::doOnActionFinished( bool rval)
 {
     doAfterAction( _ready, rval);   // _ready membership may have changed
-    std::for_each( std::begin(_eacts), std::end(_eacts), [&](auto a){ a->process(_ready);}); // Chain to execAfter actions
-    progress(1.0f);
-    FaceControlSet frdy = _ready;   // Copy out the "finished" ready set for reportChanged to potential listening actions
-    recheckReadySet();              // Allows this action to enable/disable itself first
-    for ( FaceControl* fc : frdy)   // Allow "listening" FaceActions to update themselves on the affected FaceControls
-        emit reportChanged( fc);
-    if ( displayDebugStatusProgression())
+
+    // Start asynchronous actions. Since these will end at undefined times (notifying others of their
+    // completion via FaceActionManager), their change events are not consolidated into this action's.
+    for ( FaceAction* a : _aacts)
+        a->process(_ready);
+
+#ifndef NDEBUG
+    // Check if there a duplicate FaceAction instances anywhere in the sequential execution tree.
+    std::unordered_set<const FaceAction*> allacts;
+    bool checkOkay = checkSequenceActions( allacts);
+    assert( checkOkay);
+#endif
+
+    // Synchronous actions will queue their reports of change events, so if there are multiple instances
+    // of the same change event, it is only necessary to report it once and at the end of the sequence of
+    // follow-on actions. Function collectChangeEvents collects the change events from the sequence of
+    // actions and sets them all to refrain from reporting their completed actions.
+    ChangeEventSet ces;
+    if ( _reportChanges)
     {
-        const std::string dname = debugActionName();
-        std::cerr << "___{" << dname << "}___ FINISHED" << std::endl;
+        ces = changeEvents(); // Copy out
+        for ( FaceAction* a : _sacts)
+            a->collectChangeEvents( ces);   // Also sets _reportChanges to false
     }   // end if
-    emit reportFinished( &frdy);   // Used by FaceActionManager to call setEnabled on all actions registered with it.
+
+    for ( FaceAction* a : _sacts)
+        a->process(_ready);
+
+    // ces won't be empty only if this is the 'parent' action.
+    if ( !ces.empty())
+    {
+        for ( FaceControl* fc : _ready) // Notify other actions of the changes via the FaceActionManager.
+            emit reportChanges( ces, fc);
+    }   // end if
+
+    _reportChanges = true;
+
+    progress(1.0f);
+    if ( displayDebugStatusProgression())
+        std::cerr << "=== " << debugActionName() << " === FINISHED" << std::endl;
+
+    _wmutex.unlock();
+    emit reportFinished();
 }   // end doOnActionFinished
 
 
-// protected
+// protected (default)
 void FaceAction::doAfterAction( const FaceControlSet& fst, bool)
 {
     const FaceModelSet& fms = fst.models(); // The models

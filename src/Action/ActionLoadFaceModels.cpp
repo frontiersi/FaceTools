@@ -52,5 +52,5 @@ bool ActionLoadFaceModels::doBeforeAction( FaceControlSet&)
 }   // end doBeforeAction
 
 
-bool ActionLoadFaceModels::doAction( FaceControlSet&/*ignored*/) { return _loadHelper->loadModels() > 0;}
-void ActionLoadFaceModels::doAfterAction( const FaceControlSet&, bool success) { _loadHelper->showLoadErrors();}
+bool ActionLoadFaceModels::doAction( FaceControlSet&) { return _loadHelper->loadModels() > 0;}
+void ActionLoadFaceModels::doAfterAction( const FaceControlSet&, bool) { _loadHelper->showLoadErrors();}

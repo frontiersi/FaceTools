@@ -15,51 +15,65 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <FaceTools.h>
-#include <OutlinesView.h>
+#include <CuboidView.h>
+#include <FaceModel.h>
 #include <VtkActorCreator.h>    // RVTK
-#include <VtkTools.h>           // RVTK
 #include <vtkProperty.h>
+#include <vtkCubeSource.h>
+#include <vtkPolyDataMapper.h>
 #include <algorithm>
-#include <cassert>
-using FaceTools::Vis::OutlinesView;
+using FaceTools::Vis::CuboidView;
 using FaceTools::ModelViewer;
+using FaceTools::FaceModel;
 
 
 // public
-OutlinesView::OutlinesView( const RFeatures::ObjModelBoundaryFinder& boundaries, float lw, float r, float g, float b)
-    : _viewer(NULL), _visible(false)
+CuboidView::CuboidView( const FaceModel* fm, float lw, float r, float g, float b)
+    : _viewer(NULL), _visible(false), _pickable(false)
 {
-    const int nbs = (int)boundaries.size();
-    assert( nbs > 0);
-    const RFeatures::ObjModel* model = boundaries.model();
-
-    for ( int i = 0; i < nbs; ++i)
+    for ( const cv::Vec6d& cb : fm->bounds())
     {
-        // Get the vertex data for boundary i.
-        const std::list<int>& loop = boundaries.boundary(i);
-        std::vector<cv::Vec3f> line;
-        std::for_each( std::begin(loop), std::end(loop), [&](int v){ line.push_back(model->vtx(v));});
+        vtkSmartPointer<vtkCubeSource> source = vtkSmartPointer<vtkCubeSource>::New();
+        source->SetBounds( &cb[0]);
 
-        // Create an actor for the outer boundary on the model.
-        vtkSmartPointer<vtkActor> actor = RVTK::VtkActorCreator::generateLineActor( line, true);  // Joins ends
+        vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+        mapper->SetInputConnection( source->GetOutputPort());
+        vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+        actor->SetMapper(mapper);
+
         actor->GetProperty()->SetRepresentationToWireframe();
         actor->GetProperty()->SetRenderLinesAsTubes(false);
         actor->GetProperty()->SetLineWidth( lw);
         actor->GetProperty()->SetColor( r, g, b);
-        _actors.insert(actor);
+
+        // Don't want cuboid actor to be affected by directional lighting
+        actor->GetProperty()->SetAmbient( 1.0);
+        actor->GetProperty()->SetDiffuse( 0.0);
+        actor->GetProperty()->SetSpecular( 0.0);
+
+        _actors.push_back(actor);
     }   // end for
 }   // end ctor
 
 
-OutlinesView::~OutlinesView()
+CuboidView::~CuboidView()
 {
     setVisible( false, _viewer);
 }   // end dtor
 
 
+void CuboidView::setPickable( bool v)
+{
+    std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ a->SetPickable(v);});
+    _pickable = v;
+}   // end setPickable
+
+
+bool CuboidView::pickable() const { return _pickable;}
+
+
 // public
-void OutlinesView::setVisible( bool visible, ModelViewer* viewer)
+void CuboidView::setVisible( bool visible, ModelViewer* viewer)
 {
     if ( _viewer != viewer && _viewer)
         std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ _viewer->remove(a);});
@@ -74,10 +88,3 @@ void OutlinesView::setVisible( bool visible, ModelViewer* viewer)
         _visible = visible;
     }   // end if
 }   // end setVisible
-
-
-// public
-void OutlinesView::transform( const vtkMatrix4x4* vm)
-{
-    std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ RVTK::transform(a, vm);});
-}   // end transform

@@ -24,24 +24,9 @@
  * Upon the load of each plugin, the appropriate signal is fired and the dialog is
  * populated with the discovered plugins. Plugins are managed to communicate with one
  * another based on their signalling of milestones through their actions.
- *
- * FaceAction instances that are registered with the FaceActionManager call the following
- * functions immediately after entering the process function (either directly or by
- * triggering the exposed QAction) (signals are shown here with the EMIT keyword):
- *
- * EMIT reportStarting()
- * started = doBeforeAction()
- * IF started THEN
- *    v = doAction( readySet)
- *    doAfterAction( readySet, v)
- *    FOR FaceControls f IN readySet
- *       EMIT reportChanged(f)
- *    ENDFOR
- * ENDIF
- * EMIT reportFinished()
  */
 
-#include "FaceAction.h"
+#include "ActionSelect.h"
 #include "FaceActionGroup.h"
 #include <PluginsDialog.h>      // QTools
 
@@ -56,35 +41,28 @@ public:
 
     void loadPlugins();                     // Call once after construction and connecting slots to signals
     QDialog* dialog() { return _pdialog;}   // Get a standard dialog which shows the loaded plugins.
-    QAction* addAction( FaceAction*);       // Returns the added action's internal QAction if added okay (duplicate instances not allowed).
+    QAction* addAction( FaceAction*);       // Return added action's QAction if added okay (duplicates not allowed).
 
-    void printActionInfo( std::ostream& os) const;
-
-public slots:
-    void setSelected( FaceControl*, bool);  // Forwards through to all actions - always call in GUI thread!
-    void purge( FaceControl*);              // Cause all FaceActions to discard any data concerning the FaceControl.
+    // Return the selector for programmatic selection of FaceControl instances.
+    ActionSelect* selector() { return &_selector;}
 
 signals:
-    // Signal that the given action is about to start or has just finished
-    // operating over the given set of FaceControl instances. The reportFinished
-    // signal is only ever emitted if the parameter action was actually performed
-    // (no signals are emitted for cancelled actions).
-    void reportStarting( const FaceAction&, const FaceControlSet&);
-    void reportFinished( const FaceAction&, const FaceControlSet&);
-
     void addedActionGroup( const FaceActionGroup&);
     void addedAction( const FaceAction&);
 
 private slots:
     void addPlugin( QTools::PluginInterface*);
     void doOnActionStarting( const FaceControlSet*);
-    void doOnActionFinished( const FaceControlSet*);
+    void doOnActionFinished();
+    void doOnReportChanges( const ChangeEventSet&, FaceControl*);
+    void doOnSelect( FaceControl*, bool);
+    void doOnRemove( FaceControl*);
 
 private:
+    ActionSelect _selector;
     QTools::PluginsDialog *_pdialog;
     std::unordered_set<FaceAction*> _actions;
-    void connectActionPair( FaceAction*, FaceAction*);
-    void printActionComms( std::ostream&, const FaceAction*) const;
+
     FaceActionManager( const FaceActionManager&);   // No copy
     void operator=( const FaceActionManager&);      // No copy
 };  // end class

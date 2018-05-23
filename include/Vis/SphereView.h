@@ -47,9 +47,6 @@ public:
     void setRadius( double);                            // Set radius
     double radius() const;                              // Get radius
 
-    void setVisible( bool, ModelViewer* viewer);        // Add/remove from viewer
-    bool isVisible() const;                             // Returns true iff shown
-
     void setCaption( const std::string&);               // Set highlight caption
     void highlight( bool);                              // Show highlighted (only if already visible)
     bool isHighlighted() const;                         // Returns true if highlighted
@@ -57,6 +54,9 @@ public:
     bool pointedAt( const QPoint&) const;               // Returns true if this actor under the given coordinates.
     bool isProp( const vtkProp*) const;                 // Returns true if given prop is this actor.
     const vtkProp* prop() const { return _actor;}
+
+    bool isVisible() const;                             // Returns true iff shown
+    void setVisible( bool, ModelViewer* viewer);        // Add/remove from viewer
 
 private:
     ModelViewer* _viewer;

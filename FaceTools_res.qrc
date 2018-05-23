@@ -18,8 +18,6 @@
     <file alias="SURFACE_VIS">res/icons/icons8-mesh-filled-80.png</file>
     <file alias="WIREFRAME_VIS">res/icons/icons8-mesh-80.png</file>
     <file alias="POINTS_VIS">res/icons/icons8-mesh-dots-80.png</file>
-
-    <file alias="LANDMARKS">res/icons/icons8-landmarks.png</file>
 </qresource>
 </RCC>
 

@@ -34,6 +34,7 @@ protected slots:
     bool testReady( FaceControl*) override;
     bool doAction( FaceControlSet&) override;
     void doAfterAction( const FaceControlSet&, bool) override;
+    void respondTo( const FaceAction*, const ChangeEventSet*, FaceControl*) override;
 
 private:
     FileIO::FaceModelManager *_fmm;

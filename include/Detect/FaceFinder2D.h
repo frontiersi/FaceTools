@@ -18,6 +18,10 @@
 #ifndef FACE_TOOLS_DETECT_FACE_FINDER_2D_H
 #define FACE_TOOLS_DETECT_FACE_FINDER_2D_H
 
+#ifdef _WIN32
+#pragma warning( disable : 4251)
+#endif
+
 #include "FaceTools_Export.h"
 #include <opencv2/opencv.hpp>
 typedef unsigned char byte;

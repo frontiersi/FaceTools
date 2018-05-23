@@ -32,7 +32,8 @@ namespace {
 
 void writeFaceModel( const FaceModel* fm, const std::string& objfname, PTree& rnode)
 {
-    rnode.put( "objfilename", boost::filesystem::path( objfname).filename());   // Without path info
+    const std::string relfname = boost::filesystem::path( objfname).filename().string(); // Relative filepath
+    rnode.put( "objfilename", relfname);
     rnode.put( "description", fm->description());
     rnode.put( "source", fm->source());
     rnode << fm->orientation();

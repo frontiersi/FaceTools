@@ -32,16 +32,17 @@ using FaceTools::Landmark;
 LandmarkSetView::LandmarkSetView( const LandmarkSet& lset, double r)
     : _lset(lset), _lmrad(r), _viewer(NULL)
 {
-    reset();
+    for ( int lm : _lset.ids())
+    {
+        const Landmark* lmk = _lset.get(lm);
+        _lviews[lm] = new SphereView( lmk->pos, _lmrad);
+        _lviews[lm]->setCaption( lmk->name);
+    }   // end foreach
 }   // end ctor
 
 
 // public
-LandmarkSetView::~LandmarkSetView() { erase();}
-
-
-// public
-void LandmarkSetView::erase()
+LandmarkSetView::~LandmarkSetView()
 {
     for ( const auto& lm : _lviews)
     {
@@ -49,23 +50,7 @@ void LandmarkSetView::erase()
         delete lm.second;
     }   // end foreach
     _lviews.clear();
-}   // end erase
-
-
-// public
-void LandmarkSetView::reset()
-{
-    std::cerr << " Resetting LandmarkSetView from data" << std::endl;
-    const bool shown = isVisible();
-    erase();
-    for ( int lm : _lset.ids())
-    {
-        const Landmark* lmk = _lset.get(lm);
-        _lviews[lm] = new SphereView( lmk->pos, _lmrad);
-        _lviews[lm]->setCaption( lmk->name);
-    }   // end foreach
-    setVisible(shown, _viewer);
-}   // end reset
+}   // end dtor
 
 
 // public

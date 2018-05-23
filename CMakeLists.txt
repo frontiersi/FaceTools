@@ -39,12 +39,13 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionMapSurfaceData.h"
     "${INCLUDE_ACTION_DIR}/ActionMarquee.h"
     "${INCLUDE_ACTION_DIR}/ActionOrientCameraToFace.h"
+    "${INCLUDE_ACTION_DIR}/ActionPostLoadFaceModel.h"
     "${INCLUDE_ACTION_DIR}/ActionResetCamera.h"
     "${INCLUDE_ACTION_DIR}/ActionSaveScreenshot.h"
     "${INCLUDE_ACTION_DIR}/ActionSaveFaceModels.h"
     "${INCLUDE_ACTION_DIR}/ActionSaveAsFaceModel.h"
+    "${INCLUDE_ACTION_DIR}/ActionSelect.h"
     "${INCLUDE_ACTION_DIR}/ActionSetFocus.h"
-    "${INCLUDE_ACTION_DIR}/ActionShowSelected.h"
     "${INCLUDE_ACTION_DIR}/ActionTransformToStandardPosition.h"
     "${INCLUDE_ACTION_DIR}/ActionVisualise.h"
     "${INCLUDE_ACTION_DIR}/CameraWorker.h"
@@ -66,8 +67,9 @@ set( QOBJECTS
     "${INCLUDE_REPORT_DIR}/ReportInterface.h"
 
     "${INCLUDE_VIS_DIR}/BaseVisualisation.h"
-    "${INCLUDE_VIS_DIR}/BoundaryVisualisation.h"
+    "${INCLUDE_VIS_DIR}/BoundingVisualisation.h"
     "${INCLUDE_VIS_DIR}/LandmarksVisualisation.h"
+    "${INCLUDE_VIS_DIR}/OutlinesVisualisation.h"
     "${INCLUDE_VIS_DIR}/VisualisationInterface.h"
     "${INCLUDE_VIS_DIR}/ScalarVisualisation.h"
 
@@ -103,6 +105,7 @@ set( INCLUDE_FILES
     "${INCLUDE_FILEIO_DIR}/FaceModelFileHandlerMap.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelManager.h"
 
+    "${INCLUDE_VIS_DIR}/CuboidView.h"
     "${INCLUDE_VIS_DIR}/FaceView.h"
     "${INCLUDE_VIS_DIR}/LandmarkSetView.h"
     "${INCLUDE_VIS_DIR}/LegendScalarColourRangeMapper.h"
@@ -129,7 +132,6 @@ set( INCLUDE_FILES
 
 set( SRC_FILES
     ${SRC_DIR}/${PROJECT_NAME}
-    ${SRC_DIR}/Action/ChangeEvents
     ${SRC_DIR}/Action/ActionCloseAllFaceModels
     ${SRC_DIR}/Action/ActionCloseFaceModels
     ${SRC_DIR}/Action/ActionCrop
@@ -141,13 +143,14 @@ set( SRC_FILES
     ${SRC_DIR}/Action/ActionLoadFaceModels
     ${SRC_DIR}/Action/ActionMapSurfaceData
     ${SRC_DIR}/Action/ActionMarquee
+    ${SRC_DIR}/Action/ActionPostLoadFaceModel
     ${SRC_DIR}/Action/ActionSaveFaceModels
     ${SRC_DIR}/Action/ActionSaveAsFaceModel
     ${SRC_DIR}/Action/ActionOrientCameraToFace
     ${SRC_DIR}/Action/ActionResetCamera
     ${SRC_DIR}/Action/ActionSaveScreenshot
+    ${SRC_DIR}/Action/ActionSelect
     ${SRC_DIR}/Action/ActionSetFocus
-    ${SRC_DIR}/Action/ActionShowSelected
     ${SRC_DIR}/Action/ActionTransformToStandardPosition
     ${SRC_DIR}/Action/ActionVisualise
     ${SRC_DIR}/Action/CameraWorker
@@ -178,11 +181,13 @@ set( SRC_FILES
     #${SRC_DIR}/Report/BaseReportTemplate
 
     ${SRC_DIR}/Vis/BaseVisualisation
-    ${SRC_DIR}/Vis/BoundaryVisualisation
+    ${SRC_DIR}/Vis/BoundingVisualisation
+    ${SRC_DIR}/Vis/CuboidView
     ${SRC_DIR}/Vis/FaceView
     ${SRC_DIR}/Vis/LandmarkSetView
     ${SRC_DIR}/Vis/LandmarksVisualisation
     ${SRC_DIR}/Vis/OutlinesView
+    ${SRC_DIR}/Vis/OutlinesVisualisation
     ${SRC_DIR}/Vis/LegendScalarColourRangeMapper
     ${SRC_DIR}/Vis/ScalarVisualisation
     ${SRC_DIR}/Vis/SphereView

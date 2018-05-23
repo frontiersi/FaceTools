@@ -62,15 +62,15 @@ void FaceView::rebuild()
     // Remove all actors first before building new ones
     if ( _viewer)
         std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](auto v){v->removeActors(_fc);});
-    std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](auto v){v->burn(_fc);});
+    std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](auto v){v->purge(_fc);});
 
     const ObjModel* model = _fc->data()->cmodel();
     RVTK::VtkActorCreator ac;
     _fmap.clear();  // Create the surface actor
     ac.setObjToVTKUniqueFaceMap( &_fmap);
     _sactor = ac.generateSurfaceActor( model);
-    _tactor = NULL;
 
+    _tactor = NULL;
     if ( model->getNumMaterials() == 1) // Create the textured actor
     {
         std::vector<vtkSmartPointer<vtkActor> > tactors;

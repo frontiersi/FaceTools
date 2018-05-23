@@ -18,7 +18,6 @@
 #include <LandmarksVisualisation.h>
 #include <ActionVisualise.h>
 #include <FaceModelViewer.h>
-#include <ChangeEvents.h>
 #include <FaceControl.h>
 #include <FaceModel.h>
 #include <algorithm>
@@ -26,6 +25,7 @@
 using FaceTools::Vis::LandmarksVisualisation;
 using FaceTools::Vis::LandmarkSetView;
 using FaceTools::Action::ActionVisualise;
+using FaceTools::Action::FaceAction;
 using FaceTools::ModelViewer;
 using FaceTools::FaceControl;
 using FaceTools::FaceModel;
@@ -49,7 +49,7 @@ LandmarksVisualisation::LandmarksVisualisation( const QString& dname, const QIco
 LandmarksVisualisation::~LandmarksVisualisation()
 {
     while (!_lviews.empty())
-        burn(_lviews.begin()->first);
+        purge(_lviews.begin()->first);
 }   // end dtor
 
 
@@ -111,20 +111,10 @@ void LandmarksVisualisation::refreshLandmark( const FaceControl* fc, int lmid)
 
 
 // protected
-void LandmarksVisualisation::setAction( ActionVisualise* av)
+void LandmarksVisualisation::respondTo( const FaceAction*, const FaceControl* fc)
 {
-    using namespace FaceTools::Action;
-    av->addRespondTo(LANDMARK_ADDED);
-    av->addRespondTo(LANDMARK_DELETED);
-    av->addRespondTo(LANDMARK_CHANGED);
-}   // end setAction
-
-
-// protected
-void LandmarksVisualisation::respondTo( const FaceControl* fc)
-{
-    if ( _lviews.count(fc) > 0)
-        _lviews.at(fc)->reset();
+    purge(fc);
+    apply(fc);
 }   // end respondTo
 
 
@@ -145,11 +135,11 @@ void LandmarksVisualisation::transform( const FaceControl* fc, const vtkMatrix4x
 
 
 // protected
-void LandmarksVisualisation::burn( const FaceControl* fc)
+void LandmarksVisualisation::purge( const FaceControl* fc)
 {
     if (_lviews.count(fc) > 0)
     {
         delete _lviews.at(fc);
         _lviews.erase(fc);
     }   // end if
-}   // end burn
+}   // end purge

@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_VIS_BOUNDARY_VISUALISATION_H
-#define FACE_TOOLS_VIS_BOUNDARY_VISUALISATION_H
+#ifndef FACE_TOOLS_VIS_BOUNDING_VISUALISATION_H
+#define FACE_TOOLS_VIS_BOUNDING_VISUALISATION_H
 
 #include "BaseVisualisation.h"
 #include "SphereView.h"
@@ -24,12 +24,12 @@
 namespace FaceTools {
 namespace Vis {
 
-class FaceTools_EXPORT BoundaryVisualisation : public BaseVisualisation
+class FaceTools_EXPORT BoundingVisualisation : public BaseVisualisation
 { Q_OBJECT
 public:
-    BoundaryVisualisation( const QString& dname="Boundary",
+    BoundingVisualisation( const QString& dname="Bounding",
                            const QIcon& icon=QIcon(":/icons/BOUNDARY"));
-    ~BoundaryVisualisation() override;
+    ~BoundingVisualisation() override;
 
     bool isExclusive() const override { return false;}
     bool isAvailable( const FaceModel*) const override;
@@ -48,7 +48,7 @@ public:
 
 protected:
     void transform( const FaceControl*, const vtkMatrix4x4*) override;
-    void burn( const FaceControl*) override;
+    void purge( const FaceControl*) override;
 
 private:
     std::unordered_map<const FaceControl*, SphereView*> _views;

@@ -54,7 +54,7 @@ public:
     bool isAvailable( FaceControl*) const;  // Returns true iff model was added and not yet removed.
 
     const FaceControlSet& selected() const { return _selected;}     // Returns selected view/control instances.
-    const FaceControlSet& available() const { return _available;}   // Returns the view/control instances available to select.
+    const FaceControlSet& available() const { return _available;}   // Returns view/control instances available to select.
 
 signals:
     void onSelected( FaceControl*, bool);   // Fired selection / deselection of a model.

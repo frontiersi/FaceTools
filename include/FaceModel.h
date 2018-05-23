@@ -48,11 +48,17 @@ public:
     void transform( const cv::Matx44d&);
 
     RFeatures::ObjModel::Ptr model() const { return _minfo->model();}
-    const RFeatures::ObjModel* cmodel() const { return _minfo->model().get();}
+    const RFeatures::ObjModel* cmodel() const { return _minfo->cmodel();}
+
+    // Returns the boundary values for each of the model's components as
+    // [xmin,xmax,ymin,ymax,zmin,zmax].
+    const std::vector<cv::Vec6d>& bounds() const { return _cbounds;}
 
     // Get constant references to the model's KD-tree and info.
+    // Note that the alias returned from these functions should not
+    // be cached since updateData() will recreate these data structures.
     const RFeatures::ObjModelKDTree& kdtree() const;
-    const RFeatures::ObjModelInfo& info() const;
+    const RFeatures::ObjModelInfo* info() const;
 
     LandmarkSet& landmarks() { return _landmarks;}  // For making modifications
     const LandmarkSet& landmarks() const { return _landmarks;}
@@ -75,6 +81,8 @@ private:
     RFeatures::Orientation _orientation;
     RFeatures::ObjModelInfo::Ptr _minfo;
     RFeatures::ObjModelKDTree::Ptr _kdtree;
+    std::vector<cv::Vec6d> _cbounds;    // Per component bounds
+
     std::unordered_set<FaceControl*> _fcs;  // Associated FaceControls
     bool _flagViewUpdate;
 

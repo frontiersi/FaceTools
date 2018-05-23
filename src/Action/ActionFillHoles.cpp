@@ -32,10 +32,7 @@ using FaceTools::FaceModel;
 ActionFillHoles::ActionFillHoles( const QString& dn, const QIcon& ico, QProgressBar* pb)
     : FaceAction(dn, ico, true/*disable before other*/)
 {
-    addChangeTo( MODEL_GEOMETRY_CHANGED);
-    addRespondTo( LANDMARK_ADDED);
-    addRespondTo( LANDMARK_DELETED);
-    addRespondTo( LANDMARK_CHANGED);
+    addChangeTo( DATA_CHANGE);
     if ( pb)
         setAsync(true, QTools::QProgressUpdater::create(pb));
 }   // end ctor
@@ -47,21 +44,21 @@ bool ActionFillHoles::doAction( FaceControlSet& rset)
     FaceControl* fc = rset.first();
     FaceModel* fm = fc->data();
 
-    const RFeatures::ObjModelInfo& info = fm->info();
+    const RFeatures::ObjModelInfo* info = fm->info();
     RFeatures::ObjModelHoleFiller hfiller( fm->model());
-    int nc = (int)info.components().size();
+    int nc = (int)info->components().size();
     for ( int c = 0; c < nc; ++c)
     {
-        const IntSet* bidxs = info.components().cboundaries(c);
+        const IntSet* bidxs = info->components().cboundaries(c);
         if ( bidxs == NULL) // Cannot fill holes on a component without boundaries
             continue;
 
         IntSet hbs = *bidxs;   // Copy out the boundary indices for the component
-        hbs.erase( info.components().lboundary(c));    // Erase the longest boundary (which is very likely the outer boundary)
+        hbs.erase( info->components().lboundary(c));    // Erase the longest boundary (which is very likely the outer boundary)
 
         for ( int i : hbs)
         {
-            const std::list<int>& blist = info.boundaries().boundary(i);
+            const std::list<int>& blist = info->boundaries().boundary(i);
             IntSet newPolys;
             hfiller.fillHole( blist, &newPolys);
             std::cerr << " Filled hole (boundary " << i << ") on component " << c << " with " << newPolys.size() << " polygons" << std::endl;

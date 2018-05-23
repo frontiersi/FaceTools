@@ -15,34 +15,42 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_SHOW_SELECTED_H
-#define FACE_TOOLS_ACTION_SHOW_SELECTED_H
+#ifndef FACE_TOOLS_CUBOID_VIEW_H
+#define FACE_TOOLS_CUBOID_VIEW_H
 
 /**
- * Responds to setSelected by showing or hiding a boundary around the given FaceControl.
- * Does not implement doAction().
+ * Show a transparent cuboid around each component.
  */
 
-#include "FaceAction.h"
-#include <OutlinesView.h>
-#include <unordered_map>
+#include <ModelViewer.h>
+#include <Hashing.h>
 
 namespace FaceTools {
-namespace Action {
+class FaceModel;
 
-class FaceTools_EXPORT ActionShowSelected : public FaceAction
-{ Q_OBJECT
+namespace Vis {
+
+class FaceTools_EXPORT CuboidView
+{
 public:
-    ActionShowSelected();
+    CuboidView( const FaceModel*, float lineWidth=2.0f, float red=0.5f, float green=0.2f, float blue=1.0f);
+    ~CuboidView();
 
-protected slots:
-    void tellSelected( FaceControl*, bool) override;   // Show or hide outline around given FaceControl
+    // Not pickable by default.
+    void setPickable( bool);
+    bool pickable() const;
 
-    // Recheck selection visualisation for the given FaceControl instance (which may have changed).
-    void respondToChange( FaceControl*) override;
+    bool isVisible() const { return _visible;}
+    void setVisible( bool, ModelViewer* viewer);
 
 private:
-    std::unordered_map<FaceModel*, Vis::OutlinesView*> _outlines;  // Per model selection outlines.
+    ModelViewer *_viewer;
+    bool _visible;
+    bool _pickable;
+    std::vector<vtkSmartPointer<vtkActor> > _actors;   // The cuboid actors (one per component)
+
+    CuboidView( const CuboidView&);     // No copy
+    void operator=( const CuboidView&); // No copy
 };  // end class
 
 }   // end namespace

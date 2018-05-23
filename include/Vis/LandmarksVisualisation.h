@@ -27,9 +27,7 @@ namespace Vis {
 class FaceTools_EXPORT LandmarksVisualisation : public BaseVisualisation
 { Q_OBJECT
 public:
-    LandmarksVisualisation( const QString &dname="Landmarks",
-                            const QIcon &icon=QIcon(":/icons/LANDMARKS"),
-                            const QKeySequence &keys=QKeySequence(Qt::Key_L));
+    LandmarksVisualisation( const QString &dname, const QIcon &icon, const QKeySequence &keys);
     ~LandmarksVisualisation() override;
 
     bool isExclusive() const override { return false;}
@@ -55,10 +53,10 @@ public slots:
     void refreshLandmark( const FaceControl*, int);
 
 protected:
-    void setAction( Action::ActionVisualise*) override;
-    void respondTo( const FaceControl*) override;
+    bool respondData() const override { return true;}
+    void respondTo( const Action::FaceAction*, const FaceControl*) override;
     void transform( const FaceControl*, const vtkMatrix4x4*) override;
-    void burn( const FaceControl*) override;
+    void purge( const FaceControl*) override;
 
 private:
     std::unordered_map<const FaceControl*, LandmarkSetView*> _lviews;

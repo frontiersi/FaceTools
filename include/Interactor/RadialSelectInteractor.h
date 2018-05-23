@@ -24,7 +24,7 @@
  */
 
 #include "ModelViewerInteractor.h"
-#include <BoundaryVisualisation.h>
+#include <BoundingVisualisation.h>
 
 namespace FaceTools {
 namespace Interactor {
@@ -33,12 +33,12 @@ class FaceEntryExitInteractor;
 class FaceTools_EXPORT RadialSelectInteractor : public ModelViewerInteractor 
 { Q_OBJECT
 public:
-    explicit RadialSelectInteractor( Vis::BoundaryVisualisation*);
+    explicit RadialSelectInteractor( Vis::BoundingVisualisation*);
     ~RadialSelectInteractor() override;
 
 signals:
     // Signals that notify client of the parameters needed to update
-    // the BoundaryVisualisation for the given FaceControl.
+    // the BoundingVisualisation for the given FaceControl.
     void onSetNewCentre( FaceControl*, const cv::Vec3f&);
     void onSetNewRadius( FaceControl*, double);
 
@@ -53,7 +53,7 @@ private:
     bool mouseWheelForward( const QPoint&) override;
     bool mouseWheelBackward( const QPoint&) override;
 
-    Vis::BoundaryVisualisation *_bvis;
+    Vis::BoundingVisualisation *_bvis;
     FaceEntryExitInteractor *_feei;
     FaceControl *_fc;
     bool _move;

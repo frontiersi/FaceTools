@@ -33,15 +33,14 @@ public:
     // be the default applied to all newly loaded models.
     ActionVisualise( Vis::BaseVisualisation*, bool isDefault=false);
 
-    QString getDisplayName() const override { return _vint->getDisplayName();}
-    const QIcon* getIcon() const override { return _vint->getIcon();}
     QWidget* getWidget() const override { return _vint->getWidget();}
 
 protected slots:
     bool testReady( FaceControl*) override;         // Applies default visualisation if none set yet.
+    bool testChecked( FaceControl*) override;
     bool doAction( FaceControlSet&) override;       // Apply the visualisation.
-    void respondToChange( FaceControl*) override;   // Update visualisation in response to other changes.
-    void burn( const FaceControl*) override;        // Ensure that cached visualisation data is expunged.
+    void respondTo( const FaceAction*, const ChangeEventSet*, FaceControl*) override;   // Update visualisation in response.
+    void purge( const FaceControl*) override;       // Ensure that cached visualisation data is expunged.
 
 private:
     Vis::BaseVisualisation *_vint; // The associated visualisation delegate

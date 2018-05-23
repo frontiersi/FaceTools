@@ -21,7 +21,7 @@
 /**
  * Store and manage scalar colour mappings for a given vtkActor (Mapper).
  * Colours are mapped to the minimum, zero, and maximum values of a
- * scalar range. If the curret setting 
+ * scalar range. Used by ScalarVisualisation.
  */
 
 #include <ModelViewer.h>

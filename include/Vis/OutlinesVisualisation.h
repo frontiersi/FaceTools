@@ -15,39 +15,36 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_OUTLINES_VIEW_H
-#define FACE_TOOLS_OUTLINES_VIEW_H
+#ifndef FACE_TOOLS_VIS_OUTLINES_VISUALISATION_H
+#define FACE_TOOLS_VIS_OUTLINES_VISUALISATION_H
 
-/**
- * Creates outline actors for a model's boundaries.
- */
-
-#include <ModelViewer.h>
-#include <Hashing.h>
-#include <ObjModelBoundaryFinder.h>   // RFeatures
+#include "BaseVisualisation.h"
+#include <unordered_map>
 
 namespace FaceTools {
 namespace Vis {
+class OutlinesView;
 
-class FaceTools_EXPORT OutlinesView
-{
+class FaceTools_EXPORT OutlinesVisualisation : public BaseVisualisation
+{ Q_OBJECT
 public:
-    OutlinesView( const RFeatures::ObjModelBoundaryFinder&,
-            float lineWidth=4.0f, float red=1.0f, float green=0.2f, float blue=0.2f);
-    ~OutlinesView();
+    OutlinesVisualisation( const QString &dname, const QIcon &icon, const QKeySequence &keys);
+    ~OutlinesVisualisation() override;
 
-    bool isVisible() const { return _visible;}
-    void setVisible( bool, ModelViewer* viewer);
+    bool isExclusive() const override { return false;}
 
-    void transform( const vtkMatrix4x4*);
+    void apply( const FaceControl*) override;
+    void addActors( const FaceControl*) override;
+    void removeActors( const FaceControl*) override;
+
+protected:
+    bool respondData() const override { return true;}
+    void respondTo( const Action::FaceAction*, const FaceControl*) override;
+    void transform( const FaceControl*, const vtkMatrix4x4*) override;
+    void purge( const FaceControl*) override;
 
 private:
-    ModelViewer *_viewer;
-    bool _visible;
-    std::unordered_set<vtkSmartPointer<vtkActor> > _actors;   // The line actors forming the boundary
-
-    OutlinesView( const OutlinesView&);     // No copy
-    void operator=( const OutlinesView&);   // No copy
+    std::unordered_map<const FaceControl*, OutlinesView*> _views;
 };  // end class
 
 }   // end namespace

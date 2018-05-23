@@ -91,12 +91,12 @@ void WireframeVisualisation::apply( const FaceControl* fc)
 
 void SurfaceVisualisation::addActors( const FaceControl* fc) { fc->viewer()->add(fc->view()->surfaceActor());}
 void SurfaceVisualisation::removeActors( const FaceControl* fc) { fc->viewer()->remove(fc->view()->surfaceActor());}
-void SurfaceVisualisation::onSelected( const FaceControl* fc) { fc->viewer()->enableFloodLights(false);}
+//void SurfaceVisualisation::onSelected( const FaceControl* fc) { fc->viewer()->enableFloodLights(false);}
 bool SurfaceVisualisation::belongs( const vtkProp *p, const FaceControl* fc) const { return fc->view()->surfaceActor() == p;}
 
 void TextureVisualisation::addActors( const FaceControl* fc) { fc->viewer()->add(fc->view()->textureActor());}
 void TextureVisualisation::removeActors( const FaceControl* fc) { fc->viewer()->remove(fc->view()->textureActor());}
-void TextureVisualisation::onSelected( const FaceControl* fc) { fc->viewer()->enableFloodLights(true);}
+//void TextureVisualisation::onSelected( const FaceControl* fc) { fc->viewer()->enableFloodLights(true);}
 bool TextureVisualisation::belongs( const vtkProp *p, const FaceControl* fc) const { return fc->view()->textureActor() == p;}
 
 bool TextureVisualisation::isAvailable( const FaceModel* fm) const { return fm->model()->getNumMaterials() == 1;}

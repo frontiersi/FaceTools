@@ -33,13 +33,8 @@ using FaceTools::FaceModel;
 ActionTransformToStandardPosition::ActionTransformToStandardPosition( const QString &dn, const QIcon& ico)
     : FaceAction( dn, ico, true/*disable before other*/)
 {
-    addChangeTo( MODEL_TRANSFORMED);
-    addChangeTo( MODEL_ORIENTATION_CHANGED);
-
-    // Default (parent) implementation of respondToChange adequate for these events.
-    addRespondTo( LANDMARK_ADDED);
-    addRespondTo( LANDMARK_DELETED);
-    addRespondTo( LANDMARK_CHANGED);
+    addChangeTo( DATA_CHANGE);
+    addRespondTo( DATA_CHANGE);
 }   // end ctor
 
 

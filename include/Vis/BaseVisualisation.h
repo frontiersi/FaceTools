@@ -30,12 +30,14 @@
  */
 
 #include "VisualisationInterface.h"
+#include <ChangeEvents.h>
 #include <vtkMatrix4x4.h>
 #include <vtkProp.h>
 
 namespace FaceTools {
 namespace Action {
 class ActionVisualise;
+class FaceAction;
 }   // end namespace
 
 namespace Vis {
@@ -71,26 +73,18 @@ public:
     // void removeActors( const FaceControl*)
 
 protected:
-    // Called from within ActionVisualise constructor to set self on this visualisation.
-    // Derived types may call addChangeTo and addRespondTo functions of the ActionVisualise
-    // to expand the set of ChangeEvents that this visualisation changes / responds to.
-    // Note that it is not necessary to add response to MODEL_GEOMETRY_CHANGED or
-    // MODEL_TRANSFORMED; MODEL_GEOMETRY_CHANGED is handled within ActionVisualise
-    // and any action that transforms the data will call the FaceView::transform function
-    // which will be propogated to all currently set visualisations (as long as function
-    // transform below is overridden).
-    virtual void setAction( Action::ActionVisualise*){}
-
     // An applied visualisation may need to perform further activation upon selection.
     virtual void onSelected( const FaceControl*){}
 
-    // Respond to an action. Use setAction() to specify ChangeEvents to respond to.
-    // By default, changes to model geometry will cause apply() on this visualisation
-    // to be called again, so derived types only need to override this function stub
-    // if there are actions particular to the ChangeEvents specified during the call
-    // to setAction() (e.g. updates to surface mapping values on an actor because of
-    // changes to data).
-    virtual void respondTo( const FaceControl*){}
+    // Specifiy whether this visualisation should respond to DATA/CALC type change events.
+    virtual bool respondData() const { return false;}
+    virtual bool respondCalc() const { return false;}
+
+    // Respond to a ChangeEvent by the given action for the given face. This function is
+    // only ever called if respondData or respondCalc are overridden to return true; the
+    // action that makes the respective change is passed in as parameter to this function.
+    // Derived types only need to override this function if overriding respondData/Calc.
+    virtual void respondTo( const Action::FaceAction*, const FaceControl*){}
 
     // Transform this visualisation's defined actors (if any) for the given FaceControl. Derived
     // types only need to override if they define vtkProp3D actors that must respond to movements
@@ -98,7 +92,7 @@ protected:
     virtual void transform( const FaceControl*, const vtkMatrix4x4*){}
 
     // Destroy any cached data relating to the given FaceControl.
-    virtual void burn( const FaceControl*){}
+    virtual void purge( const FaceControl*){}
 
     friend class Action::ActionVisualise;
     friend class FaceView;
@@ -132,7 +126,6 @@ public:
     bool isAvailable( const FaceModel*) const override;
 
 protected:
-    void onSelected( const FaceControl* fc) override;               // Enable flood lights
     bool belongs( const vtkProp *p, const FaceControl* fc) const;   // Test prop against texture actor only.
 };  // end class
 
@@ -156,7 +149,6 @@ public:
     void removeActors( const FaceControl* fc) override;
 
 protected:
-    void onSelected( const FaceControl* fc) override;               // Disable flood lights
     bool belongs( const vtkProp *p, const FaceControl* fc) const;   // Test prop against surface actor only.
 };  // end class
 

@@ -15,26 +15,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionResetCamera.h>
+#include <ActionPostLoadFaceModel.h>
 #include <FaceModelViewer.h>
-#include <ChangeEvents.h>
-#include <algorithm>
-using FaceTools::Action::ActionResetCamera;
-using FaceTools::Action::FaceAction;
-using FaceTools::FaceControlSet;
+using FaceTools::Action::ActionPostLoadFaceModel;
+using FaceTools::Action::ActionSelect;
+using FaceTools::FileIO::LoadFaceModelsHelper;
 using FaceTools::FaceControl;
+using FaceTools::FaceModel;
 
 
-ActionResetCamera::ActionResetCamera( const QString& dn, const QIcon& ico)
-    : FaceAction( dn, ico, true)
+ActionPostLoadFaceModel::ActionPostLoadFaceModel( ActionSelect* selector, LoadFaceModelsHelper* lhelper)
+    : _selector(selector)
 {
-    addChangeTo( VIEW_CHANGE);
+    setExternalSelect(false);
+    connect( lhelper, &LoadFaceModelsHelper::loadedModel, this, &ActionPostLoadFaceModel::processOnLoad);
 }   // end ctor
 
 
-bool ActionResetCamera::doAction( FaceControlSet& fset)
+void ActionPostLoadFaceModel::processOnLoad( FaceModel* fm)
 {
-    FaceViewerSet viewers = fset.viewers();
-    std::for_each(std::begin(viewers), std::end(viewers), [](auto v){ v->resetCamera();});
-    return true;
-}   // end doAction
+    FaceControl *fc = new FaceControl(fm);
+    _selector->viewer()->attach(fc);
+    _selector->addFaceControl(fc);
+    process(fc);    // Process on self ensures that follow-on actions execute
+}   // end processOnLoad

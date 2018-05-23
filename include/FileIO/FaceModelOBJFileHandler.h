@@ -25,7 +25,7 @@
 namespace FaceTools {
 namespace FileIO {
 
-class FaceModelOBJFileHandler : public FaceModelFileHandler
+class FaceTools_EXPORT FaceModelOBJFileHandler : public FaceModelFileHandler
 { Q_OBJECT
 public:
     FaceModelOBJFileHandler();

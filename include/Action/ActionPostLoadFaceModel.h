@@ -15,39 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_OUTLINES_VIEW_H
-#define FACE_TOOLS_OUTLINES_VIEW_H
+#ifndef FACE_TOOLS_ACTION_POST_LOAD_FACE_MODEL_H
+#define FACE_TOOLS_ACTION_POST_LOAD_FACE_MODEL_H
 
-/**
- * Creates outline actors for a model's boundaries.
- */
-
-#include <ModelViewer.h>
-#include <Hashing.h>
-#include <ObjModelBoundaryFinder.h>   // RFeatures
+#include "ActionSelect.h"
+#include <LoadFaceModelsHelper.h>
 
 namespace FaceTools {
-namespace Vis {
+namespace Action {
 
-class FaceTools_EXPORT OutlinesView
-{
+class FaceTools_EXPORT ActionPostLoadFaceModel : public FaceAction
+{ Q_OBJECT
 public:
-    OutlinesView( const RFeatures::ObjModelBoundaryFinder&,
-            float lineWidth=4.0f, float red=1.0f, float green=0.2f, float blue=0.2f);
-    ~OutlinesView();
+    ActionPostLoadFaceModel( ActionSelect*, FileIO::LoadFaceModelsHelper*);
 
-    bool isVisible() const { return _visible;}
-    void setVisible( bool, ModelViewer* viewer);
-
-    void transform( const vtkMatrix4x4*);
+private slots:
+    void processOnLoad( FaceModel*);
 
 private:
-    ModelViewer *_viewer;
-    bool _visible;
-    std::unordered_set<vtkSmartPointer<vtkActor> > _actors;   // The line actors forming the boundary
-
-    OutlinesView( const OutlinesView&);     // No copy
-    void operator=( const OutlinesView&);   // No copy
+    ActionSelect *_selector;
 };  // end class
 
 }   // end namespace

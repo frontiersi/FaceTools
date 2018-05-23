@@ -23,6 +23,7 @@
 #include <FaceControlSet.h>
 #include <PluginInterface.h>    // QTools
 #include <QProgressUpdater.h>
+#include <QMutex>
 #include <QToolBar>
 #include <QToolButton>
 #include <QPushButton>
@@ -58,7 +59,11 @@ public:
     // Constructor versions that take a display name, icon, and triggering key sequence.
     FaceAction( const QString& displayName, bool disableBeforeOther=true);
     FaceAction( const QString& displayName, const QIcon& icon, bool disableBeforeOther=true);
+    FaceAction( const QString& displayName, const QIcon* icon, bool disableBeforeOther=true);
     FaceAction( const QString& displayName, const QIcon& icon, const QKeySequence&, bool disableBeforeOther=true);
+    FaceAction( const QString& displayName, const QIcon* icon, const QKeySequence&, bool disableBeforeOther=true);
+    FaceAction( const QString& displayName, const QIcon& icon, const QKeySequence*, bool disableBeforeOther=true);
+    FaceAction( const QString& displayName, const QIcon* icon, const QKeySequence*, bool disableBeforeOther=true);
 
     QString getDisplayName() const override;
     const QIcon* getIcon() const override;
@@ -73,27 +78,27 @@ public:
     void connectButton( QPushButton*);
 
 
-    bool operator()();  // Synonymous with process (see below).
-
     // Derived types and/or delegates must specify what kinds of changes they make and what kinds of changes
-    // they're interested in. This is necessary for FaceActionManager to connect reportChanged signals with
-    // the corresponding respondToChange slots.
+    // they're interested in.
     void addChangeTo( const ChangeEvent&);   // Call with the changes they make
     void addRespondTo( const ChangeEvent&);  // Call with the changes they care about
 
     // Function changeEvents() gives clients the set of change events that this action performs.
-    // FaceActionManager uses this info to connect the reportChanged signal on this FaceAction to
-    // the respondToChange slot on other FaceAction instances that indicate their interest in
+    // FaceActionManager uses this info to connect the reportChanges signal on this FaceAction to
+    // the respondTo function on other FaceAction instances that indicate their interest in
     // such changes via the ChangeEventSet returned from the respondEvents() function.
     // See ChangeEvents.h for details of event types.
     const ChangeEventSet& changeEvents() const { return _cevents;}
 
     // Function respondEvents() allows clients to be informed of the set of events that this FaceAction
     // is interested in responding to. FaceActionManager uses this info to connect this FaceAction's
-    // respondToChange slot to the reportChanged signal emitted by other FaceAction instances that
+    // respondTo function to the reportChanges signal emitted by other FaceAction instances that
     // cause these events to occur (detailed via the ChangeEventSet returned by changeEvents).
     // See ChangeEvents.h for details of event types.
     const ChangeEventSet& respondEvents() const { return _revents;}
+
+
+    bool operator()();  // Synonymous with process (see below).
 
 public slots:
     // Function process() is the main entry point for clients to carry out this action. It can be called
@@ -106,14 +111,12 @@ public slots:
     // 2) doBeforeAction
     // 3) doAction
     // 4) doAfterAction
-    // 5) reportChanged
+    // 5) reportChanges
     // 6) reportFinished
     // Calls 3,4, and 5 are only made if doBeforeAction returns true. If doBeforeAction returns false,
-    // signal reportFinished will be emitted with a NULL parameter to denote that no FaceControl instances
-    // were acted upon. If doBeforeAction returns true, and calls 3 and 4 are made and signal reportChanged
-    // is emitted for every FaceControl acted upon and a non-NULL pointer to the worked over set of
-    // FaceControl instances will be emitted by reportFinished. The return value of doAction is passed
-    // to doAfterAction.
+    // signal reportFinished will be emitted. If doBeforeAction returns true, calls 3 and 4 are made and
+    // signal reportChanges is emitted for every FaceControl acted upon before reportFinished is emitted.
+    // The return value of doAction is passed to doAfterAction.
     // 
     // All calls except possibly doAction execute synchronously in Qt's GUI thread. Function doAction
     // may operate asynchronously in a different thread depending on whether the derived type set this
@@ -122,30 +125,21 @@ public slots:
     // True is returned from process() iff doAction was entered.
     bool process( bool checkAction=true);
 
-    // These two versions of process first cache the existing controlled and ready sets on this action then
-    // call process(true) using the provided sets, before restoring the old controlled and ready sets.
+    // These two versions of process replace the ready set with the given FaceControls and execute process.
+    // On return, the action's ready set will be reset to the current set of selected FaceControls.
     bool process( const FaceControlSet&);
     bool process( FaceControl*);
 
     // This function is used to add composite actions to this one that will be executed immediately after the
     // containing action's doAfterAction() function returns. This function can be called multiple times to add
-    // multiple actions that will execute in sequentially added order.
-    // The processing of an added action behaves like a composite "inner" function with it finishing
-    // (and potentially notifying clients) before the outer "calling" function.
+    // several actions. Asynchronous actions are executed first (in no definite order) followed by the
+    // non asynchronous actions which are executed sequentially in their order of addition.
     void execAfter( FaceAction*);
 
 signals:
     void reportStarting( const FaceControlSet*);   // Emitted immediately before doBeforeAction executes.
-
-    // This signal is emitted to inform the FaceActionManager that this action has made changes to the given
-    // FaceControl. It is emitted after doAfterAction returns but before reportFinished is emitted.
-    // FaceActionManager fowards this signal to all other FaceAction instances registered with it that are
-    // interested in events performed by the emitting action. This allows "listening" actions that might be
-    // responsible for maintaining state the ability to react to changes performed by other (unknown) actions
-    // even if affected FaceControl instances aren't in the receiving action's "ready" set.
-    void reportChanged( FaceControl*);
-
-    void reportFinished( const FaceControlSet*);  // Emitted after doAfterAction returns (or after doBeforeAction->false)
+    void reportChanges( const ChangeEventSet&, FaceControl*);   // Inform FaceActionManager of changes to given FaceControl.
+    void reportFinished();  // Emitted after doAfterAction returns (or after doBeforeAction returns false).
 
 protected slots:
     /***************************************************************/
@@ -161,6 +155,8 @@ protected slots:
     // derived type should make regular calls to progress().
     void setAsync( bool, QTools::QProgressUpdater::Ptr pupdater=QTools::QProgressUpdater::Ptr());
 
+    bool isAsync() const { return _doasync;}
+
     // If wanting to provide progress updates for long running actions that may be asynchronous, derived
     // type should regularly call this function to provide progress updates. This function first checks
     // to see if the external progress updater has been set (in setAsync) so is always safe to call.
@@ -171,19 +167,22 @@ protected slots:
     /************** SETTING / GETTING DATA TO ACT UPON *************/
     /***************************************************************/
 
-    // FaceActionManager calls to inform of the selection state for the given FaceControl instance. If called with
-    // true as its parameter, testReady() is called to allow the derived type to check if the given FaceControl is
-    // in a state that allows it to be acted upon. When doAction() is called, the parameter set passed in is the
-    // subset of the controlled set where testReady() returned true.
-    void setSelected( FaceControl*, bool);
+    // FaceActionManager calls setSelected to inform of the selection state for the given FaceControl instance.
+    // It is the entry point for the FaceActionManager to cause this action to respond to FaceControl selection
+    // events originating externally (e.g. from user interaction). This function allows the action to decide if
+    // the FaceControl should be a part of its "ready" set. If externalSelect() returns false, this fuction will
+    // not be called from external events and the action will be left up to itself to decide when this function
+    // should be called on itself (perhaps due to some other events under its own control).
+    // If called with true as its parameter, testReady() is called to allow the derived type to check if the
+    // given FaceControl is in a state that allows it to be acted upon. When doAction() is called, the parameter
+    // set passed in is the set of FaceControls for which testReady() returned true.
+    virtual void setSelected( FaceControl* fc, bool v);
 
-    // Derived FaceAction types may be interested in all calls to setSelected, and not just calls to testReady
-    // (which is used to find out if a FaceControl under nominal control can be acted upon by the derived type).
-    // Functions tellSelected and tellReady are called for calls to setSelected that causes a change in membership
-    // of the controlled or ready sets (as such, these functions are not called for every call to setSelected).
-    // Function tellSelected passes the changed controlled state to the derived type, and tellReady passes the
-    // changed ready state of the FaceControl to the derived type. These functions are called *after* setEnabled
-    // is called on this action (i.e. testEnabled is called before tellReady).
+    // FaceAction instances can implement tellSelected to know when selection status changes on a FaceControl.
+    // It is called at the end of setSelected. Similarly, function tellReady is called by this action at the end
+    // of setSelected to inform derived types of a change in the "ready" status of a passed in FaceControl.
+    // Both functions are called if setSelected is called - irrespective of whether the FaceControl is found
+    // in the ready set afterwards. Note that testEnabled is called before tellReady.
     virtual void tellSelected( FaceControl*, bool) {}
     virtual void tellReady( FaceControl*, bool) {}
 
@@ -192,18 +191,13 @@ protected slots:
     // is NOT called if setSelected is called with false as its parameter (clients should override tellReady()
     // if they need to know when a FaceControl switches legal state for being acted upon).
     // Whether or not a FaceAction is ready be be acted upon is at the discretion of the derived type, but by
-    // default all FaceControl instances passed in to setControlled with a true parameter are added to the
+    // default all FaceControl instances passed in to setSelected with a true parameter are added to the
     // ready set. If overridden, this function's complexity should be low due to the frequent calls.
     virtual bool testReady( FaceControl*) { return true;}
+    virtual bool testChecked( FaceControl*) { return true;}
 
-    // Discover if the given FaceControl is currently under nominal control or is in the ready set.
-    bool isSelected( FaceControl *fc) const { return _controlled.has(fc);}
+    // Is FaceControl in the ready set?
     bool isReady( FaceControl* fc) const { return _ready.has(fc);}
-
-    // Retain in the "ready" set only those FaceControl instances for which calls to testReady()
-    // still return true, returning the size of the modified set and test-setting the enabled state of
-    // this action. Unless testReady() overridden, ready set will equal the controlled set.
-    size_t recheckReadySet();
 
     // Return the count of FaceControl instances in the ready set.
     size_t readyCount() const { return _ready.size();}
@@ -219,7 +213,7 @@ protected slots:
     // Derived types may cache data for FaceControl instances even when not selected. This function is called
     // when there is no chance of the FaceControl being selected again in this session (typically because the
     // model's been closed). It is only ever called after setSelected(f,false) for FaceControl f.
-    virtual void burn( const FaceControl*){}
+    virtual void purge( const FaceControl*){}
 
 
     /**************************************************************/
@@ -252,18 +246,25 @@ protected slots:
     /**************** INTER-ACTION COMMUNICATION ******************/
     /**************************************************************/
 
-    // Allow this FaceAction to respond after notification of changes to a FaceControl by a different
-    // FaceAction once it's finished. FaceActionManager ensures an action's reportChanged signal is
-    // connected to the respondToChange slot on all other actions that specify their interest in the
-    // events changed by the reporting action. If not overridden, the default function is to check the
-    // passed in FaceControl's ready state and then call testAndSetEnabled(). If a derived type overrides
-    // this function to (for example) enforce state, it should normally call this function as the last
-    // line in the body of the overridden function (i.e. FaceAction::respondToChange).
-    virtual void respondToChange( FaceControl *fc=NULL);
+    // Allow this FaceAction to respond to asynchronous notification of changes to a FaceControl by some
+    // other FaceAction after it's finished. The "changing" action is passed in as parameter and the set
+    // of change events passed in as second parameter. Note that changes are not guaranteed to have occurred -
+    // they are just the aggregate set of changes that may possibly have occurred. If the action
+    // that enacted the change is asynchronous (i.e. isAsync() == true), this will be the parameter action.
+    // Non-asynchronous actions may be queued however and in this case, it is the "root" action that is passed
+    // as the parameter to this function which may not be the action directly responsible for the change!
+    // This function's default implementation ignores the FaceAction parameter, checks the ready state
+    // and then calls setEnabled(testEnabled()). *** This function is reentrant! ***
+    virtual void respondTo( const FaceAction*, const ChangeEventSet*, FaceControl *fc=NULL);
 
     // Used by FaceActionManager to know if it should set this action to be disabled in response
     // to other FaceActions registered with it starting.
     bool isDisabledBeforeOther() const { return _disableBeforeOther;}
+
+    // Set/get whether this action can be setSelected() (see above) by external events managed through
+    // the FaceActionManager. By default, this is true.
+    void setExternalSelect( bool);
+    bool externalSelect() const { return _externalSelect;}
 
 
     /**************************************************************/
@@ -294,12 +295,19 @@ private:
     QKeySequence _keys;
     bool _init;
     bool _disableBeforeOther;
+    bool _externalSelect;
+    bool _reportChanges;
     QAction _action;
     bool _doasync;
+    QMutex _wmutex;  // The "work" mutex
     QTools::QProgressUpdater::Ptr _pupdater;
-    FaceControlSet _controlled, _ready;
-    ChangeEventSet _revents, _cevents;
-    std::list<FaceAction*> _eacts;
+    FaceControlSet _ready;
+    ChangeEventSet _cevents;
+    ChangeEventSet _revents;
+    std::list<FaceAction*> _sacts;
+    std::unordered_set<FaceAction*> _aacts;
+    bool checkSequenceActions( std::unordered_set<const FaceAction*>&) const;
+    void collectChangeEvents( ChangeEventSet&);
     FaceAction( const FaceAction&);     // No copy
     void operator=( const FaceAction&); // No copy
 };  // end class

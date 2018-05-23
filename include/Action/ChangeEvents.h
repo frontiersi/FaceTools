@@ -25,81 +25,33 @@
  * FaceActionManager will connect FaceAction instances together to ensure
  * that FaceAction instances that respond to certain events are signalled by
  * the FaceAction instances that perform those events.
- *
- * Since the ChangeEvent tags are simple ints (given here as enums for
- * readability), it is possible to define new event types and FaceAction
- * types that change and respond to these events.
  */
 
 #include "FaceTools_Export.h"
-#include <unordered_map>
 #include <unordered_set>
-#include <string>
-
-namespace FaceTools {
-namespace Action {
-struct ChangeEvent;
-}   // end namespace
-}   // end namespace
-
 
 namespace FaceTools {
 namespace Action {
 
 
-enum ChangeID
+enum ChangeEvent
 {
-    // Camera changes
-    CAMERA_FOCUS_CHANGED,
-    CAMERA_POSITION_CHANGED,
-    CAMERA_ORIENTATION_CHANGED,
-    // Data (FaceModel) changes
-    MODEL_GEOMETRY_CHANGED,         // For changes to the shape only
-    MODEL_TRANSFORMED,              // Affine transformation of the model
-    MODEL_TEXTURE_CHANGED,          // Changes to the surface texture mapping (ObjModel)
-    LANDMARK_ADDED,
-    LANDMARK_DELETED,
-    LANDMARK_CHANGED,               // E.g. name, position, metadata
-    FACE_NOTE_ADDED,
-    FACE_NOTE_DELETED,
-    FACE_NOTE_CHANGED,
-    MODEL_ORIENTATION_CHANGED,      // Updated face orientation vectors
-    MODEL_DESCRIPTION_CHANGED,
-    MODEL_SOURCE_CHANGED,
-    // Visualisation
-    VISUALISATION_CHANGED,          // Visualisation changed (any)
-    SURFACE_METRICS_CALCULATED,     // Metric data about the surface recalculated
+    DATA_CHANGE,    // Changes to the underlying data that require a save to ensure peristence.
+    CALC_CHANGE,    // Changes to the results of cached calculations on the data (often after response to data change).
+    VIEW_CHANGE,    // Changes to views of the data (camera movements / visualisations etc).
 };  // end enum
-
-
-struct ChangeEvent
-{
-    ChangeEvent( ChangeID id);
-
-    // Define new ChangeEvents - cannot be an extant ChangeID.
-    ChangeEvent( int id, const std::string& d);
-
-    int id() const;
-    const std::string& description() const;
-    bool operator==( const ChangeEvent& c) const;
-private:
-    int _id;
-    static std::unordered_map<int, std::string> s_descs;
-    static void s_init();
-};  // end struct
 
 typedef std::unordered_set<ChangeEvent> ChangeEventSet;
 
 }   // end namespace
 }   // end namespace
 
-
 // Custom hash function for ChangeEvent (to allow use of ChangeEventSet)
 // just invokes std::hash<int>() on the internal change ID.
 namespace std {
 template<> struct hash<FaceTools::Action::ChangeEvent>
 {
-    size_t operator()( const FaceTools::Action::ChangeEvent& c) const { return hash<int>()(c.id());}
+    size_t operator()( const FaceTools::Action::ChangeEvent& c) const { return hash<int>()((int)c);}
 };  // end struct
 }   // end namespace (std)
 

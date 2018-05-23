@@ -194,8 +194,11 @@ bool FaceDetector::detect( const ObjModelKDTree& kdt, Orientation& on, LandmarkS
         return false;
     }   // end if
 
-    // Initialise the viewer
     _err = "";
+
+    // Initialise the viewer
+    _viewer = RVTK::Viewer::create(true/*offscreen*/);
+    _viewer->setSize(600,600);
     _viewer->setCamera( RFeatures::CameraParams( cv::Vec3f( 0, 0, _orng)));    // Default camera for detecting orientation
     RVTK::VtkActorCreator actorCreator;
     _actors.clear();
@@ -236,6 +239,7 @@ bool FaceDetector::cleanUp( std::string err)
     _err = err;
     std::cerr << _err << std::endl;
     std::for_each( std::begin(_actors), std::end(_actors), [this](auto a){ _viewer->removeActor(a);});
+    _viewer.reset();
     return err.empty();
 }   // end cleanUp
 
@@ -268,12 +272,4 @@ FaceDetector::FaceDetector( float orng, float drng)
         std::cerr << "[ERROR] FaceTools::Detect::FaceDetector: Must have successfully initialised FaceDetector first!" << std::endl;
         return;
     }   // end if
-
-    // Offscreen viewer
-    _viewer = RVTK::Viewer::create(true/*offscreen*/);
-    _viewer->setSize(600,600);
-    // Set flood lights in the viewer
-    std::vector<RVTK::Light> lights;
-    RVTK::createBoxLights( 600, lights, true);
-    RVTK::resetLights( _viewer->getRenderer(), lights);
 }   // end ctor

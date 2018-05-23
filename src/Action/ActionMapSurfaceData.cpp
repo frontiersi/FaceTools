@@ -22,6 +22,7 @@
 #include <ObjModelTriangleMeshParser.h>     // RFeatures
 #include <algorithm>
 using FaceTools::Action::ActionMapSurfaceData;
+using FaceTools::Action::ChangeEventSet;
 using FaceTools::Action::FaceAction;
 using FaceTools::FaceControlSet;
 using FaceTools::FaceModelSet;
@@ -38,11 +39,11 @@ using RFeatures::ObjModel;
 
 namespace {
 
-int findMaxZPolygon( const ObjModel* model, const IntSet& vidxs)
+int findMaxZPolygon( const ObjModel* model, const IntSet* vidxs)
 {
     int zp = -1;
     float zval = -FLT_MAX;
-    for ( int vid: vidxs)
+    for ( int vid : *vidxs)
     {
         const float zt = model->vtx(vid)[2];
         if ( zt > zval)
@@ -59,29 +60,28 @@ int findMaxZPolygon( const ObjModel* model, const IntSet& vidxs)
 
 struct ActionMapSurfaceData::SurfaceData
 {
-    SurfaceData( const ObjModelInfo& info)
+    SurfaceData( const ObjModelInfo* info)
     {
-        int nc = (int)info.components().size();   // # components
+        int nc = (int)info->components().size();   // # components
 
         // Parse all the components in the model to extract normals and polygon areas
-        const ObjModel* model = info.model().get();
-        IntSet pfset;   // For tracking the parsed faces
+        const ObjModel* model = info->cmodel();
         ObjModelTriangleMeshParser parser(model);
         parser.addTriangleParser( &normals);
         parser.addTriangleParser( &pareas);
         for ( int c = 0; c < nc; ++c)
         {
-            int zp = findMaxZPolygon( model, *info.components().componentVertices(c));
+            const IntSet* cvidxs = info->components().componentVertices(c);
+            const int zp = findMaxZPolygon( model, cvidxs);
             IntSet pset;
             parser.setParseSet( &pset);
             parser.parse( zp, cv::Vec3d(0,0,1));
-            pfset.insert( pset.begin(), pset.end());
         }   // end for
 
         // Now map the curvature to the surface of each of the components
         curvature = ObjModelCurvatureMap::create( model, &normals, &pareas);
         for ( int c = 0; c < nc; ++c)
-            curvature->map( *info.components().componentVertices(c));
+            curvature->map( *info->components().componentVertices(c));
 
         // Create the different metrics
         metrics = new ObjModelCurvatureMetrics( curvature.get());
@@ -99,13 +99,13 @@ struct ActionMapSurfaceData::SurfaceData
 };  // end struct
 
 
-ActionMapSurfaceData::ActionMapSurfaceData( const QString& dname, const QIcon& icon, QProgressBar* pb)
-    : FaceAction( dname, icon, true/*disable before other*/)
+ActionMapSurfaceData::ActionMapSurfaceData( const QString& dname)
+    : FaceAction( dname)
 {
-    addChangeTo( SURFACE_METRICS_CALCULATED);
-    addRespondTo( MODEL_GEOMETRY_CHANGED);
-    if ( pb)
-        setAsync( true, QTools::QProgressUpdater::create(pb));
+    addRespondTo( DATA_CHANGE);
+    addChangeTo( CALC_CHANGE);
+    setAsync( true);
+    setExternalSelect( false);  // Actioned programmatically
 }   // end ctor
 
 
@@ -116,34 +116,25 @@ ActionMapSurfaceData::~ActionMapSurfaceData()
 }   // end dtor
 
 
-const RFeatures::ObjModelCurvatureMetrics& ActionMapSurfaceData::metrics( const FaceControl* fc)
+const RFeatures::ObjModelCurvatureMetrics* ActionMapSurfaceData::metrics( const FaceControl* fc)
 {
-    ensureProcessed(fc);
-    return *_cmaps.at(fc->data())->metrics;
+    assert( _cmaps.count(fc->data()) > 0);
+    return _cmaps.at(fc->data())->metrics;
 }   // end metrics
 
 
-const RFeatures::ObjModelCurvatureMap& ActionMapSurfaceData::curvature( const FaceControl* fc)
+const RFeatures::ObjModelCurvatureMap* ActionMapSurfaceData::curvature( const FaceControl* fc)
 {
-    ensureProcessed(fc);
-    return *_cmaps.at(fc->data())->curvature.get();
+    assert( _cmaps.count(fc->data()) > 0);
+    return _cmaps.at(fc->data())->curvature.get();
 }   // end curvature
 
 
-const RFeatures::ObjModelNormals& ActionMapSurfaceData::normals( const FaceControl* fc)
+const RFeatures::ObjModelNormals* ActionMapSurfaceData::normals( const FaceControl* fc)
 {
-    ensureProcessed(fc);
-    return _cmaps.at(fc->data())->normals;
+    assert( _cmaps.count(fc->data()) > 0);
+    return &_cmaps.at(fc->data())->normals;
 }   // end normals
-
-
-// private
-void ActionMapSurfaceData::ensureProcessed( const FaceControl* fc)
-{
-    const FaceModel* fm = fc->data();
-    if ( _cmaps.count(fm) == 0)
-        process( const_cast<FaceControl*>(fc));    // Calls doAction on this
-}   // end ensureProcessed
 
 
 bool ActionMapSurfaceData::testReady( FaceControl* fc) { return _cmaps.count(fc->data()) == 0;}
@@ -151,27 +142,17 @@ bool ActionMapSurfaceData::testReady( FaceControl* fc) { return _cmaps.count(fc-
 
 bool ActionMapSurfaceData::doAction( FaceControlSet& rset)
 {
+    std::for_each( std::begin(rset), std::end(rset), [this]( auto fc){ this->purge(fc);});
     for ( const FaceModel* fm : rset.models())
-    {
-        assert(_cmaps.count(fm) == 0);
         _cmaps[fm] = new SurfaceData( fm->info());
-    }   // end for
     return true;
 }   // end doAction
 
 
-void ActionMapSurfaceData::respondToChange( FaceControl* fc)
-{
-    if ( _cmaps.count(fc->data()) > 0)
-    {
-        burn(fc);
-        process(fc);    // Re-map the curvature
-    }   // end if
-    FaceAction::respondToChange(fc);    // Re-test
-}   // end respondToChange
+void ActionMapSurfaceData::respondTo( const FaceAction*, const ChangeEventSet*, FaceControl* fc) { process(fc);}
 
 
-void ActionMapSurfaceData::burn( const FaceControl* fc)
+void ActionMapSurfaceData::purge( const FaceControl* fc)
 {
     const FaceModel* fm = fc->data();
     if ( _cmaps.count(fm) > 0)
@@ -179,4 +160,4 @@ void ActionMapSurfaceData::burn( const FaceControl* fc)
         delete _cmaps.at(fm);
         _cmaps.erase(fm);
     }   // end if
-}   // end burn
+}   // end purge

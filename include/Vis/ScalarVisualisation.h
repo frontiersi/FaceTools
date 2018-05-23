@@ -19,12 +19,12 @@
 #define FACE_TOOLS_VIS_SCALAR_VISUALISATION_H
 
 /**
- * Provides abstract application of scalar colour visualisations to actors.
- * Derived types must specify the min and max range values (rangeMin, rangeMax),
- * and the name of the visualisation should be returned by overridden getDisplayName().
- * Since scalar visualisations use a per viewer legend, setSelected is overridden to
- * restore the legend key for this visualisation when the corresponding FaceControl
- * is selected.
+ * Provides abstract application of scalar colour visualisations to the surface of an actor.
+ * Derived types must specify the min and max range values (rangeMin, rangeMax) and implement
+ * mapSurfaceActor to map the actual values to do the mapping between the data accessible
+ * through FaceControl and the surface actor accessible from its member FaceView. Since
+ * scalar visualisations use a per viewer legend, onSelected is overridden to restore the
+ * legend key for this visualisation when the corresponding FaceControl is selected.
  */
 
 #include "BaseVisualisation.h"
@@ -32,6 +32,10 @@
 #include <unordered_map>
 
 namespace FaceTools {
+namespace Action {
+class ActionMapSurfaceData;
+}   // end namespace
+
 namespace Vis {
 class LegendScalarColourRangeMapper;
 
@@ -42,6 +46,8 @@ public:
     ScalarVisualisation( const QString& dname, const QIcon&);
     explicit ScalarVisualisation( const QString& dname);
     ~ScalarVisualisation() override;
+
+    bool isAvailable( const FaceModel*) const override { return _msd != NULL;}
 
     void apply( const FaceControl*) override;
     void addActors( const FaceControl*) override;
@@ -59,14 +65,17 @@ public:
 
 protected:
     void onSelected( const FaceControl*) override;
-    void burn( const FaceControl*) override;
+    bool respondCalc() const override { return true;}
+    void respondTo( const Action::FaceAction*, const FaceControl*); // Calls mapSurfaceActor
+    void purge( const FaceControl*) override;
 
+    virtual void mapSurfaceActor( const Action::ActionMapSurfaceData*, const FaceControl*) = 0;
     virtual float rangeMin() const = 0; // The minimum allowed scalar value
     virtual float rangeMax() const = 0; // The maximum allowed scalar value
-    virtual void mapSurfaceActor( const FaceControl*) const = 0;    // Map the surface.
 
 private:
     std::unordered_map<const FaceControl*, LegendScalarColourRangeMapper*> _lranges;
+    const Action::ActionMapSurfaceData *_msd;
 };  // end class
 
 }   // end namespace

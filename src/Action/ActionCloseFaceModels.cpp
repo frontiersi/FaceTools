@@ -17,6 +17,7 @@
 
 #include <ActionCloseFaceModels.h>
 #include <QMessageBox>
+#include <boost/filesystem.hpp>
 #include <algorithm>
 using FaceTools::Action::ActionCloseFaceModels;
 using FaceTools::Action::FaceAction;
@@ -43,7 +44,7 @@ bool ActionCloseFaceModels::doBeforeAction( FaceControlSet& fset)
             doclose = true;
         else
         {
-            const std::string& fname = _chelper->filepath(fm);
+            std::string fname = boost::filesystem::path( _chelper->filepath(fm)).filename().string();
             if ( QMessageBox::Yes == QMessageBox::question( _chelper->parentWidget(),
                                                 tr(("Unsaved changes on \"" + fname + "\"").c_str()),
                                                 tr("Model has unsaved changes! Close without saving anyway?"),

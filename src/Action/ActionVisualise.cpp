@@ -23,23 +23,29 @@
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionVisualise;
 using FaceTools::Action::FaceAction;
+using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::ChangeEvent;
 using FaceTools::Vis::BaseVisualisation;
 using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
 
 
 ActionVisualise::ActionVisualise( BaseVisualisation* vint, bool d)
-    : FaceAction( true/*disable before other actions*/), _vint(vint), _isdefault(d)
+    : FaceAction( vint->getDisplayName(), vint->getIcon(), true/*disable before other actions*/),
+      _vint(vint), _isdefault(d)
 {
     assert(vint);
-    addChangeTo(  VISUALISATION_CHANGED);
-    addRespondTo( VISUALISATION_CHANGED);
     // Non-exclusive visualisations should not be the default!
     if ( _isdefault && !_vint->isExclusive())
         std::cerr << "[ERROR] FaceTools::Action::ActionVisualise: Making non-exclusive visualisation default!" << std::endl;
     assert( !_isdefault || _vint->isExclusive());
     setCheckable( !_vint->isExclusive(), false);    // Non-exclusive visualisations are checkable
-    vint->setAction(this);  // Allows delegate to add its own ChangeEvents to this FaceAction.
+    if ( vint->respondData())
+        addRespondTo( DATA_CHANGE);
+    if ( vint->respondCalc())
+        addRespondTo( CALC_CHANGE);
+    addRespondTo( VIEW_CHANGE);
+    addChangeTo( VIEW_CHANGE);
 }   // end ctor
 
 
@@ -63,8 +69,6 @@ bool ActionVisualise::testReady( FaceControl* fc)
         fc->viewer()->updateRender();
     }   // end if
 
-    setChecked(applied);
-
     // Return ready only if visualisation available and is not currently set on the FaceControl,
     // unless this is a checkable visualisation (in which case running this action again when
     // applied, removes the visualisation).
@@ -72,36 +76,63 @@ bool ActionVisualise::testReady( FaceControl* fc)
 }   // end testReady
 
 
+bool ActionVisualise::testChecked( FaceControl* fc) { return _vint->isApplied(fc);}
+
+
 bool ActionVisualise::doAction( FaceControlSet& s)
 {
+    const std::string dname = debugActionName();
     // Apply visualisation to each FaceControl. Default doAfterAction calls updateRender on viewers.
     if ( !isCheckable() || isChecked())
     {
-        std::cerr << " + Applying visualisation" << std::endl;
-        std::for_each( std::begin(s), std::end(s), [=]( auto fc){ fc->view()->apply( _vint);});
+        std::for_each( std::begin(s), std::end(s), [=]( auto fc)
+                {
+                    if ( !_vint->isApplied(fc))
+                    {
+                        std::cerr << " + Applying " << dname << " visualisation" << std::endl;
+                        fc->view()->apply( _vint);
+                    }   // end if
+                });
     }   // end if
     else
     {
-        std::cerr << " - Removing visualisation" << std::endl;
-        std::for_each( std::begin(s), std::end(s), [=]( auto fc){ fc->view()->remove( _vint);});
+        std::for_each( std::begin(s), std::end(s), [=]( auto fc)
+                {
+                    if ( _vint->isApplied(fc))
+                    {
+                        std::cerr << " - Removing " << dname << " visualisation" << std::endl;
+                        fc->view()->remove( _vint);
+                    }   // end if
+                });
     }   // end else
     return true;
 }   // end doAction
 
 
-void ActionVisualise::respondToChange( FaceControl* fc)
+void ActionVisualise::respondTo( const FaceAction* saction, const ChangeEventSet* ces, FaceControl* fc)
 {
-    _vint->respondTo(fc);
-    FaceAction::respondToChange(fc);
-    if ( _vint->isApplied(fc))
+    const bool applied = _vint->isApplied(fc);
+
+    // Call respondTo on visualisation for changes it cares about.
+    if ( (_vint->respondData() && ces->count(DATA_CHANGE) > 0) || (_vint->respondCalc() && ces->count(CALC_CHANGE) > 0))
+    {
+        if ( applied)
+            _vint->removeActors(fc);
+        _vint->respondTo( saction, fc);
+        if ( applied)
+            _vint->addActors(fc);
+    }   // end if
+
+    FaceAction::respondTo( saction, ces, fc);    // Forwards through to testReady(fc)
+    if ( applied)
         fc->viewer()->updateRender();
-}   // end respondToChange
+}   // end respondTo
 
 
-void ActionVisualise::burn( const FaceControl* fc)
+void ActionVisualise::purge( const FaceControl* fc)
 {
     assert(fc);
     assert(fc->viewer());
     fc->view()->remove(_vint);
-    _vint->burn(fc);    // Ditch any cached visualisation specific stuff (legends etc).
-}   // end burn
+    _vint->purge(fc);    // Ditch any cached visualisation specific stuff (legends etc).
+}   // end purge

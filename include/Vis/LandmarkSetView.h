@@ -39,9 +39,6 @@ public:
     LandmarkSetView( const LandmarkSet&, double lmrad=1.8);
     virtual ~LandmarkSetView();
 
-    void erase();                                       // Remove existing landmark views.
-    void reset();                                       // Reset all landmark views from the set.
-
     bool isVisible() const;                             // Returns true iff ANY landmark shown
     void setVisible( bool, ModelViewer*);               // Show/hide all landmarks (also sets current viewer)
 

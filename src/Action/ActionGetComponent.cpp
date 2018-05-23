@@ -31,10 +31,8 @@ using FaceTools::FaceModel;
 ActionGetComponent::ActionGetComponent( const QString& dn, const QIcon& ico)
     : FaceAction( dn, ico, true/*disable before other*/)
 {
-    addChangeTo( MODEL_GEOMETRY_CHANGED);
-    addRespondTo( LANDMARK_ADDED);
-    addRespondTo( LANDMARK_DELETED);
-    addRespondTo( LANDMARK_CHANGED);
+    addChangeTo( DATA_CHANGE);
+    addRespondTo( DATA_CHANGE);
 }   // end ctor
 
 
@@ -56,11 +54,11 @@ bool ActionGetComponent::doAction( FaceControlSet& rset)
 
         // Find which of the components of the model has this polygon as a member
         int foundC = -1;
-        const ObjModelInfo& info = fm->info();
-        int nc = info.components().size();
+        const ObjModelInfo* info = fm->info();
+        int nc = info->components().size();
         for ( int c = 0; c < nc; ++c)
         {
-            const IntSet* fids = info.components().componentPolygons(c);
+            const IntSet* fids = info->components().componentPolygons(c);
             assert(fids);
             if ( fids->count(fidx) > 0)
             {
@@ -70,7 +68,7 @@ bool ActionGetComponent::doAction( FaceControlSet& rset)
         }   // end for
 
         assert(foundC >= 0);
-        const IntSet* cfids = info.components().componentPolygons(foundC);
+        const IntSet* cfids = info->components().componentPolygons(foundC);
         assert( cfids);
         ObjModelCopier copier( model);
         std::for_each( std::begin(*cfids), std::end(*cfids), [&](int fid){ copier.addTriangle(fid);});

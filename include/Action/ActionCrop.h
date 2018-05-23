@@ -19,7 +19,7 @@
 #define FACE_TOOLS_ACTION_CROP_H
 
 #include <ActionVisualise.h>
-#include <BoundaryVisualisation.h>
+#include <BoundingVisualisation.h>
 #include <RadialSelectInteractor.h>
 #include <QStatusBar>
 
@@ -46,7 +46,7 @@ private slots:
 
 private:
     QStatusBar *_sbar;
-    Vis::BoundaryVisualisation *_bvis;
+    Vis::BoundingVisualisation *_bvis;
     ActionVisualise *_vact;
     Interactor::RadialSelectInteractor *_interactor;
 };  // end class

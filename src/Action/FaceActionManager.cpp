@@ -26,6 +26,7 @@
 using FaceTools::Action::FaceActionManager;
 using FaceTools::Action::FaceActionGroup;
 using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::ActionSelect;
 using FaceTools::Action::FaceAction;
 using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
@@ -34,6 +35,10 @@ using FaceTools::FaceControl;
 FaceActionManager::FaceActionManager( QWidget* parent)
     : QObject(), _pdialog( new QTools::PluginsDialog(parent))
 {
+    _selector.setExternalSelect(false); // the selection events this action produces should not be fed back to it!
+    connect( &_selector, &ActionSelect::onSelect, this, &FaceActionManager::doOnSelect);
+    connect( &_selector, &ActionSelect::onRemove, this, &FaceActionManager::doOnRemove);
+    addAction( &_selector); // Selector will respond to data changes that cause the selection outline to change
 }   // end ctor
 
 
@@ -57,53 +62,6 @@ void FaceActionManager::loadPlugins()
 }   // end loadPlugins
 
 
-// private
-void FaceActionManager::connectActionPair( FaceAction* ract, FaceAction* cact)
-{
-    const ChangeEventSet& cset = cact->changeEvents();
-    const ChangeEventSet& rset = ract->respondEvents();
-    for ( auto e : cset)
-    {
-        if ( rset.count(e) > 0)
-        {
-            // Default implementation of respondToChange causes the FaceAction to re-evaluate whether
-            // the changed FaceControl should be a part of the ready set or not (and then calls setEnabled).
-            connect( cact, &FaceAction::reportChanged, ract, &FaceAction::respondToChange);
-            break;
-        }   // end if
-    }   // end for
-}   // end connectActionPair
-
-
-// private
-void FaceActionManager::printActionComms( std::ostream& os, const FaceAction* fa) const
-{
-    os << std::endl;
-    os << fa->debugActionName() << std::endl;
-
-    const ChangeEventSet& re = fa->respondEvents();
-    const ChangeEventSet& ce = fa->changeEvents();
-
-    ChangeEventSet events = re;
-    events.insert( ce.begin(), ce.end());
-
-    for ( auto c : events)
-    {
-        std::ostringstream oss;
-        if ( fa->changeEvents().count(c) > 0)
-            oss << "> ";
-        else
-            oss << "  ";
-        oss << c.description();
-        if ( fa->respondEvents().count(c) > 0)
-            oss << " <";
-        else
-            oss << "  ";
-        os << std::setw(40) << oss.str() << std::endl;
-    }   // end for
-}   // end printActionComms
-
-
 // public
 QAction* FaceActionManager::addAction( FaceAction* faction)
 {
@@ -114,37 +72,11 @@ QAction* FaceActionManager::addAction( FaceAction* faction)
     faction->init();
     connect( faction, &FaceAction::reportStarting, this, &FaceActionManager::doOnActionStarting);
     connect( faction, &FaceAction::reportFinished, this, &FaceActionManager::doOnActionFinished);
-
-    for ( FaceAction* action : _actions)
-    {
-        connectActionPair( faction,  action);
-        connectActionPair(  action, faction);
-    }   // end for
+    connect( faction, &FaceAction::reportChanges,  this, &FaceActionManager::doOnReportChanges);
 
     _actions.insert( faction);
     return faction->qaction();
 }   // end addAction
-
-
-// public
-void FaceActionManager::printActionInfo( std::ostream& os) const
-{
-    std::for_each( std::begin(_actions), std::end(_actions), [&](auto a){ this->printActionComms(os, a);});
-}   // end printActionInfo
-
-
-// public slot
-void FaceActionManager::setSelected( FaceControl* fc, bool v)
-{
-    std::for_each( std::begin(_actions), std::end(_actions), [=](auto a){ a->setSelected( fc, v);});
-}   // end setSelected
-
-
-// public slot
-void FaceActionManager::purge( FaceControl* fc)
-{
-    std::for_each( std::begin(_actions), std::end(_actions), [=](auto a){ a->burn( fc);});
-}   // end purge
 
 
 // private slot
@@ -171,34 +103,67 @@ void FaceActionManager::addPlugin( QTools::PluginInterface* plugin)
 
 // private slot
 void FaceActionManager::doOnActionStarting( const FaceControlSet* workSet)
-{   // Disable all actions (including the starting action) upon some action starting
-    assert(workSet);
-    FaceAction* sending = qobject_cast<FaceAction*>(sender());
-    assert(sending);
-    std::for_each( std::begin(_actions), std::end(_actions), [=](auto a){ if ( a->isDisabledBeforeOther()) a->setEnabled(false);});
-    emit reportStarting( *sending, *workSet);
+{
+    _selector.setSelectEnabled(false);  // Prevent new selection events from firing
+    // Disable actions upon an action starting. The initiating action disables itself.
+    std::for_each( std::begin(_actions), std::end(_actions),
+            [=](auto a)
+            {
+                if ( a->isDisabledBeforeOther())
+                    a->setEnabled(false);
+            });
 }   // end doOnActionStarting
 
 
 // private slot
-void FaceActionManager::doOnActionFinished( const FaceControlSet* wset)
+void FaceActionManager::doOnActionFinished()
 {
-    if ( !wset)    // Don't do anything if the action cancelled, just re-enable others (don't check ready set membership)
-        std::for_each( std::begin(_actions), std::end(_actions), [=](auto a){ a->setEnabled(a->testEnabled());});
-    else
-    {
-        FaceAction* sending = qobject_cast<FaceAction*>(sender());
-        assert(sending);
-        // Allow all other actions to recheck if objects in worked over set should be part of their ready sets.
-        _actions.erase(sending);
-        if ( wset->empty())
-            std::for_each( std::begin(_actions), std::end(_actions), [=](auto a){ a->setEnabled(a->testEnabled());});
-        else
-        {
-            for ( FaceAction* a : _actions)
-                std::for_each( std::begin(*wset), std::end(*wset), [&](auto fc){ a->setSelected( fc, true);});
-        }   // end else
-        _actions.insert(sending);
-        emit reportFinished( *sending, *wset);
-    }   // end else
+    // Set the selected FaceControls on the actions again
+    for ( FaceControl* fc : _selector.selected())
+        doOnSelect( fc, true);
+    std::for_each( std::begin(_actions), std::end(_actions), [=](auto a){ a->setEnabled(a->testEnabled());});
+    if ( _selector.selected().empty())
+        std::for_each( std::begin(_actions), std::end(_actions), [=](auto a){ a->setChecked( false);});
+    _selector.setSelectEnabled(true);   // Re-enable selection events
 }   // end doOnActionFinished
+
+
+// private slot
+void FaceActionManager::doOnReportChanges( const ChangeEventSet& cset, FaceControl* fc)
+{
+    FaceAction* sending = qobject_cast<FaceAction*>(sender());
+    _actions.erase(sending);    // Sender mustn't respond to self!
+    for ( FaceAction* a : _actions)
+    {
+        for ( const auto& c : cset)
+        {
+            if ( a->respondEvents().count(c))
+            {
+                a->respondTo( sending, &cset, fc);
+                break;
+            }   // end if
+        }   // end for
+    }   // end for
+    _actions.insert(sending);
+}   // end doOnReportChanges
+
+
+// private slot
+void FaceActionManager::doOnSelect( FaceControl* fc, bool v)
+{
+    // Tell actions that are responsive to selection events to set the ready state for the given FaceControl.
+    std::for_each( std::begin(_actions), std::end(_actions), [=](auto a)
+            {
+                if ( a->externalSelect())
+                    a->setSelected( fc, v);
+            });
+    std::for_each( std::begin(_actions), std::end(_actions), [=](auto a){ a->setEnabled(a->testEnabled());});
+}   // end doOnSelect
+
+
+// private slot
+void FaceActionManager::doOnRemove( FaceControl* fc)
+{
+    std::for_each( std::begin(_actions), std::end(_actions), [=](auto a){ a->purge( fc);});
+}   // end doOnRemove
+

@@ -33,7 +33,7 @@ namespace FaceTools {
 class FaceTools_EXPORT ModelViewer : public QWidget
 { Q_OBJECT
 public:
-    ModelViewer( QWidget* parent=NULL, bool useFloodLights=true);
+    ModelViewer( QWidget* parent=NULL, bool useFloodLights=false);
     virtual ~ModelViewer();
 
     // Interactor::ModelViewerInteractor (MVI) calls the protected attach and detach functions. Multiple different
