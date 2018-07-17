@@ -50,7 +50,8 @@ public:
     QTools::InteractionMode interactionMode() const { return _qviewer->interactionMode();}
 
     // Lock/unlock camera/actor interaction.
-    void setInteractionLocked( bool v) { _qviewer->setInteractionLocked(v);}
+    int lockInteraction() { return _qviewer->lockInteraction();}
+    bool unlockInteraction( int lkey) { return _qviewer->unlockInteraction(lkey);}
     bool isInteractionLocked() const { return _qviewer->isInteractionLocked();}
 
     QPoint getMouseCoords() const { return _qviewer->getMouseCoords();}
@@ -172,8 +173,8 @@ public:
     size_t getWidth() const;    // Return the width of the viewport in pixels
     size_t getHeight() const;   // Return the height of the viewport in pixels
 
-    const vtkSmartPointer<vtkRenderer> getRenderer() const { return _qviewer->getRenderer();}
-    const vtkSmartPointer<vtkRenderWindow> getRenderWindow() const { return _qviewer->getRenderWindow();}
+    const vtkRenderer* getRenderer() const { return _qviewer->getRenderer();}
+    const vtkRenderWindow* getRenderWindow() const { return _qviewer->getRenderWindow();}
 
     void setCursor( QCursor);
 
@@ -194,8 +195,8 @@ private:
     std::unordered_map<int, vtkProp*> _props;
     std::unordered_set<Interactor::MVI*> _interactors;
     int addPointsActor( vtkSmartPointer<vtkActor>, const VisOptions&, bool asSpheres);
-    ModelViewer( const ModelViewer&);       // NO COPY
-    void operator=( const ModelViewer&);    // NO COPY
+    ModelViewer( const ModelViewer&) = delete;
+    void operator=( const ModelViewer&) = delete;
 };  // end class
 
 }   // end namespace

@@ -40,13 +40,11 @@ FaceModel* FaceModelAssImpFileHandler::read( const QString& qfname)
     RFeatures::ObjModel::Ptr model = _importer->load(fname);
     if ( model)
     {
-        fm = new FaceModel;
-        if ( !fm->updateData( model))
-        {
+        RFeatures::ObjModelInfo::Ptr minfo = RFeatures::ObjModelInfo::create(model);
+        if ( minfo)
+            fm = new FaceModel(minfo);
+        else
             _err = tr("Failed to clean object loaded from \"") + fname.c_str() + tr("\"");
-            delete fm;
-            fm = NULL;
-        }   // end if
     }   // end if
     else
         _err = _importer->err().c_str();

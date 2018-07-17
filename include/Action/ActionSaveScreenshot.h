@@ -18,22 +18,32 @@
 #ifndef FACE_TOOLS_ACTION_SAVE_SCREENSHOT_H
 #define FACE_TOOLS_ACTION_SAVE_SCREENSHOT_H
 
+/**
+ * Save as image snapshots the renderers for the actioned actioned FaceControls.
+ * If multiple viewers are added, the screenshot is generated from a horizontal
+ * concatenation of the images from the added viewers (left to right in additive order).
+ */
+
 #include "FaceAction.h"
+#include <FaceModelViewer.h>
 
 namespace FaceTools {
-class MultiFaceModelViewer;
 namespace Action {
 
 class FaceTools_EXPORT ActionSaveScreenshot : public FaceAction
 { Q_OBJECT
 public:
-    ActionSaveScreenshot( const QString& dname, const QIcon& icon, const MultiFaceModelViewer*);
+    // If no viewers are added, screenshots are saved from viewers of the FaceControlSet passed in to doAction.
+    ActionSaveScreenshot( const QString& dname, const QIcon& icon, const FaceModelViewer* mv=NULL);
+
+    void addViewer( const FaceModelViewer* v) { _viewers.push_back(v);}
    
 public slots:
     bool doAction( FaceControlSet&) override;
 
 private:
-    const MultiFaceModelViewer* _mviewer;
+    std::vector<const FaceModelViewer*> _viewers;
+    bool displayDebugStatusProgression() const override { return false;}
 };  // end class
 
 }   // end namespace

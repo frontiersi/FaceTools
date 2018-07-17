@@ -24,14 +24,20 @@ using FaceTools::Landmark;
 #include <cassert>
 
 
+LandmarkSet::Ptr LandmarkSet::create()
+{
+    return Ptr( new LandmarkSet, [](auto d){ delete d;});
+}   // end create
+
+
 LandmarkSet::LandmarkSet() : _sid(0) {}
 
 
+/*
 LandmarkSet::LandmarkSet( const LandmarkSet& lset)
 {
     (*this) = lset;
 }   // end ctor
-
 
 LandmarkSet& LandmarkSet::operator=( const LandmarkSet& lset)
 {
@@ -42,6 +48,7 @@ LandmarkSet& LandmarkSet::operator=( const LandmarkSet& lset)
     _sid = lset._sid;
     return *this;
 }   // end operator=
+*/
 
 
 int LandmarkSet::set( const std::string& name, const cv::Vec3f& v)
@@ -165,25 +172,25 @@ void LandmarkSet::transform( const cv::Matx44d& T)
 }   // end transform
 
 
-double FaceTools::translateLandmarksToSurface( const RFeatures::ObjModelKDTree& kdt, LandmarkSet &lset)
+double FaceTools::translateLandmarksToSurface( RFeatures::ObjModelKDTree::Ptr kdt, LandmarkSet::Ptr lset)
 {
     double sdiff = 0;
-    const RFeatures::ObjModelSurfacePointFinder spfinder( kdt.model());
+    const RFeatures::ObjModelSurfacePointFinder spfinder( kdt->model());
 
     cv::Vec3f fv;
     int notused, vidx;
-    for ( int lmkid : lset.ids())
+    for ( int lmkid : lset->ids())
     {
-        const cv::Vec3f& v = lset.pos( lmkid);  // Current position of landmark
-        vidx = kdt.find( v);   // Closest vertex to landmark
+        const cv::Vec3f& v = lset->pos( lmkid);  // Current position of landmark
+        vidx = kdt->find( v);   // Closest vertex to landmark
 
         // Project v onto the model's surface. Choose from all the polygons connected to vertex vidx the
         // projection into the plane of a polygon that gives the smallest difference in position.
         sdiff += spfinder.find( v, vidx, notused, fv);
-        lset.set( lmkid, fv);
+        lset->set( lmkid, fv);
     }   // end foreach
 
-    return sqrt( sdiff / lset.count());    // Average difference in reposition of landmarks
+    return sqrt( sdiff / lset->count());    // Average difference in reposition of landmarks
 }   // end translateLandmarksToSurface
 
 
@@ -206,7 +213,7 @@ const PTree& FaceTools::operator>>( const PTree& record, LandmarkSet& lset)
         if ( lvt.first == "landmark")
         {
             std::string nm = lvt.second.get<std::string>( "<xmlattr>.name");
-            lset.set( nm, RFeatures::getVertex( lvt));
+            lset.set( nm, RFeatures::getVertex( lvt.second));
         }   // end if
     }   // end foreach
     return record;

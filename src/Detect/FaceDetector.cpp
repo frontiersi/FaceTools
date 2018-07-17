@@ -130,7 +130,7 @@ std::string getEyePoints( vtkRenderer* ren, cv::Point2f& f0, cv::Vec3f& v0,
 
 
 // Detect the initial oriention points for the eyes and nosetip.
-std::string findOrientationPoints( RVTK::Viewer::Ptr viewer, const ObjModelKDTree& kdtree,
+std::string findOrientationPoints( RVTK::Viewer::Ptr viewer, const ObjModelKDTree::Ptr kdtree,
                                    cv::Vec3f& v0, cv::Vec3f& v1, cv::Vec3f& ntip)
 {
     FaceFinder2D faceFinder;
@@ -155,9 +155,9 @@ std::string findOrientationPoints( RVTK::Viewer::Ptr viewer, const ObjModelKDTre
     }   // end if
 
     // Find the vertices that are closest to the estimated world positions of the eyes
-    const int lvidx = kdtree.find( v0);
-    const int rvidx = kdtree.find( v1);
-    const ObjModel* model = kdtree.model();
+    const int lvidx = kdtree->find( v0);
+    const int rvidx = kdtree->find( v1);
+    const ObjModel* model = kdtree->model();
     NoseFinder m1NoseFinder( model, lvidx, rvidx);
 
     std::string msg;
@@ -180,13 +180,34 @@ std::string findOrientationPoints( RVTK::Viewer::Ptr viewer, const ObjModelKDTre
     return msg;
 }   // end findOrientationPoints
 
+
+void findNewOrientation( const cv::Vec3f& ntip, const cv::Vec3f& v0, const cv::Vec3f& v1, cv::Vec3f& nvec, cv::Vec3f& uvec)
+{
+    const cv::Vec3f d0 = v0 - ntip;
+    const cv::Vec3f d1 = v1 - ntip;
+    cv::Vec3f a, b;
+    cv::normalize( d1, a);
+    cv::normalize( d0, b);
+    cv::Vec3f d2;
+    cv::normalize( a.cross(b), d2);
+
+    const cv::Vec3f eyev = v1 - v0; // Vector between eye centres
+    const cv::Vec3f midp = v0 + (0.5f * eyev);  // Mid-point between eyes
+    d2 *= cv::norm( ntip - midp);
+
+    cv::normalize( d2 - midp, nvec);
+    cv::Vec3f neyev;
+    cv::normalize( eyev, neyev);
+    cv::normalize( nvec.cross(neyev), uvec);
+}   // end findNewOrientation
+
 }   // end namespace
 
 
 
 
 // public
-bool FaceDetector::detect( const ObjModelKDTree& kdt, Orientation& on, LandmarkSet& lset)
+bool FaceDetector::detect( const ObjModelKDTree::Ptr kdt, Orientation& on, LandmarkSet::Ptr lset)
 {
     if ( !s_initOk)
     {
@@ -200,9 +221,9 @@ bool FaceDetector::detect( const ObjModelKDTree& kdt, Orientation& on, LandmarkS
     _viewer = RVTK::Viewer::create(true/*offscreen*/);
     _viewer->setSize(600,600);
     _viewer->setCamera( RFeatures::CameraParams( cv::Vec3f( 0, 0, _orng)));    // Default camera for detecting orientation
+
     RVTK::VtkActorCreator actorCreator;
-    _actors.clear();
-    actorCreator.generateTexturedActors( kdt.model(), _actors);
+    actorCreator.generateTexturedActors( kdt->model(), _actors);
     std::for_each( std::begin(_actors), std::end(_actors), [this](auto a){ _viewer->addActor(a);});
     _viewer->resetClippingRange();
     _viewer->updateRender();
@@ -213,23 +234,33 @@ bool FaceDetector::detect( const ObjModelKDTree& kdt, Orientation& on, LandmarkS
         return cleanUp();
 
     using namespace FaceTools::Landmarks;
-    lset.set( NASAL_TIP, ntip);
-    lset.set( L_EYE_CENTRE, v0);
-    lset.set( R_EYE_CENTRE, v1);
+    lset->set( NASAL_TIP, ntip);
+    lset->set( L_EYE_CENTRE, v0);
+    lset->set( R_EYE_CENTRE, v1);
 
+    //findNewOrientation( ntip, v0, v1, on.norm(), on.up());
     if ( !FaceTools::Detect::findOrientation( kdt, v0, v1, on.norm(), on.up()))
         return cleanUp( "Unable to find orientation!");
 
     // Update the view to focus on the identified face centre using the landmark detection range.
-    const cv::Vec3f fc = FaceTools::calcFaceCentre( on.up(), lset.pos( L_EYE_CENTRE), lset.pos( R_EYE_CENTRE), lset.pos( NASAL_TIP));
+    const cv::Vec3f fc = FaceTools::calcFaceCentre( on.up(), lset->pos( L_EYE_CENTRE), lset->pos( R_EYE_CENTRE), lset->pos( NASAL_TIP));
     _viewer->setCamera( RFeatures::CameraParams( _drng * on.norm() + fc, fc, on.up()));
     _viewer->updateRender();
+    //RFeatures::showImage( snapshot(_viewer), "Updated detection image post orientation", false);
 
     if ( !FaceShapeLandmarks2DDetector::detect( _viewer, lset))
         return cleanUp( "Complete set of landmarks not found.");
 
-    // VTK's projection of landmarks to model surface is not very accurate, so shift them to be incident with the surface.
-    FaceTools::translateLandmarksToSurface( kdt, lset);
+    ntip = lset->pos(NASAL_TIP);
+    v0 = lset->pos( L_EYE_CENTRE);
+    v1 = lset->pos( R_EYE_CENTRE);
+    //findNewOrientation( ntip, v0, v1, on.norm(), on.up());
+    FaceTools::Detect::findOrientation( kdt, v0, v1, on.norm(), on.up());
+
+    //_viewer->setCamera( RFeatures::CameraParams( _drng * on.norm() + fc, fc, on.up()));
+    //_viewer->updateRender();
+    //RFeatures::showImage( snapshot(_viewer), "Image post final orientation", false);
+
     return cleanUp();
 }   // end detect
 
@@ -239,6 +270,8 @@ bool FaceDetector::cleanUp( std::string err)
     _err = err;
     std::cerr << _err << std::endl;
     std::for_each( std::begin(_actors), std::end(_actors), [this](auto a){ _viewer->removeActor(a);});
+    std::for_each( std::begin(_actors), std::end(_actors), [](auto a){ a->Delete();});
+    _actors.clear();
     _viewer.reset();
     return err.empty();
 }   // end cleanUp

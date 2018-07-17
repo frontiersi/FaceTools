@@ -20,6 +20,7 @@
 
 #include "FaceAction.h"
 #include "CameraWorker.h"
+#include <ModelMoveInteractor.h>
 
 namespace FaceTools {
 namespace Action {
@@ -27,18 +28,18 @@ namespace Action {
 class FaceTools_EXPORT ActionMarquee : public FaceAction
 { Q_OBJECT
 public:
-    ActionMarquee( const QString& dname="Marquee (Demo)", const QIcon& icon=QIcon());
+    ActionMarquee( const QString& dname, const QIcon&, Interactor::ModelMoveInteractor*);
     ~ActionMarquee() override;
 
     void addViewer( FaceModelViewer*);  // Add a viewer that marquee mode will be applied to
 
-protected slots:
-    bool testEnabled() override;
+private slots:
+    bool testEnabled() const override { return true;}
     bool doAction( FaceControlSet&) override;
 
 private:
     std::unordered_set<CameraWorker*> _workers;
-    void stop();
+    bool displayDebugStatusProgression() const override { return false;}
 };  // end class
 
 }   // end namespace

@@ -22,7 +22,7 @@ using FaceTools::Interactor::ModelViewerInteractor;
 using FaceTools::ModelViewer;
 
 ModelViewerInteractor::ModelViewerInteractor( ModelViewer* mv)
-    : _viewer(NULL)
+    : _viewer(nullptr), _ilock(0)
 {
     setViewer(mv);
 }   // end ctor
@@ -30,7 +30,7 @@ ModelViewerInteractor::ModelViewerInteractor( ModelViewer* mv)
 
 ModelViewerInteractor::~ModelViewerInteractor()
 {
-    setViewer(NULL);
+    setViewer(nullptr);
 }   // end dtor
 
 
@@ -53,3 +53,20 @@ void ModelViewerInteractor::setViewer( ModelViewer* viewer)
         onAttached();
     }   // end if
 }   // end setViewer
+
+
+void ModelViewerInteractor::setInteractionLocked( bool dolock)
+{
+    if ( _viewer)
+    {
+        _viewer->unlockInteraction(_ilock);
+        if ( dolock)
+            _ilock = _viewer->lockInteraction();
+    }   // end if
+}   // end setInteractionLocked
+
+
+bool ModelViewerInteractor::isInteractionLocked() const
+{
+    return _viewer && _viewer->isInteractionLocked();
+}   // end isInteractionLocked

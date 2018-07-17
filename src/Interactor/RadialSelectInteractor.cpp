@@ -16,71 +16,69 @@
  ************************************************************************/
 
 #include <RadialSelectInteractor.h>
-#include <FaceEntryExitInteractor.h>
-#include <BoundingVisualisation.h>
+#include <RadialSelectVisualisation.h>
 #include <FaceModelViewer.h>
-#include <FeatureUtils.h>   // RFeatures
 #include <cassert>
 using FaceTools::Interactor::RadialSelectInteractor;
-using FaceTools::Interactor::FaceEntryExitInteractor;
-using FaceTools::Vis::BoundingVisualisation;
+using FaceTools::Interactor::FaceHoveringInteractor;
+using FaceTools::Vis::RadialSelectVisualisation;
 using FaceTools::FaceControl;
 
 
 // public
-RadialSelectInteractor::RadialSelectInteractor( BoundingVisualisation* bv)
-    : _bvis(bv), _feei( new FaceEntryExitInteractor), _fc(NULL), _move(false)
+RadialSelectInteractor::RadialSelectInteractor( FEEI* feei, RadialSelectVisualisation* vis)
+    : FaceHoveringInteractor( feei, vis), _vis(vis), _move(false)
 {
-    connect( _feei, &FaceEntryExitInteractor::onEnterModel, [this](auto fc){ if (_bvis->isApplied(fc)) _fc = fc;});
-    connect( _feei, &FaceEntryExitInteractor::onLeaveModel, [this](){ _fc = NULL;});
 }   // end ctor
 
 
-// public
-RadialSelectInteractor::~RadialSelectInteractor() { delete _feei;}
-
-
-// protected
-void RadialSelectInteractor::onAttached() { _feei->setViewer(viewer());}
-void RadialSelectInteractor::onDetached() { _feei->setViewer(NULL);}
-
-
+// Double-click to reposition centre of boundary.
 bool RadialSelectInteractor::leftDoubleClick( const QPoint& p)
 {
+    assert( hoverModel());
     _move = true;
     return leftDrag(p);
 }   // end leftDoubleClick
 
 
+// Left drag (but only after _move flag set with double-click)
+// to reposition the centre of the boundary.
 bool RadialSelectInteractor::leftDrag( const QPoint& p)
 {
-    if ( !_fc || !_move)
-        return false;
-    emit onSetNewCentre( _fc, viewer()->project(p));
-    return true;
+    assert( hoverModel());
+    bool swallowed = false;
+    if ( _move)
+    {
+        swallowed = true;
+        emit onSetNewCentre( hoverModel(), viewer()->project(p));
+    }   // end if
+    return swallowed;
 }   // end leftDrag
 
 
 bool RadialSelectInteractor::leftButtonUp( const QPoint&)
 {
+    assert( hoverModel());
     _move = false;
     return false;
 }   // end leftButtonUp
 
 
+// Increase the radius
 bool RadialSelectInteractor::mouseWheelForward( const QPoint& p)
 {
-    if ( !_fc)
-        return false;
-    emit onSetNewRadius( _fc, _bvis->radius(_fc)+1);
+    FaceControl* fc = hoverModel();
+    assert(fc);
+    emit onSetNewRadius( fc, _vis->radius(fc->data())+1);
     return true;
 }   // end mouseWheelForward
 
 
+// Decrease the radius
 bool RadialSelectInteractor::mouseWheelBackward( const QPoint& p)
 {
-    if ( !_fc)
-        return false;
-    emit onSetNewRadius( _fc, _bvis->radius(_fc)-1);
+    FaceControl* fc = hoverModel();
+    assert(fc);
+    emit onSetNewRadius( fc, _vis->radius(fc->data())-1);
     return true;
 }   // end mouseWheeBackward

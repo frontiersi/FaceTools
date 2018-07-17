@@ -30,14 +30,9 @@ using FaceTools::Landmark;
 
 // public
 LandmarkSetView::LandmarkSetView( const LandmarkSet& lset, double r)
-    : _lset(lset), _lmrad(r), _viewer(NULL)
+    : _lset(lset), _lmrad(r), _viewer(nullptr)
 {
-    for ( int lm : _lset.ids())
-    {
-        const Landmark* lmk = _lset.get(lm);
-        _lviews[lm] = new SphereView( lmk->pos, _lmrad);
-        _lviews[lm]->setCaption( lmk->name);
-    }   // end foreach
+    std::for_each( std::begin(lset.ids()), std::end(lset.ids()), [this](int lm){ this->refreshLandmark(lm);});
 }   // end ctor
 
 
@@ -49,7 +44,6 @@ LandmarkSetView::~LandmarkSetView()
         showLandmark( false, lm.first);
         delete lm.second;
     }   // end foreach
-    _lviews.clear();
 }   // end dtor
 
 
@@ -60,12 +54,11 @@ bool LandmarkSetView::isVisible() const { return !_visible.empty();}
 // public
 void LandmarkSetView::setVisible( bool enable, ModelViewer* viewer)
 {
-    while ( !_visible.empty())
+    while ( isVisible())
         showLandmark( false, *_visible.begin());
-
     _viewer = viewer;
     if ( enable && _viewer)
-        std::for_each( std::begin(_lviews), std::end(_lviews), [this](const auto& lm){ this->showLandmark( true, lm.first);});
+        std::for_each( std::begin(_lviews), std::end(_lviews), [this](auto p){ this->showLandmark( true, p.first);});
 }   // end setVisible
 
 
@@ -79,24 +72,28 @@ void LandmarkSetView::showLandmark( bool enable, int lm)
 {
     assert( _lviews.count(lm) > 0);
     _lviews.at(lm)->setVisible( enable, _viewer);
+
     _visible.erase(lm);
-    _highlighted.erase(lm);
     if ( isLandmarkVisible(lm))
         _visible.insert(lm);
+
+    _highlighted.erase(lm);
+    if ( isLandmarkHighlighted(lm))
+        _highlighted.insert(lm);
 }   // end showLandmark
 
 
 // public
-bool LandmarkSetView::isLandmarkVisible( int lm) const
-{
-    return _lviews.at(lm)->isVisible();
-}   // end isLandmarkVisible
+bool LandmarkSetView::isLandmarkVisible( int lm) const { return _lviews.at(lm)->isVisible();}
+bool LandmarkSetView::isLandmarkHighlighted( int lm) const { return _lviews.at(lm)->isHighlighted();}
 
 
 // public
 void LandmarkSetView::highlightLandmark( bool enable, int lm)
 {
-    assert( _lviews.count(lm) > 0);
+    if ( _lviews.count(lm) == 0)
+        return;
+
     _lviews.at(lm)->highlight( isLandmarkVisible(lm) && enable);
     _highlighted.erase(lm);
     if ( isLandmarkHighlighted(lm))
@@ -110,52 +107,57 @@ void LandmarkSetView::highlightLandmark( bool enable, int lm)
 // public
 void LandmarkSetView::setLandmarkRadius( double r)
 {
-    std::for_each( std::begin(_lviews), std::end(_lviews), [&](const auto& p){ p.second->setRadius(r);});
+    std::for_each( std::begin(_lviews), std::end(_lviews), [&](auto p){ p.second->setRadius(r);});
     _lmrad = r;
 }   // end setLandmarkRadius
 
 
 // public
-bool LandmarkSetView::isLandmarkHighlighted( int lm) const
+void LandmarkSetView::pokeTransform( const vtkMatrix4x4* vm)
 {
-    const bool vis = _lviews.at(lm)->isHighlighted();
-#ifndef NDEBUG
-    if ( vis)
-        assert( _highlighted.count(lm) > 0);
-#endif
-    return vis;
-}   // end isLandmarkHighlighted
+    std::for_each( std::begin(_lviews), std::end(_lviews), [=](auto p){ p.second->pokeTransform(vm);});
+}   // end pokeTransform
 
 
 // public
-void LandmarkSetView::transform( const vtkMatrix4x4* vm)
+void LandmarkSetView::fixTransform()
 {
-    cv::Matx44d m = RVTK::toCV(vm);
-    RFeatures::Transformer mover(m);
-    std::for_each(std::begin(_lviews), std::end(_lviews), [&](const auto& p)
-            { p.second->setCentre( mover.transform( p.second->centre())); });
-}   // end transform
+    std::for_each( std::begin(_lviews), std::end(_lviews), [=](auto p){ p.second->fixTransform();});
+}   // end fixTransform
 
 
-// public slot
+// public
 void LandmarkSetView::refreshLandmark( int lm)
 {
+    assert(lm >= 0);
     if ( !_lset.has(lm))  // Delete landmark from view
     {
         if ( _lviews.count(lm) > 0)
         {
             showLandmark( false, lm);
-            delete _lviews.at(lm);
+            SphereView *sv = _lviews.at(lm);
             _lviews.erase(lm);
+            _props.erase(sv->prop());
+            delete sv;
         }   // end if
     }   // end if
-    else    // Landmark was added, or an existing landmark's position was changed.
+    else    // Landmark added, or an existing landmark's info (position,name) needs updating
     {
         const Landmark* lmk = _lset.get(lm);
-        if ( _lviews.count(lm) == 0)    // Landmark was added
-            _lviews[lm] = new SphereView( lmk->pos, _lmrad);
-        _lviews[lm]->setCaption( lmk->name);
-        _lviews[lm]->setCentre( lmk->pos);
+
+        SphereView *sv = nullptr;
+        if ( _lviews.count(lm) > 0) // Get the landmark sphere view to update
+            sv = _lviews.at(lm);
+        else    // Landmark was added
+        {
+            sv = _lviews[lm] = new SphereView( lmk->pos, _lmrad);
+            sv->setResolution(30);
+            sv->setColour(1,1,0.2);
+            _props[sv->prop()] = lm;
+        }   // end if
+
+        sv->setCaption( lmk->name);
+        sv->setCentre( lmk->pos);
     }   // end if
 }   // end refreshLandmark 
 
@@ -163,31 +165,26 @@ void LandmarkSetView::refreshLandmark( int lm)
 // public
 int LandmarkSetView::pointedAt( const QPoint& p) const
 {
-    for ( int lm : _visible) // Only check the landmarks that are visible
+    int id = -1;
+    const vtkProp* prop = _viewer->getPointedAt(p);
+    if ( prop && _props.count(prop) > 0)
     {
-        if ( _lviews.at(lm)->pointedAt(p))
-            return lm;
-    }   // end foreach
-    return -1;  // Not found
+        id = _props.at(prop);
+        if ( _visible.count(id) == 0)   // Ignore if not visible
+            id = -1;
+    }   // end if
+    return id;
 }   // end pointedAt
 
 
 // public
-bool LandmarkSetView::isLandmark( const vtkProp* prop) const
-{
-    for ( const auto& lm : _lviews)
-    {
-        if ( lm.second->isProp(prop))
-            return true;
-    }   // end foreach
-    return false;
-}   // end isLandmark
+bool LandmarkSetView::isLandmark( const vtkProp* prop) const { return _props.count(prop) > 0;}
 
 
 // public
 const SphereView* LandmarkSetView::landmark( int lmid) const
 {
-    const SphereView* lv = NULL;
+    const SphereView* lv = nullptr;
     if ( _lviews.count(lmid) > 0)
         lv = _lviews.at(lmid);
     return lv;

@@ -19,6 +19,7 @@
 #define FACE_TOOLS_ACTION_RESET_CAMERA_H
 
 #include "FaceAction.h"
+#include <FaceModelViewer.h>
 
 namespace FaceTools {
 namespace Action {
@@ -26,10 +27,19 @@ namespace Action {
 class FaceTools_EXPORT ActionResetCamera : public FaceAction
 { Q_OBJECT
 public:
-    ActionResetCamera( const QString& dname="Reset Camera", const QIcon& ico=QIcon());
-   
-public slots:
+    // If no viewers are added, viewers that are reset will be taken from the FaceControlSet passed in to doAction.
+    ActionResetCamera( const QString& dname="Reset Camera", const QIcon& ico=QIcon(), FaceModelViewer *v=NULL);
+
+    void addViewer( FaceModelViewer* v) { _viewers.push_back(v);}
+
+private slots:
+    bool testEnabled() const override { return true;}
     bool doAction( FaceControlSet&) override;
+    void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(CAMERA_CHANGE);}
+
+private:
+    std::vector<FaceModelViewer*> _viewers;
+    bool displayDebugStatusProgression() const override { return false;}
 };  // end class
 
 }   // end namespace

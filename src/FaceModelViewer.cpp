@@ -30,7 +30,7 @@ FaceModelViewer::FaceModelViewer( QWidget *parent) : ModelViewer(parent)
 
 
 void FaceModelViewer::saveScreenshot() const { saveSnapshot();}
-void FaceModelViewer::resetCamera() { resetDefaultCamera( 650.0f); updateRender();}
+void FaceModelViewer::resetCamera() { resetDefaultCamera( 650.0f);}
 
 
 bool FaceModelViewer::attach( FaceControl* fc)
@@ -42,6 +42,7 @@ bool FaceModelViewer::attach( FaceControl* fc)
     _attached.insert(fc);
     _models[fc->data()] = fc;
     fc->setViewer( this);
+    emit onAttached(fc);
     return true;
 }   // end attach
 
@@ -55,6 +56,7 @@ bool FaceModelViewer::detach( FaceControl* fc)
     fc->setViewer(NULL);
     if ( _attached.empty())   // Reset camera to default if now empty
         resetCamera();
+    emit onDetached(fc);
     return true;
 }   // end detach
 

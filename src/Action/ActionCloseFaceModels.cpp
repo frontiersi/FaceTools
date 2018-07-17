@@ -19,53 +19,47 @@
 #include <QMessageBox>
 #include <boost/filesystem.hpp>
 #include <algorithm>
-using FaceTools::Action::ActionCloseFaceModels;
 using FaceTools::Action::FaceAction;
-using FaceTools::FileIO::CloseFaceModelsHelper;
+using FaceTools::Action::ActionCloseFaceModels;
+using FaceTools::FileIO::FaceModelManager;
 using FaceTools::FaceControlSet;
 using FaceTools::FaceModel;
 
 
-ActionCloseFaceModels::ActionCloseFaceModels( const QString& dname, const QIcon& ico, const QKeySequence& keys, CloseFaceModelsHelper* chelper)
-    : FaceAction( dname, ico, keys, true/*this action disabled on other actions executing*/),
-      _chelper(chelper)
+ActionCloseFaceModels::ActionCloseFaceModels( const QString& dname, const QIcon& ico, const QKeySequence& keys,
+                                              FaceModelManager* fmm, QWidget* pw)
+    : FaceAction( dname, ico, keys), _fmm(fmm), _parent(pw)
 {
 }   // end ctor
 
 
-bool ActionCloseFaceModels::doBeforeAction( FaceControlSet& fset)
+bool ActionCloseFaceModels::doBeforeAction( FaceControlSet& fcs)
 {
-    FaceModelSet fms = fset.models();
+    FaceModelSet fms = fcs.models();
     for ( FaceModel* fm : fms)
     {
-        // If the FaceModel hasn't been saved and the user doesn't want to close it (after prompting), remove from the action set.
+        bool inPreferredFormat = _fmm->hasPreferredFileFormat(fm);
+
+        // If FaceModel hasn't been saved and the user doesn't want to close it (after prompting), remove from action set.
         bool doclose = false;
-        if ( _chelper->isSaved(fm))
+        if ( fm->isSaved() && ( inPreferredFormat || !fm->hasMetaData()))
             doclose = true;
         else
         {
-            std::string fname = boost::filesystem::path( _chelper->filepath(fm)).filename().string();
-            if ( QMessageBox::Yes == QMessageBox::question( _chelper->parentWidget(),
-                                                tr(("Unsaved changes on \"" + fname + "\"").c_str()),
-                                                tr("Model has unsaved changes! Close without saving anyway?"),
+            const std::string fname = boost::filesystem::path( _fmm->filepath(fm)).filename().string();
+            QString msg = tr( ("Model \"" + fname + "\" has unsaved changes! Close anyway?").c_str());
+            if ( !inPreferredFormat)
+                msg = tr("Model not saved in preferred file format (.3df); close anyway?");
+
+            if ( QMessageBox::Yes == QMessageBox::question( _parent, tr("Unsaved changes!"), msg,
                                                 QMessageBox::Yes | QMessageBox::No, QMessageBox::No))
             {
                 doclose = true;
             }   // end if
         }   // end if
 
-        if ( doclose)
-            _cset.insert(fm);
+        if ( !doclose)
+            fcs.erase(fm);
     }   // end for
-    return !_cset.empty();
+    return !fcs.empty();
 }   // end doBeforeAction
-
-
-bool ActionCloseFaceModels::doAction( FaceControlSet& rset)
-{
-    // Remove all entries in rset that will be closed (nominally all of them)
-    std::for_each(std::begin(_cset), std::end(_cset), [&](auto fm){rset.erase(fm);});
-    _chelper->close( _cset);
-    _cset.clear();
-    return true;
-}   // end doAction

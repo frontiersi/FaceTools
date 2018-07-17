@@ -16,6 +16,8 @@
  ************************************************************************/
 
 #include <LoadFaceModelsHelper.h>
+#include <FaceModelManager.h>
+#include <FaceModel.h>
 #include <QMessageBox>
 using FaceTools::FileIO::LoadFaceModelsHelper;
 using FaceTools::FileIO::FaceModelManager;
@@ -33,11 +35,14 @@ size_t LoadFaceModelsHelper::setFilteredFilenames( const QStringList& fnames)
 {
     // Get the supported filenames.
     QStringList notsupp;
+    QStringList areopen;
     _filenames.clear();
     for ( const QString& qfname : fnames)
     {
         if ( !_fmm->canRead( qfname.toStdString()))
             notsupp << qfname;
+        else if ( _fmm->isOpen( qfname.toStdString()))
+            areopen << qfname;
         else
             _filenames << qfname;
     }   // end for
@@ -46,21 +51,26 @@ size_t LoadFaceModelsHelper::setFilteredFilenames( const QStringList& fnames)
     if ( _filenames.size() + _fmm->numOpen() > _fmm->loadLimit())
     {
         const size_t nallowed = _fmm->loadLimit() - _fmm->numOpen();
-        QString msg = tr("Too many files selected! Only ");
-        msg.append( QString::number( _fmm->loadLimit())).append( tr(" models are allowed to be open at once."));
+        QString msg = QObject::tr("Too many files selected! Only ");
+        msg.append( QString::number( _fmm->loadLimit())).append( QObject::tr(" models are allowed to be open at once."));
         if ( nallowed == 1)
-            msg.append( tr("Only one more model may be loaded."));
+            msg.append( QObject::tr("Only one more model may be loaded."));
         else
-            msg.append( tr("%1 more models may be loaded.").arg(nallowed));
-        QMessageBox::warning( _parent, tr("Load limit reached!"), msg);
+            msg.append( QObject::tr("%1 more models may be loaded.").arg(nallowed));
+        QMessageBox::warning( _parent, QObject::tr("Load limit reached!"), msg);
         _filenames.clear();
     }   // end if
 
     // Show warning for not supported files
     if ( notsupp.size() == 1)
-        QMessageBox::warning( _parent, tr("Unsupported file type!"), notsupp.join(" ") + tr(" has an unsupported format!"));
+        QMessageBox::warning( _parent, QObject::tr("Unsupported file type!"), notsupp.join(" ") + QObject::tr(" has an unsupported format!"));
     else if ( notsupp.size() > 1)
-        QMessageBox::warning( _parent, tr("Unsupported file types!"), notsupp.join(", ") + tr(" are not supported file types!"));
+        QMessageBox::warning( _parent, QObject::tr("Unsupported file types!"), notsupp.join(", ") + QObject::tr(" are not supported file types!"));
+
+    if ( areopen.size() == 1)
+        QMessageBox::warning( _parent, QObject::tr("File already open!"), areopen.join(" ") + QObject::tr(" is already open!"));
+    else if ( areopen.size() > 1)
+        QMessageBox::warning( _parent, QObject::tr("Files already open!"), areopen.join(", ") + QObject::tr(" are already open!"));
 
     return _filenames.size();
 }   // end setFilteredFilenames
@@ -70,20 +80,17 @@ size_t LoadFaceModelsHelper::setFilteredFilenames( const QStringList& fnames)
 size_t LoadFaceModelsHelper::loadModels()
 {
     _failnames.clear();
-    size_t nloaded = 0;
+    _loaded.clear();
     for ( const QString& fname : _filenames)
     {
         FaceModel* fm = _fmm->read( fname.toStdString());   // Blocks
         if ( fm)
-        {
-            emit loadedModel( fm);
-            nloaded++;
-        }   // end if
+            _loaded.push_back(fname.toStdString());
         else
             _failnames[_fmm->error().c_str()] << fname;
     }   // end for
     _filenames.clear();
-    return nloaded;
+    return _loaded.size();
 }   // end loadModels
 
 
@@ -104,9 +111,9 @@ void LoadFaceModelsHelper::showLoadErrors()
     // For each error type, display a warning dialog
     for ( auto f : _failnames)
     {
-        QString msg = f.first + tr("\nUnable to load the following:\n");
+        QString msg = f.first + QObject::tr("\nUnable to load the following:\n");
         msg.append( f.second.join("\n"));
-        QMessageBox::warning( _parent, tr("Unable to load file(s)!"), msg);
+        QMessageBox::warning( _parent, QObject::tr("Unable to load file(s)!"), msg);
     }   // end for
     _failnames.clear();
 }   // end showLoadErrors
@@ -117,3 +124,7 @@ bool LoadFaceModelsHelper::reachedLoadLimit() const
 {
     return _fmm->numOpen() >= _fmm->loadLimit();
 }   // end reachedLoadLimit
+
+
+QString LoadFaceModelsHelper::createImportFilters() const { return _fmm->fileFormats().createImportFilters();}
+QStringList LoadFaceModelsHelper::createSimpleImportFilters() const { return _fmm->fileFormats().createSimpleImportFilters();}

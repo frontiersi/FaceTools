@@ -18,21 +18,21 @@
 #include <ActionLoadDirFaceModels.h>
 #include <QFileDialog>
 using FaceTools::Action::ActionLoadDirFaceModels;
+using FaceTools::Action::ChangeEventSet;
 using FaceTools::Action::FaceAction;
 using FaceTools::FileIO::LoadFaceModelsHelper;
 using FaceTools::FileIO::FaceModelManager;
 using FaceTools::FaceControlSet;
-using FaceTools::FaceModel;
 
 
 ActionLoadDirFaceModels::ActionLoadDirFaceModels( const QString& dn, const QIcon& ico, LoadFaceModelsHelper* lhelper)
-    : FaceAction( dn, ico, true), _loadHelper( lhelper)
+    : FaceAction( dn, ico), _loadHelper( lhelper)
 {
     setAsync(true);
 }   // end ctor
 
 
-bool ActionLoadDirFaceModels::testEnabled() { return !_loadHelper->reachedLoadLimit();}
+bool ActionLoadDirFaceModels::testEnabled() const { return !_loadHelper->reachedLoadLimit();}
 
 
 bool ActionLoadDirFaceModels::doBeforeAction( FaceControlSet&)
@@ -41,7 +41,8 @@ bool ActionLoadDirFaceModels::doBeforeAction( FaceControlSet&)
     // dialog couldn't be found. On some Win10 machines, crashes occur unless non-native dialogs are used.
     QString dname = QFileDialog::getExistingDirectory( _loadHelper->parentWidget(),
                                                        tr("Select directory containing models"), "",
-                                                       QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly);
+                                                       QFileDialog::ShowDirsOnly);
+                                                       //QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly);
     // Get list of filenames from directory
     QDir qdir(dname);
     QStringList fnames = qdir.entryList( _loadHelper->createSimpleImportFilters());
@@ -51,5 +52,15 @@ bool ActionLoadDirFaceModels::doBeforeAction( FaceControlSet&)
 }   // end doBeforeAction
 
 
-bool ActionLoadDirFaceModels::doAction( FaceControlSet&/*ignored*/) { return _loadHelper->loadModels() > 0;}
-void ActionLoadDirFaceModels::doAfterAction( const FaceControlSet&, bool) { _loadHelper->showLoadErrors();}
+bool ActionLoadDirFaceModels::doAction( FaceControlSet&/*ignored*/)
+{
+    return _loadHelper->loadModels() > 0;
+}   // end doAction
+
+
+void ActionLoadDirFaceModels::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool loaded)
+{
+    _loadHelper->showLoadErrors();
+    if ( loaded)
+        cs.insert(LOADED_MODEL);
+}   // end doAfterAction

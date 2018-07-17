@@ -24,8 +24,8 @@ using FaceTools::FileIO::FaceModelFileHandlerException;
 using FaceTools::FaceModel;
 
 
-FaceModelU3DFileHandler::FaceModelU3DFileHandler()
-    : _exporter( true/* delete transition files*/)
+FaceModelU3DFileHandler::FaceModelU3DFileHandler( bool delFilesWhenDone)
+    : _exporter( delFilesWhenDone)
 {
     if ( !canWrite())
         throw FaceModelFileHandlerException( "u3d", "FaceModelU3DFileHandler unsupported on construction!");
@@ -43,7 +43,7 @@ QString FaceModelU3DFileHandler::getFileDescription() const
 bool FaceModelU3DFileHandler::write( const FaceModel* fm, const QString& fname)
 {
     _err = "";
-    if ( !_exporter.save( fm->cmodel(), fname.toStdString()))
+    if ( !_exporter.save( fm->info()->cmodel(), fname.toStdString()))
         _err = _exporter.err().c_str();
     return _err.isEmpty();
 }   // end write

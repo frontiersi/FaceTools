@@ -18,50 +18,47 @@
 #include <ActionCloseAllFaceModels.h>
 #include <QMessageBox>
 #include <algorithm>
-using FaceTools::Action::ActionCloseAllFaceModels;
 using FaceTools::Action::FaceAction;
-using FaceTools::FileIO::CloseFaceModelsHelper;
+using FaceTools::Action::ActionCloseAllFaceModels;
+using FaceTools::FileIO::FaceModelManager;
 using FaceTools::FaceControlSet;
+using FaceTools::FaceModelSet;
 using FaceTools::FaceModel;
 
 
-ActionCloseAllFaceModels::ActionCloseAllFaceModels( const QString& dname, CloseFaceModelsHelper* chelper)
-    : FaceAction( dname, true/*action disabled on other actions executing*/), _chelper(chelper)
+ActionCloseAllFaceModels::ActionCloseAllFaceModels( const QString& dname, FaceModelManager* fmm, QWidget* pw)
+    : FaceAction( dname), _fmm(fmm), _parent(pw)
 {
 }   // end ctor
 
 
-bool ActionCloseAllFaceModels::testEnabled()
-{
-    return !_chelper->opened().empty();
-}   // end testEnabled
-
-
-bool ActionCloseAllFaceModels::doBeforeAction( FaceControlSet&)
+bool ActionCloseAllFaceModels::doBeforeAction( FaceControlSet& fcs)
 {
     bool doclose = true; // If any of the open models aren't saved, ask user to confirm.
-    const std::unordered_set<FaceModel*>& models = _chelper->opened();
+    const FaceModelSet& models = _fmm->opened();
     for ( FaceModel* fm : models)
     {
-        if ( !_chelper->isSaved(fm))
+        if ( !fm->isSaved() || (!_fmm->hasPreferredFileFormat(fm) && fm->hasMetaData()))
         {
-            if ( QMessageBox::No == QMessageBox::question( _chelper->parentWidget(), tr("Unsaved changes!"),
-                                                tr("Open models(s) have unsaved changes! Close all without saving anyway?"),
+            static const QString msg = tr("Model(s) have unsaved changes! Close all anyway?");
+            if ( QMessageBox::No == QMessageBox::question( _parent, tr("Unsaved changes!"), msg,
                                                 QMessageBox::Yes | QMessageBox::No, QMessageBox::No))
             {
                 doclose = false;
             }   // end if
-            break;  // Question being asked for all models so break
+            break;  // Question being asked on behalf of all models so break
         }   // end if
     }   // end for
+
+    // Populate fcs with FaceControl instances from all open models.
+    if ( doclose)
+    {
+        for ( FaceModel* fm : models)
+        {
+            const FaceControlSet& fcs0 = fm->faceControls();
+            std::for_each( std::begin(fcs0), std::end(fcs0), [&](auto fc){ fcs.insert(fc);});
+        }   // end for
+    }   // end if
+
     return doclose;
 }   // end doBeforeAction
-
-
-bool ActionCloseAllFaceModels::doAction( FaceControlSet &rset)
-{
-    FaceModelSet cset = _chelper->opened(); // Copy out
-    std::for_each(std::begin(cset), std::end(cset), [&](auto fm){rset.erase(fm);});
-    _chelper->close( cset);
-    return true;
-}   // end doAction

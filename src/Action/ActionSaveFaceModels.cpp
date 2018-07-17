@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <ActionSaveFaceModels.h>
+#include <FaceControl.h>
 #include <QMessageBox>
 #include <algorithm>
 #include <cassert>
@@ -30,22 +31,16 @@ using FaceTools::FaceModel;
 
 ActionSaveFaceModels::ActionSaveFaceModels( const QString& dn, const QIcon& ico, const QKeySequence& ks,
                                             FaceModelManager* fmm, QWidget *parent)
-    : FaceAction( dn, ico, ks, true/*this action disabled on other actions executing*/),
-      _fmm(fmm), _parent(parent)
+    : FaceAction( dn, ico, ks), _fmm(fmm), _parent(parent)
 {
-    addRespondTo( DATA_CHANGE);
     setAsync(true);
 }   // end ctor
 
 
-bool ActionSaveFaceModels::testReady( FaceControl* fc)
+bool ActionSaveFaceModels::testReady( const FaceControl* fc)
 {
-    FaceModel* fm = fc->data();
-    // Add to potential save set if FaceControl is under control, has undergone
-    // changes since last save, and is currently saved in the preferred format.
-    const bool isSaved = _fmm->isSaved( fm);
-    const bool hasPreferredFormat = _fmm->hasPreferredFileFormat( fm);
-    return !isSaved && hasPreferredFormat;
+    FaceModel *fm = fc->data();
+    return !fm->isSaved() && (_fmm->hasPreferredFileFormat(fm) || !fm->hasMetaData());
 }   // end testReady
 
 
@@ -62,7 +57,7 @@ bool ActionSaveFaceModels::doAction( FaceControlSet& fset)
 }   // end doAction
 
 
-void ActionSaveFaceModels::doAfterAction( const FaceControlSet&, bool)
+void ActionSaveFaceModels::doAfterAction( ChangeEventSet&, const FaceControlSet&, bool)
 {
     for ( auto f : _fails)  // Display a critical error for each type of error message received
     {
@@ -72,10 +67,3 @@ void ActionSaveFaceModels::doAfterAction( const FaceControlSet&, bool)
     }   // end for
     _fails.clear(); // Ensure the fail set is cleared
 }   // end doAfterAction
-
-
-void ActionSaveFaceModels::respondTo( const FaceAction* a, const ChangeEventSet* c, FaceControl* fc)
-{
-    _fmm->setUnsaved(fc->data());
-    FaceAction::respondTo( a, c, fc);
-}   // end respondTo

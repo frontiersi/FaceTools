@@ -41,6 +41,9 @@ public:
     void setOpacity( double);
     double opacity() const;
 
+    void setColour( double r, double g, double b);      // Set colour as rgb components in [0,1].
+    const double* colour() const;                       // Return a 3-tuple array for the rgb components.
+
     void setCentre( const cv::Vec3f&);                  // Update position of actor.
     cv::Vec3f centre() const;                           // Return this view's position.
 
@@ -57,6 +60,9 @@ public:
 
     bool isVisible() const;                             // Returns true iff shown
     void setVisible( bool, ModelViewer* viewer);        // Add/remove from viewer
+
+    void pokeTransform( const vtkMatrix4x4*);
+    void fixTransform();
 
 private:
     ModelViewer* _viewer;

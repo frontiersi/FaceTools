@@ -22,44 +22,52 @@
 #include <ObjModelCopier.h> // RFeatures
 #include <cassert>
 using FaceTools::Action::ActionGetComponent;
+using FaceTools::Action::ChangeEventSet;
 using FaceTools::Action::FaceAction;
 using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
 using FaceTools::FaceModel;
 
 
-ActionGetComponent::ActionGetComponent( const QString& dn, const QIcon& ico)
-    : FaceAction( dn, ico, true/*disable before other*/)
+ActionGetComponent::ActionGetComponent( const QString& dn, const QIcon& ico, QProgressBar* pb)
+    : FaceAction( dn, ico)
 {
-    addChangeTo( DATA_CHANGE);
-    addRespondTo( DATA_CHANGE);
+    if ( pb)
+        setAsync(true, QTools::QProgressUpdater::create(pb));
 }   // end ctor
 
 
-bool ActionGetComponent::testReady( FaceControl* fc)
+bool ActionGetComponent::testReady( const FaceControl* fc)
 {
-    return fc->data()->landmarks().has( FaceTools::Landmarks::NASAL_TIP);
+    const FaceModel* fm = fc->data();
+    fm->lockForRead();
+    const FaceTools::LandmarkSet::Ptr lmks = fm->landmarks();
+    const bool rval = lmks->has( FaceTools::Landmarks::NASAL_TIP) && fm->info()->components().size() > 1;
+    fm->unlock();
+    return rval;
 }   // end testReady
 
 
 bool ActionGetComponent::doAction( FaceControlSet& rset)
 {
+    bool success = true;
     using namespace RFeatures;
     const FaceModelSet& fms = rset.models();
     for ( FaceModel* fm : fms)
     {
-        int svidx = fm->kdtree().find( fm->landmarks().pos( FaceTools::Landmarks::NASAL_TIP));
-        const ObjModel* model = fm->cmodel();
-        int fidx = *model->getFaceIds(svidx).begin();    // Get a polygon attached to this vertex
+        fm->lockForRead();
+        const FaceTools::LandmarkSet::Ptr lmks = fm->landmarks();
+        int svidx = fm->kdtree()->find( lmks->pos( FaceTools::Landmarks::NASAL_TIP));
+
+        ObjModelInfo::Ptr info = fm->info();
+        int fidx = *info->cmodel()->getFaceIds(svidx).begin();    // Get a polygon attached to this vertex
 
         // Find which of the components of the model has this polygon as a member
         int foundC = -1;
-        const ObjModelInfo* info = fm->info();
         int nc = info->components().size();
         for ( int c = 0; c < nc; ++c)
         {
             const IntSet* fids = info->components().componentPolygons(c);
-            assert(fids);
             if ( fids->count(fidx) > 0)
             {
                 foundC = c;
@@ -70,9 +78,29 @@ bool ActionGetComponent::doAction( FaceControlSet& rset)
         assert(foundC >= 0);
         const IntSet* cfids = info->components().componentPolygons(foundC);
         assert( cfids);
-        ObjModelCopier copier( model);
+        ObjModelCopier copier( info->cmodel());
         std::for_each( std::begin(*cfids), std::end(*cfids), [&](int fid){ copier.addTriangle(fid);});
-        fm->updateData( copier.getCopiedModel());
+        fm->unlock();
+
+        ObjModelInfo::Ptr ninfo = ObjModelInfo::create( copier.getCopiedModel());
+        assert( ninfo);
+        if ( !ninfo)
+        {
+            std::cerr << "[ERROR] FaceTools::ActionGetComponent::doAction: Unable to create new model from component!" << std::endl;
+            success = false;
+            continue;
+        }   // end if
+
+        fm->lockForWrite();
+        fm->update( ninfo);
+        fm->unlock();
     }   // end for
-    return true;
+    return success;
 }   // end doAction
+
+
+// protected
+void ActionGetComponent::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool)
+{ 
+    cs.insert(GEOMETRY_CHANGE);
+}   // end doAfterAction

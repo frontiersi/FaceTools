@@ -25,7 +25,7 @@ using FaceTools::ModelViewer;
 
 
 SphereView::SphereView( const cv::Vec3f& c, double r, bool p)
-    : _viewer(NULL),
+    : _viewer(nullptr),
       _source( vtkSmartPointer<vtkSphereSource>::New()),
       _actor( vtkSmartPointer<vtkActor>::New()),
       _caption( vtkSmartPointer<vtkCaptionActor2D>::New()),
@@ -35,12 +35,18 @@ SphereView::SphereView( const cv::Vec3f& c, double r, bool p)
     mapper->SetInputConnection( _source->GetOutputPort());
     _actor->SetMapper(mapper);
 
+    vtkProperty* property = _actor->GetProperty();
+    property->SetAmbient( 1.0);
+    property->SetDiffuse( 0.0);
+    property->SetSpecular( 0.0);
+
     _caption->BorderOff();
     _caption->GetCaptionTextProperty()->BoldOff();
     _caption->GetCaptionTextProperty()->ItalicOff();
     _caption->GetCaptionTextProperty()->ShadowOff();
     _caption->GetCaptionTextProperty()->SetFontFamilyToCourier();
-    _caption->GetCaptionTextProperty()->SetFontSize(4);
+    _caption->GetCaptionTextProperty()->SetFontSize(6);
+    _caption->GetCaptionTextProperty()->SetColor( 1,1,1);
     _caption->GetCaptionTextProperty()->SetUseTightBoundingBox(true);
     _caption->SetPickable(false);
 
@@ -52,7 +58,7 @@ SphereView::SphereView( const cv::Vec3f& c, double r, bool p)
 
 SphereView::~SphereView()
 {
-    setVisible( false, NULL);
+    setVisible( false, nullptr);
 }   // end dtor
 
 
@@ -74,6 +80,9 @@ double SphereView::opacity() const { return _actor->GetProperty()->GetOpacity();
 void SphereView::setOpacity( double v) { _actor->GetProperty()->SetOpacity( v);}
 double SphereView::radius() const { return _source->GetRadius();}
 
+void SphereView::setColour( double r, double g, double b) { _actor->GetProperty()->SetColor(r,g,b);}
+const double* SphereView::colour() const { return _actor->GetProperty()->GetColor();}
+
 void SphereView::setCaption( const std::string& lname) { _caption->SetCaption( lname.c_str());}
 
 // public
@@ -93,6 +102,25 @@ cv::Vec3f SphereView::centre() const
     _source->GetCenter( vp);
     return cv::Vec3f( float(vp[0]), float(vp[1]), float(vp[2]));
 }   // end centre
+
+
+// public
+void SphereView::pokeTransform( const vtkMatrix4x4* vm)
+{
+    _actor->PokeMatrix( const_cast<vtkMatrix4x4*>(vm));
+    double vp[3];   // Get the translation vector from the transform matrix
+    vp[0] = vm->GetElement(0,3);
+    vp[1] = vm->GetElement(1,3);
+    vp[2] = vm->GetElement(2,3);
+    _caption->SetAttachmentPoint( vp);
+}   // end pokeTransform
+
+
+// public
+void SphereView::fixTransform()
+{
+    RVTK::transform( _actor, _actor->GetMatrix());
+}   // end fixTransform
 
 
 // public
@@ -133,9 +161,6 @@ bool SphereView::isProp( const vtkProp* prop) const { return _actor == prop;}
 void SphereView::highlight( bool enable)
 {
     _ishighlighted = enable && isVisible();
-    _actor->GetProperty()->SetColor( 0.7,1,1);
-    _caption->GetCaptionTextProperty()->SetColor( 1,1,1);
-    _caption->SetVisibility( true);
 
     if ( _viewer)
     {

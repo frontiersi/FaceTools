@@ -29,12 +29,13 @@ public:
     ActionTransformToStandardPosition( const QString& dname="Transform to Standard Position",
                                        const QIcon& icon=QIcon());
 
-protected slots:
-    bool testReady( FaceControl*) override;
+private slots:
     bool doAction( FaceControlSet&) override;
+    void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(AFFINE_CHANGE);}
 };  // end class
 
 }   // end namespace
 }   // end namespace
 
 #endif
+

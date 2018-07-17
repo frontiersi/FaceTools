@@ -20,6 +20,8 @@
 #include <MiscFunctions.h>
 #include <AssetImporter.h>
 #include <OBJExporter.h>
+#include <QTemporaryDir>
+#include <quazip/JlCompress.h>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -37,7 +39,8 @@ void writeFaceModel( const FaceModel* fm, const std::string& objfname, PTree& rn
     rnode.put( "description", fm->description());
     rnode.put( "source", fm->source());
     rnode << fm->orientation();
-    rnode << fm->landmarks();
+    rnode << *fm->landmarks();
+    rnode << *fm->paths();
 }   // end writeFaceModel
 
 
@@ -51,7 +54,14 @@ FaceModel* readFaceModel( const PTree& rnode, std::string& objfilename)
     RFeatures::Orientation on;
     rnode >> on;
     fm->setOrientation(on);
-    rnode >> fm->landmarks();
+
+    std::cerr << "Read in orientation " << on << " with DP " << on.norm().dot( on.up()) << std::endl;
+
+    FaceTools::LandmarkSet::Ptr lmks = fm->landmarks();
+    rnode >> *lmks;
+
+    FaceTools::PathSet::Ptr paths = fm->paths();
+    rnode >> *paths;
 
     return fm;
 }   // end readFaceModel
@@ -63,19 +73,40 @@ FaceModel* readFaceModel( const PTree& rnode, std::string& objfilename)
 FaceModel* FaceModelXMLFileHandler::read( const QString& sfname)
 {
     _err = "";
-    FaceModel* fm = NULL;
-    const std::string fname = sfname.toStdString();
+    FaceModel* fm = nullptr;
 
     try
     {
+        QTemporaryDir dir;
+        if ( !dir.isValid())
+        {
+            _err = "Unable to open temporary directory for reading from!";
+            return nullptr;
+        }   // end if
+
+        QStringList fnames = JlCompress::extractDir( sfname, dir.path());
+        if ( fnames.isEmpty())
+        {
+            _err = "Unable to extract files from archive!";
+            return nullptr;
+        }   // end if
+
+        std::string xmlfile = boost::filesystem::path(sfname.toStdString()).filename().replace_extension( "xml").string();   // 13040011.xml
+        xmlfile = dir.filePath( xmlfile.c_str()).toStdString();
+        if ( !boost::filesystem::exists( xmlfile) || !boost::filesystem::is_regular_file( xmlfile))
+        {
+            _err = "Cannot find XML meta-data file in archive!";
+            return nullptr;
+        }   // end if
+
         std::ifstream ifs;
-        ifs.open( fname);
+        ifs.open( xmlfile);
         if ( !ifs.is_open())
         {
             std::ostringstream serr;
-            serr << "Unable to open \"" << fname << "\" for reading!";
+            serr << "Unable to open \"" << xmlfile << "\" for reading!";
             _err = serr.str().c_str();
-            return NULL;
+            return nullptr;
         }   // end if
 
         PTree tree;
@@ -88,7 +119,7 @@ FaceModel* FaceModelXMLFileHandler::read( const QString& sfname)
             std::ostringstream serr;
             serr << "Invalid XML file version (got " << fversion << " but need " << XML_VERSION << ")";
             _err = serr.str().c_str();
-            return NULL;
+            return nullptr;
         }   // end if
 
         const std::string filedesc = faces.get<std::string>( "description");
@@ -100,7 +131,7 @@ FaceModel* FaceModelXMLFileHandler::read( const QString& sfname)
         if ( nrecs <= 0)
         {
             _err = "No FaceModel objects recorded in file!";
-            return NULL;
+            return nullptr;
         }   // end if
 
         if ( nrecs > 1)
@@ -122,7 +153,7 @@ FaceModel* FaceModelXMLFileHandler::read( const QString& sfname)
         if ( !fm)
         {
             _err = "Unable to read in FaceModel from file record!";
-            return NULL;
+            return nullptr;
         }   // end if
 
         const std::string fext = FaceTools::getExtension( objfilename);
@@ -130,31 +161,35 @@ FaceModel* FaceModelXMLFileHandler::read( const QString& sfname)
         {
             _err = "FaceModel has its model saved in an unsupported format!";
             delete fm;
-            return NULL;
+            return nullptr;
         }   // end if
 
         RModelIO::AssetImporter importer(true,true);
         importer.enableFormat(fext);
-        const std::string modelfile = (boost::filesystem::path(fname).parent_path() / objfilename).string();
-        std::cerr << "[STATUS] FaceTools::FileIO::FaceModelXMLFileHandler::read: Loading model from \"" << modelfile << "\"" << std::endl;
-        RFeatures::ObjModel::Ptr model = importer.load( modelfile);   // Doesn't merge materials or clean!
+        const std::string objfile = dir.filePath( objfilename.c_str()).toStdString();
+        std::cerr << "[STATUS] FaceTools::FileIO::FaceModelXMLFileHandler::read: Loading model from \"" << objfile << "\"" << std::endl;
+        RFeatures::ObjModel::Ptr model = importer.load( objfile);   // Doesn't merge materials or clean!
         if ( !model)
         {
             std::ostringstream serr;
-            serr << "Failed to load object from \"" << modelfile << "\"";
+            serr << "Failed to load object from \"" << objfile << "\"";
             _err = serr.str().c_str();
             delete fm;
-            return NULL;
+            return nullptr;
         }   // end if
 
-        if (!fm->updateData( model))
+        RFeatures::ObjModelInfo::Ptr minfo = RFeatures::ObjModelInfo::create(model);
+        if ( !minfo)
         {
             std::ostringstream serr;
-            serr << "Failed to clean object loaded from \"" << modelfile << "\"";
+            serr << "Failed to clean object loaded from \"" << objfile << "\"";
             _err = serr.str().c_str();
             delete fm;
-            return NULL;
+            return nullptr;
         }   // end if
+
+        const bool uokay = fm->update( minfo);
+        assert(uokay);
     }   // end try
     catch ( const boost::property_tree::ptree_bad_path& e)
     {
@@ -175,7 +210,7 @@ FaceModel* FaceModelXMLFileHandler::read( const QString& sfname)
     if ( !_err.isEmpty() && fm)
     {
         delete fm;
-        fm = NULL;
+        fm = nullptr;
     }   // end if
 
     return fm;
@@ -188,22 +223,32 @@ bool FaceModelXMLFileHandler::write( const FaceModel* fm, const QString& sfname)
 {
     assert(fm);
     _err = "";
-    const std::string fname = sfname.toStdString();
 
     try
     {
+        std::string fname = sfname.toStdString();   // /home/rich/Desktop/13040011.3df
+        QTemporaryDir dir( boost::filesystem::path(fname).parent_path().string().c_str());
+        if ( !dir.isValid())
+        {
+            _err = "Unable to create temporary directory for writing to!";
+            return false;
+        }   // end if
+
+        std::string xmlfile = boost::filesystem::path(fname).filename().replace_extension( "xml").string();   // 13040011.xml
+        xmlfile = dir.filePath( xmlfile.c_str()).toStdString();
+
         std::ofstream ofs;
-        ofs.open( fname);
+        ofs.open( xmlfile);
         if ( !ofs.is_open())
         {
-            _err = ("Unable to open \"" + fname + "\" for writing!").c_str();
+            _err = ("Unable to open \"" + xmlfile + "\" for writing!").c_str();
             return false;
         }   // end if
 
         // Write out the model geometry itself into .obj format.
         RModelIO::OBJExporter exporter;
-        const std::string modfile = boost::filesystem::path(fname).replace_extension( "obj").string();
-        const RFeatures::ObjModel* model = fm->cmodel();
+        const std::string modfile = boost::filesystem::path(xmlfile).replace_extension( "obj").string();
+        const RFeatures::ObjModel* model = fm->info()->cmodel();
         std::cerr << "[STATUS] FaceTools::FileIO::FaceModelXMLFileHandler::write: Exporting model to " << modfile << std::endl;
         if ( !exporter.save( model, modfile))
         {
@@ -212,14 +257,13 @@ bool FaceModelXMLFileHandler::write( const FaceModel* fm, const QString& sfname)
             return false;
         }   // end if
 
-        std::cerr << "[STATUS] FaceTools::FileIO::FaceModelXMLFileHandler::write: Exported model to " << modfile << std::endl;
-        std::cerr << "[STATUS] FaceTools::FileIO::FaceModelXMLFileHandler::write: Writing meta-data out to " << fname << std::endl;
+        std::cerr << "[STATUS] FaceTools::FileIO::FaceModelXMLFileHandler::write: Exported object to " << modfile << std::endl;
 
         PTree tree;
         PTree& topNode = tree.put( "faces","");
         topNode.put( "<xmlattr>.version", XML_VERSION);
         std::ostringstream desc;
-        desc << XML_FILE_DESCRIPTION << ";" << time(NULL);
+        desc << XML_FILE_DESCRIPTION << ";" << time(nullptr);
         topNode.put( "description", desc.str());
 
         PTree& records = topNode.put( "FaceModels","");    // Only a single record
@@ -229,10 +273,17 @@ bool FaceModelXMLFileHandler::write( const FaceModel* fm, const QString& sfname)
 
         boost::property_tree::write_xml( ofs, tree);
         ofs.close();
+
+        std::cerr << "[STATUS] FaceTools::FileIO::FaceModelXMLFileHandler::write: Exported meta-data to " << xmlfile << std::endl;
+
+        // Finally, zip up the contents of the directory into sfname.
+        if ( !JlCompress::compressDir( sfname, dir.path(), true/*recursively pack subdirs*/))
+            _err = "Unable to compress saved data into archive format!";
     }   // end try
     catch ( const std::exception& e)
     {
-        std::cerr << "[EXCEPTION] FaceTools::FileIO::FaceModelXMLFileHandler::write: Failed to write to " << fname << std::endl;
+        std::cerr << "[EXCEPTION] FaceTools::FileIO::FaceModelXMLFileHandler::write: Failed to write to "
+            << sfname.toStdString() << std::endl;
         _err = e.what();
     }   // end catch
 

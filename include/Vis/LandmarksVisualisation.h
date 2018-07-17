@@ -27,11 +27,11 @@ namespace Vis {
 class FaceTools_EXPORT LandmarksVisualisation : public BaseVisualisation
 { Q_OBJECT
 public:
-    LandmarksVisualisation( const QString &dname, const QIcon &icon, const QKeySequence &keys);
+    LandmarksVisualisation( const QString &dname, const QIcon &icon);
     ~LandmarksVisualisation() override;
 
-    bool isExclusive() const override { return false;}
     bool isAvailable( const FaceModel*) const override;
+    bool isExclusive() const override { return false;}
 
     bool belongs( const vtkProp*, const FaceControl*) const override;
 
@@ -43,19 +43,18 @@ public:
     const LandmarkSetView* landmarks( const FaceControl*) const;
 
 public slots:
-    // Show or hide the given landmark across all views.
-    void setLandmarkVisible( int, bool);
+    // Show or hide the given landmark for the given FaceControl.
+    void setLandmarkVisible( const FaceControl*, int, bool);
 
-    // Set highlighted or not the given landmark across all views.
-    void setLandmarkHighlighted( int, bool);
+    // Set highlighted or not the given landmark for the given FaceControl.
+    void setLandmarkHighlighted( const FaceControl*, int, bool);
 
     // Refresh information about the given landmark from its set for the given FaceControl.
     void refreshLandmark( const FaceControl*, int);
 
 protected:
-    bool respondData() const override { return true;}
-    void respondTo( const Action::FaceAction*, const FaceControl*) override;
-    void transform( const FaceControl*, const vtkMatrix4x4*) override;
+    void pokeTransform( const FaceControl*, const vtkMatrix4x4*) override;
+    void fixTransform( const FaceControl*) override;
     void purge( const FaceControl*) override;
 
 private:

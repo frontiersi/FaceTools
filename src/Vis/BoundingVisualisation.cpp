@@ -16,27 +16,23 @@
  ************************************************************************/
 
 #include <BoundingVisualisation.h>
-#include <FaceShapeLandmarks2DDetector.h>   // FaceTools::Landmarks
 #include <ActionVisualise.h>
 #include <FaceModelViewer.h>
-#include <CameraParams.h>   // RFeatures
-#include <LandmarkSet.h>
 #include <FaceControl.h>
 #include <FaceModel.h>
-#include <VtkTools.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Vis::BoundingVisualisation;
-using FaceTools::Vis::SphereView;
-using FaceTools::LandmarkSet;
-using FaceTools::ModelViewer;
-using FaceTools::FaceControl;
-using FaceTools::FaceModel;
+using FaceTools::Vis::BoundingView;
 using FaceTools::Action::ActionVisualise;
+using FaceTools::Action::FaceAction;
+using FaceTools::ModelViewer;
+using FaceTools::FaceControlSet;
+using FaceTools::FaceControl;
 
 
-BoundingVisualisation::BoundingVisualisation( const QString& dname, const QIcon& icon)
-    : BaseVisualisation(dname, icon)
+BoundingVisualisation::BoundingVisualisation( const QString& dname)
+    : BaseVisualisation( dname)
 {
 }   // end ctor
 
@@ -48,70 +44,43 @@ BoundingVisualisation::~BoundingVisualisation()
 }   // end dtor
 
 
-bool BoundingVisualisation::isAvailable( const FaceModel* fm) const { return fm->landmarks().has( FaceTools::Landmarks::NASAL_TIP);}
-
-
 void BoundingVisualisation::apply( const FaceControl* fc)
 {
     if ( _views.count(fc) == 0)
-    {
-        _views[fc] = new SphereView( fc->data()->landmarks().pos( FaceTools::Landmarks::NASAL_TIP), 40, false);
-        _views[fc]->setResolution(201);
-        _views[fc]->setOpacity(0.4);
-    }   // end if
+        _views[fc] = new BoundingView( fc->data()->bounds());
 }   // end apply
 
 
 void BoundingVisualisation::addActors( const FaceControl* fc)
 {
-    _views.at(fc)->setVisible( true, fc->viewer());
+    if (_views.count(fc) > 0)
+        _views.at(fc)->setVisible( true, fc->viewer());
 }   // end addActors
 
 
 void BoundingVisualisation::removeActors( const FaceControl* fc)
 {
-    _views.at(fc)->setVisible( false, fc->viewer());
+    if (_views.count(fc) > 0)
+        _views.at(fc)->setVisible( false, fc->viewer());
 }   // end removeActors
 
 
-cv::Vec3f BoundingVisualisation::centre( const FaceControl* fc) const
+// protected
+void BoundingVisualisation::pokeTransform( const FaceControl* fc, const vtkMatrix4x4* vm)
 {
-    assert(_views.count(fc) > 0);
-    return _views.at(fc)->centre();
-}   // end centre
-
-
-void BoundingVisualisation::setCentre( const FaceControl* fc, const cv::Vec3f& v)
-{
-    assert(_views.count(fc) > 0);
-    _views.at(fc)->setCentre(v);
-    fc->viewer()->updateRender();
-}   // end setCentre
-
-
-double BoundingVisualisation::radius( const FaceControl* fc) const
-{
-    assert(_views.count(fc) > 0);
-    return _views.at(fc)->radius();
-}   // end radius
-
-
-void BoundingVisualisation::setRadius( const FaceControl* fc, double nrad)
-{
-    assert(_views.count(fc) > 0);
-    _views.at(fc)->setRadius(nrad);
-    fc->viewer()->updateRender();
-}   // end setRadius
+    if ( _views.count(fc) > 0)
+        _views.at(fc)->pokeTransform(vm);
+}   // end pokeTransform
 
 
 // protected
-void BoundingVisualisation::transform( const FaceControl* fc, const vtkMatrix4x4* vm)
+void BoundingVisualisation::fixTransform( const FaceControl* fc)
 {
-    cv::Vec3f npos = centre(fc);
-    RFeatures::Transformer mover( RVTK::toCV(vm));
-    mover.transform( npos);   // Transform position
-    setCentre( fc, npos);   // Set back
-}   // end transform
+    // Instead of fixing the actor matrix in, new bounds are
+    // generated so that the bounding box always remains upright at rest.
+    if ( _views.count(fc) > 0)
+        _views.at(fc)->updateBounds(fc->data()->bounds());
+}   // end fixTransform
 
 
 // protected

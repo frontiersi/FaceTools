@@ -19,7 +19,6 @@
 #define FACE_TOOLS_ACTION_MAP_SURFACE_DATA_H
 
 #include "FaceAction.h"
-#include <ObjModelCurvatureMetrics.h>   // RFeatures
 
 namespace FaceTools {
 namespace Action {
@@ -27,23 +26,13 @@ namespace Action {
 class FaceTools_EXPORT ActionMapSurfaceData : public FaceAction
 { Q_OBJECT
 public:
-    explicit ActionMapSurfaceData( const QString& dname);  // Asynchronous
-    ~ActionMapSurfaceData() override;
+    ActionMapSurfaceData();
 
-    // Returns surface data for the given FaceControl (data must already be present!).
-    const RFeatures::ObjModelCurvatureMetrics* metrics( const FaceControl*);
-    const RFeatures::ObjModelCurvatureMap* curvature( const FaceControl*);
-    const RFeatures::ObjModelNormals* normals( const FaceControl*);
-
-protected slots:
-    bool testReady( FaceControl*) override;
+private slots:
     bool doAction( FaceControlSet&) override;
-    void respondTo( const FaceAction*, const ChangeEventSet*, FaceControl*) override;
-    void purge( const FaceControl*) override;
-
-private:
-    struct SurfaceData;
-    std::unordered_map<const FaceModel*, SurfaceData*> _cmaps;
+    void purge( const FaceModel*) override;
+    void doOnCalculated( const FaceModel*);
+    bool displayDebugStatusProgression() const override { return false;}
 };  // end class
 
 }   // end namespace

@@ -22,10 +22,10 @@
 using namespace RFeatures;
 
 
-bool FaceTools::hasReqLandmarks( const LandmarkSet& lset)
+bool FaceTools::hasReqLandmarks( const LandmarkSet::Ptr lset)
 {
     using namespace FaceTools::Landmarks;
-    return lset.has( L_EYE_CENTRE) && lset.has(R_EYE_CENTRE) && lset.has(NASAL_TIP);
+    return lset->has( L_EYE_CENTRE) && lset->has(R_EYE_CENTRE) && lset->has(NASAL_TIP);
 }   // end hasReqLandmarks
 
 
@@ -36,6 +36,12 @@ cv::Vec3f FaceTools::calcFaceCentre( const cv::Vec3f& upv, const cv::Vec3f& v0, 
     cv::Vec3f downVec;
     cv::normalize( -upv, downVec);
     return midEye + (downVec.dot(dvec) * downVec);
+}   // end calcFaceCentre
+
+
+cv::Vec3f FaceTools::calcFaceCentre( const cv::Vec3f& v0, const cv::Vec3f& v1, const cv::Vec3f& nt)
+{
+    return (1.0f/3) * (v0 + v1 + nt);
 }   // end calcFaceCentre
 
 

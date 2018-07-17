@@ -19,7 +19,8 @@
 #define FACE_TOOLS_VIS_BOUNDING_VISUALISATION_H
 
 #include "BaseVisualisation.h"
-#include "SphereView.h"
+#include "BoundingView.h"
+#include <unordered_map>
 
 namespace FaceTools {
 namespace Vis {
@@ -27,31 +28,28 @@ namespace Vis {
 class FaceTools_EXPORT BoundingVisualisation : public BaseVisualisation
 { Q_OBJECT
 public:
-    BoundingVisualisation( const QString& dname="Bounding",
-                           const QIcon& icon=QIcon(":/icons/BOUNDARY"));
+    explicit BoundingVisualisation( const QString& dname="BoundingVisualisation");
     ~BoundingVisualisation() override;
 
     bool isExclusive() const override { return false;}
-    bool isAvailable( const FaceModel*) const override;
+
+    bool isVisible() const override { return false;}
+
+    // Used to bound the selected view - so should only be applied to a single FaceView.
+    bool singleView() const override { return true;}
 
     void apply( const FaceControl*) override;
     void addActors( const FaceControl*) override;
     void removeActors( const FaceControl*) override;
 
-    // Set/get a new radius of the boundary for the given FaceControl.
-    void setCentre( const FaceControl*, const cv::Vec3f&);
-    cv::Vec3f centre( const FaceControl*) const;
-
-    // Set/get a new boundary centre for the given FaceControl.
-    void setRadius( const FaceControl*, double);
-    double radius( const FaceControl*) const;
-
 protected:
-    void transform( const FaceControl*, const vtkMatrix4x4*) override;
+    void pokeTransform( const FaceControl*, const vtkMatrix4x4*) override;
+    void fixTransform( const FaceControl*) override;
     void purge( const FaceControl*) override;
+    bool applyOnReady() const override { return true;}
 
 private:
-    std::unordered_map<const FaceControl*, SphereView*> _views;
+    std::unordered_map<const FaceControl*, BoundingView*> _views;
 };  // end class
 
 }   // end namespace

@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <ActionCrop.h>
+#include <ActionRadialSelect.h>
 #include <FaceControl.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
@@ -23,98 +24,66 @@
 #include <FaceModelViewer.h>
 #include <ObjModelRegionSelector.h>
 #include <ObjModelCopier.h>
-using FaceTools::Action::ActionCrop;
+#include <cassert>
 using FaceTools::Action::FaceAction;
-using FaceTools::Action::ActionVisualise;
-using FaceTools::Vis::BoundingVisualisation;
-using FaceTools::Interactor::RadialSelectInteractor;
+using FaceTools::Action::ActionCrop;
+using FaceTools::Action::ActionRadialSelect;
+using FaceTools::Action::ChangeEventSet;
 using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
 using FaceTools::FaceModel;
 
 
-ActionCrop::ActionCrop( const QString& dn, const QIcon& ico, QStatusBar* sbar)
-    : FaceAction(dn, ico, true/*disable before other*/), _sbar(sbar)
+ActionCrop::ActionCrop( const QString& dn, const QIcon& ico, QProgressBar* pb)
+    : FaceAction(dn, ico), _rsel(nullptr)
 {
-    _bvis = new BoundingVisualisation( dn, ico);
-    _vact = new ActionVisualise( _bvis);
-    _interactor = new RadialSelectInteractor( _bvis);
-    connect( _interactor, &RadialSelectInteractor::onSetNewCentre, this, &ActionCrop::doOnSetNewCentre);
-    connect( _interactor, &RadialSelectInteractor::onSetNewRadius, this, &ActionCrop::doOnSetNewRadius);
-    addChangeTo( DATA_CHANGE);
-    addRespondTo( VIEW_CHANGE); // The view change being responded to is the application of the associated BoundingVisualiation
+    if ( pb)
+        setAsync(true, QTools::QProgressUpdater::create(pb));
 }   // end ctor
 
 
-ActionCrop::~ActionCrop()
+bool ActionCrop::testEnabled() const
 {
-    delete _interactor;
-    delete _vact;
-    delete _bvis;
-}   // end dtor
-
-
-// private slot
-void ActionCrop::doOnSetNewCentre( FaceControl* fc, const cv::Vec3f& v)
-{
-    _bvis->setCentre( fc, v);
-    fc->viewer()->updateRender();
-}   // end doOnSetNewCentre
-
-
-// private slot
-void ActionCrop::doOnSetNewRadius( FaceControl* fc, double r)
-{
-    _bvis->setRadius( fc, r);
-    fc->viewer()->updateRender();
-}   // end doOnSetNewRadius
-
-
-bool ActionCrop::testReady( FaceControl* fc)
-{
-    return _bvis->isApplied(fc);
-}   // end testReady
-
-
-void ActionCrop::tellReady( FaceControl* fc, bool isReady)
-{
-    const static QString smsg( tr("Reposition with left drag; change size with right drag."));
-    // Show or hide status info
-    if ( isReady)   // ready if _bvis->isApplied(fc)
-    {
-        _interactor->setViewer( fc->viewer());
-        _sbar->showMessage(smsg, 10000);    // 10 sec temp
-    }   // end if
-    else
-    {
-        _interactor->setViewer(NULL);
-        if ( _sbar->currentMessage() == smsg)
-            _sbar->clearMessage();
-    }   // end else
-}   // end tellReady
+    assert(_rsel);
+    return _rsel && _rsel->isChecked();
+}   // end testEnabled
 
 
 bool ActionCrop::doAction( FaceControlSet& rset)
 {
+    assert(_rsel);
     assert(rset.size() == 1);
     FaceControl* fc = rset.first();
-    FaceModel* fm = fc->data();
 
-    double rad = _bvis->radius( fc);
-    cv::Vec3f v = _bvis->centre( fc);
-    int s = fm->kdtree().find(v);
+    double rad = _rsel->radius( fc);
+    cv::Vec3f v = _rsel->centre( fc);
+
+    FaceModel* fm = fc->data();
+    fm->lockForWrite();
+    int s = fm->kdtree()->find(v);
 
     using namespace RFeatures;
-    const ObjModel* model = fm->cmodel();
-    ObjModelRegionSelector::Ptr cropper = ObjModelRegionSelector::create( model, v, s);
+    ObjModelRegionSelector::Ptr cropper = ObjModelRegionSelector::create( fm->info()->cmodel(), v, s);
     cropper->setRadius( rad);
     IntSet cfids;
     cropper->getRegionFaces( cfids);
-    assert( !cfids.empty());
 
     // Copy the subset of faces into a new model
-    ObjModelCopier copier( model);
-    std::for_each( std::begin(cfids), std::end(cfids), [&](int fid){ copier.addTriangle(fid);});
-    fm->updateData( copier.getCopiedModel());
+    if ( !cfids.empty())
+    {
+        ObjModelCopier copier( fm->info()->cmodel());
+        std::for_each( std::begin(cfids), std::end(cfids), [&](int fid){ copier.addTriangle(fid);});
+        ObjModel::Ptr nmodel = copier.getCopiedModel();
+        ObjModelInfo::Ptr nfo = ObjModelInfo::create(nmodel);
+        fm->update( nfo);
+    }   // end if
+
+    fm->unlock();
     return true;
 }   // end doAction
+
+
+void ActionCrop::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool)
+{ 
+    cs.insert(GEOMETRY_CHANGE);
+}   // end doAfterAction

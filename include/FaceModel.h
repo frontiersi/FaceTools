@@ -18,78 +18,91 @@
 #ifndef FACE_TOOLS_FACE_MODEL_H
 #define FACE_TOOLS_FACE_MODEL_H
 
+#include "PathSet.h"
 #include "LandmarkSet.h"
+#include "FaceControlSet.h"
 #include <ObjModelTools.h>   // RFeatures
+#include <QReadWriteLock>
 
 namespace FaceTools {
-namespace Action {
-class FaceAction;
-}   // end namespace
-
 class FaceControl;
 
 class FaceTools_EXPORT FaceModel
 {
 public:
+    explicit FaceModel( RFeatures::ObjModelInfo::Ptr);
     FaceModel();
-    virtual ~FaceModel(){}
 
-    // Pass in a new ObjModel to make destructive changes i.e., rebuilding all info including
-    // boundary and component info. New ObjModels are cleaned before setting. If the model
-    // cannot be cleaned, false is returned and no changes are made. If no ObjModel is
-    // supplied, the existing model is presumed to have been changed and data are repropagated
-    // internally. Surface data are updated (including landmarks and KD-tree), but model
-    // orientation is not (must be set separately).
-    bool updateData( RFeatures::ObjModel::Ptr=NULL);
+    // Use these read/write locks before accessing or writing to this FaceModel.
+    void lockForWrite();
+    void lockForRead() const;
+    void unlock() const;    // Call after done with read or write locks.
+
+    // Update with new data. Returns false iff a null object is passed in or the wrapped ObjModel is not a
+    // valid 2D manifold. If parameter NULL, update with existing data (which is presumed to have changed).
+    bool update( RFeatures::ObjModelInfo::Ptr=nullptr);
 
     // For making linear changes to the model that can be expressed using a matrix.
-    // Transform the model, the orientation, and the landmarks using the given matrix
-    // and then propagate changes via an internal call to updateData.
+    // Transform the model, the orientation, and the landmarks using the given matrix.
     void transform( const cv::Matx44d&);
 
-    RFeatures::ObjModel::Ptr model() const { return _minfo->model();}
-    const RFeatures::ObjModel* cmodel() const { return _minfo->cmodel();}
+    // Use this function to access the model for making direct changes. After making
+    // changes, call update to ensure that updates propagate through. If making changes
+    // to the wrapped ObjModel, ensure that ObjModelInfo::reset is called before update.
+    RFeatures::ObjModelInfo::Ptr info() const { return _minfo;}
 
-    // Returns the boundary values for each of the model's components as
-    // [xmin,xmax,ymin,ymax,zmin,zmax].
+    // Get the KD-tree - DO NOT MAKE CHANGES TO IT DIRECTLY!
+    RFeatures::ObjModelKDTree::Ptr kdtree() const { return _kdtree;}
+
+    // Returns boundary values for each model component as [xmin,xmax,ymin,ymax,zmin,zmax].
     const std::vector<cv::Vec6d>& bounds() const { return _cbounds;}
 
-    // Get constant references to the model's KD-tree and info.
-    // Note that the alias returned from these functions should not
-    // be cached since updateData() will recreate these data structures.
-    const RFeatures::ObjModelKDTree& kdtree() const;
-    const RFeatures::ObjModelInfo* info() const;
-
-    LandmarkSet& landmarks() { return _landmarks;}  // For making modifications
-    const LandmarkSet& landmarks() const { return _landmarks;}
-
     // Set/get orientation of the data.
-    void setOrientation( const RFeatures::Orientation& o) { _orientation = o;}
+    void setOrientation( const RFeatures::Orientation &o) { _orientation = o; setSaved(false);}
     const RFeatures::Orientation& orientation() const { return _orientation;}
 
+    // Landmarks.
+    LandmarkSet::Ptr landmarks() const { return _landmarks;}    // CALL setSaved(false) AFTER UPDATING!
+    // Paths.
+    PathSet::Ptr paths() const { return _paths;}    // CALL setSaved(false) AFTER UPDATING!
+
     // Set/get description of data.
-    void setDescription( const std::string& d) { _description = d;}
+    void setDescription( const std::string& d) { _description = d; setSaved(false);}
     const std::string& description() const { return _description;}
 
+    // Set/get source of data.
+    void setSource( const std::string& s) { _source = s; setSaved(false);}
     const std::string& source() const { return _source;}
-    void setSource( const std::string& s) { _source = s;}
+
+    const FaceControlSet& faceControls() const { return _fcs;}
+
+    // Set/get if this model needs saving.
+    bool isSaved() const { return _saved;}
+    void setSaved( bool s=true) { _saved = s;}
+
+    bool hasMetaData() const;
+
+    // Convenience function to update renderers on all associated FaceControls.
+    void updateRenderers() const;
 
 private:
+    bool _saved;
     std::string _description;   // Long form description
     std::string _source;        // Data source info
-    FaceTools::LandmarkSet _landmarks;
     RFeatures::Orientation _orientation;
+    FaceTools::LandmarkSet::Ptr _landmarks;
+    FaceTools::PathSet::Ptr _paths;
     RFeatures::ObjModelInfo::Ptr _minfo;
     RFeatures::ObjModelKDTree::Ptr _kdtree;
     std::vector<cv::Vec6d> _cbounds;    // Per component bounds
 
-    std::unordered_set<FaceControl*> _fcs;  // Associated FaceControls
-    bool _flagViewUpdate;
-
+    mutable QReadWriteLock _mutex;
+    FaceControlSet _fcs;  // Associated FaceControls
     friend class FaceControl;
-    friend class Action::FaceAction;
-    FaceModel( const FaceModel&);               // No copy
-    FaceModel& operator=( const FaceModel&);    // No copy
+
+    void calculateBounds();
+    FaceModel( const FaceModel&) = delete;
+    void operator=( const FaceModel&) = delete;
 };  // end class
 
 }   // end namespace

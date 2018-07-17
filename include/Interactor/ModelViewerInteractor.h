@@ -26,24 +26,28 @@
  * and detaches itself on destruction with ModelViewer::detachInterface( &MVI).
  */
 
-#include "FaceTools_Export.h"
+#include <FaceTools_Export.h>
 #include <VtkViewerInteractor.h>    // QTools::VVI
 #include <QPoint>
 
 namespace FaceTools {
 class ModelViewer;
+class FaceControl;
 
 namespace Interactor {
 
 class FaceTools_EXPORT ModelViewerInteractor : public QTools::VVI
 { Q_OBJECT
 public:
-    explicit ModelViewerInteractor( ModelViewer *v=NULL);
-    virtual ~ModelViewerInteractor();       // Calls setViewer(NULL) to detach.
+    explicit ModelViewerInteractor( ModelViewer *v=nullptr);
+    virtual ~ModelViewerInteractor();       // Calls setViewer(nullptr) to detach.
 
-    void setViewer( ModelViewer *v=NULL);  // Attach to given viewer or detach from current (NULL).
+    void setViewer( ModelViewer *v=nullptr);  // Attach to given viewer or detach from current (nullptr).
 
     ModelViewer* viewer() const { return _viewer;} // Get attached viewer.
+
+signals:
+    void onChangedData( const FaceControl*);  // Interactors that change data should emit this.
 
 protected:
     // Called immediately after attaching self. Can be used by derived types to add
@@ -54,8 +58,12 @@ protected:
     // types to finish interactions (e.g. emit final signals).
     virtual void onDetached(){}
 
+    void setInteractionLocked( bool);   // May not result in unlocking if other interactors active.
+    bool isInteractionLocked() const;   // Returns true iff interaction locked.
+
 private:
     ModelViewer *_viewer;
+    int _ilock;
 };  // end class
 
 typedef ModelViewerInteractor MVI;

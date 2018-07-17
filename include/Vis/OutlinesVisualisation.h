@@ -19,11 +19,11 @@
 #define FACE_TOOLS_VIS_OUTLINES_VISUALISATION_H
 
 #include "BaseVisualisation.h"
+#include "LoopsView.h"
 #include <unordered_map>
 
 namespace FaceTools {
 namespace Vis {
-class OutlinesView;
 
 class FaceTools_EXPORT OutlinesVisualisation : public BaseVisualisation
 { Q_OBJECT
@@ -38,13 +38,12 @@ public:
     void removeActors( const FaceControl*) override;
 
 protected:
-    bool respondData() const override { return true;}
-    void respondTo( const Action::FaceAction*, const FaceControl*) override;
-    void transform( const FaceControl*, const vtkMatrix4x4*) override;
+    void pokeTransform( const FaceControl*, const vtkMatrix4x4*) override;
+    void fixTransform( const FaceControl*) override;
     void purge( const FaceControl*) override;
 
 private:
-    std::unordered_map<const FaceControl*, OutlinesView*> _views;
+    std::unordered_map<const FaceControl*, LoopsView*> _views;
 };  // end class
 
 }   // end namespace

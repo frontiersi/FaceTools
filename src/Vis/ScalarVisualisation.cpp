@@ -16,149 +16,219 @@
  ************************************************************************/
 
 #include <ScalarVisualisation.h>
-#include <LegendScalarColourRangeMapper.h>
-#include <ActionMapSurfaceData.h>
-#include <FaceControl.h>
+#include <FaceModelSurfaceData.h>
 #include <FaceModelViewer.h>
+#include <FaceControl.h>
+#include <FaceModel.h>
 #include <FaceView.h>
 #include <vtkDataSetAttributes.h>
 #include <vtkCellData.h>
-#include <vtkProperty.h>
 #include <vtkMapper.h>
 #include <algorithm>
 #include <cassert>
+#include <PolySurfaceCurvScalarMapper.h>
+using RFeatures::ObjModelCurvatureMetrics;
+using FaceTools::Vis::LegendScalarColourRangeMapper;
 using FaceTools::Vis::SurfaceVisualisation;
 using FaceTools::Vis::ScalarVisualisation;
 using FaceTools::Vis::FaceView;
-using FaceTools::Action::ActionMapSurfaceData;
-using FaceTools::Action::FaceAction;
+using FaceTools::Action::ChangeEventSet;
+using FaceTools::FaceModelSurfaceData;
+using FaceTools::SurfaceData;
+using FaceTools::FaceControlSet;
+using FaceTools::FaceViewerSet;
 using FaceTools::FaceControl;
-using FaceTools::ModelViewer;
+using FaceTools::FaceModel;
+using FaceTools::FaceModelViewer;
 using QTools::ColourMappingWidget;
-typedef FaceTools::Vis::LegendScalarColourRangeMapper LSCRM;
 
 
 ScalarVisualisation::ScalarVisualisation( const QString& d, const QIcon& i, const QKeySequence& k)
-    : SurfaceVisualisation(d,i,k), _msd(NULL) {}   // end ctor
+    : SurfaceVisualisation(d,i,k), _lrng( new LegendScalarColourRangeMapper( d.toStdString())), _mfunc(nullptr)
+{
+}   // end ctor
 
 ScalarVisualisation::ScalarVisualisation( const QString& d, const QIcon& i)
-    : SurfaceVisualisation(d,i), _msd(NULL) {}   // end ctor
+    : SurfaceVisualisation(d,i), _lrng( new LegendScalarColourRangeMapper( d.toStdString())), _mfunc(nullptr)
+{
+}   // end ctor
 
 ScalarVisualisation::ScalarVisualisation( const QString& d)
-    : SurfaceVisualisation(d), _msd(NULL) {}   // end ctor
+    : SurfaceVisualisation(d), _lrng( new LegendScalarColourRangeMapper( d.toStdString())), _mfunc(nullptr)
+{
+}   // end ctor
 
 
 ScalarVisualisation::~ScalarVisualisation()
 {
-    std::for_each( std::begin(_lranges), std::end(_lranges), [](auto f){ delete f.second;});
-    _lranges.clear();
+    delete _lrng;
 }   // end dtor
 
 
+namespace {
+class CurvMapper : public RVTK::PolySurfaceCurvScalarMapper
+{
+public:
+    CurvMapper( const FaceTools::ScalarMappingFunction& func, const ObjModelCurvatureMetrics* cm,
+                vtkActor* actor, const IntIntMap* lookup, const std::string& mname)
+        : RVTK::PolySurfaceCurvScalarMapper( cm, actor, lookup, mname), _func(func) {}
+private:
+    FaceTools::ScalarMappingFunction _func;
+    float getCurvMetric( int faceIdx) const override { return _func( _cmetrics, faceIdx);}
+};  // end class
+}   // end namespace
+
+
+// private
+std::pair<float,float> ScalarVisualisation::mapActor( const FaceControl* fc) const
+{
+    SurfaceData::RPtr msd = FaceModelSurfaceData::rdata(fc->data()); // Scoped lock
+    FaceView* fv = fc->view();
+    assert( _mfunc != nullptr);
+    CurvMapper mapper( _mfunc, msd->metrics, fv->surfaceActor(), &fv->polyLookups(), getDisplayName().toStdString());
+    mapper.mapActor();
+    float minval, maxval;
+    mapper.getMappedRange( &minval, &maxval);
+    return std::pair<float,float>( minval, maxval);
+}   // end mapActor
+
+
+// public
+bool ScalarVisualisation::isAvailable( const FaceModel* fm) const
+{
+    return FaceModelSurfaceData::get()->isAvailable(fm) && _mfunc != nullptr;
+}   // end isAvailable
+
+
+// public
 void ScalarVisualisation::apply( const FaceControl* fc)
 {
-    assert(_msd);
-    mapSurfaceActor( _msd, fc);   // Map data to actor
-    vtkActor* actor = fc->view()->surfaceActor();
     const std::string vname = getDisplayName().toStdString();
-    if ( _lranges.count(fc) == 0)
-        _lranges[fc] = new LSCRM( actor, false/*don't auto-remap*/);
-    _lranges[fc]->setRangeLimits( vname, rangeMin(), rangeMax()); // set defaults
+
+    // If the surface actor isn't yet mapped, or there's no _mapping entry
+    // (because of purge), do the mapping of the surface actor.
+    vtkActor* actor = fc->view()->surfaceActor();
+    vtkDataSetAttributes* da = RVTK::getPolyData(actor)->GetCellData();
+    if ( da->GetAbstractArray( vname.c_str()) == nullptr || _mappings.count(fc) == 0)
+        _mappings[fc] = mapActor(fc);   // *** PROBABLE DEADLOCK BECAUSE OF DOUBLE READ LOCK in ActionVisualise and mapActor
+    da->SetActiveScalars( vname.c_str());
+    _added.insert(fc);
+    remapColourRange();
+    SurfaceVisualisation::apply(fc);
+    actor->GetMapper()->SetScalarVisibility(true);
 }   // end apply
 
 
+// public
 void ScalarVisualisation::addActors( const FaceControl* fc)
 {
     SurfaceVisualisation::addActors(fc);
-    // Set the active scalar mapping on the surface actor
     vtkActor* actor = fc->view()->surfaceActor();
-    actor->GetProperty()->SetRepresentationToSurface();
-    vtkDataSetAttributes *da = RVTK::getPolyData( actor)->GetCellData();
-    const std::string vname = getDisplayName().toStdString();
-    da->SetActiveScalars( vname.c_str());
-    actor->GetMapper()->SetScalarVisibility(true);
-    onSelected(fc);
+    FaceModelViewer* viewer = fc->viewer();
+    _lrng->map( viewer, actor);
+    viewer->showLegend(true);
 }   // end addActors
 
 
+// public
 void ScalarVisualisation::removeActors( const FaceControl* fc)
 {
     SurfaceVisualisation::removeActors(fc);
-    _lranges.at(fc)->setVisible("", NULL);  // NULL viewer hides
+    FaceModelViewer* viewer = fc->viewer();
+
+    const FaceControlSet& fcs = viewer->attached(); // All other views attached to the same viewer
+    bool hideLegend = true;
+    // If any of these have this visualisation applied, don't hide the legend
+    for ( FaceControl* f : fcs)
+    {
+        assert(f->viewer() == viewer);
+        if ( (f != fc) && isApplied(f))
+        {
+            hideLegend = false;
+            break;
+        }   // end if
+    }   // end for
+
+    _added.erase(fc);
+    if ( hideLegend)
+        viewer->showLegend(false);
+    else
+        remapColourRange();
 }   // end removeActors
 
 
-void ScalarVisualisation::onSelected( const FaceControl* fc)
-{
-    assert(fc);
-    assert(_lranges.count(fc) > 0);
-    // Ensure the legend mapping is selected for display in the corresponding viewer's scalar legend.
-    _lranges.at(fc)->setVisible( getDisplayName().toStdString(), fc->viewer());
-    SurfaceVisualisation::onSelected(fc);   // Set lighting
-}   // end onSelected
-
-
-void ScalarVisualisation::respondTo( const FaceAction* fa, const FaceControl* fc)
-{
-    if ( _msd == NULL)
-        _msd = qobject_cast<const ActionMapSurfaceData*>(fa);
-    assert(_msd);
-    apply(fc);  // Cause the surface to be remapped with the new data and update the range limits.
-}   // end respondTo
-
-
+// protected
 void ScalarVisualisation::purge( const FaceControl* fc)
 {
-    if (_lranges.count(fc) > 0)
-    {
-        delete _lranges.at(fc);
-        _lranges.erase(fc);
-    }   // end if
+    _added.erase(fc);
+    _mappings.erase(fc);
+    remapColourRange();
 }   // end purge
 
 
+// private
+void ScalarVisualisation::remapColourRange()
+{
+    // Reset scalar range mapping to be the widest needed across all mappings.
+    float nmin = FLT_MAX;
+    float nmax = -FLT_MAX;
+    for ( const auto& p : _mappings)
+    {
+        const std::pair<float,float>& mm = p.second;
+        nmin = std::min<float>( nmin, mm.first);
+        nmax = std::max<float>( nmax, mm.second);
+    }   // end for
+    _lrng->setRangeLimits( nmin, nmax);
+    //std::cerr << "Legend set range min,max = " << nmin << ", " << nmax << std::endl;
+
+    // Reset colour mappings for the actors.
+    for ( const FaceControl* fc : _added)
+        _lrng->map( fc->viewer(), fc->view()->surfaceActor());
+}   // end remapColourRange
+
+
+// public
 bool ScalarVisualisation::updateColourMapping( const FaceControl* fc, const ColourMappingWidget* w)
 {
     assert(w);
     assert(fc);
-    if ( _lranges.count(fc) == 0)
+    if ( !isAvailable(fc->data()))
         return false;
 
-    LSCRM* leg = _lranges.at(fc);
     QColor mcol0 = w->minColour();
     QColor mcol1 = w->midColour();
     QColor mcol2 = w->maxColour();
-    leg->setColours( mcol0, mcol1, mcol2);
-    leg->setNumColours( w->numColours());
-    leg->setVisibleRange( w->minScalar(), w->maxScalar());
-    leg->remap();
+    _lrng->setColours( mcol0, mcol1, mcol2);
+    _lrng->setNumColours( w->numColours());
+    _lrng->setVisibleRange( w->minScalar(), w->maxScalar());
+    apply( fc);
     fc->viewer()->updateRender();
     return true;
 }   // end doOnWidgetChanged
 
 
+// public
 bool ScalarVisualisation::updateWidget( ColourMappingWidget* w, const FaceControl* fc) const
 {
     assert(w);
     assert(fc);
-    if (_lranges.count(fc) == 0)
+    if ( !isAvailable(fc->data()))
         return false;
 
-    LSCRM* leg = _lranges.at(fc);
     QColor c0, c1, c2;
-    leg->colours(c0,c1,c2);
-    const auto& vrng = *leg->visibleRange();  // Currently set values.
-    const float rmin = rangeMin();  // Could get from LSCRM but is same
-    const float rmax = rangeMax();  // Could get from LSCRM but is same
-    const bool threeband = rmin < 0.0f && rmax > 0.0f;  // Will tell widget whether or not to hide the "mid" colour
+    _lrng->colours(c0,c1,c2);
+    const auto& vrng = _lrng->visibleRange();  // Currently set values.
+    const auto& rlims = _lrng->rangeLimits();
+    const bool threeband = rlims.first < 0.0f && rlims.second > 0.0f;  // Will tell widget whether or not to hide "mid" colour
 
     w->setThreeBand( threeband);
     w->setMinColour(c0);
     w->setMidColour(c1);
     w->setMaxColour(c2);
-    w->setScalarRangeLimits( rmin, rmax);
+    w->setScalarRangeLimits( rlims.first, rlims.second);
     w->setMinScalar( vrng.first);
     w->setMaxScalar( vrng.second);
-    w->setNumColours( leg->numColours());
+    w->setNumColours( _lrng->numColours());
     return true;
 }   // end setWidgetTo
+

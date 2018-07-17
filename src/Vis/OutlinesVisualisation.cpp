@@ -18,27 +18,18 @@
 #include <OutlinesVisualisation.h>
 #include <ActionVisualise.h>
 #include <FaceModelViewer.h>
-#include <OutlinesView.h>
 #include <FaceControl.h>
 #include <FaceModel.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Vis::OutlinesVisualisation;
-using FaceTools::Vis::OutlinesView;
+using FaceTools::Vis::LoopsView;
 using FaceTools::Action::ActionVisualise;
 using FaceTools::Action::FaceAction;
 using FaceTools::ModelViewer;
+using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
 using FaceTools::FaceModel;
-
-namespace {
-void updateRender( const std::unordered_map<const FaceControl*, OutlinesView*>& views)
-{
-    std::unordered_set<ModelViewer*> viewers;
-    std::for_each( std::begin(views), std::end(views),    [&](auto f){ viewers.insert(f.first->viewer());});
-    std::for_each( std::begin(viewers), std::end(viewers), [](auto v){ v->updateRender();});
-}   // end updateRender
-}   // end namespace
 
 
 OutlinesVisualisation::OutlinesVisualisation( const QString& dname, const QIcon& icon, const QKeySequence& keys)
@@ -57,36 +48,52 @@ OutlinesVisualisation::~OutlinesVisualisation()
 void OutlinesVisualisation::apply( const FaceControl* fc)
 {
     if ( _views.count(fc) == 0)
-        _views[fc] = new OutlinesView( fc->data()->info()->boundaries());
+    {
+        LoopsView* ov = _views[fc] = new LoopsView( 5, 1.0/*red*/, 0.0/*green*/, 0.1/*blue*/);
+        const RFeatures::ObjModelBoundaryFinder& boundaries = fc->data()->info()->boundaries();
+        const int nbs = (int)boundaries.size();
+        assert(nbs > 0);
+        const RFeatures::ObjModel* model = boundaries.model();
+        for ( int i = 0; i < nbs; ++i)
+        {
+            // Get the vertex positions for boundary i
+            const std::list<int>& loop = boundaries.boundary(i);
+            std::list<cv::Vec3f> line;
+            std::for_each( std::begin(loop), std::end(loop), [&](int v){ line.push_back(model->vtx(v));});
+            ov->addLoop(line);  // Add actor
+        }   // end for
+    }   // end if
 }   // end apply
 
 
 void OutlinesVisualisation::addActors( const FaceControl* fc)
 {
-    _views.at(fc)->setVisible( true, fc->viewer());
+    if (_views.count(fc) > 0)
+        _views.at(fc)->setVisible( true, fc->viewer());
 }   // end addActors
 
 
 void OutlinesVisualisation::removeActors( const FaceControl* fc)
 {
-    _views.at(fc)->setVisible( false, fc->viewer());
+    if (_views.count(fc) > 0)
+        _views.at(fc)->setVisible( false, fc->viewer());
 }   // end removeActors
 
 
 // protected
-void OutlinesVisualisation::respondTo( const FaceAction*, const FaceControl* fc)
+void OutlinesVisualisation::pokeTransform( const FaceControl* fc, const vtkMatrix4x4* m)
 {
-    purge(fc);
-    apply(fc);
-}   // end respondTo
+    if ( _views.count(fc) > 0)
+        _views.at(fc)->pokeTransform(m);
+}   // end pokeTransform
 
 
 // protected
-void OutlinesVisualisation::transform( const FaceControl* fc, const vtkMatrix4x4* m)
+void OutlinesVisualisation::fixTransform( const FaceControl* fc)
 {
-    assert(_views.count(fc) > 0);
-    _views.at(fc)->transform(m);
-}   // end transform
+    if ( _views.count(fc) > 0)
+        _views.at(fc)->fixTransform();
+}   // end fixTransform
 
 
 // protected

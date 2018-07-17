@@ -40,6 +40,9 @@ public:
 
     const FaceControlSet& attached() const { return _attached;}
     bool isAttached( FaceControl *fc) const { return _attached.has(fc);}
+    bool isAttached( const FaceControl *fc) const { return isAttached(const_cast<FaceControl*>(fc));}
+    bool isAttached( FaceModel *fm) const { return _models.count(fm) > 0;}
+    bool isAttached( const FaceModel *fm) const { return isAttached(const_cast<FaceModel*>(fm));}
 
     FaceControl* get( FaceModel* fm) const; // Pointer to view/control of given model or NULL if model not attached.
 
@@ -49,6 +52,8 @@ public slots:
 
 signals:
     void toggleZeroArea( bool);             // When going from positve to zero viewing area (true) and back (false).
+    void onAttached( FaceControl*);
+    void onDetached( FaceControl*);
 
 protected:
     void resizeEvent( QResizeEvent*) override;

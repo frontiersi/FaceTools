@@ -65,15 +65,11 @@ ModelViewer::ModelViewer( QWidget* parent, bool floodFill)
     : QWidget(parent), _qviewer( new QTools::VtkActorViewer( NULL)), _scalarLegend(NULL), _axes(NULL),
       _floodLightsEnabled(floodFill), _addedModelID(0)
 {
-    _scalarLegend = new RVTK::ScalarLegend( _qviewer->getRenderWindow()->GetInteractor());
-    _axes = new RVTK::Axes( _qviewer->getRenderWindow()->GetInteractor());
+    _scalarLegend = new RVTK::ScalarLegend( _qviewer->GetInteractor());
+    _axes = new RVTK::Axes( _qviewer->GetInteractor());
     showAxes(false);
     showLegend(false);
     enableFloodLights( _floodLightsEnabled);
-
-    vtkSmartPointer<vtkRenderer> renderer = _qviewer->getRenderer();
-    renderer->SetGradientBackground(false);
-    renderer->SetBackground(0,0,0);
 
     setLayout(new QVBoxLayout);
     layout()->setContentsMargins( QMargins(0,0,0,0));
@@ -242,7 +238,7 @@ int ModelViewer::add( const ObjModel* model, const ModelViewer::VisOptions& vo)
     vtkSmartPointer<vtkActor> actor;
     if ( mvis == TEXTURE_VISUALISATION)
     {
-        std::vector<vtkSmartPointer<vtkActor> > actors;
+        std::vector<vtkActor*> actors;
         actorCreator.generateTexturedActors( model, actors);
         assert( actors.size() == 1);    // Because all models should only have 1 texture!
         actor = actors[0];

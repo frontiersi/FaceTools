@@ -18,38 +18,37 @@
 #include <FaceModelAssImpFileHandlerFactory.h>
 #include <FaceModelFileHandlerException.h>
 #include <algorithm>
+#include <iomanip>
 #include <cassert>
 using FaceTools::FileIO::FaceModelAssImpFileHandlerFactory;
 using FaceTools::FileIO::FaceModelFileHandlerException;
 using FaceTools::FileIO::FaceModelAssImpFileHandler;
 
-// public
-FaceModelAssImpFileHandlerFactory::FaceModelAssImpFileHandlerFactory()
-    : _importer( true/*load textures*/, true/*fail on non triangles*/)
-{
-}   // end ctor
+
+// static definition
+RModelIO::AssetImporter FaceModelAssImpFileHandlerFactory::assimp( true/*load textures*/, true/*fail on non triangles*/);
 
 
 // public
-FaceModelAssImpFileHandlerFactory::~FaceModelAssImpFileHandlerFactory()
-{
-    std::for_each( std::begin(_fhandlers), std::end(_fhandlers), [this]( auto p){ delete p.second;});
-}   // end dtor
-
-
-// public
-FaceModelAssImpFileHandler* FaceModelAssImpFileHandlerFactory::get( const QString& qext)
+FaceModelAssImpFileHandler* FaceModelAssImpFileHandlerFactory::make( const QString& qext)
 {
     const std::string ext = qext.toLower().toStdString();
-    if ( _importer.getAvailable().count(ext) == 0)
+    if ( assimp.getAvailable().count(ext) == 0)
         return NULL;
 
-    if ( !_importer.enableFormat( ext)) // Enable using provided file extension
+    if ( !assimp.enableFormat( ext)) // Enable using provided file extension
     {
-        throw FaceModelFileHandlerException( ext, "[ERROR] FaceTools::FileIO::FaceModelAssImpFileHandlerFactory: Unable to enable *available* file format!");
+        throw FaceModelFileHandlerException( ext,
+                "[ERROR] FaceTools::FileIO::FaceModelAssImpFileHandlerFactory: Unable to enable *available* file format!");
     }   // end if
 
-    if ( _fhandlers.count(ext) == 0)
-        _fhandlers[ext] = new FaceModelAssImpFileHandler( &_importer, qext.toLower());
-    return _fhandlers.at(ext);
-}   // end get
+    return new FaceModelAssImpFileHandler( &assimp, qext.toLower());
+}   // end make
+
+
+// public static
+void FaceModelAssImpFileHandlerFactory::printAvailableFormats( std::ostream& os)
+{
+    for ( auto p : assimp.getAvailable())
+        os << std::setw(10) << p.first << " | " << p.second << std::endl;
+}   // end printAvailableFormats

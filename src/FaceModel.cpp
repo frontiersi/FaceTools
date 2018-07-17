@@ -17,12 +17,16 @@
 
 #include <FaceModel.h>
 #include <FaceControl.h>
+#include <FaceModelViewer.h>
 #include <FaceTools.h>
 #include <FaceView.h>
 #include <VtkTools.h>       // RVTK
 #include <algorithm>
 #include <cassert>
+using FaceTools::PathSet;
 using FaceTools::FaceModel;
+using FaceTools::LandmarkSet;
+using FaceTools::FaceModelViewer;
 using RFeatures::ObjModelKDTree;
 using RFeatures::ObjModelInfo;
 using RFeatures::ObjModel;
@@ -74,63 +78,105 @@ std::vector<cv::Vec3d> toPoints( const cv::Vec6d& bds)
 }   // end namespace
 
 
-// public
-FaceModel::FaceModel() : _flagViewUpdate(false) {}
-
-
-// public
-bool FaceModel::updateData( ObjModel::Ptr m)
+FaceModel::FaceModel( RFeatures::ObjModelInfo::Ptr minfo)
+    : _saved(false), _description(""), _source("")
 {
-    if ( m)
+    assert(minfo);
+    _landmarks = LandmarkSet::create();
+    _paths = PathSet::create();
+    update(minfo);
+}   // end ctor
+
+
+FaceModel::FaceModel()
+    : _saved(false), _description(""), _source("")
+{
+    _landmarks = LandmarkSet::create();
+    _paths = PathSet::create();
+}   // end ctor
+
+
+// public
+bool FaceModel::update( ObjModelInfo::Ptr nfo)
+{
+    if (!nfo)
+        nfo = _minfo;
+
+    _minfo = nfo;
+    assert(_minfo);
+    if ( !_minfo || !_minfo->is2DManifold())
     {
-        _minfo = ObjModelInfo::create(m);
-        if ( _minfo)
-        {
-            if ( m->getNumMaterials() > 1) // Merge materials if more than 1 texture map
-            {
-                std::cerr << "[INFO] FaceTools::FaceModel::updateData: Merged materials" << std::endl;
-                m->mergeMaterials();
-            }   // end if
-        }   // end if
+        std::cerr << "[ERROR] FaceTools::FaceModel::update: null or non-manifold ObjModelInfo passed in!" << std::endl;
+        return false;
     }   // end if
 
-    _kdtree = NULL;
-    _cbounds.clear();
-    if ( _minfo)
-    {
-        _kdtree = ObjModelKDTree::create( _minfo->cmodel());
-        FaceTools::translateLandmarksToSurface( kdtree(), _landmarks);   // Ensure landmarks remapped to surface
+    _kdtree = ObjModelKDTree::create( _minfo->cmodel());
+    FaceTools::translateLandmarksToSurface( _kdtree, _landmarks);   // Ensure landmarks remapped to surface
+    _paths->recalculate( _kdtree);                             // Ensure stored paths remap to the new surface.
+    calculateBounds();
 
-        // Get the bounds for each of the model's components
-        const RFeatures::ObjModelComponentFinder& components = _minfo->components();
-        const int nc = (int)components.size();
-        for ( int c = 0; c < nc; ++c)
-        {
-            const cv::Vec6i* bounds = components.componentBounds(c);
-            assert(bounds);
-            _cbounds.push_back( getComponentBounds( _minfo->cmodel(), *bounds));
-        }   // end for
-    }   // end if
-
-    _flagViewUpdate = true; // Cause FaceActions to propagate data changes to all associated FaceControls
-    return _minfo != NULL;
-}   // end updateData
+    _saved = false;
+    return true;
+}   // end update
 
 
 // public
 void FaceModel::transform( const cv::Matx44d& m)
 {
-    _orientation.rotate( m);     // Just use the rotation sub-matrix
-    _landmarks.transform(m);     // Transform the landmarks
+    assert(_minfo);
+    _orientation.rotate( m);    // Just use the rotation sub-matrix
+    _landmarks->transform(m);   // Transform the landmarks
+    _paths->transform(m);       // Transform the paths
     RFeatures::Transformer transformer(m);
     transformer.transform( _minfo->model()); // Adjust vertices of the model in-place
-    updateData();
+    _minfo->rebuildInfo();
+    _kdtree = ObjModelKDTree::create( _minfo->cmodel());
+    calculateBounds();
+
+    vtkSmartPointer<vtkMatrix4x4> vm = RVTK::toVTK(m);
+    for ( FaceControl* fc : _fcs)
+    {
+        fc->view()->pokeTransform( vm);
+        fc->view()->fixTransform(); // "Hard" transform of VTK data.
+    }   // end for
+
+    _saved = false;
 }   // end transform
 
 
+// private
+void FaceModel::calculateBounds()
+{
+    assert(_minfo);
+    // Get the bounds for each of the model's components
+    const RFeatures::ObjModelComponentFinder& components = _minfo->components();
+    const int nc = (int)components.size();
+    _cbounds.resize(nc);
+    for ( int c = 0; c < nc; ++c)
+        _cbounds[c] = getComponentBounds( _minfo->cmodel(), *components.componentBounds(c));
+}   // end calculateBounds
+
+
 // public
-const ObjModelKDTree& FaceModel::kdtree() const { return *_kdtree.get();}
-const ObjModelInfo* FaceModel::info() const { return _minfo.get();}
+void FaceModel::lockForWrite() { _mutex.lockForWrite();}
+void FaceModel::lockForRead() const { _mutex.lockForRead();}
+void FaceModel::unlock() const { _mutex.unlock();}
+
+
+// public
+bool FaceModel::hasMetaData() const
+{
+    bool hmd = !landmarks()->empty();
+    return hmd;
+}   // end hasMetaData
+
+
+// public
+void FaceModel::updateRenderers() const
+{
+    FaceViewerSet fvs = _fcs.viewers();
+    std::for_each( std::begin(fvs), std::end(fvs), [](auto v){ v->updateRender();});
+}   // end updateRenderers
 
 
 /*
@@ -177,5 +223,3 @@ void FaceModel::buildDistanceMaps()
     _cdist->propagateFront( vidx);
 }   // end buildDistanceMaps
 */
-
-

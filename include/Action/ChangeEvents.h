@@ -28,32 +28,56 @@
  */
 
 #include "FaceTools_Export.h"
+#include <QMetaType>
 #include <unordered_set>
 
 namespace FaceTools {
 namespace Action {
 
 
-enum ChangeEvent
+enum ChangeId
 {
-    DATA_CHANGE,    // Changes to the underlying data that require a save to ensure peristence.
-    CALC_CHANGE,    // Changes to the results of cached calculations on the data (often after response to data change).
-    VIEW_CHANGE,    // Changes to views of the data (camera movements / visualisations etc).
+    NULL_EVENT,
+    LOADED_MODEL,       // Can be used to specify that an action should process on load (via FaceAction::addProcessOn).
+    CLOSE_MODEL,        // INFORM that one or more models should be closed (actions should not close models themselves).
+    GEOMETRY_CHANGE,    // Change to underlying geometry of the model.
+    SURFACE_DATA_CHANGE,// Change to results of cached calculations on the data (often after response to data change).
+    LANDMARKS_CHANGE,   // Change to landmark data.
+    ORIENTATION_CHANGE, // Change to model's orientation.
+    METRICS_CHANGE,     // Change to model metrics (path data etc)
+    VIEW_CHANGE,        // Changes to views of the data (visualisations etc) - NOT CAMERA.
+    CAMERA_CHANGE,      // Changes to camera parameters.
+    AFFINE_CHANGE,      // Change to an actor's position (affine transform).
+    REPORT_CREATED      // A report was just created.
 };  // end enum
+
+struct ChangeEvent
+{
+    ChangeEvent() : id(NULL_EVENT), processFlag(false) {}
+    ChangeEvent( ChangeId i, bool ps=true) : id(i), processFlag(ps) {}
+    ChangeEvent( const ChangeEvent& c) : id(c.id), processFlag(c.processFlag) {}
+
+    ChangeId id;
+    bool processFlag;
+    bool operator==( const ChangeEvent& ce) const { return id == ce.id;}
+};  // end struct
 
 typedef std::unordered_set<ChangeEvent> ChangeEventSet;
 
 }   // end namespace
 }   // end namespace
 
+
 // Custom hash function for ChangeEvent (to allow use of ChangeEventSet)
 // just invokes std::hash<int>() on the internal change ID.
 namespace std {
 template<> struct hash<FaceTools::Action::ChangeEvent>
 {
-    size_t operator()( const FaceTools::Action::ChangeEvent& c) const { return hash<int>()((int)c);}
+    size_t operator()( const FaceTools::Action::ChangeEvent& c) const { return hash<int>()((int)c.id);}
 };  // end struct
 }   // end namespace (std)
 
+Q_DECLARE_METATYPE( FaceTools::Action::ChangeEvent)
+Q_DECLARE_METATYPE( FaceTools::Action::ChangeEventSet)
 
 #endif

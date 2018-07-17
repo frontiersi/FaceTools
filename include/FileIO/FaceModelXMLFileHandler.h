@@ -25,7 +25,7 @@ namespace FileIO {
 
 static const std::string XML_VERSION = "1.32";
 static const std::string XML_FILE_EXTENSION = "3df";
-static const std::string XML_FILE_DESCRIPTION = "3D-FAST";
+static const std::string XML_FILE_DESCRIPTION = "Cliniface";
 
 class FaceTools_EXPORT FaceModelXMLFileHandler : public FaceModelFileHandler
 { Q_OBJECT

@@ -18,36 +18,39 @@
 #include <ActionMarquee.h>
 #include <FaceModelViewer.h>
 #include <FaceControlSet.h>
+#include <algorithm>
 using FaceTools::Action::ActionMarquee;
 using FaceTools::Action::CameraWorker;
 using FaceTools::Action::FaceAction;
 using FaceTools::FaceControlSet;
 using FaceTools::FaceModelViewer;
+using FaceTools::Interactor::ModelMoveInteractor;
 
 
 // public
-ActionMarquee::ActionMarquee( const QString& dn, const QIcon& ico)
-    : FaceAction( dn, ico, true)
+ActionMarquee::ActionMarquee( const QString& dn, const QIcon& ico, ModelMoveInteractor* mmi)
+    : FaceAction( dn, ico)
 {
     setCheckable(true, false);
+
+    connect( mmi, &ModelMoveInteractor::onCameraRotate, [this](){ if (isChecked()) process(false);});
+    connect( mmi, &ModelMoveInteractor::onCameraDolly,  [this](){ if (isChecked()) process(false);});
+    connect( mmi, &ModelMoveInteractor::onCameraPan,    [this](){ if (isChecked()) process(false);});
+
+    connect( mmi, &ModelMoveInteractor::onActorRotate,  [this](){ if (isChecked()) process(false);});
+    connect( mmi, &ModelMoveInteractor::onActorDolly,   [this](){ if (isChecked()) process(false);});
+    connect( mmi, &ModelMoveInteractor::onActorPan,     [this](){ if (isChecked()) process(false);});
+
+    addProcessOn( ChangeEvent(CAMERA_CHANGE,false));
 }   // end ctor
 
 
 ActionMarquee::~ActionMarquee()
 {
-    stop();
+    process(false);
     for ( CameraWorker* cw : _workers)
         delete cw;
 }   // end dtor
-
-
-bool ActionMarquee::testEnabled()
-{
-    size_t nattached = 0;
-    for ( CameraWorker* cw : _workers)
-        nattached += cw->viewer()->attached().size();
-    return nattached > 0;
-}   // end testEnabled
 
 
 void ActionMarquee::addViewer( FaceModelViewer* v)
@@ -59,22 +62,8 @@ void ActionMarquee::addViewer( FaceModelViewer* v)
 bool ActionMarquee::doAction( FaceControlSet&)
 {
     if ( isChecked())
-    {
-        for ( CameraWorker* cw : _workers)
-        {
-            if ( cw->viewer()->attached().size() > 0)
-                cw->start();
-        }   // end for
-    }   // end if
+        std::for_each( std::begin(_workers), std::end(_workers), [](auto cw){cw->start();});
     else
-        stop();
+        std::for_each( std::begin(_workers), std::end(_workers), [](auto cw){cw->stop();});
     return true;
 }   // end doAction
-
-
-void ActionMarquee::stop()
-{
-    for ( CameraWorker* cw : _workers)
-        cw->stop();
-}   // end stop
-

@@ -34,11 +34,16 @@ class FaceTools_EXPORT FaceShapeLandmarks2DDetector
 {
 public:
     static bool initialise( const std::string& faceShapeLandmarksDat);
-    static bool detect( RVTK::Viewer::Ptr, LandmarkSet&); 
+    static bool detect( RVTK::Viewer::Ptr, LandmarkSet::Ptr); 
+
+    // Returns the number of "detection" landmarks in the given set.
+    static size_t numDetectionLandmarks( const LandmarkSet::Ptr);
+
 private:
     static dlib::shape_predictor s_shapePredictor;
 };  // end class
 }   // end namespace
+
 
 
 // The landmarks updated by FaceDetector

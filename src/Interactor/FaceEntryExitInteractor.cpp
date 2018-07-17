@@ -30,7 +30,7 @@ using FaceTools::Vis::LandmarksVisualisation;
 
 // public
 FaceEntryExitInteractor::FaceEntryExitInteractor()
-    : _mnow(NULL), _lnow(-1)
+    : _mnow(nullptr), _lnow(-1), _ldown(false)
 {
 }   // end ctor
 
@@ -41,26 +41,53 @@ void FaceEntryExitInteractor::onAttached()
     _viewer = qobject_cast<FaceModelViewer*>( viewer());
     assert(_viewer);    // Check that this was added to a FaceModelViewer and not a base ModelViewer
     if ( !_viewer)
-        std::cerr << "[ERROR] FaceTools::Interactor::FaceEntryExitInteractor::onAttached: Must be attached to FaceModelViewer!" << std::endl;
+    {
+        std::cerr << "[ERROR] FaceTools::Interactor::FaceEntryExitInteractor::onAttached: "
+                  << "Must be attached to FaceModelViewer!" << std::endl;
+    }   // end if
 }   // end onAttached
 
 
 // protected
 void FaceEntryExitInteractor::onDetached()
 {
-    _viewer = NULL;
-    testLeaveLandmark(NULL,-1);
+    _viewer = nullptr;
+    testLeaveLandmark(nullptr,-1);
     testLeaveModel();
     _lnow = -1;
-    _mnow = NULL;
 }   // end onDetached
 
 
 // private virtual
-bool FaceEntryExitInteractor::leftDrag( const QPoint& p) { return testPoint(p);}
+bool FaceEntryExitInteractor::leftDrag( const QPoint& p) { emit onLeftDrag(); return testPoint(p);}
 bool FaceEntryExitInteractor::rightDrag( const QPoint& p) { return testPoint(p);}
 bool FaceEntryExitInteractor::middleDrag( const QPoint& p) { return testPoint(p);}
 bool FaceEntryExitInteractor::mouseMove( const QPoint& p) { return testPoint(p);}
+
+bool FaceEntryExitInteractor::mouseLeave( const QPoint& p)
+{
+    return testPoint(p);
+}   // end mouseLeave
+
+bool FaceEntryExitInteractor::mouseEnter( const QPoint& p) { return testPoint(p);}
+
+
+// private virtual
+bool FaceEntryExitInteractor::leftButtonDown( const QPoint&)
+{
+    _ldown = true;
+    emit onLeftDown();
+    return false;
+}   // end leftButtonDown
+
+
+// private virtual
+bool FaceEntryExitInteractor::leftButtonUp( const QPoint&)
+{
+    _ldown = false;
+    emit onLeftUp();
+    return false;
+}   // end leftButtonUp
 
 
 // private
@@ -81,23 +108,23 @@ bool FaceEntryExitInteractor::testPoint( const QPoint& p)
         }   // end if
     }   // end if
 
-    testLeaveLandmark(fc,lnow);
+    testLeaveLandmark(fc, lnow);
 
     if ( _mnow != fc)
     {
         testLeaveModel();
+        _mnow = fc; // Must be updated before signal fired!
         if ( fc)    // Inform entering model
             emit onEnterModel( fc);
     }   // end if
 
-    if ( lnow >= 0 && (_lnow != lnow))  // Enter new landmark?
+    if ( _lnow != lnow)
     {
-        assert( fc);
-        emit onEnterLandmark( fc, lnow);
+        _lnow = lnow;   // Must be updated before signal is fired!
+        if ( lnow >= 0) // Inform entering landmark
+            emit onEnterLandmark( fc, lnow);
     }   // end if
 
-    _lnow = lnow;
-    _mnow = fc;
     return false;
 }   // end testPoint
 
@@ -115,5 +142,8 @@ void FaceEntryExitInteractor::testLeaveLandmark( FaceControl* fc, int lnow)
 void FaceEntryExitInteractor::testLeaveModel()
 {
     if ( _mnow) // Inform leaving model
+    {
         emit onLeaveModel( _mnow);
+        _mnow = nullptr;
+    }   // end if
 }   // end testLeaveModel

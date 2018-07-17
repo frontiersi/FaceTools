@@ -26,35 +26,67 @@
 using FaceTools::Action::ActionTransformToStandardPosition;
 using FaceTools::Action::FaceAction;
 using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
 using FaceTools::FaceModel;
+
+namespace {
+
+// Find and return index to largest rectangular volume from the given vector of bounds.
+int findLargest( const std::vector<cv::Vec6d>& bounds)
+{
+    int j = 0;
+    double maxA = 0;    // Max area
+    int n = (int)bounds.size();
+    for ( int i = 0; i < n; ++i)
+    {
+        const cv::Vec6d& b = bounds[i];
+        double a = (b[1] - b[0]) * (b[3] - b[2]) * (b[5] - b[4]);
+        if ( a > maxA)
+        {
+            maxA = a;
+            j = i;
+        }   // end if
+    }   // end for
+    return j;
+}   // end findLargest
+}   // end namespace
+
 
 
 ActionTransformToStandardPosition::ActionTransformToStandardPosition( const QString &dn, const QIcon& ico)
-    : FaceAction( dn, ico, true/*disable before other*/)
+    : FaceAction( dn, ico)
 {
-    addChangeTo( DATA_CHANGE);
-    addRespondTo( DATA_CHANGE);
 }   // end ctor
-
-
-bool ActionTransformToStandardPosition::testReady( FaceControl* fc)
-{
-    return FaceTools::hasReqLandmarks( fc->data()->landmarks());
-}   // end testReady
 
 
 bool ActionTransformToStandardPosition::doAction( FaceControlSet& rset)
 {
-    using namespace FaceTools::Landmarks;
     const FaceModelSet& fms = rset.models();
     for ( FaceModel* fm : fms)
     {
+        fm->lockForWrite();
+
+        // Get the transformation centre as calculated from the face centre if landmarks available,
+        // or just as the centre point of the largest component otherwise.
+        cv::Vec3f c(0,0,0);
+        FaceTools::LandmarkSet::Ptr lmks = fm->landmarks();
+        if ( FaceTools::hasReqLandmarks( lmks))
+        {
+            using namespace FaceTools::Landmarks;
+            c = FaceTools::calcFaceCentre( lmks->pos(L_EYE_CENTRE), lmks->pos(R_EYE_CENTRE), lmks->pos(NASAL_TIP));
+        }   // end if
+        else
+        {
+            const cv::Vec6d& bd = fm->bounds()[ findLargest( fm->bounds())];
+            c = cv::Vec3f( (bd[0] + bd[1])/2, (bd[2] + bd[3])/2, (bd[4] + bd[5])/2);
+        }   // end else
+
         const RFeatures::Orientation& on = fm->orientation();
-        const FaceTools::LandmarkSet& lmks = fm->landmarks();
-        const cv::Vec3f c = FaceTools::calcFaceCentre( on.up(), lmks.pos(L_EYE_CENTRE), lmks.pos(R_EYE_CENTRE), lmks.pos(NASAL_TIP));
-        cv::Matx44d m = RFeatures::toStandardPosition( on, c);
-        fm->transform(m);   // Transform the data - will cause all associated views to update
+        cv::Matx44d m = RFeatures::toStandardPosition( on.norm(), on.up(), c);
+        std::cerr << "Orientation pre-transform (norm,up)  : " << on << std::endl;
+        fm->transform(m);
+        std::cerr << "Orientation post-transform (norm,up) : " << on << std::endl;
+
+        fm->unlock();
     }   // end for
     return true;
 }   // end doAction

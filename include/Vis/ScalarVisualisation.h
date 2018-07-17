@@ -28,26 +28,36 @@
  */
 
 #include "BaseVisualisation.h"
+#include "LegendScalarColourRangeMapper.h"
 #include <ColourMappingWidget.h>    // QTools
+#include <ObjModelCurvatureMetrics.h>
+#include <ChangeEvents.h>
 #include <unordered_map>
+#include <functional>
 
 namespace FaceTools {
-namespace Action {
-class ActionMapSurfaceData;
-}   // end namespace
+class FaceModel;
+class FaceControlSet;
+class FaceModelViewer;
+
+typedef std::function<float (const RFeatures::ObjModelCurvatureMetrics*, int)> ScalarMappingFunction;
 
 namespace Vis {
-class LegendScalarColourRangeMapper;
 
 class FaceTools_EXPORT ScalarVisualisation : public SurfaceVisualisation
 { Q_OBJECT
 public:
+    // Pass in delegate functions to return a floating point value from a polygon.
     ScalarVisualisation( const QString& dname, const QIcon&, const QKeySequence&);
     ScalarVisualisation( const QString& dname, const QIcon&);
     explicit ScalarVisualisation( const QString& dname);
     ~ScalarVisualisation() override;
 
-    bool isAvailable( const FaceModel*) const override { return _msd != NULL;}
+    // Provide the delegate that maps a scalar to a model polygon.
+    void setMappingFunction( const ScalarMappingFunction& mf) { _mfunc = mf;}
+
+    // Returns true if the data to perform mapping are available.
+    bool isAvailable( const FaceModel*) const override;
 
     void apply( const FaceControl*) override;
     void addActors( const FaceControl*) override;
@@ -64,18 +74,18 @@ public:
     bool updateWidget( QTools::ColourMappingWidget*, const FaceControl* fc) const;
 
 protected:
-    void onSelected( const FaceControl*) override;
-    bool respondCalc() const override { return true;}
-    void respondTo( const Action::FaceAction*, const FaceControl*); // Calls mapSurfaceActor
+    void addPurgeEvents( Action::ChangeEventSet& ces) const override { ces.insert(Action::SURFACE_DATA_CHANGE);}
     void purge( const FaceControl*) override;
 
-    virtual void mapSurfaceActor( const Action::ActionMapSurfaceData*, const FaceControl*) = 0;
-    virtual float rangeMin() const = 0; // The minimum allowed scalar value
-    virtual float rangeMax() const = 0; // The maximum allowed scalar value
-
 private:
-    std::unordered_map<const FaceControl*, LegendScalarColourRangeMapper*> _lranges;
-    const Action::ActionMapSurfaceData *_msd;
+    LegendScalarColourRangeMapper *_lrng;
+    ScalarMappingFunction _mfunc;
+    std::unordered_map<const FaceControl*, std::pair<float,float> > _mappings;
+    std::unordered_set<const FaceControl*> _added;
+
+    // (Re)map this visualisation's scalar data to the FaceControl's surface actor.
+    std::pair<float,float> mapActor( const FaceControl*) const;
+    void remapColourRange();
 };  // end class
 
 }   // end namespace

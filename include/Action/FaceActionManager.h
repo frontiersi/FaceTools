@@ -26,9 +26,13 @@
  * another based on their signalling of milestones through their actions.
  */
 
-#include "ActionSelect.h"
+#include "ModelSelector.h"
 #include "FaceActionGroup.h"
+#include "ActionExecutionQueue.h"
+#include "VisualisationsManager.h"
+#include <FaceModelManager.h>
 #include <PluginsDialog.h>      // QTools
+#include <QMutex>
 
 namespace FaceTools {
 namespace Action {
@@ -36,35 +40,50 @@ namespace Action {
 class FaceTools_EXPORT FaceActionManager : public QObject
 { Q_OBJECT
 public:
-    explicit FaceActionManager( QWidget* parent=NULL);
+    FaceActionManager( FaceModelViewer *defaultViewer, size_t llimit=UINT_MAX, QWidget* parent=nullptr);
     ~FaceActionManager() override;
 
     void loadPlugins();                     // Call once after construction and connecting slots to signals
     QDialog* dialog() { return _pdialog;}   // Get a standard dialog which shows the loaded plugins.
     QAction* addAction( FaceAction*);       // Return added action's QAction if added okay (duplicates not allowed).
 
-    // Return the selector for programmatic selection of FaceControl instances.
-    ActionSelect* selector() { return &_selector;}
+    // Get the selector for programmatic selection of FaceControl instances.
+    ModelSelector* selector() { return &_selector;}
+
+    FileIO::FaceModelManager* modelManager() { return _fmm;}
+
+    // Returns the visualisations manager which determines the selection exclusivity
+    // of visualisations and allows clients to add the corresponding actions to widgets.
+    const VisualisationsManager& visualisations() const { return _vman;}
 
 signals:
-    void addedActionGroup( const FaceActionGroup&);
-    void addedAction( const FaceAction&);
+    void addedActionGroup( FaceActionGroup*);
+    void addedAction( FaceAction*);
+    void onUpdateSelected();    // Emitted at the end of an action and when changing selection.
 
 private slots:
     void addPlugin( QTools::PluginInterface*);
-    void doOnActionStarting( const FaceControlSet*);
-    void doOnActionFinished();
-    void doOnReportChanges( const ChangeEventSet&, FaceControl*);
-    void doOnSelect( FaceControl*, bool);
-    void doOnRemove( FaceControl*);
+    void doOnActionStarting();
+    void doOnChangedData( const FaceControl*);
+    void doOnActionFinished( ChangeEventSet, FaceControlSet, bool);
 
 private:
-    ActionSelect _selector;
     QTools::PluginsDialog *_pdialog;
+    FileIO::FaceModelManager *_fmm;
+    ModelSelector _selector;
     std::unordered_set<FaceAction*> _actions;
+    VisualisationsManager _vman;
+    ActionExecutionQueue _aqueue;
+    QMutex _mutex;
 
-    FaceActionManager( const FaceActionManager&);   // No copy
-    void operator=( const FaceActionManager&);      // No copy
+    void processFinishedAction( FaceAction*, ChangeEventSet*, FaceControlSet*);
+    void testPurge( FaceAction*, const ChangeEventSet*, const FaceModelSet*);
+    void setReady( FaceControl*, bool);
+    void close( FaceModel*);
+    void doLoadedModels( FaceControlSet*);
+
+    FaceActionManager( const FaceActionManager&) = delete;
+    void operator=( const FaceActionManager&) = delete;
 };  // end class
 
 }   // end namespace

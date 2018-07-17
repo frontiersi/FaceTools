@@ -36,11 +36,11 @@ public:
                       QWidget *parent=NULL, QProgressBar* pb=NULL);
     ~ActionDetectFace() override;
 
-public slots:
-    bool testEnabled() override { return _detector && (readyCount() == 1);}
+protected slots:
+    bool testEnabled() const override { return _detector && (readyCount() == 1);}
     bool doBeforeAction( FaceControlSet&) override;   // Warn if overwriting
     bool doAction( FaceControlSet&) override;
-    void doAfterAction( const FaceControlSet&, bool) override;
+    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
 
 private:
     QWidget *_parent;

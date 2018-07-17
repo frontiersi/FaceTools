@@ -33,12 +33,10 @@
 #include <ChangeEvents.h>
 #include <vtkMatrix4x4.h>
 #include <vtkProp.h>
+#include <cassert>
 
 namespace FaceTools {
-namespace Action {
-class ActionVisualise;
-class FaceAction;
-}   // end namespace
+namespace Action { class ActionVisualise;}
 
 namespace Vis {
 class FaceView;
@@ -59,40 +57,55 @@ public:
     bool isExclusive() const override { return true;}
     bool isAvailable( const FaceModel*) const override { return true;}
 
-    // Returns true iff this visualisation is currently applied in the given view.
-    bool isApplied( const FaceControl*) const;
+    // Should this visualisation be presented as user actionable?
+    virtual bool isVisible() const { return true;}
+
+    // By default visualisations apply to all models within a viewer.
+    // If singleModel is overridden, the visualisation is applied to all
+    // views of the currently selected model in any viewer. If singleView
+    // is overridden, the visualisation is applied just to the currently
+    // selected view. In both cases, the visualisation is only available
+    // if exactly one view of a model is selected.
+    virtual bool singleModel() const { return false;}
+    virtual bool singleView() const { return false;}
 
     // Return true iff the given prop relating to the given FaceControl belongs to
     // this visualisation. Typically, visualisations do not define extra actors
     // so the default implementation defaults to returning false.
     virtual bool belongs( const vtkProp*, const FaceControl*) const { return false;}
 
+    // Returns true if this visualisation is applied to the given FaceControl.
+    bool isApplied( const FaceControl*) const;
+
     // Derived types still need to provide overrides for:
     // void apply( const FaceControl*)
     // void addActors( const FaceControl*)
     // void removeActors( const FaceControl*)
 
+signals:
+    void onAvailable( const FaceModel*, bool);  // Inform of change in data availability for visualisation.
+
 protected:
-    // An applied visualisation may need to perform further activation upon selection.
-    virtual void onSelected( const FaceControl*){}
+    // Poke the matrix transform for this visualisation's actors into a temporary state (called by FaceView).
+    virtual void pokeTransform( const FaceControl*, const vtkMatrix4x4*){}
 
-    // Specifiy whether this visualisation should respond to DATA/CALC type change events.
-    virtual bool respondData() const { return false;}
-    virtual bool respondCalc() const { return false;}
+    // Fix the current position of the actors for this visualisation
+    // according to their current transform matrix (called by FaceView).
+    virtual void fixTransform( const FaceControl*){}
 
-    // Respond to a ChangeEvent by the given action for the given face. This function is
-    // only ever called if respondData or respondCalc are overridden to return true; the
-    // action that makes the respective change is passed in as parameter to this function.
-    // Derived types only need to override this function if overriding respondData/Calc.
-    virtual void respondTo( const Action::FaceAction*, const FaceControl*){}
-
-    // Transform this visualisation's defined actors (if any) for the given FaceControl. Derived
-    // types only need to override if they define vtkProp3D actors that must respond to movements
-    // of the main FaceView actors in the given FaceControl.
-    virtual void transform( const FaceControl*, const vtkMatrix4x4*){}
-
-    // Destroy any cached data relating to the given FaceControl.
+    // Destroy any cached data relating to the given FaceControl (called by ActionVisualise).
     virtual void purge( const FaceControl*){}
+
+    // Descendent classes should add events to the given set that this visualisation will be purged for.
+    // NB visualisations will always be purged for GEOMETRY_CHANGE so there's no need to add that one.
+    virtual void addPurgeEvents( Action::ChangeEventSet&) const {}
+
+    // Similarly for reapplying the visualisation (without necessarily purging).
+    virtual void addProcessEvents( Action::ChangeEventSet&) const {}
+
+    // Specifies if application of this visualisation should be automatically
+    // synchronised with a FaceControl's ready status.
+    virtual bool applyOnReady() const { return false;}
 
     friend class Action::ActionVisualise;
     friend class FaceView;
@@ -102,8 +115,8 @@ private:
     const QIcon *_icon;             // Display icon
     const QKeySequence *_keys;      // Key shortcut
 
-    BaseVisualisation( const BaseVisualisation&);
-    void operator=( const BaseVisualisation&);
+    BaseVisualisation( const BaseVisualisation&) = delete;
+    void operator=( const BaseVisualisation&) = delete;
 };  // end class
 
 
@@ -115,8 +128,8 @@ public:
                           const QKeySequence &keys=QKeySequence(Qt::Key_1))
         : BaseVisualisation( displayName, icon, keys) {}
 
-    // Nothing needs to be done to apply the visualisation since the textured actor is used as is.
-    void apply( const FaceControl*) override {}
+    // Hides the scalar legend.
+    void apply( const FaceControl*) override;
 
     // Add and remove the texture actor.
     void addActors( const FaceControl* fc) override;
@@ -141,8 +154,10 @@ public:
         : BaseVisualisation( displayName) {}
     SurfaceVisualisation()  // Default constructor for plain surface.
         : BaseVisualisation( "Surface", QIcon(":/icons/SURFACE_VIS"), QKeySequence(Qt::Key_2)) {}
-
-    void apply( const FaceControl*) override; // Sets the scalar visibility to false and the representation to surface.
+ 
+    // Sets the scalar visibility to false and the representation to surface.
+    // Hides the scalar legend.
+    void apply( const FaceControl*) override;
 
     // Add and remove the surface actor.
     void addActors( const FaceControl* fc) override;

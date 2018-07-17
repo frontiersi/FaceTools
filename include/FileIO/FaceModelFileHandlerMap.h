@@ -43,7 +43,7 @@ class FaceTools_EXPORT FaceModelFileHandlerMap
 {
 public:
     void add( FaceModelFileHandler*);  // The first added will be the preferred file format.
-    const QString& getPreferredExt() const { return _primaryExt;}   // First added
+    const QString& preferredExt() const { return _primaryExt;}   // First added
 
     // Get the load/save interface appropriate for the given filename (extension checked for type).
     FaceModelFileHandler* getLoadInterface( const std::string&) const;

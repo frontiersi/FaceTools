@@ -27,42 +27,35 @@
 
 #include "FaceTools_Export.h"
 #include <opencv2/opencv.hpp>
+#include <QMetaType>
 
 namespace FaceTools {
 class FaceModelViewer;
 class FaceModel;
 
-namespace Vis {
-class FaceView;
-}   // end namespace
+namespace Vis { class FaceView;}
 
 class FaceTools_EXPORT FaceControl
 {
 public:
-    explicit FaceControl( FaceModel*);
+    FaceControl() : _fdata(nullptr), _fview(nullptr) {} // For QMetaType
+    FaceControl( FaceModel*, FaceModelViewer*);
     virtual ~FaceControl();
-
-    // After moving the actors in the FaceView via interaction, fix the position of this view and
-    // every view attached to this FaceControl's associated FaceModel. This function calls transform
-    // with the user transform returned from the associated FaceView. On return, the user transform
-    // for all associated views will be the identity matrix.
-    void transformFromView();
 
     // Convenience function to get/set viewer this FaceControl uses.
     FaceModelViewer* viewer() const;
     void setViewer( FaceModelViewer*);
 
-    FaceModel* data() const { return _fdata;}
-    Vis::FaceView* view() const { return _fview;}
+    inline FaceModel* data() const { return _fdata;}
+    inline Vis::FaceView* view() const { return _fview;}
 
 private:
     FaceModel *_fdata;
     Vis::FaceView *_fview;
-
-    FaceControl( const FaceControl&);     // No copy
-    void operator=( const FaceControl&);  // No copy
 };  // end class
 
 }   // end namespace
+
+Q_DECLARE_METATYPE( FaceTools::FaceControl)
     
 #endif

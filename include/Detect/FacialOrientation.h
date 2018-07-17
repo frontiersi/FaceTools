@@ -27,7 +27,7 @@ namespace Detect {
 // Estimate the up and normal vectors using an interative approach that evaluates
 // normals along line segments measured over portions of the face. The left and right
 // positions v0 and v1 should be given by the surface vertices at the left and right pupils.
-FaceTools_EXPORT bool findOrientation( const RFeatures::ObjModelKDTree& kdt,
+FaceTools_EXPORT bool findOrientation( const RFeatures::ObjModelKDTree::Ptr kdt,
                                        const cv::Vec3f& v0,    // Position of left eye
                                        const cv::Vec3f& v1,    // Position of right eye
                                        cv::Vec3f& vnorm,       // Output face norm

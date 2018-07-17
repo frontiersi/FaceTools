@@ -30,10 +30,10 @@ public:
     ActionLoadFaceModels( const QString& dname, const QIcon& icon, const QKeySequence& keys, FileIO::LoadFaceModelsHelper*);
 
 protected slots:
-    bool testEnabled() override;
+    bool testEnabled() const override;
     bool doBeforeAction( FaceControlSet&) override;
     bool doAction( FaceControlSet&) override;
-    void doAfterAction( const FaceControlSet&, bool) override;
+    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
 
 private:
     FileIO::LoadFaceModelsHelper *_loadHelper;

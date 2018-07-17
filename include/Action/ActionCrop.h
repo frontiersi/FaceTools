@@ -18,37 +18,28 @@
 #ifndef FACE_TOOLS_ACTION_CROP_H
 #define FACE_TOOLS_ACTION_CROP_H
 
-#include <ActionVisualise.h>
-#include <BoundingVisualisation.h>
-#include <RadialSelectInteractor.h>
-#include <QStatusBar>
+#include "FaceAction.h"
 
 namespace FaceTools {
 namespace Action {
 
+class ActionRadialSelect;
+
+
 class FaceTools_EXPORT ActionCrop : public FaceAction
 { Q_OBJECT
 public:
-    ActionCrop( const QString& dname, const QIcon& icon, QStatusBar*);
-    ~ActionCrop() override;
+    ActionCrop( const QString& dname, const QIcon& icon, QProgressBar* pb=nullptr); // Async if pb not null
 
-    ActionVisualise* visualiser() { return _vact;}  // Return the visualisation action.
-
-protected slots:
-    bool testReady( FaceControl* fc) override;
-    bool testEnabled() const { return readyCount() == 1;}   // Only enabled for single selections
-    void tellReady( FaceControl*, bool) override;
-    bool doAction( FaceControlSet&) override;
+    void setSelector( ActionRadialSelect *rs) { _rsel = rs;}
 
 private slots:
-    void doOnSetNewCentre( FaceControl*, const cv::Vec3f&);
-    void doOnSetNewRadius( FaceControl*, double);
+    bool testEnabled() const override;
+    bool doAction( FaceControlSet&) override;
+    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
 
 private:
-    QStatusBar *_sbar;
-    Vis::BoundingVisualisation *_bvis;
-    ActionVisualise *_vact;
-    Interactor::RadialSelectInteractor *_interactor;
+    ActionRadialSelect *_rsel;
 };  // end class
 
 }   // end namespace

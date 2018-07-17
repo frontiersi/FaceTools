@@ -23,6 +23,7 @@
 #include <FaceTools.h>
 #include <QMessageBox>
 using FaceTools::Action::ActionDetectFace;
+using FaceTools::Action::ChangeEventSet;
 using FaceTools::Action::FaceAction;
 using FaceTools::FaceModelViewer;
 using FaceTools::FaceControlSet;
@@ -35,14 +36,12 @@ using FaceTools::Detect::FaceDetector;
 
 ActionDetectFace::ActionDetectFace( const QString& dn, const QIcon& icon,
         const QString& haar, const QString& lmks, QWidget *parent, QProgressBar* pb)
-    : FaceAction(dn, icon, true/*disable before other*/),
-      _parent(parent), _detector(NULL)
+    : FaceAction(dn, icon), _parent(parent), _detector(NULL)
 {
-    addChangeTo( DATA_CHANGE);
     if ( FaceDetector::initialise( haar.toStdString(), lmks.toStdString()))
         _detector = new FaceDetector;
     else
-        std::cerr << "[WARNING] FaceTools::Action::ActionDetectFace: Failed to initialise FaceTools::Detect::FaceDetector!" << std::endl;
+        std::cerr << "[WARNING] FaceTools::Action::ActionDetectFace: FaceDetector failed to initialise!" << std::endl;
 
     if ( pb)
         setAsync( true, QTools::QProgressUpdater::create(pb));
@@ -61,7 +60,9 @@ bool ActionDetectFace::doBeforeAction( FaceControlSet& rset)
     bool docheck = false;
     for ( FaceControl* fc : rset)
     {
-        if ( FaceTools::hasReqLandmarks( fc->data()->landmarks()))  // Warn if about to overwrite!
+        FaceModel* fm = fc->data();
+        // Warn if about to overwrite!
+        if ( FaceTools::Detect::FaceShapeLandmarks2DDetector::numDetectionLandmarks( fm->landmarks()) > 0)
         {
             docheck = true;
             break;
@@ -89,21 +90,25 @@ bool ActionDetectFace::doAction( FaceControlSet& rset)
     FaceModelSet fms = rset.models();   // Copy out
     for ( FaceModel* fm : fms)
     {
-        RFeatures::Orientation on = fm->orientation();
-        LandmarkSet &lmks = fm->landmarks();    // Updated in place
-        if ( _detector->detect( fm->kdtree(), on, lmks))
+        fm->lockForWrite();
+        RFeatures::Orientation on;
+        if ( _detector->detect( fm->kdtree(), on, fm->landmarks()))
+        {
+            std::cerr << "Detected orientation (norm,up) : " << on << std::endl;
             fm->setOrientation(on);
+        }   // end if
         else
         {
             _failSet.insert(fm);
             rset.erase(fm);
         }   // end else
+        fm->unlock();
     }   // end for
     return !rset.empty();   // Success if at least one detection
 }   // end doAction
 
 
-void ActionDetectFace::doAfterAction( const FaceControlSet& rset, bool v)
+void ActionDetectFace::doAfterAction( ChangeEventSet& cset, const FaceControlSet& rset, bool v)
 {
     if ( !_failSet.empty()) // Warn failure
     {
@@ -113,5 +118,6 @@ void ActionDetectFace::doAfterAction( const FaceControlSet& rset, bool v)
         QMessageBox::warning(_parent, tr("Detection Failed!"), msg);
     }   // end if
     _failSet.clear();
-    FaceAction::doAfterAction( rset, v);    // Update render
+    cset.insert(LANDMARKS_CHANGE);
+    cset.insert(ORIENTATION_CHANGE);
 }   // end doAfterAction

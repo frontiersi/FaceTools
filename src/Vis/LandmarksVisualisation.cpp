@@ -16,32 +16,21 @@
  ************************************************************************/
 
 #include <LandmarksVisualisation.h>
-#include <ActionVisualise.h>
 #include <FaceModelViewer.h>
 #include <FaceControl.h>
 #include <FaceModel.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Vis::LandmarksVisualisation;
+using FaceTools::Vis::BaseVisualisation;
 using FaceTools::Vis::LandmarkSetView;
-using FaceTools::Action::ActionVisualise;
-using FaceTools::Action::FaceAction;
-using FaceTools::ModelViewer;
+using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
 using FaceTools::FaceModel;
 
-namespace {
-void updateRender( const std::unordered_map<const FaceControl*, LandmarkSetView*>& lviews)
-{
-    std::unordered_set<ModelViewer*> viewers;
-    std::for_each( std::begin(lviews), std::end(lviews), [&](auto f){ viewers.insert(f.first->viewer());});
-    std::for_each( std::begin(viewers), std::end(viewers), [](auto v){ v->updateRender();});
-}   // end updateRender
-}   // end namespace
 
-
-LandmarksVisualisation::LandmarksVisualisation( const QString& dname, const QIcon& icon, const QKeySequence& keys)
-    : BaseVisualisation(dname, icon, keys)
+LandmarksVisualisation::LandmarksVisualisation( const QString& dname, const QIcon& icon)
+    : BaseVisualisation(dname, icon)
 {
 }   // end ctor
 
@@ -55,89 +44,97 @@ LandmarksVisualisation::~LandmarksVisualisation()
 
 bool LandmarksVisualisation::isAvailable( const FaceModel* fm) const
 {
-    return !fm->landmarks().empty();
+    return !fm->landmarks()->empty();
 }   // end isAvailable
 
 
 void LandmarksVisualisation::apply( const FaceControl* fc)
 {
     if ( _lviews.count(fc) == 0)
-        _lviews[fc] = new LandmarkSetView( fc->data()->landmarks());
+    {
+        const FaceModel* fm = fc->data();
+        FaceTools::LandmarkSet::Ptr lmks = fm->landmarks();
+        _lviews[fc] = new LandmarkSetView( *lmks);
+    }   // end if
 }   // end apply
 
 
 void LandmarksVisualisation::addActors( const FaceControl* fc)
 {
-    _lviews.at(fc)->setVisible( true, fc->viewer());
+    if (_lviews.count(fc) > 0)
+        _lviews.at(fc)->setVisible( true, fc->viewer());
 }   // end addActors
 
 
 void LandmarksVisualisation::removeActors( const FaceControl* fc)
 {
-    _lviews.at(fc)->setVisible( false, fc->viewer());
+    if (_lviews.count(fc) > 0)
+        _lviews.at(fc)->setVisible( false, fc->viewer());
 }   // end removeActors
 
 
 const LandmarkSetView* LandmarksVisualisation::landmarks( const FaceControl* fc) const
 {
-    if ( !fc || _lviews.count(fc) == 0)
-        return NULL;
+    if ( _lviews.count(fc) == 0)
+        return nullptr;
     return _lviews.at(fc);
 }   // end landmarks
 
 
 // public slot
-void LandmarksVisualisation::setLandmarkVisible( int lm, bool v)
+void LandmarksVisualisation::setLandmarkVisible( const FaceControl* fc, int lm, bool v)
 {
-    std::for_each( std::begin(_lviews), std::end(_lviews), [=](auto f){ f.second->showLandmark(v,lm);});
-    updateRender(_lviews);
+    if (_lviews.count(fc) > 0)
+        _lviews.at(fc)->showLandmark(v,lm);
 }   // end setLandmarkVisible
 
 
 // public slot
-void LandmarksVisualisation::setLandmarkHighlighted( int lm, bool v)
+void LandmarksVisualisation::setLandmarkHighlighted( const FaceControl* fc, int lm, bool v)
 {
-    std::for_each( std::begin(_lviews), std::end(_lviews), [=](auto f){ f.second->highlightLandmark(v,lm);});
-    updateRender(_lviews);
+    if (_lviews.count(fc) > 0)
+        _lviews.at(fc)->highlightLandmark(v,lm);
 }   // end setLandmarkHighlighted
 
 
 // public slot
 void LandmarksVisualisation::refreshLandmark( const FaceControl* fc, int lmid)
 {
-    assert(_lviews.count(fc) > 0);
-    _lviews.at(fc)->refreshLandmark(lmid);
+    if (_lviews.count(fc) > 0)
+        _lviews.at(fc)->refreshLandmark(lmid);
 }   // end refreshLandmark
-
-
-// protected
-void LandmarksVisualisation::respondTo( const FaceAction*, const FaceControl* fc)
-{
-    purge(fc);
-    apply(fc);
-}   // end respondTo
 
 
 // public
 bool LandmarksVisualisation::belongs( const vtkProp* p, const FaceControl* fc) const
 {
-    assert(_lviews.count(fc) > 0);
-    return _lviews.at(fc)->isLandmark(p);
+    bool b = false;
+    if (_lviews.count(fc) > 0)
+        b = _lviews.at(fc)->isLandmark(p);
+    return b;
 }   // end belongs
 
 
 // protected
-void LandmarksVisualisation::transform( const FaceControl* fc, const vtkMatrix4x4* m)
+void LandmarksVisualisation::pokeTransform( const FaceControl* fc, const vtkMatrix4x4* vm)
 {
-    assert(_lviews.count(fc) > 0);
-    _lviews.at(fc)->transform(m);
-}   // end transform
+    if ( _lviews.count(fc) > 0)
+        _lviews.at(fc)->pokeTransform(vm);
+}   // end pokeTransform
+
+
+// protected
+void LandmarksVisualisation::fixTransform( const FaceControl* fc)
+{
+    if ( _lviews.count(fc) > 0)
+        _lviews.at(fc)->fixTransform();
+}   // end fixTransform
 
 
 // protected
 void LandmarksVisualisation::purge( const FaceControl* fc)
 {
-    if (_lviews.count(fc) > 0)
+    if ( _lviews.count(fc) > 0)
     {
         delete _lviews.at(fc);
         _lviews.erase(fc);

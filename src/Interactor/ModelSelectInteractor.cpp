@@ -95,9 +95,14 @@ void ModelSelectInteractor::insertSelected( FaceControl* fc)
 }   // end insertSelected
 
 
+bool ModelSelectInteractor::leftButtonDown(const QPoint& p)
+{
+    return rightButtonDown(p);
+}   // end leftButtonDown
+
+
 bool ModelSelectInteractor::rightButtonDown( const QPoint& p)
 {
-    bool swallowed = false;
     if ( _enabled)
     {
         FaceControl* fc = _available.find( viewer()->getPointedAt(p));
@@ -106,10 +111,9 @@ bool ModelSelectInteractor::rightButtonDown( const QPoint& p)
             if ( _exclusive)    // signal to listeners that currently selected models are being deselected
                 deselectAll();
             insertSelected( fc);
-            swallowed = true;
         }   // end if
     }   // end if
-    return swallowed;
+    return false;
 }   // end rightButtonDown
 
 

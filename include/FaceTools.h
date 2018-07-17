@@ -25,11 +25,14 @@ namespace FaceTools {
 
 // Checks if the essential landmarks (eyes and nose tip) needed for crop,
 // calcFaceCropRadius, transformToOrigin and others are present in the given set of landmarks.
-FaceTools_EXPORT bool hasReqLandmarks( const LandmarkSet&);
+FaceTools_EXPORT bool hasReqLandmarks( const LandmarkSet::Ptr);
 
 // Calculate and return the centre of the face as the point directly behind the nose tip in the plane of the front of the eyes.
 // Requires the centre points of the eyes, the nose tip, and the *up* vector defining the proper upright position of the face.
 FaceTools_EXPORT cv::Vec3f calcFaceCentre( const cv::Vec3f& upVector, const cv::Vec3f& leye, const cv::Vec3f& reye, const cv::Vec3f& ntip);
+
+// Calculate face centre as the mean of the three provided vertices.
+FaceTools_EXPORT cv::Vec3f calcFaceCentre( const cv::Vec3f& leye, const cv::Vec3f& reye, const cv::Vec3f& ntip);
 
 // Calculate cropping radius for a face as G times the distance from the face centre to the point halfway between the eyes.
 FaceTools_EXPORT double calcFaceCropRadius( const cv::Vec3f& faceCentre, const cv::Vec3f& leye, const cv::Vec3f& reye, double G);

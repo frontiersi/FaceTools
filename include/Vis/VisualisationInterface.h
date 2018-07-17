@@ -29,8 +29,8 @@
 #include <PluginInterface.h>    // QTools
 
 namespace FaceTools {
-class FaceModel;
 class FaceControl;
+class FaceModel;
 
 namespace Vis {
 

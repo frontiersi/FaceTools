@@ -65,8 +65,9 @@ private:
     FaceControlSet _selected;
     FaceControlSet _available;
 
-    bool rightButtonDown( const QPoint&) override;    // Overridden to fire onSelected and onRightButtonDown
-    bool leftDoubleClick( const QPoint&) override;    // Overridden to fire onSelected
+    bool leftButtonDown(const QPoint&) override;    // Fires onSelected
+    bool rightButtonDown( const QPoint&) override;  // Fires onSelected
+    bool leftDoubleClick( const QPoint&) override;  // Fires onSelected
     void deselectAll();
     void insertSelected( FaceControl*);
     void eraseSelected( FaceControl*);

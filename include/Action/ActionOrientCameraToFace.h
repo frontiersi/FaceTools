@@ -22,15 +22,42 @@
 
 namespace FaceTools {
 namespace Action {
+class ActionSynchroniseCameraMovement;
 
 class FaceTools_EXPORT ActionOrientCameraToFace : public FaceAction
 { Q_OBJECT
 public:
     ActionOrientCameraToFace( const QString& dname="Orient Camera to Face", const QIcon& icon=QIcon());
+
+    // Set/get the distance in world units to the face centre point
+    // for the new position of the camera when transformed.
+    void setDistance( float d) { _distance = d;}
+    float distance() const { return _distance;}
+
+    // Set/get the angle about the face that will be viewed.
+    // Angles are given about the face up vector looking toward
+    // the negative side, with the face normal vector as the pseudo
+    // up vector from that point of view. An angle of 0 radians is
+    // straight up along the normal vector (default). An angle of
+    // +pi/2 radians will cause the camera to look at the RIGHT
+    // profile of the face and an angle of -pi/2 radians will cause
+    // the camera to look at the LEFT profile of the face.
+    void setAngleAboutUpVector( float rads) { _urads = rads;}
+    float angleAboutUpVector() const { return _urads;}
+
+    void setCamSynch( const ActionSynchroniseCameraMovement* cs) { _camSynch = cs;}
    
-public slots:
-    bool testReady( FaceControl*);
+private slots:
+    bool testReady( const FaceControl*);
+    bool testEnabled() const override { return readyCount() == 1;}
     bool doAction( FaceControlSet&) override;
+    void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(CAMERA_CHANGE);}
+
+private:
+    float _distance;
+    float _urads;
+    const ActionSynchroniseCameraMovement *_camSynch;
+    bool displayDebugStatusProgression() const override { return false;}
 };  // end class
 
 }   // end namespace

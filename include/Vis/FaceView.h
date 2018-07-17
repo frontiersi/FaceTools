@@ -21,12 +21,8 @@
 /**
  * The container for coordinating the generation and application of visualisations for a
  * RFeatures::ObjModel data model. FaceTools::Vis::BaseVisualisation instances are delegates
- * that define ways to visualise the vtkActors generated from the data model passed in to
- * rebuild. Multiple visualisation layers can be added and removed separately. See related
- * classes for further info:
- * FaceTools::Vis::VisualisationInterface
- * FaceTools::Vis::BaseVisualisation
- * FaceTools::Action::ActionVisualise
+ * that define ways to visualise the vtkActors generated from the data model. Multiple
+ * visualisation layers can be added and removed separately.
  */
 
 #include <FaceTools_Export.h>
@@ -50,41 +46,43 @@ public:
     // viewer, and then added to the new viewer. No rebuilding or re-application of
     // visualisations to the vtkActors is undertaken.
     void setViewer( ModelViewer*);
-    ModelViewer* viewer() const { return _viewer;}  // May be NULL
+    ModelViewer* viewer() const { return _viewer;}  // May be null
 
-    // Rebuild the view models from the data model and reapply the visualisations (first removing
-    // previous view actors). For textured actors only ObjModels with a single material are
-    // accepted (for models having multiple materials, use ObjModel::mergeMaterials beforehand).
-    // If the ObjModel doesn't have any materials, a warning will be printed to stderr and only
-    // non-texture mapped visualisations will be available.
-    void rebuild();
+    // Remove all visualisations and rebuild the view models from the data model. For textured actors
+    // only ObjModels with a single material are accepted (for models having multiple materials, use
+    // ObjModel::mergeMaterials beforehand). If the ObjModel doesn't have any materials, a warning will
+    // be printed to stderr and only non-texture mapped visualisations will be available.
+    void reset();
 
-    // Remove the given visualisation, or remove all if parameter left as NULL.
-    void remove( BaseVisualisation *vis=NULL);
+    // Remove the given visualisation, or remove all if parameter left as null.
+    void remove( BaseVisualisation *vis=nullptr);
 
-    // Apply (or re-apply) a visualisation and add the visualisation to the current viewer.
+    // Apply a visualisation and add the visualisation to the current viewer.
     // Actors relating to the given visualisation are first removed before being re-added.
-    // If the visualisation parameter is left as NULL, the existing visualisation(s) are
-    // re-applied. If the given visualisation is "exclusive", it will replace any existing
-    // "exclusive" visualisation (the actors of the existing exclusive visualisation will
-    // be removed). Non-exclusive visualisations are added without replacing existing ones.
-    // Note that all applied visualisations 
-    bool apply( BaseVisualisation *vis=NULL);
+    // If the given visualisation is "exclusive", it will replace any existing "exclusive"
+    // visualisation (the actors of the existing exclusive visualisation will be removed).
+    // Non-exclusive visualisations are added without replacing existing ones.
+    bool apply( BaseVisualisation *vis=nullptr);
+
+    bool isApplied( const BaseVisualisation *vis) const;
 
     // Returns the set of currently applied visualisations.
     const std::unordered_set<BaseVisualisation*> visualisations() const { return _vlayers;}
 
+    // Returns the current exclusive visualisation (null if none set).
+    BaseVisualisation* exclusiveVisualisation() const { return _visx;}
+
     // Allow a visualisation to use either the surface or the textured actors.
-    vtkSmartPointer<vtkActor> surfaceActor() const { return _sactor;}
-    vtkSmartPointer<vtkActor> textureActor() const { return _tactor;}
+    vtkActor* surfaceActor() const { return _sactor;}
+    vtkActor* textureActor() const { return _tactor;}
 
     // The ObjModel to vtkActor polygon lookups for the surface model created upon bulding.
     // Can be used by visualisations to map information calculated about polygons on the
     // source ObjModel to polygons created for the vtkActor surface model.
     const IntIntMap& polyLookups() const { return _fmap;}
 
-    // Returns the visualisation that vtkProp belongs to or NULL.
-    const BaseVisualisation* belongs( const vtkProp*) const;
+    // Returns the visualisation that vtkProp belongs to or null.
+    BaseVisualisation* belongs( const vtkProp*) const;
 
     // Set/get the opacity of the surface and texture models.
     void setOpacity( double);
@@ -99,25 +97,26 @@ public:
     void setBackfaceCulling( bool);
     bool backfaceCulling() const;
 
-    // Transform the actors and any visualisations using the given matrix. This is a "hard"
-    // transform in that it updates the poly data underlying the actors. The actor's internal
-    // transformation matrix is ignored and the actor's poly data updated using the given matrix.
-    // On return, the actor's user transformation matrix will be the identity matrix.
-    void transform( const vtkMatrix4x4*);
-
-    // Return the actor's current user transform which is the identity matrix unless
-    // the actors have been moved around (typically via interactor).
+    // Returns the transform matrix for the actor of the current exclusive visualisation.
+    // This will be the identity matrix unless the actor has been moved via pokeTransform.
     vtkSmartPointer<vtkMatrix4x4> userTransform() const;
+
+    // Transform the visualisation actors using the given matrix.
+    void pokeTransform( const vtkMatrix4x4*, bool transEx=true);
+
+    // Fix the current transform for all visualisation actors and cause
+    // the userTransform to become reset to the identity matrix.
+    void fixTransform();
 
 private:
     const FaceControl *_fc;
     ModelViewer *_viewer;                               // The viewer being rendered to.
     BaseVisualisation *_visx;                           // The exclusive visualisation.
     std::unordered_set<BaseVisualisation*> _vlayers;    // Visualisation layers.
-    vtkSmartPointer<vtkActor> _sactor, _tactor;         // The surface and texture models.
+    vtkSmartPointer<vtkActor> _sactor, _tactor;         // The surface model and texture model.
     IntIntMap _fmap;                                    // Polygon ID lookups for the surface model.
-    FaceView( const FaceView&);       // No copy
-    void operator=( const FaceView&); // No copy
+    FaceView( const FaceView&) = delete;
+    void operator=( const FaceView&) = delete;
 };  // end class
 
 }   // end namespace

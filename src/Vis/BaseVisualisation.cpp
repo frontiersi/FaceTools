@@ -61,10 +61,7 @@ BaseVisualisation::~BaseVisualisation()
 }   // end dtor
 
 
-bool BaseVisualisation::isApplied( const FaceControl* fc) const
-{
-    return fc && fc->view()->visualisations().count(const_cast<BaseVisualisation*>(this)) > 0;
-}   // end isApplied
+bool BaseVisualisation::isApplied( const FaceControl* fc) const { return fc->view()->isApplied(this);}
 
 
 void SurfaceVisualisation::apply( const FaceControl* fc)
@@ -72,6 +69,7 @@ void SurfaceVisualisation::apply( const FaceControl* fc)
     vtkActor* actor = fc->view()->surfaceActor();
     actor->GetMapper()->SetScalarVisibility(false);
     actor->GetProperty()->SetRepresentationToSurface();
+    fc->viewer()->showLegend(false);
 }   // end apply
 
 
@@ -91,12 +89,18 @@ void WireframeVisualisation::apply( const FaceControl* fc)
 
 void SurfaceVisualisation::addActors( const FaceControl* fc) { fc->viewer()->add(fc->view()->surfaceActor());}
 void SurfaceVisualisation::removeActors( const FaceControl* fc) { fc->viewer()->remove(fc->view()->surfaceActor());}
-//void SurfaceVisualisation::onSelected( const FaceControl* fc) { fc->viewer()->enableFloodLights(false);}
 bool SurfaceVisualisation::belongs( const vtkProp *p, const FaceControl* fc) const { return fc->view()->surfaceActor() == p;}
+
+void TextureVisualisation::apply( const FaceControl* fc)
+{
+    fc->viewer()->showLegend(false);
+}   // end apply
 
 void TextureVisualisation::addActors( const FaceControl* fc) { fc->viewer()->add(fc->view()->textureActor());}
 void TextureVisualisation::removeActors( const FaceControl* fc) { fc->viewer()->remove(fc->view()->textureActor());}
-//void TextureVisualisation::onSelected( const FaceControl* fc) { fc->viewer()->enableFloodLights(true);}
 bool TextureVisualisation::belongs( const vtkProp *p, const FaceControl* fc) const { return fc->view()->textureActor() == p;}
 
-bool TextureVisualisation::isAvailable( const FaceModel* fm) const { return fm->model()->getNumMaterials() == 1;}
+bool TextureVisualisation::isAvailable( const FaceModel* fm) const
+{
+    return fm->info()->cmodel()->getNumMaterials() == 1;
+}   // end isAvailable

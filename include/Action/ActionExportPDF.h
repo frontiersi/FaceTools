@@ -19,33 +19,51 @@
 #define FACE_TOOLS_ACTION_EXPORT_PDF_H
 
 #include "FaceAction.h"
-#include <boost/filesystem/path.hpp>
+#include <BaseReportTemplate.h>
 
-namespace FaceApp {
+namespace FaceTools {
 namespace Action {
 
 class FaceTools_EXPORT ActionExportPDF : public FaceAction
 { Q_OBJECT
 public:
-    ActionExportPDF( Report::BaseReportTemplate*, QWidget*, QProgressBar* pb=NULL);  // Is async if pb not NULL
+    // Initialise PDF export with the locations of pdflatex and IDTFConverter.
+    static bool init( const std::string& pdflatex, const std::string& idtfConverter);
+
+    ActionExportPDF( Report::BaseReportTemplate*, const QIcon& icon=QIcon(),
+                     QWidget* parent=nullptr, QProgressBar* pb=nullptr);  // Is async if pb not null
+    ~ActionExportPDF() override { delete _template;}
+
+    // Set the path to the logo resouce.
+    void setLogoResource( const QString& logo) { _logoFile = logo;}
+
+    // Set author info to be embedded in all reports.
+    void setAuthorInfo( const QString& ainfo) { _author = ainfo;}
 
     QWidget* getWidget() const override { return _template->getWidget();}
 
 protected slots:
-    bool testReady( FaceControl*) override;
-    bool testEnabled() override;
+    bool testReady( const FaceControl*) override;
+    bool testEnabled() const override;
     bool doBeforeAction( FaceControlSet&) override;
     bool doAction( FaceControlSet&) override;
-    void doAfterAction( const FaceControlSet&, bool) override;
+    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
+    void purge( const FaceModel*) override;
 
 private:
     Report::BaseReportTemplate *_template;
     QWidget *_parent;
+    QString _logoFile;
+    QString _author;
 
-    boost::filesystem::path _workdir;
-    boost::filesystem::path _logopath;
     std::string _pdffile;
     std::string _err;
+    bool writeLaTeX( const FaceModel*,
+                     const RFeatures::CameraParams&,
+                     const std::string&,
+                     const std::string&,
+                     const std::string&,
+                     std::vector<RModelIO::LaTeXU3DInserter::Ptr>&);
 };  // end class
 
 }   // end namespace

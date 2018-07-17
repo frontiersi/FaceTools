@@ -16,154 +16,80 @@
  ************************************************************************/
 
 #include <ActionExportPDF.h>
-
-#include <ModelViewer.h>
-#include <FaceControlSet.h>
-#include <FaceControl.h>
+#include <FaceModelViewer.h>
 #include <FaceModel.h>
-
-#include <PDFGenerator.h>      // RModelIO
+#include <PDFGenerator.h>       // RModelIO
 #include <U3DExporter.h>       // RModelIO
 
-#include <QApplication>
+#include <QTemporaryDir>
 #include <QFileDialog>
 #include <QMessageBox>
-#include <QPixmap>
+#include <QFile>
 
 #include <boost/filesystem.hpp>
 #include <boost/system/error_code.hpp>
 #include <fstream>
 #include <cassert>
-using FaceTools::ActionExportPDF;
+using FaceTools::Action::ActionExportPDF;
+using FaceTools::Action::ChangeEventSet;
+using FaceTools::Report::BaseReportTemplate;
 using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
 using FaceTools::FaceModel;
-using FaceTools::ModelViewer;
+
 using RModelIO::PDFGenerator;
 using RModelIO::U3DExporter;
-using RFeatures::CameraParams;
-using RFeatures::ObjModel;
+typedef RModelIO::LaTeXU3DInserter::Ptr FigIns;
 
 
-namespace {
-
-bool writeDoc( PDFGenerator::LaTeXU3DInserter* fig, const std::string& texfile, const std::string& logofile)
+// static public
+bool ActionExportPDF::init( const std::string& pdflatex, const std::string& idtfConverter)
 {
-    assert(fig);
-    bool writtenOkay = false;
-    std::ofstream os;
-    try
-    {
-        os.open( texfile.c_str(), std::ios::out);
-        os << "\\documentclass{article}" << std::endl;
-        os << "\\usepackage[a4paper]{geometry}" << std::endl;
-        os << "\\usepackage{a4wide}" << std::endl;
-        os << "\\usepackage{media9}" << std::endl;
-        os << "\\usepackage[parfill]{parskip}" << std::endl;
-        os << "\\usepackage[colorlinks=true,urlcolor=red]{hyperref}" << std::endl;
-        os << "\\usepackage{graphicx}" << std::endl;
-        os << "\\DeclareGraphicsExtensions{.png,.jpg,.pdf}" << std::endl;
-        os << std::endl;
-        os << "\\begin{document}" << std::endl;
-        os << "\\title{3D-FAST: Facial Analysis Report (Beta)}" << std::endl;
-        os << "\\author{\\href{mailto:r.l.palmer@curtin.edu.au?subject=3D-FAST\\%20PDF\\%20report}{Email}}" << std::endl;
-        os << "\\maketitle" << std::endl;
-        os << "\\thispagestyle{empty}" << std::endl;
-        os << std::endl;
-
-        os << *fig << std::endl;
-
-        if ( !logofile.empty())
-        {
-            os << "\\begin{figure}[!ht]" << std::endl;
-            os << "\\centering" << std::endl;
-            os << "\\includegraphics[]{" << logofile << "}" << std::endl;
-            os << "\\end{figure}" << std::endl;
-        }   // end if
-
-        os << "\\end{document}" << std::endl;
-        os.flush();
-        writtenOkay = true;
-    }   // end try
-    catch ( const std::exception& e)
-    {
-        std::cerr << "[EXCEPTION!] Exception writing to file " << texfile << std::endl;
-        std::cerr << e.what() << std::endl;
-        writtenOkay = false;
-    }   // end catch
-    os.close();
-    return writtenOkay;
-}   // end writeDoc
-
-}   // end namespace
-
-
-// public
-ActionExportPDF::ActionExportPDF( BaseReportTemplate* t, QWidget* p, QProgressBar* pb)
-    : FaceAction( t->getDisplayName(), t->getIcon() == NULL ? QIcon(), t-getIcon()),
-      _template(t), _parent(p),
-      _workdir( boost::filesystem::path( qApp->applicationDirPath().toStdString()))
-{
-    assert(t);
-    PDFGenerator::pdflatex = PDF_LATEX;
-    U3DExporter::IDTFConverter = IDTF_CONVERTER;
+    PDFGenerator::pdflatex = pdflatex;
+    U3DExporter::IDTFConverter = idtfConverter;
     std::cerr << "IDTFConverter : " << U3DExporter::IDTFConverter << " ("
               << (U3DExporter::isAvailable()  ? "" : "not ") << "available)" << std::endl;
     std::cerr << "pdflatex      : " << PDFGenerator::pdflatex << " ("
               << (PDFGenerator::isAvailable() ? "" : "not ") << "available)" << std::endl;
-
-    // Set the working directory for latex output.
-    boost::filesystem::path wdir = boost::filesystem::path( LATEX_WORK);
-    assert( boost::filesystem::is_directory( wdir));
-    _workdir = wdir;
-
-    // Set the logo to use
-    _logopath = boost::filesystem::path( LATEX_LOGO);
-    assert( boost::filesystem::exists( _logopath));
-
-    _template->setAction(this); // Allows report template to add extra respond to events for checking availability.
-    if ( pb)
-        setAsync( true, QTools::QProgressUpdater::create(pb));
-}   // end ctor
+    return U3DExporter::isAvailable() && PDFGenerator::isAvailable();
+}   // end init
 
 
 // public
-bool ActionExportPDF::testReady( FaceControl* fc)
+ActionExportPDF::ActionExportPDF( BaseReportTemplate* t, const QIcon& icon, QWidget* p, QProgressBar* pb)
+    : FaceAction( t->getDisplayName(), icon), _template(t), _parent(p)
 {
-    // Could also test in here for other FaceControls on the same viewer - if the report needed them for example.
-    return _template->isAvailable(fc->data());
-}   // end testReady
+    // Default author info
+    _author = "\\href{mailto:r.l.palmer@curtin.edu.au?subject=FaceTools\\%20PDF\\%20report}{Email}";
+    if ( pb)
+        setAsync(true, QTools::QProgressUpdater::create(pb));
+}   // end ctor
 
 
-bool ActionExportPDF::testEnabled()
+bool ActionExportPDF::testReady( const FaceControl* fc) { return _template->isAvailable(fc->data());}
+
+
+bool ActionExportPDF::testEnabled() const
 {
-    return PDFGenerator::isAvailable() && U3DExporter::isAvailable();
+    return readyCount() == 1 && PDFGenerator::isAvailable() && U3DExporter::isAvailable();
 }   // end testEnabled
 
-// TODO
 
-// protected virtual
+// Get the save filepath for the report
 bool ActionExportPDF::doBeforeAction( FaceControlSet& fcs)
 {
-    assert( _fconts.size() == 1);
-    const FaceControl* fcont = *_fconts.begin();
-    assert( fcont->getViewer());
-    std::string outfile = fcont->getModel()->getObjectMeta()->getObjectFile();
-    boost::filesystem::path outpath(outfile);
-    const QString parentDir = outpath.parent_path().string().c_str();
+    const FaceControl* fc = fcs.first();
 
-    // Make _outfile have the preferred extension
-    outfile = outpath.replace_extension( "pdf").string();
-
+    //std::string outfile = "report.pdf";
     QFileDialog fileDialog;
     fileDialog.setWindowTitle( tr("Export as PDF"));
     fileDialog.setFileMode( QFileDialog::AnyFile);
     fileDialog.setNameFilter( "Portable Document Format (*.pdf)");
-    fileDialog.setDirectory( parentDir);    // Default save directory is last save location for model
+    //fileDialog.setDirectory( parentDir);    // Default save directory is last save location for model
     fileDialog.setDefaultSuffix( "pdf");
-    fileDialog.selectFile( outfile.c_str());
+    //fileDialog.selectFile( outfile.c_str());
     fileDialog.setAcceptMode( QFileDialog::AcceptSave);
-    fileDialog.setOption( QFileDialog::DontUseNativeDialog);
+    //fileDialog.setOption( QFileDialog::DontUseNativeDialog);
 
     QStringList fileNames;
     if ( fileDialog.exec())
@@ -172,93 +98,164 @@ bool ActionExportPDF::doBeforeAction( FaceControlSet& fcs)
 
     _pdffile = "";
     if ( !fileNames.empty())
+    {
+        // Set the output file and try to remove what's already there (if anything)
         _pdffile = fileNames.first().toStdString();
+        boost::system::error_code errCode;
+        if ( boost::filesystem::exists( _pdffile))
+        {
+            if ( !boost::filesystem::remove( _pdffile, errCode))
+            {
+                _err = errCode.message();
+                _pdffile = "";
+            }   // end if
+        }   // end if
+    }   // end if
+
     return !_pdffile.empty();
 }   // end doBeforeAction
 
 
-// protected virtual
-void ActionExportPDF::doAfterAction( bool v)
+bool ActionExportPDF::doAction( FaceControlSet& fcs)
+{
+    assert( fcs.size() == 1);
+    const FaceControl* fc = fcs.first();
+    _err = "";
+
+    QTemporaryDir tdir;
+    if ( !tdir.isValid())
+    {
+        _err = "Unable to open temporary directory for report generation!";
+        return false;
+    }   // end if
+
+    progress(0.0f);
+
+    QFile logo( _logoFile);
+    const std::string logopath = tdir.filePath( "logo.pdf").toStdString();
+    if ( logo.copy( logopath.c_str()))
+        std::cerr << "[INFO] FaceTools::Action::ActionExportPDF::doAction: Saved logo to ";
+    else
+        std::cerr << "[ERROR] FaceTools::Action::ActionExportPDF::doAction: Error saving logo to ";
+    std::cerr << "'" << logopath << "'" << std::endl;
+
+    std::cerr << "[INFO] FaceTools::Action::ActionExportPDF::doAction: Creating U3D based figure(s)..." << std::endl;
+    const std::string texpath = tdir.filePath( "report.tex").toStdString();   // File location where LaTeX being written
+    // Figure references need to be stored until after PDF generation since LaTeXU3DInserter destructor
+    // will remove delete U3D instances from the filesystem.
+    std::vector<FigIns> figs;
+    if ( !writeLaTeX( fc->data(), fc->viewer()->getCamera(), tdir.path().toStdString(), texpath, logopath, figs))
+    {
+        _err = "Failed to create '" + texpath + "' for LaTeX parsing!";
+        return false;
+    }   // end if
+
+    std::cerr << "[INFO] FaceTools::Action::ActionExportPDF::doAction: Generating PDF from LaTeX..." << std::endl;
+    PDFGenerator pdfgen;
+    const bool genOk = pdfgen( texpath, true);
+    if ( !genOk)
+        _err = "Failed to generate PDF!";
+    else
+    {
+        // Copy the created pdf to the requested location.
+        QFile outfile( tdir.filePath( "report.pdf"));
+        outfile.copy( _pdffile.c_str());
+    }   // end else
+
+    progress(1.0f);
+    return _err.empty();
+}   // end doAction
+
+
+void ActionExportPDF::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool v)
 {
     if ( !v)
-        QMessageBox::warning( _fapp, tr("PDF Export Error!"), tr( _err.c_str()));
-
-    if ( !_pdffile.empty())
     {
-        std::cerr << "Created PDF at '" << _pdffile << "'" << std::endl;
-        QMessageBox::information( _fapp, tr("Created PDF"),
-                                  tr( (std::string("Created PDF at '") + _pdffile + "'").c_str()));
+        QMessageBox::warning( _parent, tr("PDF Export Error!"), tr( _err.c_str()));
+        std::cerr << _err << std::endl;
     }   // end if
-    _pupdater.reset();
+    else 
+    {
+        std::cerr << "[INFO] FaceTools::Action::ActionExportPDF::doAfterAction: Created PDF at '" << _pdffile << "'" << std::endl;
+        QMessageBox::information( _parent, tr("Created PDF"), tr( (std::string("Created PDF at '") + _pdffile + "'").c_str()));
+        cs.insert(REPORT_CREATED);
+    }   // end if
     _pdffile = "";
 }   // end doAfterAction
 
 
-// public
-bool ActionExportPDF::doAction()
+void ActionExportPDF::purge( const FaceModel* fm) { _template->purge(fm);}
+
+
+// private
+bool ActionExportPDF::writeLaTeX( const FaceModel* fm,
+                                  const RFeatures::CameraParams& cam,
+                                  const std::string& tmpdir,
+                                  const std::string& texfile,
+                                  const std::string& logopath,
+                                  std::vector<FigIns>& figs)
 {
-    if ( _pdffile.empty())
-        return true;
-
-    std::cerr << "[INFO] FaceApp::ActionExportPDF::doAction: Commencing PDF generation..." << std::endl;
-    assert( _fconts.size() == 1);
-    const FaceControl* fcont = *_fconts.begin();
-
-    _pupdater.reset();
-    _pupdater.processUpdate(0.01f);
-
-    const std::string texpath = (_workdir / "main.tex").string();
-    _err = "";
-
-    // Currently, the model itself is written out, not the VTK view (next version!)
-    const ModelViewer* viewer = fcont->getViewer();
-    const ObjModel::Ptr model = fcont->getModel()->getObjectMeta()->getObject();
-    PDFGenerator pdfgen;
-    _pupdater.processUpdate(0.2f);
-    PDFGenerator::LaTeXU3DInserter* fig = pdfgen.getFigureInserter( model, 150, 150, viewer->getCamera(), "3D Facial Image (Beta)");
-    if ( !fig)
-        _err = "Failed to create U3D model from data!";
-    _pupdater.processUpdate(0.6f);
-
-    if ( _err.empty())
+    std::string ainfo = _author.toStdString();
+    std::ofstream os;
+    try
     {
-        if ( !writeDoc( fig, texpath, _logopath.string()))
-            _err = "Failed to create '" + texpath + "' for LaTeX parsing!";
-    }   // end if
-    _pupdater.processUpdate(0.65f);
+        os.open( texfile.c_str(), std::ios::out);
+        os << "\\documentclass{article}" << std::endl;
+        os << "\\usepackage[textwidth=16cm,textheight=24cm]{geometry}" << std::endl;
+        os << "\\usepackage{media9}" << std::endl;
+        os << "\\usepackage[parfill]{parskip}" << std::endl;
+        os << "\\usepackage[colorlinks=true,urlcolor=red]{hyperref}" << std::endl;
+        os << "\\usepackage{graphicx}" << std::endl;
+        os << "\\DeclareGraphicsExtensions{.png,.jpg,.pdf,.eps}" << std::endl;
 
-    if ( _err.empty())
-    {
-        if ( !pdfgen( texpath, true))
-            _err = "Failed to generate PDF!";
-    }   // end if
-    _pupdater.processUpdate(0.9f);
+        // Header
+        os << std::endl;
+        os << "\\usepackage{fancyhdr}" << std::endl;
+        os << "\\pagestyle{fancy}" << std::endl;
+        os << "\\renewcommand{\\headrulewidth}{0pt}" << std::endl;
+        os << "\\renewcommand{\\footrulewidth}{0pt}" << std::endl;
+        os << "\\setlength\\headheight{80.0pt}" << std::endl;
+        os << "\\addtolength{\\textheight}{-80.0pt}" << std::endl;
+        os << "\\rhead{\\includegraphics[width=0.5\\textwidth]{" << logopath << "}}" << std::endl;
+        os << "\\lhead{" << std::endl;
+        os << "\\Large " << _template->reportTitle() << " \\\\" << std::endl;
+        os << "\\large \\today \\\\" << std::endl;
+        os << "\\normalsize " << ainfo << " \\\\" << std::endl;
+        os << "}" << std::endl;
 
-    const boost::filesystem::path pdfout( _workdir / "main.pdf");
-    if ( _err.empty() && boost::filesystem::exists( pdfout))
-    {
-        boost::system::error_code errCode;
+        // Document
+        os << std::endl;
+        os << "\\begin{document}" << std::endl;
+        os << "\\pagenumbering{gobble}" << std::endl;
+        os << "\\thispagestyle{fancy}" << std::endl;
+        os << std::endl;
 
-        // Copy the created pdf to the requested location
-        if ( boost::filesystem::exists( _pdffile))
+        const size_t nfigs = _template->figureCount();
+        const float progVal = 0.9f/nfigs;
+        for ( size_t i = 0; i < nfigs; ++i)
         {
-            if ( !boost::filesystem::remove( _pdffile, errCode))
-                _err = errCode.message();
-        }   // end if
+            FigIns fig = _template->createFigure( i, tmpdir, fm, cam);
+            if ( fig)
+            {
+                figs.push_back(fig);    // Store until after PDF generated so U3D figure not prematurely deleted from filesystem.
+                os << *fig << std::endl;
+            }   // end if
+            else
+                _err = "Report template figure count mismatch!";
+            progress( progress() + progVal);
+        }   // end for
 
-        if ( !errCode)
-        {
-            boost::filesystem::copy( pdfout, _pdffile);
-            if ( !boost::filesystem::remove( pdfout, errCode))
-                _err = errCode.message();
-        }   // end if
-        else
-            _pdffile = pdfout.string();
-    }   // end if
-    else
-        _pdffile = "";
-
-    _pupdater.processUpdate(1.0f);
+        os << "\\end{document}" << std::endl;
+        os.flush();
+    }   // end try
+    catch ( const std::exception& e)
+    {
+        std::cerr << "[EXCEPTION!] Exception writing to file " << texfile << std::endl;
+        std::cerr << e.what() << std::endl;
+        _err = "Unable to write report template at '" + texfile + "'!";
+    }   // end catch
+    os.close();
     return _err.empty();
-}   // end doAction
+}   // end writeLaTeX
+
 

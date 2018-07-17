@@ -20,6 +20,8 @@
 
 /**
  * Signals onLeave and onEnter when leaving and entering respectively the attached ModelViewer.
+ * Used by ViewerInteractionManager to ensure that interactors are always set on the viewer
+ * underneath the mouse cursor.
  */
 
 #include "ModelViewerInteractor.h"

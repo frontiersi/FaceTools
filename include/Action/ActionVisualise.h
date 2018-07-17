@@ -27,24 +27,28 @@ namespace Action {
 class FaceTools_EXPORT ActionVisualise : public FaceAction
 { Q_OBJECT
 public:
-    // Change events specified in the provided VisualisationInterface are
-    // combined with the standard set of events understood by this action.
-    // Set isDefault to true if it is wished that the passed in visualisation
-    // be the default applied to all newly loaded models.
-    ActionVisualise( Vis::BaseVisualisation*, bool isDefault=false);
+    explicit ActionVisualise( Vis::BaseVisualisation*);
+    ~ActionVisualise() override { delete _vis;}
 
-    QWidget* getWidget() const override { return _vint->getWidget();}
+    QWidget* getWidget() const override { return _vis->getWidget();}
+
+    bool isExclusive() const { return _vis->isExclusive();}
+
+    Vis::BaseVisualisation* visualisation() { return _vis;}
 
 protected slots:
-    bool testReady( FaceControl*) override;         // Applies default visualisation if none set yet.
+    bool testReady( const FaceControl*) override;
+    void tellReady( FaceControl*, bool) override;   // Called whenever ready status changes
+    bool testEnabled() const override;
     bool testChecked( FaceControl*) override;
-    bool doAction( FaceControlSet&) override;       // Apply the visualisation.
-    void respondTo( const FaceAction*, const ChangeEventSet*, FaceControl*) override;   // Update visualisation in response.
-    void purge( const FaceControl*) override;       // Ensure that cached visualisation data is expunged.
+    bool doAction( FaceControlSet&) override;
+    void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(VIEW_CHANGE);}
+    void purge( const FaceModel*) override;
 
 private:
-    Vis::BaseVisualisation *_vint; // The associated visualisation delegate
-    const bool _isdefault;
+    bool displayDebugStatusProgression() const override { return false;}
+    void toggleVis( FaceControl*);
+    Vis::BaseVisualisation *_vis; // The visualisation delegate
 };  // end class
 
 }   // end namespace

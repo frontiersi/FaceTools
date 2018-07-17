@@ -18,7 +18,7 @@
 #ifndef FACE_TOOLS_FACE_CONTROL_SET_H
 #define FACE_TOOLS_FACE_CONTROL_SET_H
 
-#include "FaceTools_Export.h"
+#include "FaceControl.h"
 #include "Hashing.h"
 #include <vtkProp.h>
 #include <unordered_set>
@@ -27,7 +27,6 @@
 namespace FaceTools {
 
 class FaceModelViewer;
-class FaceControl;
 class FaceModel;
 typedef std::unordered_set<FaceModel*>       FaceModelSet;
 typedef std::unordered_set<FaceModelViewer*> FaceViewerSet;
@@ -54,13 +53,14 @@ public:
     size_t size() const;                    // How many FaceControl instances.
     size_t size( const FaceModel*) const;   // Returns the number of FaceControl instances that map to the given FaceModel.
     bool empty() const;                     // True iff empty.
-    FaceControl* first() const;             // Returns *_fcs.begin() or NULL if empty set.
+    FaceControl* first() const;             // Returns *_fcs.begin() or null if empty set.
 
-    FaceViewerSet viewers() const;          // Return the set of viewers used at this moment by the FaceControl instances.
+    FaceViewerSet viewers() const;          // Return the set of viewers used at this moment by ALL REFERENCED FACEMODELS
+    FaceViewerSet directViewers() const;    // Return the viewers just associated with the FaceControls in this set.
     const FaceModelSet& models() const;     // Return the set of models (FaceControl::data) from the set.
 
-    // Given a prop, returns the associated FaceControl where FaceControl::belongs returns true or NULL if not present.
-    // Currently does a linear lookup. TODO make hashable.
+    // Given a prop, returns the associated FaceControl where FaceControl::belongs returns
+    // true or null if not present. Currently does a linear lookup. TODO make hashable.
     FaceControl* find( const vtkProp*) const;
 
     std::unordered_set<FaceControl*>::iterator begin() { return _fcs.begin();}
@@ -74,7 +74,8 @@ private:
     FaceModelSet _fms;
 };  // end class
 
-
 }   // end namespace
+
+Q_DECLARE_METATYPE( FaceTools::FaceControlSet)
     
 #endif

@@ -26,13 +26,15 @@ namespace Action {
 class FaceTools_EXPORT ActionGetComponent : public FaceAction
 { Q_OBJECT
 public:
-    ActionGetComponent( const QString& dname="Get Face Component", const QIcon& icon=QIcon());
+    ActionGetComponent( const QString& dname="Get Face Component", const QIcon& icon=QIcon(), QProgressBar* pb=NULL);
 
     // TODO Currently requires the nose landmark to get the face but should make generic for any component.
 
-public slots:
-    bool testReady( FaceControl* fc) override;
+private slots:
+    bool testReady( const FaceControl*) override;
+    bool testEnabled() const override { return readyCount() == 1;}
     bool doAction( FaceControlSet&) override;
+    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
 };  // end class
 
 }   // end namespace

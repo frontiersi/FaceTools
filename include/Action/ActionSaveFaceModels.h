@@ -31,10 +31,9 @@ public:
     ActionSaveFaceModels( const QString& dname, const QIcon&, const QKeySequence&, FileIO::FaceModelManager*, QWidget *parent=NULL);
 
 protected slots:
-    bool testReady( FaceControl*) override;
+    bool testReady( const FaceControl*) override;
     bool doAction( FaceControlSet&) override;
-    void doAfterAction( const FaceControlSet&, bool) override;
-    void respondTo( const FaceAction*, const ChangeEventSet*, FaceControl*) override;
+    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
 
 private:
     FileIO::FaceModelManager *_fmm;

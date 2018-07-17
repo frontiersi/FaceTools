@@ -19,7 +19,6 @@
 #define FACE_TOOLS_FILE_IO_FACE_MODEL_ASS_IMP_FILE_HANDLER_FACTORY_H
 
 #include "FaceModelAssImpFileHandler.h"
-#include <unordered_map>
 
 namespace FaceTools {
 namespace FileIO {
@@ -27,16 +26,14 @@ namespace FileIO {
 class FaceTools_EXPORT FaceModelAssImpFileHandlerFactory
 {
 public:
-    FaceModelAssImpFileHandlerFactory();
-    virtual ~FaceModelAssImpFileHandlerFactory();   // Frees all created file handlers.
+    // Create and return the file handler for the given extension or NULL
+    // if not possible to get a file handler for given extension.
+    static FaceModelAssImpFileHandler* make( const QString& ext);
 
-    // Get (creating if necessary) the file handler for the given extension.
-    // Returns NULL if not possible to get a file handler for given extension.
-    FaceModelAssImpFileHandler* get( const QString& ext);
+    static void printAvailableFormats( std::ostream&);
 
 private:
-    RModelIO::AssetImporter _importer;
-    std::unordered_map<std::string, FaceModelAssImpFileHandler*> _fhandlers;
+    static RModelIO::AssetImporter assimp;
 };  // end class
 
 }   // end namespace

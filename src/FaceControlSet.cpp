@@ -20,7 +20,6 @@
 #include <FaceModel.h>
 #include <FaceView.h>
 #include <algorithm>
-#include <cassert>
 using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
 using FaceTools::FaceModel;
@@ -90,7 +89,6 @@ FaceControlSet FaceControlSet::operator()( const FaceModel* fm) const
 // public
 bool FaceControlSet::insert( FaceControl* fc)
 {
-    assert(fc);
     bool success = false;
     if ( !has(fc))
     {
@@ -109,7 +107,6 @@ bool FaceControlSet::insert( FaceControl* fc)
 // public
 bool FaceControlSet::erase( FaceControl* fc)
 {
-    assert(fc);
     size_t a = _fcs.size();
     _fcs.erase(fc);
     if ( fc)
@@ -156,7 +153,7 @@ void FaceControlSet::clear()
 // public
 FaceControl* FaceControlSet::first() const
 {
-    FaceControl* fc = NULL;
+    FaceControl* fc = nullptr;
     if ( !empty())
         fc = *_fcs.begin();
     return fc;
@@ -171,22 +168,35 @@ const FaceModelSet& FaceControlSet::models() const { return _fms;}
 FaceViewerSet FaceControlSet::viewers() const
 {
     FaceViewerSet viewers;
-    std::for_each( std::begin(_fcs), std::end(_fcs), [&](auto fc){ viewers.insert(fc->viewer());});
-    viewers.erase(NULL);    // Ensure no NULL entries (though there shouldn't be any).
+    std::for_each( std::begin(_fms), std::end(_fms), [&](auto fm){
+                for ( FaceControl* fc : fm->faceControls()) // For all FaceControl's that map to the model
+                    viewers.insert(fc->viewer());
+            });
+    viewers.erase(nullptr);    // Ensure no null entries (though there shouldn't be any).
     return viewers;
 }   // end viewers
+
+
+// public
+FaceViewerSet FaceControlSet::directViewers() const
+{
+    FaceViewerSet viewers;
+    std::for_each( std::begin(_fcs), std::end(_fcs), [&](auto fc){ viewers.insert(fc->viewer());});
+    viewers.erase(nullptr);    // Ensure no null entries (though there shouldn't be any).
+    return viewers;
+}   // end directViewers
 
 
 // public
 FaceControl* FaceControlSet::find( const vtkProp* prop) const
 {
     if ( !prop)
-        return NULL;
+        return nullptr;
     for ( FaceControl* fc : _fcs)
     {
         if ( fc->view()->belongs( prop))
             return fc;
     }   // end for
-    return NULL;
+    return nullptr;
 }   // end find
 

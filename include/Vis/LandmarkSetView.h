@@ -36,7 +36,7 @@ namespace Vis {
 class FaceTools_EXPORT LandmarkSetView
 {
 public:
-    LandmarkSetView( const LandmarkSet&, double lmrad=1.8);
+    LandmarkSetView( const LandmarkSet&, double lmrad=1.5);
     virtual ~LandmarkSetView();
 
     bool isVisible() const;                             // Returns true iff ANY landmark shown
@@ -53,13 +53,12 @@ public:
     void setLandmarkRadius( double);
     double landmarkRadius() const { return _lmrad;}
 
-    int pointedAt( const QPoint&) const;                // Returns ID of the landmark under the given coordinates or -1 if none.
-    bool isLandmark( const vtkProp*) const;             // Returns true if given prop is a landmark AND the landmark is visible.
+    int pointedAt( const QPoint&) const;                // Returns ID of landmark under the given coordinates or -1 if none.
+    bool isLandmark( const vtkProp*) const;             // Returns true if given prop is landmark AND landmark is visible.
     const SphereView* landmark( int lmID) const;        // Return the landmark view with this ID or NULL if not found.
 
-    // Transform the landmark views according to the given matrix.
-    // This function does NOT change the real position of the landmark!
-    void transform( const vtkMatrix4x4*);                     
+    void pokeTransform( const vtkMatrix4x4*);                     
+    void fixTransform();
 
     // Refresh info about the given landmark from the set.
     // For lmids not in the set, the view is deleted. For lmids in the set, but not the view,
@@ -72,10 +71,12 @@ private:
     double _lmrad;
     ModelViewer *_viewer;
     std::unordered_map<int, SphereView*> _lviews;
-    std::unordered_set<int> _visible, _highlighted;
+    std::unordered_map<const vtkProp*, int> _props; // Mapping of props to landmark IDs for fast lookup
+    std::unordered_set<int> _highlighted;
+    std::unordered_set<int> _visible;
 
-    LandmarkSetView( const LandmarkSetView&);   // No copy
-    void operator=( const LandmarkSetView&);    // No copy
+    LandmarkSetView( const LandmarkSetView&) = delete;
+    void operator=( const LandmarkSetView&) = delete;
 };  // end class
 
 }   // end namespace

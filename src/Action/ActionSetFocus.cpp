@@ -20,21 +20,17 @@
 #include <FaceView.h>
 #include <cassert>
 using FaceTools::Action::ActionSetFocus;
+using FaceTools::Action::ChangeEventSet;
 using FaceTools::Action::FaceAction;
 using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
-typedef FaceTools::Interactor::FaceEntryExitInteractor FEEI;
 
 
 // public
-ActionSetFocus::ActionSetFocus( const QString& dn) : FaceAction( dn, true)
+ActionSetFocus::ActionSetFocus( const QString& dn, FEEI* feei) : FaceAction( dn)
 {
-    setExternalSelect(false);   // Prevent external selection of this action
-    addRespondTo( DATA_CHANGE);
-    addRespondTo( VIEW_CHANGE);
-    addChangeTo( VIEW_CHANGE);
-    connect( &_interactor, &FEEI::onEnterModel, [this](auto fc){ this->setSelected(fc, true);});
-    connect( &_interactor, &FEEI::onLeaveModel, [this](auto fc){ this->setSelected(fc, false);});
+    connect( feei, &FEEI::onEnterModel, [this](auto fc){ this->resetReady(fc);});
+    connect( feei, &FEEI::onLeaveModel, [this](auto fc){ this->clearReady();});
 }   // end ctor
 
 
@@ -52,3 +48,9 @@ bool ActionSetFocus::doAction( FaceControlSet& fset)
     mv->setFocus(nf);
     return true;
 }   // end doAction
+
+
+void ActionSetFocus::doAfterAction( ChangeEventSet& cs, const FaceControlSet& fcs, bool v)
+{
+    cs.insert(VIEW_CHANGE);
+}   // end doAfterAction

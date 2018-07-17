@@ -23,28 +23,22 @@
  * so can only be attached to FaceModelViewer and not the base ModelViewer type.
  */
 
-#include "ModelViewerInteractor.h"
-#include <BoundingVisualisation.h>
+#include "FaceHoveringInteractor.h"
+#include <RadialSelectVisualisation.h>
 
 namespace FaceTools {
 namespace Interactor {
-class FaceEntryExitInteractor;
 
-class FaceTools_EXPORT RadialSelectInteractor : public ModelViewerInteractor 
+class FaceTools_EXPORT RadialSelectInteractor : public FaceHoveringInteractor 
 { Q_OBJECT
 public:
-    explicit RadialSelectInteractor( Vis::BoundingVisualisation*);
-    ~RadialSelectInteractor() override;
+    RadialSelectInteractor( FEEI*, Vis::RadialSelectVisualisation*);
 
 signals:
     // Signals that notify client of the parameters needed to update
-    // the BoundingVisualisation for the given FaceControl.
+    // the RadialSelectVisualisation for the given FaceControl.
     void onSetNewCentre( FaceControl*, const cv::Vec3f&);
     void onSetNewRadius( FaceControl*, double);
-
-protected:
-    void onAttached() override;
-    void onDetached() override;
 
 private:
     bool leftDoubleClick( const QPoint&) override;
@@ -53,9 +47,7 @@ private:
     bool mouseWheelForward( const QPoint&) override;
     bool mouseWheelBackward( const QPoint&) override;
 
-    Vis::BoundingVisualisation *_bvis;
-    FaceEntryExitInteractor *_feei;
-    FaceControl *_fc;
+    Vis::RadialSelectVisualisation *_vis;
     bool _move;
 };  // end class
 

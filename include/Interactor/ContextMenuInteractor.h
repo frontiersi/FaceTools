@@ -19,6 +19,7 @@
 #define FACE_TOOLS_CONTEXT_MENU_INTERACTOR_H
 
 #include "ModelViewerInteractor.h"
+#include <FaceAction.h>
 #include <QMenu>
 
 namespace FaceTools {
@@ -27,13 +28,19 @@ namespace Interactor {
 class FaceTools_EXPORT ContextMenuInteractor : public ModelViewerInteractor
 { Q_OBJECT
 public:
-    explicit ContextMenuInteractor( QMenu* cm=NULL);
+    ContextMenuInteractor();
 
-    void setContextMenu( QMenu*);
+    void addAction( Action::FaceAction*);
+    void addSeparator();
 
 private:
+    qint64 _rDownTime;
+    QMenu _cmenu;
+    std::vector<Action::FaceAction*> _actions;
+
     bool rightButtonDown( const QPoint&) override;
-    QMenu *_cmenu;
+    bool rightButtonUp( const QPoint&) override;
+    size_t testEnabledActions() const;
 };  // end class
 
 }   // end namespace

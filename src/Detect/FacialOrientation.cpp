@@ -44,9 +44,9 @@ cv::Vec3d calcMeanNormalBetweenPoints( const ObjModel* model, int v0, int v1)
 }   // end calcMeanNormalBetweenPoints
 
 
-cv::Vec3d findNormalEstimate( const ObjModelKDTree& kdt, const cv::Vec3d& inNorm, int e0, int e1)
+cv::Vec3d findNormalEstimate( const ObjModelKDTree::Ptr kdt, const cv::Vec3d& inNorm, int e0, int e1)
 {
-    const ObjModel* model = kdt.model();
+    const ObjModel* model = kdt->model();
     const cv::Vec3d v0 = model->vtx(e0);
     const cv::Vec3d v1 = model->vtx(e1);
 
@@ -57,8 +57,8 @@ cv::Vec3d findNormalEstimate( const ObjModelKDTree& kdt, const cv::Vec3d& inNorm
 
     // Find locations further down the face from e0 and e1
     const double pdelta = 1.0 * cv::norm(baseVec);
-    const int c0 = kdt.find( v0 + estDownVec * pdelta);
-    const int c1 = kdt.find( v1 + estDownVec * pdelta);
+    const int c0 = kdt->find( v0 + estDownVec * pdelta);
+    const int c1 = kdt->find( v1 + estDownVec * pdelta);
 
     // The final view vector is defined as the mean normal along the path over
     // the model between the provided points and the shifted points.
@@ -73,13 +73,13 @@ cv::Vec3d findNormalEstimate( const ObjModelKDTree& kdt, const cv::Vec3d& inNorm
 
 
 // public
-bool FaceTools::Detect::findOrientation( const ObjModelKDTree& kdt,
+bool FaceTools::Detect::findOrientation( const ObjModelKDTree::Ptr kdt,
                                          const cv::Vec3f& v0, const cv::Vec3f& v1,
                                          cv::Vec3f& normvec, cv::Vec3f& upvec)
 {
-    const ObjModel* model = kdt.model();
-    const int e0 = kdt.find( v0);
-    const int e1 = kdt.find( v1);
+    const ObjModel* model = kdt->model();
+    const int e0 = kdt->find( v0);
+    const int e1 = kdt->find( v1);
 
     cv::Vec3d viewNorm = cv::Vec3d(0,0,1);  // Initial view normal estimate as +Z
     cv::Vec3d inNorm = viewNorm;
@@ -96,8 +96,15 @@ bool FaceTools::Detect::findOrientation( const ObjModelKDTree& kdt,
         tries++;
     }   // end while
 
-    normvec = viewNorm;
-    cv::normalize( viewNorm.cross( v1 - v0), upvec);  // Set the normalised up vector
+    normvec[0] = (float)viewNorm[0];
+    normvec[1] = (float)viewNorm[1];
+    normvec[2] = (float)viewNorm[2];
+    cv::Vec3d nuvec;
+    cv::normalize( viewNorm.cross( v1 - v0), nuvec);  // Set the normalised up vector
+    upvec[0] = (float)nuvec[0];
+    upvec[1] = (float)nuvec[1];
+    upvec[2] = (float)nuvec[2];
+
     return true;
 }   // end findOrientation
 

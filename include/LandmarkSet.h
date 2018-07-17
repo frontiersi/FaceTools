@@ -22,16 +22,15 @@
 #include <ObjModelKDTree.h>
 #include <unordered_map>
 #include <unordered_set>
+#include <memory>
 
 namespace FaceTools {
 
 class FaceTools_EXPORT LandmarkSet
 {
 public:
-    LandmarkSet();
-    LandmarkSet( const LandmarkSet&);
-    LandmarkSet& operator=( const LandmarkSet&);
-    virtual ~LandmarkSet(){}
+    typedef std::shared_ptr<LandmarkSet> Ptr;
+    static Ptr create();
 
     // Set a landmark (new or extant) to position v.
     int set( const std::string& name, const cv::Vec3f& v); // New or existing.
@@ -67,6 +66,7 @@ public:
     // Set membership tests
     bool empty() const { return count() == 0;}
     size_t count() const { return _landmarks.size();}
+    size_t size() const { return _landmarks.size();}
     bool has( int id) const { return _ids.count(id) > 0;}
     bool has( const std::string& name) const { return _names.count(name) > 0;}
 
@@ -76,12 +76,17 @@ private:
     std::unordered_map<int, std::string> _landmarkIDs;     // Landmark IDs to names
     std::unordered_set<std::string> _names;
     std::unordered_set<int> _ids;
+
+    LandmarkSet();
+    ~LandmarkSet(){}
+    LandmarkSet( const LandmarkSet&){}       // No copy
+    void operator=( const LandmarkSet&){}    // No copy
 };  // end class
 
 
 // Translate each landmark in the set to be incident with the closest part of the given object's surface.
 // Returns the mean positional difference between the old and new landmark positions.
-FaceTools_EXPORT double translateLandmarksToSurface( const RFeatures::ObjModelKDTree&, LandmarkSet&);
+FaceTools_EXPORT double translateLandmarksToSurface( RFeatures::ObjModelKDTree::Ptr, LandmarkSet::Ptr);
 
 
 FaceTools_EXPORT PTree& operator<<( PTree&, const LandmarkSet&);        // Write out the set of landmarks

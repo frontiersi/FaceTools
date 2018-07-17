@@ -28,13 +28,16 @@ namespace Action {
 class FaceTools_EXPORT ActionSaveAsFaceModel : public FaceAction
 { Q_OBJECT
 public:
-    ActionSaveAsFaceModel( const QString& dname, const QIcon&, FileIO::FaceModelManager*, QWidget *parent=NULL);
+    ActionSaveAsFaceModel( const QString& dname, const QIcon&, FileIO::FaceModelManager*, QWidget *parent=nullptr);
+
+signals:
+    void onSavedAs( const FaceControl*);
 
 protected slots:
-    bool testEnabled() override { return readyCount() == 1;}    // Only enabled for a single selected FaceControl
+    bool testEnabled() const override { return readyCount() == 1;}    // Only enabled for a single selected FaceControl
     bool doBeforeAction( FaceControlSet&) override;
     bool doAction( FaceControlSet&) override;
-    void doAfterAction( const FaceControlSet&, bool) override;
+    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
 
 private:
     FileIO::FaceModelManager *_fmm;

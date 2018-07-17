@@ -18,21 +18,21 @@
 #include <ActionLoadFaceModels.h>
 #include <QFileDialog>
 using FaceTools::Action::ActionLoadFaceModels;
+using FaceTools::Action::ChangeEventSet;
 using FaceTools::Action::FaceAction;
 using FaceTools::FileIO::LoadFaceModelsHelper;
 using FaceTools::FileIO::FaceModelManager;
 using FaceTools::FaceControlSet;
-using FaceTools::FaceModel;
 
 
 ActionLoadFaceModels::ActionLoadFaceModels( const QString& dn, const QIcon& ico, const QKeySequence& ks, LoadFaceModelsHelper* lhelper)
-    : FaceAction( dn, ico, ks, true), _loadHelper( lhelper)
+    : FaceAction( dn, ico, ks), _loadHelper( lhelper)
 {
     setAsync(true);
 }   // end ctor
 
 
-bool ActionLoadFaceModels::testEnabled() { return !_loadHelper->reachedLoadLimit();}
+bool ActionLoadFaceModels::testEnabled() const { return !_loadHelper->reachedLoadLimit();}
 
 
 bool ActionLoadFaceModels::doBeforeAction( FaceControlSet&)
@@ -43,14 +43,22 @@ bool ActionLoadFaceModels::doBeforeAction( FaceControlSet&)
     filters.prepend(anyf);
     QString allf = filters.join(";;");
 
-    // Don't use native dialog because there's some Windows 10 debug output stating that some element of the
-    // dialog couldn't be found. On some Win10 machines, crashes occur unless non-native dialogs are used.
     QStringList fnames = QFileDialog::getOpenFileNames( _loadHelper->parentWidget(),
                                                         tr("Select one or more models to load"), "",
-                                                        allf, &anyf, QFileDialog::DontUseNativeDialog);
+                                                        allf, &anyf);
     return _loadHelper->setFilteredFilenames( fnames) > 0;
 }   // end doBeforeAction
 
 
-bool ActionLoadFaceModels::doAction( FaceControlSet&) { return _loadHelper->loadModels() > 0;}
-void ActionLoadFaceModels::doAfterAction( const FaceControlSet&, bool) { _loadHelper->showLoadErrors();}
+bool ActionLoadFaceModels::doAction( FaceControlSet&)
+{
+    return _loadHelper->loadModels() > 0;   // Blocks
+}   // end doAction
+
+
+void ActionLoadFaceModels::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool loaded)
+{
+    _loadHelper->showLoadErrors();
+    if ( loaded)
+        cs.insert(LOADED_MODEL);
+}   // end doAfterAction

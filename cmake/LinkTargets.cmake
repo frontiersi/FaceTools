@@ -65,3 +65,12 @@ endif()
 if(WITH_DLIB)
     target_link_libraries( ${PROJECT_NAME} ${dlib_LIBRARIES})
 endif()
+
+if(WITH_QUAZIP)
+    target_link_libraries( ${PROJECT_NAME} ${QuaZip_LIBRARIES})
+endif()
+
+if(WITH_ZLIB)
+    target_link_libraries( ${PROJECT_NAME} ${ZLIB_LIBRARIES})
+endif()
+

@@ -16,31 +16,67 @@
  ************************************************************************/
 
 #include <ContextMenuInteractor.h>
+#include <FaceAction.h>
 #include <ModelViewer.h>
+#include <QDateTime>
+#include <QApplication>
 using FaceTools::Interactor::ContextMenuInteractor;
+using FaceTools::Action::FaceAction;
 
 
 // public
-ContextMenuInteractor::ContextMenuInteractor( QMenu* cm)
+ContextMenuInteractor::ContextMenuInteractor()
+    : _rDownTime(0)
 {
-    setContextMenu(cm);
 }   // end ctor
 
 
-void ContextMenuInteractor::setContextMenu( QMenu* cm) { _cmenu = cm;}
+void ContextMenuInteractor::addAction( FaceAction* a)
+{
+    _cmenu.addAction( a->qaction());
+    _actions.push_back(a);
+}   // end addAction
+
+
+void ContextMenuInteractor::addSeparator()
+{
+    QAction* sep = new QAction;
+    sep->setSeparator(true);
+    _cmenu.addAction( sep);
+}   // end addSeparator
 
 
 bool ContextMenuInteractor::rightButtonDown( const QPoint& p)
 {
-    bool swallowed = false;
-    if ( _cmenu)
-    {
-        const vtkProp* prop = viewer()->getPointedAt(p);
-        if ( prop && const_cast<vtkProp*>(prop)->GetPickable())
-        {
-            swallowed = true;
-            _cmenu->exec( viewer()->mapToGlobal(p));
-        }   // end if
-    }   // end if
-    return swallowed;
+    _rDownTime = 0;
+    const vtkProp* prop = viewer()->getPointedAt(p);
+    if ( prop && const_cast<vtkProp*>(prop)->GetPickable())
+        _rDownTime = QDateTime::currentDateTime().currentMSecsSinceEpoch();
+    return false;
 }   // end rightButtonDown
+
+
+bool ContextMenuInteractor::rightButtonUp( const QPoint& p)
+{
+    const qint64 tnow = QDateTime::currentDateTime().currentMSecsSinceEpoch();
+    // Use double-click interval for acceptable right button down time
+    if (( tnow - _rDownTime) < (QApplication::doubleClickInterval()/2))
+    {
+        if ( testEnabledActions() > 0)
+            _cmenu.exec( viewer()->mapToGlobal(p));
+    }   // end if
+    _rDownTime = 0;
+    return false;
+}   // end rightButtonUp
+
+
+size_t ContextMenuInteractor::testEnabledActions() const
+{
+    size_t nenabled = 0;
+    for ( FaceAction* a : _actions)
+    {
+        if ( a->testSetEnabled())
+            nenabled++;
+    }   // end for
+    return nenabled;
+}   // end testEnabledActions

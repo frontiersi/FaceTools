@@ -17,62 +17,85 @@
 
 #include <FaceModelManager.h>
 #include <MiscFunctions.h>
+#include <FaceModel.h>
 #include <FaceTools.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <cassert>
-using FaceTools::FileIO::FaceModelFileHandler;
 using FaceTools::FileIO::FaceModelManager;
+using FaceTools::FileIO::FaceModelFileHandler;
+using FaceTools::FileIO::LoadFaceModelsHelper;
 using FaceTools::FaceModel;
 
 
 // public
-FaceModelManager::FaceModelManager( FaceModelFileHandler* fii, size_t llimit)
-    : _loadLimit(llimit)
+FaceModelManager::FaceModelManager( QWidget* parent, size_t llimit)
+    : _loader( nullptr), _loadLimit(llimit)
 {
-    add(fii);   // First added is preferred
+    _loader = new LoadFaceModelsHelper( this, parent);
 }  // end ctor
 
 
 // public
-void FaceModelManager::add( FaceModelFileHandler* fii) { _fhmap.add(fii);}
+FaceModelManager::~FaceModelManager()
+{
+    delete _loader;
+}   // end dtor
+
+
+// public
+void FaceModelManager::add( FaceModelFileHandler* fii) { if ( fii) _fhmap.add(fii);}
 
 
 // public
 bool FaceModelManager::hasPreferredFileFormat( FaceModel* fm) const
 {
     assert( _models.count(fm) > 0);
-    const QString& pext = _fhmap.getPreferredExt();
-    const std::string cext = FaceTools::getExtension( _mdata.at(fm).filepath);
-    return cext == pext.toLower().toStdString();
+    return isPreferredFileFormat( _mdata.at(fm));
 }   // end hasPreferredFileFormat
 
 
+// public
+bool FaceModelManager::isPreferredFileFormat( const std::string& fname) const
+{
+    const QString& pext = _fhmap.preferredExt();
+    const std::string cext = FaceTools::getExtension( fname);
+    return cext == pext.toLower().toStdString();
+}   // end isPreferredFileFormat
+
+
 // private
-void FaceModelManager::setModelData( FaceModel* fm, const std::string& fname)
+void FaceModelManager::setModelFilepath( FaceModel* fm, const std::string& fname)
 {
     _models.insert(fm);
-    _mdata[fm].filepath = fname;
-    _mdata[fm].saved = true;
+    _mdata[fm] = fname;
     _mfiles[fname] = fm;
-}   // end setModelData
+    fm->setSaved();
+}   // end setModelFilepath
 
 
 // public
 bool FaceModelManager::write( FaceModel* fm, std::string* fpath)
 {
     assert( _models.count(fm) > 0);
-    std::string savefilepath = _mdata.at(fm).filepath;
+    std::string savefilepath = _mdata.at(fm);
+    std::string delfilepath;    // Will not be empty if replacing filename
     if ( fpath)
     {
-        if (!fpath->empty())
-            savefilepath = *fpath;  // New filepath specified
-        else
+        if ( fpath->empty())
             *fpath = savefilepath;
+        else    // New filepath specified
+        {
+            delfilepath = savefilepath;
+            savefilepath = *fpath;
+        }   // end else
     }   // end if
+
+    std::cerr << "[INFO] FaceTools::FileIO::FaceModelManager::write: Writing out file \"" << savefilepath << "\"" << std::endl;
 
     _err = "";  // Reset the error
     FaceModelFileHandler* fileio = _fhmap.getSaveInterface( savefilepath);
+    fm->lockForRead();
     if ( !fileio)
         _err = "File \"" + savefilepath + "\" is not an allowed file type!";
     else if ( !fileio->canWrite())
@@ -80,7 +103,11 @@ bool FaceModelManager::write( FaceModel* fm, std::string* fpath)
     else if ( !fileio->write( fm, QString(savefilepath.c_str())))
         _err = fileio->error().toStdString();
     else    // Successful write
-        setModelData( fm, savefilepath);
+    {
+        _mfiles.erase(delfilepath);
+        setModelFilepath( fm, savefilepath);
+    }   // end else
+    fm->unlock();
 
     return _err.empty();
 }   // end save
@@ -97,65 +124,66 @@ bool FaceModelManager::canRead( const std::string& fname) const
 
 
 // public
+bool FaceModelManager::isOpen( const std::string& fname) const { return _mfiles.count(fname) > 0;}
+
+
+// public
 FaceModel* FaceModelManager::read( const std::string& fname)
 {
     assert( !fname.empty());
-    std::string err;
+
+    _err = "";
     if ( _mfiles.count(fname) > 0)
     {
+        _err = "File \"" + fname + "\" already open!";
         std::cerr << "[STATUS] FaceTools::FileIO::FaceModelManager::read: Model already loaded!" << std::endl;
-        return _mfiles.at(fname);
+        return nullptr;
     }   // end if
 
-    FaceModelFileHandler* fileio = NULL;
-    FaceModel* fm = NULL;
-    _err = "";
+    std::cerr << "[INFO] FaceTools::FileIO::FaceModelManager::read: Reading in file \"" << fname << "\"" << std::endl;
+
+    FaceModelFileHandler* fileio = nullptr;
+    FaceModel* fm = nullptr;
     if ( !boost::filesystem::exists( fname))
         _err = "File \"" + fname + "\" does not exist!";
-    else if ( (fileio = _fhmap.getLoadInterface(fname)) == NULL)
+    else if ( (fileio = _fhmap.getLoadInterface(fname)) == nullptr)
         _err = "File \"" + fname + "\" is not an allowed file type!";
     else if ( !fileio->canRead())
         _err = "Cannot read from " + fileio->getFileDescription().toStdString() + " files!";
-    else if ( (fm = fileio->read( QString( fname.c_str()))) == NULL)
+    else if ( (fm = fileio->read( QString( fname.c_str()))) == nullptr)
         _err = fileio->error().toStdString();
     else
-        setModelData( fm, fname);
+        setModelFilepath( fm, fname);
 
     return fm;
 }   // end read
 
 
 // public
-bool FaceModelManager::isSaved( FaceModel* fm) const
-{
-    assert(_models.count(fm) > 0);
-    return _mdata.at(fm).saved;
-}   // end isSaved
-
-
-// public
-void FaceModelManager::setUnsaved( FaceModel* fm)
-{
-    assert(_models.count(fm) > 0);
-    _mdata.at(fm).saved = false;
-}   // end setUnsaved
-
-
-// public
 const std::string& FaceModelManager::filepath( FaceModel* fm) const
 {
     assert(_models.count(fm) > 0);
-    return _mdata.at(fm).filepath;
+    return _mdata.at(fm);
 }   // end filepath
+
+
+// public
+FaceModel* FaceModelManager::model( const std::string& fname) const
+{
+    FaceModel* fm = nullptr;
+    if ( _mfiles.count(fname) > 0)
+        fm = _mfiles.at(fname);
+    return fm;
+}   // end model
 
 
 // public
 void FaceModelManager::close( FaceModel* fm)
 {
     assert(_models.count(fm) > 0);
-    if ( !isSaved(fm))
+    if ( !fm->isSaved())
         std::cerr << "[WARNING] FaceTools::FileIO::FaceModelManager::close: Model is unsaved!" << std::endl;
-    _mfiles.erase(_mdata.at(fm).filepath);
+    _mfiles.erase(_mdata.at(fm));
     _models.erase(fm);
     _mdata.erase(fm);
     delete fm;

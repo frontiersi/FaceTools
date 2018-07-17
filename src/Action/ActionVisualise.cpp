@@ -17,122 +17,125 @@
 
 #include <ActionVisualise.h>
 #include <FaceModelViewer.h>
+#include <FaceModel.h>
 #include <FaceView.h>
 #include <algorithm>
 #include <cassert>
-using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionVisualise;
-using FaceTools::Action::FaceAction;
 using FaceTools::Action::ChangeEventSet;
-using FaceTools::Action::ChangeEvent;
+using FaceTools::Action::FaceAction;
 using FaceTools::Vis::BaseVisualisation;
+using FaceTools::FaceModelViewer;
 using FaceTools::FaceControlSet;
+using FaceTools::FaceViewerSet;
 using FaceTools::FaceControl;
+using FaceTools::FaceModel;
 
 
-ActionVisualise::ActionVisualise( BaseVisualisation* vint, bool d)
-    : FaceAction( vint->getDisplayName(), vint->getIcon(), true/*disable before other actions*/),
-      _vint(vint), _isdefault(d)
+ActionVisualise::ActionVisualise( BaseVisualisation* vint)
+    : FaceAction( vint->getDisplayName(), vint->getIcon()), _vis(vint)
 {
     assert(vint);
-    // Non-exclusive visualisations should not be the default!
-    if ( _isdefault && !_vint->isExclusive())
-        std::cerr << "[ERROR] FaceTools::Action::ActionVisualise: Making non-exclusive visualisation default!" << std::endl;
-    assert( !_isdefault || _vint->isExclusive());
-    setCheckable( !_vint->isExclusive(), false);    // Non-exclusive visualisations are checkable
-    if ( vint->respondData())
-        addRespondTo( DATA_CHANGE);
-    if ( vint->respondCalc())
-        addRespondTo( CALC_CHANGE);
-    addRespondTo( VIEW_CHANGE);
-    addChangeTo( VIEW_CHANGE);
+    setCheckable( true, false);
+    setVisible(_vis->isVisible());
+
+    // Purge events
+    ChangeEventSet pces;
+    pces.insert(GEOMETRY_CHANGE);
+    _vis->addPurgeEvents(pces);
+    std::for_each( std::begin(pces), std::end(pces), [this](auto c){ this->addPurgeOn(c);});
 }   // end ctor
 
 
-bool ActionVisualise::testReady( FaceControl* fc)
+bool ActionVisualise::testReady( const FaceControl* fc)
 {
-    const std::string dname = debugActionName();
-    const bool avail = _vint->isAvailable(fc->data());
-    // If no visualisations have yet been applied to the face view, this action is the default
-    // visualisation, and the visualisation is available for the model, then apply it.
-    if ( fc->view()->visualisations().empty() && _isdefault && avail) // Set default initial visualisation
-    {
-        std::cerr << " + Applying " << dname << " (default visualisation)" << std::endl;
-        fc->view()->rebuild();
-        fc->view()->apply( _vint);     // Applies visualisation post-processing and sets in viewer.
-    }   // end if
-
-    const bool applied = _vint->isApplied(fc);
-    if ( avail && applied)
-    { 
-        _vint->onSelected(fc);
-        fc->viewer()->updateRender();
-    }   // end if
-
-    // Return ready only if visualisation available and is not currently set on the FaceControl,
-    // unless this is a checkable visualisation (in which case running this action again when
-    // applied, removes the visualisation).
-    return avail && (isCheckable() || !applied);
+    return _vis->isAvailable(fc->data()) && (!_vis->isExclusive() || !_vis->isApplied(fc));
 }   // end testReady
 
 
-bool ActionVisualise::testChecked( FaceControl* fc) { return _vint->isApplied(fc);}
-
-
-bool ActionVisualise::doAction( FaceControlSet& s)
+void ActionVisualise::tellReady( FaceControl* fc, bool v)
 {
-    const std::string dname = debugActionName();
-    // Apply visualisation to each FaceControl. Default doAfterAction calls updateRender on viewers.
-    if ( !isCheckable() || isChecked())
+    if ( _vis->applyOnReady())
     {
-        std::for_each( std::begin(s), std::end(s), [=]( auto fc)
-                {
-                    if ( !_vint->isApplied(fc))
-                    {
-                        std::cerr << " + Applying " << dname << " visualisation" << std::endl;
-                        fc->view()->apply( _vint);
-                    }   // end if
-                });
+        setChecked(v);
+        toggleVis(fc);
+    }   // end if
+}   // end tellReady
+
+
+bool ActionVisualise::testEnabled() const
+{
+    return readyCount() == 1 || (!_vis->singleModel() && !_vis->singleView() && readyCount() > 0);
+}   // end testEnabled
+
+
+bool ActionVisualise::testChecked( FaceControl* fc)
+{
+    return _vis->isApplied(fc);
+}   // end testChecked
+
+
+// private
+void ActionVisualise::toggleVis( FaceControl* fc)
+{
+    FaceModel* fm = fc->data();
+    fm->lockForRead();
+    if ( isChecked() && _vis->isAvailable(fc->data()))
+        fc->view()->apply( _vis);
+    else
+    {
+        fc->view()->remove( _vis);
+        setChecked(false);
+    }   // end else
+    fm->unlock();
+}   // end toggleVis
+
+
+bool ActionVisualise::doAction( FaceControlSet& fcs)
+{
+    if ( _vis->singleModel() || _vis->singleView())
+    {
+        assert(fcs.size() == 1);
+        FaceControl* fc = fcs.first();
+        assert(fc);
+        // Apply to single view only
+        if ( _vis->singleView())
+        {
+            toggleVis(fc);
+            fcs.insert(fc);
+        }   // end if
+        else
+        {
+            FaceModel* fm = fc->data();
+            assert(fm);
+            // Apply to all views corresponding to the selected model
+            for ( FaceControl* f : fm->faceControls())
+            {
+                toggleVis(f);
+                fcs.insert(f);
+            }   // end for
+        }   // end else
     }   // end if
     else
     {
-        std::for_each( std::begin(s), std::end(s), [=]( auto fc)
-                {
-                    if ( _vint->isApplied(fc))
-                    {
-                        std::cerr << " - Removing " << dname << " visualisation" << std::endl;
-                        fc->view()->remove( _vint);
-                    }   // end if
-                });
+        // Apply to all FaceControls that the visualisation is available for in all directly accessible (selected) viewers.
+        FaceViewerSet fvs = fcs.directViewers();  // Don't use fcs.viewers() because that will return all viewers for all data.
+        for ( const FaceModelViewer* v : fvs)
+        {
+            for ( FaceControl* fc : v->attached())
+            {
+                toggleVis(fc);
+                fcs.insert(fc);
+            }   // end for
+        }   // end for
     }   // end else
+
     return true;
 }   // end doAction
 
 
-void ActionVisualise::respondTo( const FaceAction* saction, const ChangeEventSet* ces, FaceControl* fc)
+void ActionVisualise::purge( const FaceModel* fm)
 {
-    const bool applied = _vint->isApplied(fc);
-
-    // Call respondTo on visualisation for changes it cares about.
-    if ( (_vint->respondData() && ces->count(DATA_CHANGE) > 0) || (_vint->respondCalc() && ces->count(CALC_CHANGE) > 0))
-    {
-        if ( applied)
-            _vint->removeActors(fc);
-        _vint->respondTo( saction, fc);
-        if ( applied)
-            _vint->addActors(fc);
-    }   // end if
-
-    FaceAction::respondTo( saction, ces, fc);    // Forwards through to testReady(fc)
-    if ( applied)
-        fc->viewer()->updateRender();
-}   // end respondTo
-
-
-void ActionVisualise::purge( const FaceControl* fc)
-{
-    assert(fc);
-    assert(fc->viewer());
-    fc->view()->remove(_vint);
-    _vint->purge(fc);    // Ditch any cached visualisation specific stuff (legends etc).
+    for ( FaceControl* fc : fm->faceControls())
+        _vis->purge(fc);
 }   // end purge

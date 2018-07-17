@@ -26,11 +26,13 @@ namespace Action {
 class FaceTools_EXPORT ActionFillHoles : public FaceAction
 { Q_OBJECT
 public:
-    ActionFillHoles( const QString& dname="Fill Holes", const QIcon& icon=QIcon(), QProgressBar* pb=NULL);   // Async if pb not NULL
+    ActionFillHoles( const QString& dname="Fill Holes", const QIcon& icon=QIcon(), QProgressBar* pb=nullptr);   // Async if pb not null
 
-protected slots:
-    bool testEnabled() const { return readyCount() == 1;}   // Only enabled for single selections
+private slots:
+    bool testReady( const FaceControl*) override;
+    bool testEnabled() const override { return readyCount() == 1;}   // Only enabled for single selections
     bool doAction( FaceControlSet&) override;
+    void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(GEOMETRY_CHANGE);}
 };  // end class
 
 }   // end namespace

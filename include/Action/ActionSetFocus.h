@@ -27,18 +27,20 @@ namespace Action {
 class FaceTools_EXPORT ActionSetFocus : public FaceAction
 { Q_OBJECT
 public:
-    explicit ActionSetFocus( const QString& dname="Set Focus");
+    ActionSetFocus( const QString& dname, FEEI*);
 
-    Interactor::MVI* interactor() { return &_interactor;}
-
-protected slots:
+private slots:
     bool doAction( FaceControlSet&) override;
+    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
 
 private:
-    Interactor::FaceEntryExitInteractor _interactor;
+    bool displayDebugStatusProgression() const override { return false;}
 };  // end class
 
 }   // end namespace
 }   // end namespace
 
 #endif
+
+
+

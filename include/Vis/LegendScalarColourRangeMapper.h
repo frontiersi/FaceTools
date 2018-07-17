@@ -19,9 +19,9 @@
 #define FACE_TOOLS_VIS_LEGEND_SCALAR_COLOUR_RANGE_MAPPER_H
 
 /**
- * Store and manage scalar colour mappings for a given vtkActor (Mapper).
- * Colours are mapped to the minimum, zero, and maximum values of a
- * scalar range. Used by ScalarVisualisation.
+ * Store and manage scalar colour mappings for a surface mapping.
+ * To apply the mappings, pass in a valid viewer and actor to the map function.
+ * Colours are mapped to the minimum, zero, and maximum values of a scalar range.
  */
 
 #include <ModelViewer.h>
@@ -33,38 +33,16 @@ namespace Vis {
 class FaceTools_EXPORT LegendScalarColourRangeMapper
 {
 public:
-    LegendScalarColourRangeMapper( vtkActor*, bool autoRemap=true);
-    virtual ~LegendScalarColourRangeMapper();
+    explicit LegendScalarColourRangeMapper( const std::string& smap);
 
-    // Set (and optionally select) a legend range mapping to be visible.
-    // Legend is mapped to the viewer pointed at and is hidden from any
-    // previous viewer. If the viewer parameter is left NULL, legend is
-    // hidden from all viewers.
-    // If the name is left empty, the existing mapping (last set) is used.
-    // Note that if setting to be visible, then remapping of the visualisation
-    // will occur whether or not auto-remapping was disabled in the constructor.
-    void setVisible( std::string v="", ModelViewer* viewer=NULL);
+    const std::string& rangeName() const { return _smap;}
 
-    // Returns true if v is set to a non-empty string, matches a legend range,
-    // and that legend range is currently set, or if v is empty, returns true
-    // if ANY legend range is currently in the viewer. Returns false if no
-    // legend is in the viewer, or (in the case that v is non-empty) false
-    // if the specified legend range is not visible.
-    bool isVisible( const std::string& v="") const;
+    // Set/get the min/max bounds of the mapping range.
+    void setRangeLimits( float minv, float maxv);
+    void setRangeLimits( const std::pair<float,float>&);
+    const std::pair<float,float>& rangeLimits() const { return _range;}
+    const std::pair<float,float>& visibleRange() const { return _lastr;}
 
-    // Initialise mapped range to the given min, max bounds.
-    void setRangeLimits( const std::string&, float minv, float maxv);
-    void setRangeLimits( const std::string&, const std::pair<float,float>&);
-
-    bool gotMapping( const std::string&) const;
-    const std::string& rangeName() const { return _smap;}   // Current range name.
-    const std::pair<float,float>* rangeLimits() const;      // Range of the currently set range (NULL if none set)
-    const std::pair<float,float>* visibleRange() const;     // Min,max values of the current range (NULL if none set)
-
-    // Change min/max mapping values by delta.
-    void changeVisibleMin( float delta);
-    void changeVisibleMax( float delta);
-    
     // Set the visible range (won't set outside of bounded range).
     void setVisibleRange( float smin, float smax);
 
@@ -74,26 +52,17 @@ public:
     void colours( QColor& c0, QColor& c1, QColor& c2) const;
 
     void setNumColours( size_t);
-    size_t numColours() const;
+    size_t numColours() const { return _ncols;}
 
-    void remap();   // Force remapping to viewer for the current range (happens automatically if auto-remapping)
+    void map( ModelViewer*, vtkActor*) const;
 
 private:
-    vtkActor *_sactor;
-    ModelViewer *_viewer;   // The viewer (ScalarLegend) currently being mapped to.
-    std::string _smap;      // Currently active visualisation
-    bool _autoRemap;        // Automatically remap after any change?
+    const std::string _smap;
+    size_t _ncols;                  // Number of colours
+    std::pair<float,float> _range;  // Allowed range
+    std::pair<float,float> _lastr;  // Current range
+    cv::Vec3b _cols[3];  // min, mid, and max colours
 
-    struct VisDeets
-    {
-        VisDeets();
-        size_t ncols;                  // Number of colours
-        std::pair<float,float> range;  // Allowed range
-        std::pair<float,float> lastr;  // Current range
-        cv::Vec3b cols[3];  // min, mid, and max colours
-    };  // end struct
-
-    std::unordered_map<std::string, VisDeets> _vdeets;
     LegendScalarColourRangeMapper( const LegendScalarColourRangeMapper&);   // No copy
     void operator=( const LegendScalarColourRangeMapper&);                  // No copy
 };  // end class

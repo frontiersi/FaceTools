@@ -16,21 +16,41 @@
  ************************************************************************/
 
 #include <ActionSaveScreenshot.h>
-#include <MultiFaceModelViewer.h>
+#include <FeatureUtils.h>
+#include <QImageTools.h>
+#include <algorithm>
 using FaceTools::Action::ActionSaveScreenshot;
 using FaceTools::Action::FaceAction;
+using FaceTools::FaceModelViewer;
 using FaceTools::FaceControlSet;
-using FaceTools::MultiFaceModelViewer;
 
 
-ActionSaveScreenshot::ActionSaveScreenshot( const QString& dn, const QIcon& ico, const MultiFaceModelViewer* v)
-    : FaceAction( dn, ico, true), _mviewer(v)
+ActionSaveScreenshot::ActionSaveScreenshot( const QString& dn, const QIcon& ico, const FaceModelViewer *mv)
+    : FaceAction( dn, ico)
 {
+    if ( mv)
+        addViewer(mv);
 }   // end ctor
 
 
-bool ActionSaveScreenshot::doAction( FaceControlSet&)
+bool ActionSaveScreenshot::doAction( FaceControlSet& fset)
 {
-    _mviewer->saveScreenshot();
+    if ( _viewers.empty())
+    {
+        for ( FaceControl* fc : fset)
+            fc->viewer()->saveScreenshot();
+    }   // end if
+    else
+    {
+        std::vector<cv::Mat> mimgs;
+        for ( const FaceModelViewer *v : _viewers)
+        {
+            if ( v->width() > 0 && v->height() > 0)
+                mimgs.push_back( v->grabImage());
+        }   // end for
+        cv::Mat m = RFeatures::concatHorizontalMax( mimgs);
+        QTools::saveImage( m);
+    }   // end else
+
     return true;
 }   // end doAction

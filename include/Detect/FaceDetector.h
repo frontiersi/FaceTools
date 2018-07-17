@@ -46,7 +46,7 @@ public:
 
     // Find orientation and landmarks on the face ObjModel attached to the kd-tree.
     // Returns false if detection fails (use err() to get the error message).
-    bool detect( const RFeatures::ObjModelKDTree&, RFeatures::Orientation&, LandmarkSet&);
+    bool detect( const RFeatures::ObjModelKDTree::Ptr, RFeatures::Orientation&, LandmarkSet::Ptr);
 
     const std::string& err() const { return _err;} // Error message relating to last call to detect()
 
@@ -55,7 +55,7 @@ private:
     float _orng, _drng;
     std::string _err;
     RVTK::Viewer::Ptr _viewer;
-    std::vector<vtkSmartPointer<vtkActor> > _actors;
+    std::vector<vtkActor*> _actors;
 
     bool cleanUp();
     bool cleanUp( std::string);

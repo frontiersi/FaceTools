@@ -16,25 +16,33 @@
  ************************************************************************/
 
 #include <ActionResetCamera.h>
-#include <FaceModelViewer.h>
-#include <ChangeEvents.h>
 #include <algorithm>
 using FaceTools::Action::ActionResetCamera;
 using FaceTools::Action::FaceAction;
+using FaceTools::FaceModelViewer;
 using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
 
 
-ActionResetCamera::ActionResetCamera( const QString& dn, const QIcon& ico)
-    : FaceAction( dn, ico, true)
+ActionResetCamera::ActionResetCamera( const QString& dn, const QIcon& ico, FaceModelViewer *mv)
+    : FaceAction( dn, ico)
 {
-    addChangeTo( VIEW_CHANGE);
+    if ( mv)
+        addViewer(mv);
 }   // end ctor
 
 
-bool ActionResetCamera::doAction( FaceControlSet& fset)
+bool ActionResetCamera::doAction( FaceControlSet &fset)
 {
-    FaceViewerSet viewers = fset.viewers();
-    std::for_each(std::begin(viewers), std::end(viewers), [](auto v){ v->resetCamera();});
+    if ( _viewers.empty())
+    {
+        FaceViewerSet vwrs = fset.viewers();
+        for ( FaceModelViewer* v : vwrs)
+            v->resetCamera();
+    }   // end if
+    else
+    {
+        std::for_each( std::begin(_viewers), std::end(_viewers), [](auto v){ v->resetCamera();});
+        std::for_each( std::begin(_viewers), std::end(_viewers), [](auto v){ v->updateRender();});
+    }   // end else
     return true;
 }   // end doAction

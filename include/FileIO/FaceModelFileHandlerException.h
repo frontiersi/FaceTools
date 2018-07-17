@@ -18,7 +18,13 @@
 #ifndef FACE_TOOLS_FILE_IO_FACE_MODEL_FILE_HANDLER_EXCEPTION_H
 #define FACE_TOOLS_FILE_IO_FACE_MODEL_FILE_HANDLER_EXCEPTION_H
 
+#ifdef _WIN32
+#pragma warning( disable : 4251)    // Disable warning about non dll-interface class std::runtime_error
+#pragma warning( disable : 4275)    // Disable warning about non dll-interface class std::string
+#endif
+
 #include <FaceTools_Export.h>
+#include <string>
 #include <stdexcept>
 
 namespace FaceTools {
