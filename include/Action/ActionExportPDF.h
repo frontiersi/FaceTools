@@ -30,6 +30,9 @@ public:
     // Initialise PDF export with the locations of pdflatex and IDTFConverter.
     static bool init( const std::string& pdflatex, const std::string& idtfConverter);
 
+    // Returns whether this action is available to use.
+    static bool isAvailable();
+
     ActionExportPDF( Report::BaseReportTemplate*, const QIcon& icon=QIcon(),
                      QWidget* parent=nullptr, QProgressBar* pb=nullptr);  // Is async if pb not null
     ~ActionExportPDF() override { delete _template;}

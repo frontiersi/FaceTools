@@ -39,6 +39,9 @@ public:
     // Returns number of filenames left in list and set in _filenames;
     size_t setFilteredFilenames( const QStringList& filenames);
 
+    // Returns the list of filenames to attempt to load in the next call to loadModels.
+    const QStringList& filenames() const { return _filenames;}
+
     // Loads the models set by the last call to setFilteredFilenames and returns
     // the number successfully loaded. Load errors can be displayed afterwards using
     // showLoadErrors(). Every time a model is successfuly loaded, its filepath is

@@ -29,6 +29,9 @@ class FaceTools_EXPORT ActionLoadFaceModels : public FaceAction
 public:
     ActionLoadFaceModels( const QString& dname, const QIcon& icon, const QKeySequence& keys, FileIO::LoadFaceModelsHelper*);
 
+    // Load a single model returning true on success.
+    bool loadModel( const QString& filepath);
+
 protected slots:
     bool testEnabled() const override;
     bool doBeforeAction( FaceControlSet&) override;

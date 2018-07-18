@@ -32,21 +32,40 @@ ActionLoadFaceModels::ActionLoadFaceModels( const QString& dn, const QIcon& ico,
 }   // end ctor
 
 
+// public
+bool ActionLoadFaceModels::loadModel( const QString& fname)
+{
+    bool loaded = false;
+    if ( testEnabled())
+    {
+        QStringList fnames;
+        fnames << fname;
+        if ( _loadHelper->setFilteredFilenames(fnames) > 0)
+            loaded = process();
+    }   // end if
+    return loaded;
+}   // end loadModel
+
+
 bool ActionLoadFaceModels::testEnabled() const { return !_loadHelper->reachedLoadLimit();}
 
 
 bool ActionLoadFaceModels::doBeforeAction( FaceControlSet&)
 {
-    // Get the dialog filters
-    QString anyf = "Any file (*.*)";
-    QStringList filters = _loadHelper->createImportFilters().split(";;");
-    filters.prepend(anyf);
-    QString allf = filters.join(";;");
+    if ( _loadHelper->filenames().empty())
+    {
+        // Get the dialog filters
+        QString anyf = "Any file (*.*)";
+        QStringList filters = _loadHelper->createImportFilters().split(";;");
+        filters.prepend(anyf);
+        QString allf = filters.join(";;");
 
-    QStringList fnames = QFileDialog::getOpenFileNames( _loadHelper->parentWidget(),
-                                                        tr("Select one or more models to load"), "",
-                                                        allf, &anyf);
-    return _loadHelper->setFilteredFilenames( fnames) > 0;
+        QStringList fnames = QFileDialog::getOpenFileNames( _loadHelper->parentWidget(),
+                                                            tr("Select one or more models to load"), "",
+                                                            allf, &anyf);
+        _loadHelper->setFilteredFilenames( fnames);
+    }   // end if
+    return !_loadHelper->filenames().empty();
 }   // end doBeforeAction
 
 

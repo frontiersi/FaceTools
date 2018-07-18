@@ -51,8 +51,15 @@ bool ActionExportPDF::init( const std::string& pdflatex, const std::string& idtf
               << (U3DExporter::isAvailable()  ? "" : "not ") << "available)" << std::endl;
     std::cerr << "pdflatex      : " << PDFGenerator::pdflatex << " ("
               << (PDFGenerator::isAvailable() ? "" : "not ") << "available)" << std::endl;
-    return U3DExporter::isAvailable() && PDFGenerator::isAvailable();
+    return isAvailable();
 }   // end init
+
+
+// static public
+bool ActionExportPDF::isAvailable()
+{
+    return U3DExporter::isAvailable() && PDFGenerator::isAvailable();
+}   // end isAvailable
 
 
 // public
@@ -68,11 +75,7 @@ ActionExportPDF::ActionExportPDF( BaseReportTemplate* t, const QIcon& icon, QWid
 
 bool ActionExportPDF::testReady( const FaceControl* fc) { return _template->isAvailable(fc->data());}
 
-
-bool ActionExportPDF::testEnabled() const
-{
-    return readyCount() == 1 && PDFGenerator::isAvailable() && U3DExporter::isAvailable();
-}   // end testEnabled
+bool ActionExportPDF::testEnabled() const { return readyCount() == 1 && isAvailable();}
 
 
 // Get the save filepath for the report
