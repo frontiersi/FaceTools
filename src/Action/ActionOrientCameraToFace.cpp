@@ -79,7 +79,8 @@ bool ActionOrientCameraToFace::doAction( FaceControlSet& fset)
     else if ( _camSynch && _camSynch->isChecked())
     {
         const std::unordered_set<ModelViewer*>& vwrs = _camSynch->viewers();
-        std::for_each( std::begin(vwrs), std::end(vwrs), [&](auto v){v->setCamera( focus, nvec, uvec, _distance);});
+        std::for_each( std::begin(vwrs), std::end(vwrs), [&](auto v){ v->setCamera( focus, nvec, uvec, _distance);
+                                                                      v->updateRender();});
     }   // end else if
 
     return true;

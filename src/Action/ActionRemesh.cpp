@@ -29,7 +29,7 @@ using FaceTools::FaceModel;
 
 
 ActionRemesh::ActionRemesh( const QString& dn, const QIcon& ico, QProgressBar* pb)
-    : FaceAction(dn, ico), _maxEdgeLen(2.0)
+    : FaceAction(dn, ico), _maxtarea(2.0)
 {
     if ( pb)
         setAsync(true, QTools::QProgressUpdater::create(pb));
@@ -46,15 +46,12 @@ bool ActionRemesh::doAction( FaceControlSet& rset)
 
     bool success = true;
     RFeatures::ObjModelInfo::Ptr info = fm->info();
+    RFeatures::ObjModel::Ptr model = info->model();
 
-    // Debug - work on a cloned copy until sure remeshing works as expected.
-    RFeatures::ObjModel::Ptr cloned = RFeatures::ObjModel::copy( info->cmodel());
-
-    RFeatures::ObjModelVertexAdder vadder( cloned);
-    std::cerr << "[INFO] FaceTools::Action::ActionRemesh::doAction:: Adding vertices for max edge length of "
-              << maxEdgeLength() << std::endl;
-    vadder.subdivideEdges( maxEdgeLength());
-    if ( info->reset( cloned))
+    RFeatures::ObjModelVertexAdder vadder( model);
+    std::cerr << "[INFO] FaceTools::Action::ActionRemesh::doAction:: subdivide and merge..." << std::endl;
+    vadder.subdivideAndMerge( maxTriangleArea());
+    if ( info->reset( model))
         fm->update(info);
     else
     {

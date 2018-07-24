@@ -126,6 +126,7 @@ bool ActionExportPDF::doAction( FaceControlSet& fcs)
     _err = "";
 
     QTemporaryDir tdir;
+    //tdir.setAutoRemove(false);    // Uncomment for debug purposes
     if ( !tdir.isValid())
     {
         _err = "Unable to open temporary directory for report generation!";
@@ -154,7 +155,7 @@ bool ActionExportPDF::doAction( FaceControlSet& fcs)
     }   // end if
 
     std::cerr << "[INFO] FaceTools::Action::ActionExportPDF::doAction: Generating PDF from LaTeX..." << std::endl;
-    PDFGenerator pdfgen;
+    PDFGenerator pdfgen(false);
     const bool genOk = pdfgen( texpath, true);
     if ( !genOk)
         _err = "Failed to generate PDF!";
@@ -204,6 +205,7 @@ bool ActionExportPDF::writeLaTeX( const FaceModel* fm,
     {
         os.open( texfile.c_str(), std::ios::out);
         os << "\\documentclass{article}" << std::endl;
+        os << "\\listfiles" << std::endl;   // Do this to see in the .log file which packages are used
         os << "\\usepackage[textwidth=16cm,textheight=24cm]{geometry}" << std::endl;
         os << "\\usepackage{media9}" << std::endl;
         os << "\\usepackage[parfill]{parskip}" << std::endl;

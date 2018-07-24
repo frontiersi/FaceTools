@@ -28,7 +28,7 @@ class FaceTools_EXPORT ActionRemesh : public FaceAction
 public:
     ActionRemesh( const QString& dname="Remesh", const QIcon& icon=QIcon(), QProgressBar* pb=NULL);   // Async if pb not NULL
 
-    double maxEdgeLength() const { return _maxEdgeLen;}
+    double maxTriangleArea() const { return _maxtarea;}
 
 private slots:
     bool testEnabled() const override { return readyCount() == 1;}   // Only enabled for single selections
@@ -36,7 +36,7 @@ private slots:
     bool doAction( FaceControlSet&) override;
 
 private:
-    double _maxEdgeLen;
+    double _maxtarea;
 };  // end class
 
 }   // end namespace

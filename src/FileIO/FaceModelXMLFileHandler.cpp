@@ -21,7 +21,7 @@
 #include <AssetImporter.h>
 #include <OBJExporter.h>
 #include <QTemporaryDir>
-#include <quazip/JlCompress.h>
+#include <quazip5/JlCompress.h>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
