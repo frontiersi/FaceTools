@@ -51,6 +51,7 @@ bool ActionRemesh::doAction( FaceControlSet& rset)
     RFeatures::ObjModelVertexAdder vadder( model);
     std::cerr << "[INFO] FaceTools::Action::ActionRemesh::doAction:: subdivide and merge..." << std::endl;
     vadder.subdivideAndMerge( maxTriangleArea());
+    //vadder.addVerticesToMaxTriangleArea( maxTriangleArea());
     if ( info->reset( model))
         fm->update(info);
     else

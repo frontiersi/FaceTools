@@ -68,7 +68,6 @@ void FaceView::reset()
     remove();   // Remove all
 
     const FaceModel* fm = _fc->data();
-    //fm->lockForRead();
 
     const ObjModel* model = fm->info()->cmodel();
     RVTK::VtkActorCreator ac;
@@ -94,7 +93,6 @@ void FaceView::reset()
         std::cerr << std::endl;
     }   // end else
 
-    //fm->unlock();
     for ( BaseVisualisation* vis : vlayers)
         apply(vis);
 }   // end reset
