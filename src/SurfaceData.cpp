@@ -19,6 +19,7 @@
 #include <FaceModel.h>
 #include <ObjModelTriangleMeshParser.h>     // RFeatures
 #include <QApplication>
+#include <cassert>
 using FaceTools::SurfaceDataWorker;
 using FaceTools::SurfaceData;
 using FaceTools::FaceModel;
@@ -32,6 +33,20 @@ using RFeatures::ObjModelInfo;
 using RFeatures::ObjModel;
 
 namespace {
+
+
+int checkSame( const IntSet* s0, const IntSet* s1)
+{
+    if ( s0->size() != s1->size())
+        return s0->size() - s1->size();
+
+    for ( int f : *s0)
+        if ( s1->count(f) == 0)
+            return -1;
+
+    return 0;
+}   // end checkSame
+
 
 int findMaxZPolygon( const ObjModel* model, const IntSet* vidxs)
 {
@@ -64,15 +79,32 @@ void createSurfaceData( SurfaceData* sd, const FaceModel* fm)
     {
         const IntSet* cvidxs = info->components().componentVertices(c);
         const int zp = findMaxZPolygon( model, cvidxs);
-        IntSet pset;
+#ifndef NDEBUG
+        const IntSet* cpolys = info->components().componentPolygons(c);
+        IntSet pset;    // Will be the IDs of the faces parsed for the component
         parser.setParseSet( &pset);
+#endif
         parser.parse( zp, cv::Vec3d(0,0,1));
+#ifndef NDEBUG
+        int dval = checkSame( cpolys, &pset);
+        if ( dval != 0)
+        {
+            std::cerr << "[ERROR] Parsed contents doesn't match known polygons of component "
+                      << c << " (" << dval << ")" << std::endl;
+            assert(false);
+        }   // end if
+#endif
     }   // end for
 
     // Now map the curvature to the surface of each of the components
     sd->curvature = ObjModelCurvatureMap::create( model, &sd->normals, &sd->pareas);
     for ( int c = 0; c < nc; ++c)
-        sd->curvature->map( *info->components().componentVertices(c));
+    {
+        //std::cerr << "[INFO] FaceTools::SurfaceData::createSurfaceData: Mapping curvature to model component " << c << std::endl;
+        const IntSet* cverts = info->components().componentVertices(c);
+        assert(cverts);
+        sd->curvature->map( *cverts);
+    }   // end for
     sd->metrics = new ObjModelCurvatureMetrics( sd->curvature.get());
 }   // end createSurfaceData
 

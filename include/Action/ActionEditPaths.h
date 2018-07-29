@@ -38,9 +38,9 @@ public:
 
     Interactor::PathSetInteractor* interactor() override { return _interactor;}
 
-private slots:
-    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
+protected slots:
     void doOnEditedPath( const FaceControl*);
+    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
 
 private:
     Vis::PathSetVisualisation *_vis;

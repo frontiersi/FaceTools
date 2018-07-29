@@ -47,17 +47,17 @@ public:
 
     void setCamSynch( const ActionSynchroniseCameraMovement* cs) { _camSynch = cs;}
    
-private slots:
+protected slots:
     bool testReady( const FaceControl*);
     bool testEnabled() const override { return readyCount() == 1;}
     bool doAction( FaceControlSet&) override;
-    void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(CAMERA_CHANGE);}
+    void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override{ cs.insert(CAMERA_CHANGE);}
+    bool displayDebugStatusProgression() const override { return false;}
 
 private:
     float _distance;
     float _urads;
     const ActionSynchroniseCameraMovement *_camSynch;
-    bool displayDebugStatusProgression() const override { return false;}
 };  // end class
 
 }   // end namespace

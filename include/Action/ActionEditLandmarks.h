@@ -34,9 +34,9 @@ public:
 
     Interactor::LandmarksInteractor* interactor() override { return _interactor;}
 
-private slots:
-    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
+protected slots:
     void doOnEditedLandmark( const FaceControl*);
+    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
 
 private:
     Vis::LandmarksVisualisation *_vis;

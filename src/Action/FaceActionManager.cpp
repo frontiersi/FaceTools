@@ -141,26 +141,20 @@ void FaceActionManager::doOnActionStarting()
 // private slot
 void FaceActionManager::doOnActionFinished( ChangeEventSet cset, FaceControlSet workSet, bool)
 {
+    _mutex.lock();
     FaceAction* sact = qobject_cast<FaceAction*>(sender());
     assert(sact);
-    /*
     std::cerr << "[INFO] FaceTools::Action::FaceActionManager::doOnActionFinished: "
               << sact->debugActionName() << " (" << sact << ") "
               << cset.size() << " CHANGE EVENTS" << std::endl;
-    */
 
-    _mutex.lock();
-
-    bool pflag = false;
-    FaceAction* nact = nullptr;
+    FaceViewerSet vwrs = workSet.viewers();    // The viewers before processing (e.g. before load or close)
 
     if ( !cset.empty())
     {
-        FaceViewerSet vwrs = workSet.viewers();    // The viewers before processing (e.g. before load or close)
         processFinishedAction( sact, &cset, &workSet);  // Process after action bits
-        FaceViewerSet vwrs1 = workSet.viewers();    // The viewers after processing (e.g. after load or close)
+        FaceViewerSet vwrs1 = workSet.viewers();        // The viewers after processing (e.g. after load or close)
         vwrs.insert(vwrs1.begin(), vwrs1.end());
-        std::for_each( std::begin(vwrs), std::end(vwrs), [](auto v){ v->updateRender();});
 
         // Push actions to execute to the back of the cue (if any)
         if ( !cset.empty())
@@ -170,23 +164,44 @@ void FaceActionManager::doOnActionFinished( ChangeEventSet cset, FaceControlSet 
                 _aqueue.testPush( act, &cset);
             _actions.insert(sact);
         }   // end if
-
-        nact = _aqueue.pop( pflag);
     }   // end if
 
-    FaceControlSet sel = _selector.selected();
-    _mutex.unlock();
+    // Visualisations will have been reapplied unless purging their data made them
+    // unavailable in which case these views need default visualisations setting.
+    _vman.enforceVisualisationConformance( &workSet);
+    std::for_each( std::begin(vwrs), std::end(vwrs), [](auto v){ v->updateRender();});
 
-    if ( nact)
+    std::cerr << "[INFO] FaceTools::Action::FaceActionManager::doOnActionFinished: " << _aqueue.size() << " actions left on queue" << std::endl;
+
+    bool pflag = false;
+    FaceAction* nact = _aqueue.pop( pflag);
+    FaceControlSet sel = _selector.selected();
+
+    while ( nact)
     {
-        //std::cerr << " + Starting " << nact->debugActionName() << " with process flag " << std::boolalpha << pflag << std::endl;
-        nact->process( sel, pflag);
+        nact->resetReady( sel);
+        if ( nact->testEnabled())   // Found next action to execute
+            break;
+        else
+        {
+            std::cerr << " Skipping queued action " << nact->debugActionName() << " (unavailable to selected models)" << std::endl;
+            nact = _aqueue.pop( pflag); // Get next action on the queue (returns null if no more)
+        }   // end else
     }   // end if
 
     // Update the ready state for the actions
     std::for_each(std::begin(_actions), std::end(_actions), [&](auto a){ a->resetReady(sel);});
 
     emit onUpdateSelected();
+
+    _mutex.unlock();
+
+    // Finally, execute the next queued action (if any)
+    if ( nact)
+    {
+        std::cerr << " ++ Starting " << nact->debugActionName() << " with process flag " << std::boolalpha << pflag << std::endl;
+        nact->process( pflag);
+    }   // end if
 }   // end doOnActionFinished
 
 
@@ -207,6 +222,7 @@ void FaceActionManager::processFinishedAction( FaceAction* sact, ChangeEventSet 
         {
             assert(workSet->empty());
             doLoadedModels( workSet);  // Obtain the FaceControl's for the just loaded FaceModels
+            cset->insert(GEOMETRY_CHANGE);
         }   // end if
         else if ( !cset->empty())   // Cause actions to respond to change events
         {
@@ -226,10 +242,6 @@ void FaceActionManager::processFinishedAction( FaceAction* sact, ChangeEventSet 
                 }   // end for
             }   // end if
         }   // end else if
-
-        // Visualisations will have been reapplied unless purging their data made them
-        // unavailable in which case these views need default visualisations setting.
-        _vman.enforceVisualisationConformance( workSet);
     }   // end else
 }   // end processFinishedAction
 

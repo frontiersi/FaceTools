@@ -63,8 +63,18 @@ void FaceView::setViewer( ModelViewer* viewer)
 // public
 void FaceView::reset()
 {
-    std::cerr << "[INFO] FaceTools::Vis::FaceView::reset: Resetting view models" << std::endl;
-    std::unordered_set<BaseVisualisation*> vlayers = _vlayers;  // Copy out
+    //std::cerr << "[INFO] FaceTools::Vis::FaceView::reset: Resetting view models" << std::endl;
+    std::unordered_set<BaseVisualisation*> vlayers = visualisations();  // Copy out
+    bool bface = false;
+    double op = 1.0;
+    QColor cl(255,255,255);
+    if ( _sactor)
+    {
+        bface = backfaceCulling();
+        op = opacity();
+        cl = colour();
+    }   // end if
+
     remove();   // Remove all
 
     const FaceModel* fm = _fc->data();
@@ -93,8 +103,13 @@ void FaceView::reset()
         std::cerr << std::endl;
     }   // end else
 
+    // Reapply visualisations and other aspects (colour, opacity, backface-culling)
     for ( BaseVisualisation* vis : vlayers)
         apply(vis);
+
+    setBackfaceCulling(bface);
+    setOpacity(op);
+    setColour(cl);
 }   // end reset
 
 

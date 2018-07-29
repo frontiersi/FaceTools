@@ -35,6 +35,8 @@ public:
     // value to be passed to FaceAction::process. Returns null if no more actions.
     FaceAction* pop( bool &pflag);
 
+    size_t size() const { return _queue.size();}
+
 private:
     std::list<FaceAction*> _queue;
     std::unordered_map<FaceAction*, bool> _actions;

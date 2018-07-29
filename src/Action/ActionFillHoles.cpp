@@ -41,7 +41,17 @@ bool ActionFillHoles::testReady( const FaceControl* fc)
 {
     const FaceModel* fm = fc->data();
     fm->lockForRead();
-    const bool rval = fm->info()->boundaries().size() > 1;
+    // Ready if there's more than one boundary on any component.
+    bool rval = false;
+    const int nc = (int)fm->info()->components().size();
+    for ( int c = 0; c < nc; ++c)
+    {
+        if ( fm->info()->components().numComponentBoundaries(c) > 1)
+        {
+            rval = true;
+            break;
+        }   // end if
+    }   // end for
     fm->unlock();
     return rval;
 }   // end testReady
@@ -77,8 +87,7 @@ bool ActionFillHoles::doAction( FaceControlSet& rset)
                 const std::list<int>& blist = fmi->boundaries().boundary(i);
                 IntSet newPolys;
                 hfiller.fillHole( blist, &newPolys);
-                std::cerr << " Filled hole (boundary " << i << ") on component " << (c+1) << " of " << nc
-                          << " with " << newPolys.size() << " polygons" << std::endl;
+                std::cerr << " Filled hole (boundary " << i << ") on component " << c << " with " << newPolys.size() << " polygons" << std::endl;
                 filledHole = true;
             }   // end for
         }   // end for

@@ -67,7 +67,7 @@ public:
     bool isApplied( const BaseVisualisation *vis) const;
 
     // Returns the set of currently applied visualisations.
-    const std::unordered_set<BaseVisualisation*> visualisations() const { return _vlayers;}
+    const std::unordered_set<BaseVisualisation*>& visualisations() const { return _vlayers;}
 
     // Returns the current exclusive visualisation (null if none set).
     BaseVisualisation* exclusiveVisualisation() const { return _visx;}

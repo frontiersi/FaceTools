@@ -233,7 +233,7 @@ bool FaceAction::process( bool checked)
     setChecked(checked);    // For external calls to ensure the action is checked
 
     _wset = _ready; // Copy out the ready set as is now into the work set
-    bool rv = false;
+    bool enteredDoAction = false;
     if ( !doBeforeAction( _wset))  // Always in the GUI thread
     {
         _pmutex.unlock();
@@ -243,10 +243,11 @@ bool FaceAction::process( bool checked)
     }   // end if
     else
     {
-        rv = true;
         const bool async = isAsync();
         if ( displayDebugStatusProgression())
             std::cerr << "--- STARTING " << debugActionName() << " ---" << (async ? " (ASYNC)" : "") << std::endl;
+
+        enteredDoAction = true;
 
         if ( async)
         {
@@ -263,7 +264,7 @@ bool FaceAction::process( bool checked)
         }   // end else
     }   // end else
 
-    return rv;
+    return enteredDoAction;
 }   // end process
 
 

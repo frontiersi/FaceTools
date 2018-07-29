@@ -33,7 +33,6 @@ ActionMapSurfaceData::ActionMapSurfaceData()
 {
     addPurgeOn( GEOMETRY_CHANGE);
     addProcessOn( GEOMETRY_CHANGE);
-    addProcessOn( LOADED_MODEL);
     connect( FaceModelSurfaceData::get(), &FaceModelSurfaceData::onCalculated, this, &ActionMapSurfaceData::doOnCalculated);
 }   // end ctor
 

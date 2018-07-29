@@ -58,7 +58,10 @@ FaceModelSurfaceData::~FaceModelSurfaceData()
         if ( !purge( fm, 1000)) // Wait 1 second to purge
         {
             if ( QThread::currentThread() != _data.at(fm)->thread())
+            {
+                std::cerr << "[WARNING] FaceTools::FaceModelSurfaceData::dtor: TERMINATING THREAD!" << std::endl;
                 _data.at(fm)->thread()->terminate();
+            }   // end if
             purge(fm);
         }   // end if
     }   // end while
