@@ -38,7 +38,7 @@ namespace {
 int checkSame( const IntSet* s0, const IntSet* s1)
 {
     if ( s0->size() != s1->size())
-        return s0->size() - s1->size();
+        return (int)s0->size() - (int)s1->size();
 
     for ( int f : *s0)
         if ( s1->count(f) == 0)
