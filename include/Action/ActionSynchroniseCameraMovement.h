@@ -33,6 +33,8 @@ public:
 
     const std::unordered_set<ModelViewer*>& viewers() const { return _viewers;}
 
+    static const ActionSynchroniseCameraMovement* get() { return s_obj;}
+
 private slots:
     bool testEnabled() const override { return true;}
     bool doAction( FaceControlSet&) override;
@@ -42,6 +44,7 @@ private:
     Interactor::ModelMoveInteractor *_interactor;
     std::unordered_set<ModelViewer*> _viewers;
     bool displayDebugStatusProgression() const override { return false;}
+    static const ActionSynchroniseCameraMovement* s_obj;
 };  // end class
 
 }   // end namespace

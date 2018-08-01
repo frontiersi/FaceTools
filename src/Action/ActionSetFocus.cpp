@@ -16,8 +16,10 @@
  ************************************************************************/
 
 #include <ActionSetFocus.h>
+#include <ActionSynchroniseCameraMovement.h>
 #include <FaceModelViewer.h>
 #include <FaceView.h>
+#include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionSetFocus;
 using FaceTools::Action::ChangeEventSet;
@@ -45,12 +47,18 @@ bool ActionSetFocus::doAction( FaceControlSet& fset)
     if ( !onModel)
         onModel = mv->calcSurfacePosition( fc->view()->textureActor(), p, nf);
     assert(onModel);    // Must be or couldn't have been ready!
-    mv->setFocus(nf);
+
+    // If camera synchroniser is null, work on just the selected FaceControl's viewer,
+    // otherwise work over all viewers registered with the camera synchroniser.
+    typedef FaceTools::Action::ActionSynchroniseCameraMovement CamSynch;
+    const CamSynch* camSynch = CamSynch::get();
+    if ( !camSynch || !camSynch->isChecked())
+        mv->setFocus(nf);
+    else if ( camSynch && camSynch->isChecked())
+    {
+        const std::unordered_set<ModelViewer*>& vwrs = camSynch->viewers();
+        std::for_each( std::begin(vwrs), std::end(vwrs), [&](auto v){ v->setFocus( nf); v->updateRender();});
+    }   // end else if
+
     return true;
 }   // end doAction
-
-
-void ActionSetFocus::doAfterAction( ChangeEventSet& cs, const FaceControlSet& fcs, bool v)
-{
-    cs.insert(VIEW_CHANGE);
-}   // end doAfterAction

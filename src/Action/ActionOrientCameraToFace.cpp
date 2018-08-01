@@ -34,7 +34,7 @@ using FaceTools::ModelViewer;
 
 
 ActionOrientCameraToFace::ActionOrientCameraToFace( const QString& dn, const QIcon& ico)
-    : FaceAction( dn, ico), _distance(450.0f), _urads(0.0f), _camSynch(nullptr)
+    : FaceAction( dn, ico), _distance(450.0f), _urads(0.0f)
 {
 }   // end ctor
 
@@ -74,11 +74,13 @@ bool ActionOrientCameraToFace::doAction( FaceControlSet& fset)
 
     // If camera synchroniser is null, work on just the selected FaceControl's viewer,
     // otherwise work over all viewers registered with the camera synchroniser.
-    if ( !_camSynch || !_camSynch->isChecked())
+    typedef FaceTools::Action::ActionSynchroniseCameraMovement CamSynch;
+    const CamSynch* camSynch = CamSynch::get();
+    if ( !camSynch || !camSynch->isChecked())
         fc->viewer()->setCamera( focus, nvec, uvec, _distance);
-    else if ( _camSynch && _camSynch->isChecked())
+    else if ( camSynch && camSynch->isChecked())
     {
-        const std::unordered_set<ModelViewer*>& vwrs = _camSynch->viewers();
+        const std::unordered_set<ModelViewer*>& vwrs = camSynch->viewers();
         std::for_each( std::begin(vwrs), std::end(vwrs), [&](auto v){ v->setCamera( focus, nvec, uvec, _distance);
                                                                       v->updateRender();});
     }   // end else if

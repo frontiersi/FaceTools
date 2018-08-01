@@ -22,7 +22,6 @@
 
 namespace FaceTools {
 namespace Action {
-class ActionSynchroniseCameraMovement;
 
 class FaceTools_EXPORT ActionOrientCameraToFace : public FaceAction
 { Q_OBJECT
@@ -45,8 +44,6 @@ public:
     void setAngleAboutUpVector( float rads) { _urads = rads;}
     float angleAboutUpVector() const { return _urads;}
 
-    void setCamSynch( const ActionSynchroniseCameraMovement* cs) { _camSynch = cs;}
-   
 protected slots:
     bool testReady( const FaceControl*);
     bool testEnabled() const override { return readyCount() == 1;}
@@ -57,7 +54,6 @@ protected slots:
 private:
     float _distance;
     float _urads;
-    const ActionSynchroniseCameraMovement *_camSynch;
 };  // end class
 
 }   // end namespace

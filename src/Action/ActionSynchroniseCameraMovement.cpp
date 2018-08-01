@@ -19,6 +19,7 @@
 #include <FaceControlSet.h>
 #include <ModelViewer.h>
 #include <algorithm>
+#include <cassert>
 using FaceTools::Action::ActionSynchroniseCameraMovement;
 using FaceTools::Action::FaceAction;
 using FaceTools::FaceControlSet;
@@ -26,11 +27,21 @@ using FaceTools::ModelViewer;
 using FaceTools::Interactor::ModelMoveInteractor;
 
 
+const ActionSynchroniseCameraMovement* ActionSynchroniseCameraMovement::s_obj(nullptr);
+
+
 // public
 ActionSynchroniseCameraMovement::ActionSynchroniseCameraMovement( const QString& dn, const QIcon& ico, ModelMoveInteractor* mmi)
     : FaceAction( dn, ico), _interactor(mmi)
 {
+    assert( !s_obj);
+    if ( s_obj)
+    {
+        std::cerr << "[ERROR] FaceTools::Action::ActionSynchroniseCameraMovement::ctor: More than one object of this type is bad!" << std::endl;
+        delete s_obj;
+    }   // end if
     setCheckable(true, false);
+    s_obj = this;
 }   // end ctor
 
 

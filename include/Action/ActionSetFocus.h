@@ -29,11 +29,9 @@ class FaceTools_EXPORT ActionSetFocus : public FaceAction
 public:
     ActionSetFocus( const QString& dname, FEEI*);
 
-private slots:
+protected slots:
     bool doAction( FaceControlSet&) override;
-    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
-
-private:
+    void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(CAMERA_CHANGE);}
     bool displayDebugStatusProgression() const override { return false;}
 };  // end class
 
@@ -41,6 +39,3 @@ private:
 }   // end namespace
 
 #endif
-
-
-
