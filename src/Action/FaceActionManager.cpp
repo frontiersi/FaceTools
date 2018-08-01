@@ -144,9 +144,11 @@ void FaceActionManager::doOnActionFinished( ChangeEventSet cset, FaceControlSet 
     _mutex.lock();
     FaceAction* sact = qobject_cast<FaceAction*>(sender());
     assert(sact);
+    /*
     std::cerr << "[INFO] FaceTools::Action::FaceActionManager::doOnActionFinished: "
               << sact->debugActionName() << " (" << sact << ") "
               << cset.size() << " CHANGE EVENTS" << std::endl;
+    */
 
     FaceViewerSet vwrs = workSet.viewers();    // The viewers before processing (e.g. before load or close)
 
@@ -171,7 +173,7 @@ void FaceActionManager::doOnActionFinished( ChangeEventSet cset, FaceControlSet 
     _vman.enforceVisualisationConformance( &workSet);
     std::for_each( std::begin(vwrs), std::end(vwrs), [](auto v){ v->updateRender();});
 
-    std::cerr << "[INFO] FaceTools::Action::FaceActionManager::doOnActionFinished: " << _aqueue.size() << " actions left on queue" << std::endl;
+    //std::cerr << "[INFO] FaceTools::Action::FaceActionManager::doOnActionFinished: " << _aqueue.size() << " actions left on queue" << std::endl;
 
     bool pflag = false;
     FaceAction* nact = _aqueue.pop( pflag);
@@ -184,7 +186,7 @@ void FaceActionManager::doOnActionFinished( ChangeEventSet cset, FaceControlSet 
             break;
         else
         {
-            std::cerr << " Skipping queued action " << nact->debugActionName() << " (unavailable to selected models)" << std::endl;
+            //std::cerr << " Skipping queued action " << nact->debugActionName() << " (unavailable to selected models)" << std::endl;
             nact = _aqueue.pop( pflag); // Get next action on the queue (returns null if no more)
         }   // end else
     }   // end if
@@ -199,7 +201,7 @@ void FaceActionManager::doOnActionFinished( ChangeEventSet cset, FaceControlSet 
     // Finally, execute the next queued action (if any)
     if ( nact)
     {
-        std::cerr << " ++ Starting " << nact->debugActionName() << " with process flag " << std::boolalpha << pflag << std::endl;
+        //std::cerr << " ++ Starting " << nact->debugActionName() << " with process flag " << std::boolalpha << pflag << std::endl;
         nact->process( pflag);
     }   // end if
 }   // end doOnActionFinished

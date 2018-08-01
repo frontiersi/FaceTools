@@ -149,22 +149,21 @@ bool ActionExportPDF::doAction( FaceControlSet& fcs)
     // will remove delete U3D instances from the filesystem.
     std::vector<FigIns> figs;
     if ( !writeLaTeX( fc->data(), fc->viewer()->getCamera(), tdir.path().toStdString(), texpath, logopath, figs))
-    {
         _err = "Failed to create '" + texpath + "' for LaTeX parsing!";
-        return false;
-    }   // end if
-
-    std::cerr << "[INFO] FaceTools::Action::ActionExportPDF::doAction: Generating PDF from LaTeX..." << std::endl;
-    PDFGenerator pdfgen(false);
-    const bool genOk = pdfgen( texpath, true);
-    if ( !genOk)
-        _err = "Failed to generate PDF!";
     else
     {
-        // Copy the created pdf to the requested location.
-        QFile outfile( tdir.filePath( "report.pdf"));
-        outfile.copy( _pdffile.c_str());
-    }   // end else
+        std::cerr << "[INFO] FaceTools::Action::ActionExportPDF::doAction: Generating PDF from LaTeX..." << std::endl;
+        PDFGenerator pdfgen(false);
+        const bool genOk = pdfgen( texpath, true);
+        if ( !genOk)
+            _err = "Failed to generate PDF!";
+        else
+        {
+            // Copy the created pdf to the requested location.
+            QFile outfile( tdir.filePath( "report.pdf"));
+            outfile.copy( _pdffile.c_str());
+        }   // end else
+    }   // endelse
 
     progress(1.0f);
     return _err.empty();
