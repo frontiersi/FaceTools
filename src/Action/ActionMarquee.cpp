@@ -47,9 +47,7 @@ ActionMarquee::ActionMarquee( const QString& dn, const QIcon& ico, ModelMoveInte
 
 ActionMarquee::~ActionMarquee()
 {
-    process(false);
-    for ( CameraWorker* cw : _workers)
-        delete cw;
+    std::for_each( std::begin(_workers), std::end(_workers), [](auto cw){delete cw;});
 }   // end dtor
 
 
@@ -59,7 +57,7 @@ void ActionMarquee::addViewer( FaceModelViewer* v)
 }   // end addViewer
 
 
-bool ActionMarquee::doAction( FaceControlSet&)
+bool ActionMarquee::doAction( FaceControlSet&, const QPoint&)
 {
     if ( isChecked())
         std::for_each( std::begin(_workers), std::end(_workers), [](auto cw){cw->start();});

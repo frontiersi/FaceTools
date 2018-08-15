@@ -27,22 +27,21 @@ using FaceTools::FaceModelViewer;
 using FaceTools::FaceModelSet;
 using FaceTools::FaceControl;
 using FaceTools::FaceModel;
+using FaceTools::ModelViewer;
 
 // private
 ModelSelector::ModelSelector( FaceModelViewer *viewer)
-    : _interactor( new ModelSelectInteractor(true)) // Exclusive select
 {
-    _interactor->setViewer(viewer);
-    connect( _interactor, &ModelSelectInteractor::onSelected, [this](FaceControl* fc, bool v){ emit onSelected( fc,v);});
+    _interactor.setViewer(viewer);
+    connect( &_interactor, &ModelSelectInteractor::onSelected, [this](FaceControl* fc, bool v){ emit onSelected( fc,v);});
 }   // end ctor
 
 
 // private
 ModelSelector::~ModelSelector()
 {
-    FaceModelSet fms = _interactor->available().models();  // Copy out
+    FaceModelSet fms = _interactor.available().models();  // Copy out
     std::for_each( std::begin(fms), std::end(fms), [this](auto fm){ this->remove(fm);});
-    delete _interactor;
 }   // end dtor
 
 
@@ -50,9 +49,9 @@ ModelSelector::~ModelSelector()
 FaceControl* ModelSelector::addFaceControl( FaceModel* fm, FaceModelViewer* tv)
 {
     if ( !tv)
-        tv = static_cast<FaceModelViewer*>(_interactor->viewer());
+        tv = static_cast<FaceModelViewer*>(_interactor.viewer());
     FaceControl* fc = new FaceControl( fm, tv); // Attaches the viewer and creates the base models (calls FaceView::reset)
-    _interactor->add(fc);   // Will cause onSelected(fc, true) to fire
+    _interactor.add(fc);   // Will cause onSelected(fc, true) to fire
     return fc;
 }   // end addFaceControl
 
@@ -60,7 +59,7 @@ FaceControl* ModelSelector::addFaceControl( FaceModel* fm, FaceModelViewer* tv)
 // public
 void ModelSelector::removeFaceControl( FaceControl* fc)
 {
-    _interactor->remove(fc);    // Called *before* the viewer is detached from the FaceControl.
+    _interactor.remove(fc);    // Called *before* the viewer is detached from the FaceControl.
     FaceModelViewer* viewer = fc->viewer();
     delete fc;
     viewer->updateRender(); // Extra render needed after detaching the viewer.
@@ -76,8 +75,28 @@ void ModelSelector::remove( FaceModel* fm)
 
 
 // public
-void ModelSelector::select( FaceControl* fc, bool enable)
+void ModelSelector::setSelected( FaceControl* fc, bool enable)
 {
-    if ( _interactor->isSelected(fc) != enable)    // Do nothing if no change in selection
-        _interactor->setSelected( fc, enable);
-}   // end select
+    if ( _interactor.isSelected(fc) != enable)    // Do nothing if no change in selection
+        _interactor.setSelected( fc, enable);
+}   // end setSelected
+
+
+// private
+void ModelSelector::doSwitchSelectedToViewer( ModelViewer* vwr)
+{
+    FaceControl* fc = _interactor.selected();
+    if ( !fc)
+        return;
+
+    const FaceControlSet& fcs = fc->data()->faceControls();
+    for ( FaceControl* f : fcs)
+    {
+        if ( f != fc && f->viewer() == vwr)
+        {
+            setSelected( fc, false);
+            setSelected( f, true);
+            break;
+        }   // end if
+    }   // end for
+}   // end doSwitchSelectedToViewer

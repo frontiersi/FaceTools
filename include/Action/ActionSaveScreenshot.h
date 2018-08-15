@@ -39,11 +39,11 @@ public:
     void addViewer( const FaceModelViewer* v) { _viewers.push_back(v);}
    
 public slots:
-    bool doAction( FaceControlSet&) override;
+    bool doAction( FaceControlSet&, const QPoint&) override;
+    bool displayDebugStatusProgression() const override { return false;}
 
 private:
     std::vector<const FaceModelViewer*> _viewers;
-    bool displayDebugStatusProgression() const override { return false;}
 };  // end class
 
 }   // end namespace

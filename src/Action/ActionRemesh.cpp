@@ -36,7 +36,7 @@ ActionRemesh::ActionRemesh( const QString& dn, const QIcon& ico, QProgressBar* p
 }   // end ctor
 
 
-bool ActionRemesh::doAction( FaceControlSet& rset)
+bool ActionRemesh::doAction( FaceControlSet& rset, const QPoint&)
 {
     assert(rset.size() == 1);
     FaceControl* fc = rset.first();

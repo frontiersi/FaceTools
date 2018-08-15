@@ -48,7 +48,7 @@ bool ActionOrientCameraToFace::testReady( const FaceControl* fc)
 }   // end testReady
 
 
-bool ActionOrientCameraToFace::doAction( FaceControlSet& fset)
+bool ActionOrientCameraToFace::doAction( FaceControlSet& fset, const QPoint&)
 {
     assert(fset.size() == 1);
     const FaceControl* fc = fset.first();
@@ -71,19 +71,11 @@ bool ActionOrientCameraToFace::doAction( FaceControlSet& fset)
     on.rotate( transformer.matrix());
 
     const cv::Vec3f focus = FaceTools::calcFaceCentre( leye, reye, ntip);
+    fc->viewer()->setCamera( focus, nvec, uvec, _distance);
 
     // If camera synchroniser is null, work on just the selected FaceControl's viewer,
     // otherwise work over all viewers registered with the camera synchroniser.
-    typedef FaceTools::Action::ActionSynchroniseCameraMovement CamSynch;
-    const CamSynch* camSynch = CamSynch::get();
-    if ( !camSynch || !camSynch->isChecked())
-        fc->viewer()->setCamera( focus, nvec, uvec, _distance);
-    else if ( camSynch && camSynch->isChecked())
-    {
-        const std::unordered_set<ModelViewer*>& vwrs = camSynch->viewers();
-        std::for_each( std::begin(vwrs), std::end(vwrs), [&](auto v){ v->setCamera( focus, nvec, uvec, _distance);
-                                                                      v->updateRender();});
-    }   // end else if
+    FaceTools::Action::ActionSynchroniseCameraMovement::sync();
 
     return true;
 }   // end doAction

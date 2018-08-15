@@ -54,7 +54,7 @@ void VisualisationsManager::makeDefault( FaceActionManager* fman)
 void VisualisationsManager::add( FaceAction* a)
 {
     ActionVisualise* av = qobject_cast<ActionVisualise*>(a);
-    if ( av && av->isVisible())
+    if ( av && av->isVisible() && av->manageVisualisation())
     {
         if ( av->isExclusive())
             _evis.addAction(av->qaction());
@@ -83,13 +83,13 @@ bool VisualisationsManager::setDefaultVisualisation( FaceView* fv)
     bool setv = false;
     if ( fv->textureActor() != nullptr) // Try to apply the texture visualisation first
     {
-        fv->apply( &_tvis);
-        setv = true;
+        setv = fv->apply( &_tvis);
+        assert(setv);
     }   // end if
     else if ( fv->surfaceActor() != nullptr)
     {
-        fv->apply( &_svis);
-        setv = true;
+        setv = fv->apply( &_svis);
+        assert(setv);
     }   // end else if
     return setv;
 }   // end setDefaultVisualisation
@@ -133,7 +133,7 @@ void VisualisationsManager::enforceVisualisationConformance( const FaceControlSe
             // If any of the views can't have this visualisation, all views in the viewer are set to the default.
             if ( fc->view()->exclusiveVisualisation() != vis)
             {
-                if ( vis->isAvailable(fc->data()))
+                if ( vis->isAvailable(fc))
                     fc->view()->apply( vis);
                 else
                 {

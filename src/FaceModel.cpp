@@ -131,6 +131,9 @@ void FaceModel::transform( const cv::Matx44d& m)
     transformer.transform( _minfo->model()); // Adjust vertices of the model in-place
     _minfo->rebuildInfo();
     _kdtree = ObjModelKDTree::create( _minfo->cmodel());
+
+    FaceTools::translateLandmarksToSurface( _kdtree, _landmarks);   // Ensure landmarks remapped to surface
+    _paths->recalculate( _kdtree);                             // Ensure stored paths remap to the new surface.
     calculateBounds();
 
     vtkSmartPointer<vtkMatrix4x4> vm = RVTK::toVTK(m);
@@ -179,47 +182,14 @@ void FaceModel::updateRenderers() const
 }   // end updateRenderers
 
 
-/*
-const boost::unordered_map<int,double>* FaceModel::getUniformDistanceMap() const
+// public
+double FaceModel::translateToSurface( cv::Vec3f& pos) const
 {
-    if ( _udist == NULL)
-        return NULL;
-    return &_udist->getCrossings();
-}   // end getUniformDistanceMap
-
-
-const boost::unordered_map<int,double>* FaceModel::getCurvDistanceMap() const
-{
-    if ( _cdist == NULL)
-        return NULL;
-    return &_cdist->getCrossings();
-}   // end getCurvDistanceMap
-
-
-void FaceModel::buildDistanceMaps()
-{
-    if ( _omd->getObject() == NULL || !_omd->landmarks()->hasLandmark( FaceTools::Landmarks::NASAL_TIP))
-        return;
-
-    const cv::Vec3f& nt = _omd->landmarks()->getLandmark( FaceTools::Landmarks::NASAL_TIP);
-    const int vidx = _omd->getKDTree()->find( nt);
-    const ObjModel::Ptr model = _omd->getObject();
-
-    if ( _facalc.getFaceAngles().empty()) // Obtain face angles
-    {
-        RFeatures::ObjModelTriangleMeshParser tparser( model);
-        tparser.addTriangleParser( &_facalc);
-        const int fidx = *model->getFaceIds(vidx).begin();  // Get connected polygon to nose tip
-        tparser.parse( fidx, cv::Vec3f(0,0,1));
-    }   // end if
-
-    // Propagate from nose tip
-    const RFeatures::ObjModelFastMarcher::SpeedFunctor uniformSpeedFunctor;
-    _udist = RFeatures::ObjModelFastMarcher::create( model, &uniformSpeedFunctor, &_facalc.getFaceAngles());
-    _udist->propagateFront( vidx);
-
-    const FaceTools::CurvatureSpeedFunctor curvSpeedFunctor( _omd->getCurvatureMap());
-    _cdist = RFeatures::ObjModelFastMarcher::create( model, &curvSpeedFunctor, &_facalc.getFaceAngles());
-    _cdist->propagateFront( vidx);
-}   // end buildDistanceMaps
-*/
+    int notused;
+    cv::Vec3f fv;
+    int vidx = _kdtree->find(pos);
+    const RFeatures::ObjModelSurfacePointFinder spfinder( _kdtree->model());
+    double sdiff = spfinder.find( pos, vidx, notused, fv);
+    pos = fv;
+    return sdiff;
+}   // end translateToSurface

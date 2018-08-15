@@ -43,7 +43,7 @@ bool ActionBackfaceCulling::testReady( const FaceControl* fc)
 }   // end testReady
 
 
-bool ActionBackfaceCulling::doAction( FaceControlSet& fcs)
+bool ActionBackfaceCulling::doAction( FaceControlSet& fcs, const QPoint&)
 {
     // Apply to all FaceControls in all directly selected viewers.
     FaceViewerSet fvs = fcs.directViewers();

@@ -54,8 +54,16 @@ void FaceView::setViewer( ModelViewer* viewer)
     _viewer = viewer;
     if ( _viewer)
     {
-        std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](auto v){v->apply(_fc);});     // Re-apply
-        std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](auto v){v->addActors(_fc);}); // Re-add
+        decltype(_vlayers) nlayers;
+        for ( auto v : _vlayers)
+        {
+            if ( v->apply(_fc)) // Re-apply
+            {
+                v->addActors(_fc);  // Re-add
+                nlayers.insert(v);
+            }   // end if
+        }   // end for
+        _vlayers = nlayers;
     }   // end if
 }   // end setViewer
 
@@ -105,7 +113,7 @@ void FaceView::reset()
 
     // Reapply visualisations and other aspects (colour, opacity, backface-culling)
     for ( BaseVisualisation* vis : vlayers)
-        apply(vis);
+        this->apply(vis);
 
     setBackfaceCulling(bface);
     setOpacity(op);
@@ -141,7 +149,7 @@ void FaceView::remove( BaseVisualisation* vis)
 
 
 // public
-bool FaceView::apply( BaseVisualisation* vis)
+bool FaceView::apply( BaseVisualisation* vis, const QPoint* mc)
 {
     assert(_sactor);
     if ( !_sactor)
@@ -166,11 +174,12 @@ bool FaceView::apply( BaseVisualisation* vis)
         return true;
     }   // end if
 
-    assert( vis->isAvailable(_fc->data()));
+    //assert( vis->isAvailable(_fc->data()));
     if ( !vis->isAvailable(_fc->data()))
     {
         std::cerr << "[WARNING] FaceTools::Vis::FaceView::apply: "
-                  << "Cannot apply visualisations - is not available for the FaceModel!" << std::endl;
+                  << "Cannot apply visualisations - " << vis->getDisplayName().toStdString()
+                  << " is not available for the FaceModel!" << std::endl;
         return false;
     }   // end if
 
@@ -189,19 +198,29 @@ bool FaceView::apply( BaseVisualisation* vis)
             _visx->removeActors(_fc);
             _vlayers.erase(_visx);
         }   // end if
-        _visx = vis;
     }   // end if
-    _vlayers.insert(vis);
 
-    vis->apply(_fc);   // A - see note above about this line and line B
-    vis->addActors(_fc);
+    if ( vis->apply(_fc, mc))
+    {
+        vis->addActors(_fc);
+        _vlayers.insert(vis);
+        if ( vis->isExclusive())
+            _visx = vis;
+    }   // end if
 
-    return true;
+    return isApplied(vis);
 }   // end apply
 
 
 // public
 bool FaceView::isApplied( const BaseVisualisation *vis) const { return _vlayers.count(const_cast<BaseVisualisation*>(vis)) > 0;}
+
+
+// public
+bool FaceView::isFace( const vtkProp* prop) const
+{
+    return prop && (( _sactor == prop) || (_tactor == prop));
+}   // end isFace
 
 
 // public
@@ -218,6 +237,32 @@ BaseVisualisation* FaceView::belongs( const vtkProp* prop) const
     }   // end for
     return nullptr;
 }   // end belongs
+
+
+// public
+bool FaceView::pointToFace( const QPoint& p, cv::Vec3f& v) const
+{
+    const vtkProp* prop = isPointOnFace( p);
+    if ( !prop)
+        return false;
+    if ( prop != _sactor && prop != _tactor)
+        return false;
+    return _viewer->calcSurfacePosition( prop, p, v);
+}   // end pointToFace
+
+
+// public
+const vtkProp* FaceView::isPointOnFace( const QPoint& p) const
+{
+    if ( !_viewer)
+        return nullptr;
+    const vtkProp* prop = _viewer->getPointedAt(p);
+    if ( prop == _sactor)
+        return _sactor;
+    if ( prop == _tactor)
+        return _tactor;
+    return nullptr;
+}   // end isPointOnFace
 
 
 // public

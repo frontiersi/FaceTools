@@ -32,13 +32,13 @@ public:
     Interactor::ModelMoveInteractor* interactor() override { return &_interactor;}
 
 protected slots:
-    bool testEnabled() const override { return true;}
-    bool doAction( FaceControlSet&) override;
+    //bool testEnabled( const QPoint* mc=nullptr) const override { return true;}
+    bool doAction( FaceControlSet&, const QPoint&) override;
+    bool displayDebugStatusProgression() const override { return false;}
     void doOnAffineChange( const FaceControl*);
 
 private:
     Interactor::ModelMoveInteractor _interactor;
-    bool displayDebugStatusProgression() const override { return false;}
 };  // end class
 
 }   // end namespace

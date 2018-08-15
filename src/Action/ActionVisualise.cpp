@@ -49,7 +49,7 @@ ActionVisualise::ActionVisualise( BaseVisualisation* vint)
 
 bool ActionVisualise::testReady( const FaceControl* fc)
 {
-    return _vis->isAvailable(fc->data()) && (!_vis->isExclusive() || !_vis->isApplied(fc));
+    return testChecked(fc) || (_vis->isAvailable( fc->data()) && (!_vis->isExclusive() || !_vis->isApplied(fc)));
 }   // end testReady
 
 
@@ -58,77 +58,67 @@ void ActionVisualise::tellReady( FaceControl* fc, bool v)
     if ( _vis->applyOnReady())
     {
         setChecked(v);
-        toggleVis(fc);
+        toggleVis(fc, nullptr);
     }   // end if
 }   // end tellReady
 
 
-bool ActionVisualise::testEnabled() const
+bool ActionVisualise::testEnabled( const QPoint* mc) const
 {
-    return readyCount() == 1 || (!_vis->singleModel() && !_vis->singleView() && readyCount() > 0);
+    FaceControl* fc = ready1();
+    return fc && (testChecked(fc) || _vis->isAvailable( fc, mc) || (!_vis->singleModel() && !_vis->singleView()));
 }   // end testEnabled
 
 
-bool ActionVisualise::testChecked( FaceControl* fc)
-{
-    return _vis->isApplied(fc);
-}   // end testChecked
+bool ActionVisualise::testChecked( const FaceControl* fc) const { return fc && _vis->isApplied(fc);}
 
 
 // private
-void ActionVisualise::toggleVis( FaceControl* fc)
+void ActionVisualise::toggleVis( FaceControl* fc, const QPoint* mc)
 {
     FaceModel* fm = fc->data();
     fm->lockForRead();
     if ( isChecked() && _vis->isAvailable(fc->data()))
-        fc->view()->apply( _vis);
+        fc->view()->apply( _vis, mc);
     else
-    {
         fc->view()->remove( _vis);
-        setChecked(false);
-    }   // end else
+    setChecked( fc->view()->isApplied( _vis));
     fm->unlock();
 }   // end toggleVis
 
 
-bool ActionVisualise::doAction( FaceControlSet& fcs)
+bool ActionVisualise::doAction( FaceControlSet& fcs, const QPoint& mc)
 {
-    if ( _vis->singleModel() || _vis->singleView())
+    assert(fcs.size() == 1);
+    FaceControl* fc = fcs.first();
+    fcs.clear();
+
+    if ( _vis->singleView() && _vis->singleModel())
     {
-        assert(fcs.size() == 1);
-        FaceControl* fc = fcs.first();
-        assert(fc);
-        // Apply to single view only
-        if ( _vis->singleView())
-        {
-            toggleVis(fc);
-            fcs.insert(fc);
-        }   // end if
-        else
-        {
-            FaceModel* fm = fc->data();
-            assert(fm);
-            // Apply to all views corresponding to the selected model
-            for ( FaceControl* f : fm->faceControls())
-            {
-                toggleVis(f);
-                fcs.insert(f);
-            }   // end for
-        }   // end else
+        std::cerr << "[WARNING] FaceTools::ActionVisualise::doAction: Visualisation " << debugActionName()
+                  << " has both singleModel() and singleView() returning true which is not allowed!" << std::endl;
+        assert(false);
     }   // end if
-    else
+
+    if ( _vis->singleModel())
     {
-        // Apply to all FaceControls that the visualisation is available for in all directly accessible (selected) viewers.
-        FaceViewerSet fvs = fcs.directViewers();  // Don't use fcs.viewers() because that will return all viewers for all data.
-        for ( const FaceModelViewer* v : fvs)
-        {
-            for ( FaceControl* fc : v->attached())
-            {
-                toggleVis(fc);
-                fcs.insert(fc);
-            }   // end for
-        }   // end for
-    }   // end else
+        // Apply to all views corresponding to the selected model. Apply first to the selected FaceControl since
+        // the visualisation may depend on the mouse coordinates for the viewer of the selected FaceControl to
+        // create internal data structures associated with fc->data() (which is shared ) so that these shared
+        // data are available for the subsequent FaceControl views.
+        fcs.insert( fc->data()); // Ensure all present.
+    }   // end if
+    else if ( !_vis->singleView())
+    {   // Apply to all FaceControls in the same viewer as the selected FaceControl.
+        fcs = fc->viewer()->attached();
+    }   // end else if
+
+    toggleVis(fc, &mc); // Apply first to the selected FaceControl.
+    fc->viewer()->updateRender();
+    fcs.erase(fc);      // Don't apply the visualisation to the selected FaceControl again in the below loop
+    std::for_each( std::begin(fcs), std::end(fcs), [&](auto f){ this->toggleVis(f, &mc); f->viewer()->updateRender();});  // Apply to all the others
+
+    fcs.insert(fc); // Ensure the selected FaceControl is in the set on return.
 
     return true;
 }   // end doAction
@@ -136,6 +126,17 @@ bool ActionVisualise::doAction( FaceControlSet& fcs)
 
 void ActionVisualise::purge( const FaceModel* fm)
 {
-    for ( FaceControl* fc : fm->faceControls())
-        _vis->purge(fc);
+    const FaceControlSet& fcs = fm->faceControls();
+    // Purge the visualisation, but don't do this through the FaceView since that de-applies the visualisation.
+    std::for_each( std::begin(fcs), std::end(fcs), [=](auto fc){ _vis->removeActors(fc); _vis->purge(fc);});
+    _vis->purge(fm);
 }   // end purge
+
+
+void ActionVisualise::clean( const FaceModel* fm)
+{
+    const FaceControlSet& fcs = fm->faceControls();
+    // Remove through the FaceView since this removes the visualisation layer.
+    std::for_each( std::begin(fcs), std::end(fcs), [=](auto fc){ fc->view()->remove( _vis);});
+    _vis->purge(fm);
+}   // end clean

@@ -30,21 +30,20 @@ public:
     ActionSynchroniseCameraMovement( const QString& dname, const QIcon&, Interactor::ModelMoveInteractor*);
 
     void addViewer( ModelViewer* v) { _viewers.insert(v);}
-
     const std::unordered_set<ModelViewer*>& viewers() const { return _viewers;}
 
-    static const ActionSynchroniseCameraMovement* get() { return s_obj;}
+    static void sync();    // Only synchronises if the associated singleton object is checked
 
 private slots:
-    bool testEnabled() const override { return true;}
-    bool doAction( FaceControlSet&) override;
-    void doOnCameraMove();
+    bool testEnabled( const QPoint* mc=nullptr) const override { return true;}
+    bool doAction( FaceControlSet&, const QPoint&) override;
+    bool displayDebugStatusProgression() const override { return false;}
+    void doSyncActiveCamera();
 
 private:
     Interactor::ModelMoveInteractor *_interactor;
     std::unordered_set<ModelViewer*> _viewers;
-    bool displayDebugStatusProgression() const override { return false;}
-    static const ActionSynchroniseCameraMovement* s_obj;
+    static ActionSynchroniseCameraMovement* s_obj;
 };  // end class
 
 }   // end namespace

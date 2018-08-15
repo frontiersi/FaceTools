@@ -75,11 +75,11 @@ ActionExportPDF::ActionExportPDF( BaseReportTemplate* t, const QIcon& icon, QWid
 
 bool ActionExportPDF::testReady( const FaceControl* fc) { return _template->isAvailable(fc->data());}
 
-bool ActionExportPDF::testEnabled() const { return readyCount() == 1 && isAvailable();}
+bool ActionExportPDF::testEnabled( const QPoint*) const { return gotReady() && isAvailable();}
 
 
 // Get the save filepath for the report
-bool ActionExportPDF::doBeforeAction( FaceControlSet& fcs)
+bool ActionExportPDF::doBeforeAction( FaceControlSet& fcs, const QPoint&)
 {
     const FaceControl* fc = fcs.first();
 
@@ -119,7 +119,7 @@ bool ActionExportPDF::doBeforeAction( FaceControlSet& fcs)
 }   // end doBeforeAction
 
 
-bool ActionExportPDF::doAction( FaceControlSet& fcs)
+bool ActionExportPDF::doAction( FaceControlSet& fcs, const QPoint&)
 {
     assert( fcs.size() == 1);
     const FaceControl* fc = fcs.first();

@@ -20,10 +20,64 @@
 using FaceTools::Action::ActionExecutionQueue;
 using FaceTools::Action::ChangeEventSet;
 using FaceTools::Action::FaceAction;
+using FaceTools::FaceControlSet;
 
 
 // public
-void ActionExecutionQueue::testPush( FaceAction* act, const ChangeEventSet* cs)
+void ActionExecutionQueue::pushIfShould( FaceAction* act, const ChangeEventSet* cs)
+{
+    if ( testPush( act, cs))
+        _queue.push_back(act);
+}   // end pushIfShould
+
+
+// public
+FaceAction* ActionExecutionQueue::popOrClear( const FaceControlSet& wset, bool& pflag)
+{
+    FaceAction* nact = nullptr;
+    if ( !wset.empty())
+    {
+        while ( !nact && !_queue.empty())
+        {
+            nact = pop( pflag);
+            if ( nact)
+            {
+                nact->setReady( wset, true);
+                if ( nact->isEnabled())
+                    break;
+                else
+                    nact = nullptr; // Will cause the next action to be popped
+            }   // end if
+        }   // end while
+    }   // end else
+
+    if ( !nact)
+    {
+        _queue.clear();
+        _actions.clear();
+    }   // end if
+    return nact;
+}   // end popOrClear
+
+
+// Pop next action to work on - setting pflag on return with the value to be passed to FaceAction::process.
+// Returns null if no more actions.
+FaceAction* ActionExecutionQueue::pop( bool& pflag)
+{
+    FaceAction* act = nullptr;
+    if ( !_queue.empty())
+    {
+        act = *_queue.begin();
+        pflag = _actions.at(act);  // Set the process flag
+        _queue.pop_front();
+    }   // end if
+    return act;
+}   // end pop
+
+
+
+// Test if the given action should be pushed to the execution queue.
+bool ActionExecutionQueue::testPush( FaceAction* act, const ChangeEventSet* cs)
 {
     const bool ispresent = _actions.count(act) > 0; // Is the action already in the queue?
     bool add2q = false;
@@ -51,23 +105,6 @@ void ActionExecutionQueue::testPush( FaceAction* act, const ChangeEventSet* cs)
         }   // end for
     }   // end if
 
-    if ( add2q && !ispresent)   // Don't add if already present
-        _queue.push_back(act);
+    return add2q && !ispresent;   // Don't add if already present
 }   // end testPush
 
-
-FaceAction* ActionExecutionQueue::pop( bool& pflag)
-{
-    FaceAction* act = nullptr;
-    if ( !_queue.empty())
-    {
-        act = *_queue.begin();
-        pflag = _actions.at(act);  // Set the process flag
-        _queue.pop_front();
-    }   // end if
-
-    // DO NOT remove actions from _actions until the queue is empty!
-    if ( _queue.empty())
-        _actions.clear();
-    return act;
-}   // end pop

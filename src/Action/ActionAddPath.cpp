@@ -23,6 +23,7 @@
 #include <cassert>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionAddPath;
+using FaceTools::Action::ActionEditPaths;
 using FaceTools::Action::ChangeEventSet;
 using FaceTools::Interactor::PathSetInteractor;
 using FaceTools::FaceControlSet;
@@ -30,49 +31,38 @@ using FaceTools::FaceControl;
 using FaceTools::FaceModel;
 
 
-ActionAddPath::ActionAddPath( const QString& dn, const QIcon& ico)
-    : FaceAction( dn, ico), _editor(nullptr)
+ActionAddPath::ActionAddPath( const QString& dn, const QIcon& ico, ActionEditPaths* e)
+    : FaceAction( dn, ico), _editor(e)
 {
 }   // end ctor
 
 
-bool ActionAddPath::testEnabled() const
+bool ActionAddPath::testEnabled( const QPoint*) const
 {
     // Allow path adding only if the model being hovered over is the same as
     // the selected model AND there's no handle currently being hovered over
     // and path editing is currently enabled.
-    bool enabled = false;
-    FaceControl* fc = nullptr;
-    assert(_editor);
-    if ( readyCount() == 1 && _editor->isChecked())
-    {
-        PathSetInteractor* interactor = _editor->interactor();
-        fc = interactor->hoverModel();
-        enabled = isReady( fc) && interactor->hoverID() < 0;
-    }   // end if
-    return enabled;
+    PathSetInteractor* interactor = _editor->interactor();
+    const FaceControl* fc = interactor->hoverModel();
+    return isReady( fc) && interactor->hoverID() < 0;
 }   // end testEnabled
 
 
-bool ActionAddPath::doAction( FaceControlSet& fcs)
+bool ActionAddPath::doBeforeAction( FaceControlSet&, const QPoint&)
+{
+    if ( !_editor->isChecked())
+        _editor->process( ready(), true);   // Flip the visualisation on if not already
+    return true;
+}   // end doBeforeAction
+
+
+bool ActionAddPath::doAction( FaceControlSet& fcs, const QPoint& p)
 {
     assert(_editor);
     PathSetInteractor* interactor = _editor->interactor();
-    QPoint p = interactor->viewer()->getMouseCoords();
-    FaceControl* hc = fcs.first();
-    assert(hc);
     fcs.clear();
-    int pid = interactor->addPath();
+    int pid = interactor->addPath(p);
     if ( pid >= 0)
-    {
-        fcs.insert( hc);
-        interactor->setDrag( pid, p);
-    }   // end if
+        fcs.insert( interactor->hoverModel()->data());
     return pid >= 0;
 }   // end doAction
-
-
-void ActionAddPath::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool)
-{
-    cs.insert( METRICS_CHANGE);
-}   // end doAfterAction

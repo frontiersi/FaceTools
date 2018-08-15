@@ -33,7 +33,7 @@ ActionSaveScreenshot::ActionSaveScreenshot( const QString& dn, const QIcon& ico,
 }   // end ctor
 
 
-bool ActionSaveScreenshot::doAction( FaceControlSet& fset)
+bool ActionSaveScreenshot::doAction( FaceControlSet& fset, const QPoint&)
 {
     if ( _viewers.empty())
     {

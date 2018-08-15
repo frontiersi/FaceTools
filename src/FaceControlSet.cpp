@@ -105,8 +105,9 @@ bool FaceControlSet::insert( FaceControl* fc)
 
 
 // public
-bool FaceControlSet::erase( FaceControl* fc)
+bool FaceControlSet::erase( const FaceControl* cfc)
 {
+    FaceControl* fc = const_cast<FaceControl*>(cfc);
     size_t a = _fcs.size();
     _fcs.erase(fc);
     if ( fc)
@@ -124,6 +125,16 @@ bool FaceControlSet::erase( FaceControl* fc)
 
 
 // public
+bool FaceControlSet::insert( const FaceModel* fm)
+{
+    size_t a = 0;
+    for ( FaceControl* fc : fm->faceControls())
+        a += insert(fc) ? 1 : 0;
+    return a > 1;
+}   // end insert
+
+
+// public
 bool FaceControlSet::erase( const FaceModel* fm)
 {
     size_t a = _fmm.size();
@@ -134,7 +145,7 @@ bool FaceControlSet::erase( const FaceModel* fm)
 
 
 // public
-bool FaceControlSet::has( FaceControl* fc) const { return _fcs.count(fc) == 1;}
+bool FaceControlSet::has( const FaceControl* fc) const { return _fcs.count(const_cast<FaceControl*>(fc)) == 1;}
 bool FaceControlSet::has( const FaceModel* fm) const { return _fmm.count(fm) == 1;}
 size_t FaceControlSet::size( const FaceModel* fm) const { return has(fm) ? _fmm.at(fm).size() : 0;}
 size_t FaceControlSet::size() const { return _fcs.size();}

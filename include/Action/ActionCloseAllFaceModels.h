@@ -30,8 +30,8 @@ public:
     ActionCloseAllFaceModels( const QString& dname, FileIO::FaceModelManager*, QWidget* parent=nullptr);
 
 private slots:
-    bool testEnabled() const override { return _fmm->numOpen() > 0;}
-    bool doBeforeAction( FaceControlSet&) override;
+    bool testEnabled( const QPoint* mc=nullptr) const override { return _fmm->numOpen() > 0;}
+    bool doBeforeAction( FaceControlSet&, const QPoint&) override;
     void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(CLOSE_MODEL);}
 
 private:

@@ -26,14 +26,13 @@ namespace Action {
 class FaceTools_EXPORT ActionAddLandmark : public FaceAction
 { Q_OBJECT
 public:
-    ActionAddLandmark( const QString& dname, const QIcon& icon, QWidget* parent=nullptr);
-
-    void setEditor( ActionEditLandmarks *e) { _editor = e;}
+    ActionAddLandmark( const QString& dname, const QIcon& icon, ActionEditLandmarks*, QWidget* parent=nullptr);
 
 protected slots:
-    bool testEnabled() const override;
-    bool doAction( FaceControlSet&) override;
-    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool);
+    bool testEnabled( const QPoint* mc=nullptr) const override;
+    bool doBeforeAction( FaceControlSet&, const QPoint&) override;
+    bool doAction( FaceControlSet&, const QPoint&) override;
+    void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(LANDMARKS_CHANGE);}
 
 private:
     ActionEditLandmarks *_editor;

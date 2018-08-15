@@ -33,7 +33,7 @@ ActionCloseFaceModels::ActionCloseFaceModels( const QString& dname, const QIcon&
 }   // end ctor
 
 
-bool ActionCloseFaceModels::doBeforeAction( FaceControlSet& fcs)
+bool ActionCloseFaceModels::doBeforeAction( FaceControlSet& fcs, const QPoint&)
 {
     FaceModelSet fms = fcs.models();
     for ( FaceModel* fm : fms)

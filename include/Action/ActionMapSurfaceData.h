@@ -28,8 +28,8 @@ class FaceTools_EXPORT ActionMapSurfaceData : public FaceAction
 public:
     ActionMapSurfaceData();
 
-private slots:
-    bool doAction( FaceControlSet&) override;
+protected slots:
+    bool doAction( FaceControlSet&, const QPoint&) override;
     void purge( const FaceModel*) override;
     void doOnCalculated( const FaceModel*);
     bool displayDebugStatusProgression() const override { return false;}

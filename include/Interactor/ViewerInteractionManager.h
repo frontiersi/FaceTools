@@ -39,7 +39,7 @@ signals:
     // Emitted after the mouse has entered the given viewer.
     // All interactors will be active on the given viewer.
     // All other viewers won't be receiving user input events.
-    void onActivatedViewer(ModelViewer*);
+    void onActivatedViewer( ModelViewer*);
 
 private slots:
     void doOnViewerEntered();

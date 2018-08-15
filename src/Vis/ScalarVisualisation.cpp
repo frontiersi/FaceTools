@@ -101,7 +101,7 @@ bool ScalarVisualisation::isAvailable( const FaceModel* fm) const
 
 
 // public
-void ScalarVisualisation::apply( const FaceControl* fc)
+bool ScalarVisualisation::apply( const FaceControl* fc, const QPoint*)
 {
     const std::string vname = getDisplayName().toStdString();
 
@@ -116,6 +116,7 @@ void ScalarVisualisation::apply( const FaceControl* fc)
     remapColourRange();
     SurfaceVisualisation::apply(fc);
     actor->GetMapper()->SetScalarVisibility(true);
+    return true;
 }   // end apply
 
 

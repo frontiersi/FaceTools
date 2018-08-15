@@ -21,7 +21,7 @@
 #include <FaceView.h>
 #include <cassert>
 using FaceTools::Interactor::LandmarksInteractor;
-using FaceTools::Interactor::FaceHoveringInteractor;
+using FaceTools::Interactor::ModelViewerInteractor;
 using FaceTools::Vis::LandmarksVisualisation;
 using FaceTools::Vis::LandmarkSetView;
 using FaceTools::FaceControlSet;
@@ -30,23 +30,27 @@ using FaceTools::FaceModel;
 using FaceTools::Path;
 
 
+const QString LandmarksInteractor::s_defaultMsg( QObject::tr("Add/remove/rename landmarks from the context menu; reposition by left-click and dragging."));
+
+const QString LandmarksInteractor::s_moveMsg( QObject::tr("Reposition with left-click and drag; right click to remove/rename the landmark."));
+
 // public
-LandmarksInteractor::LandmarksInteractor( FEEI* feei, LandmarksVisualisation* vis)
-    : FaceHoveringInteractor( feei, vis), _vis(vis), _drag(-1), _hover(-1)
+LandmarksInteractor::LandmarksInteractor( FEEI* feei, LandmarksVisualisation* vis, QStatusBar* sbar)
+    : ModelViewerInteractor( nullptr, sbar), _feei(feei), _vis(vis), _drag(-1), _hover(-1), _model(nullptr)
 {
     connect( feei, &FEEI::onEnterLandmark, this, &LandmarksInteractor::doOnEnterLandmark);
     connect( feei, &FEEI::onLeaveLandmark, this, &LandmarksInteractor::doOnLeaveLandmark);
+    setEnabled(false);
 }   // end ctor
 
 
 // public
-int LandmarksInteractor::addLandmark( const std::string& lname)
+int LandmarksInteractor::addLandmark( const std::string& lname, const QPoint& p)
 {
     FaceControl *fc = hoverModel();
     if ( !fc)
         return -1;
 
-    QPoint p = viewer()->getMouseCoords();
     cv::Vec3f hpos; // Get the position of the new landmark by projecting p onto the surface of the model.
     if ( !viewer()->calcSurfacePosition( fc->view()->surfaceActor(), p, hpos))
         return -1;
@@ -55,12 +59,8 @@ int LandmarksInteractor::addLandmark( const std::string& lname)
     fm->lockForWrite(); // Add landmark
     int id = fm->landmarks()->set( lname, hpos);
     fm->setSaved(false);
-    fm->unlock();
-
-    fm->lockForRead();
-    const FaceControlSet& fcs = fm->faceControls();    // Add to the visualisations
-    std::for_each( std::begin(fcs), std::end(fcs), [=](auto f){ _vis->refreshLandmark(f, id);});
-    std::for_each( std::begin(fcs), std::end(fcs), [=](auto f){ _vis->setLandmarkVisible(f, id, true);});
+    _vis->updateLandmark( fm, id);
+    _vis->setLandmarkVisible( fm, id, true);
     fm->unlock();
 
     return id;
@@ -70,7 +70,7 @@ int LandmarksInteractor::addLandmark( const std::string& lname)
 // public
 bool LandmarksInteractor::deleteLandmark()
 {
-    int id = hoverID();
+    int id = _hover;
     if ( id < 0)
         return false;
 
@@ -82,42 +82,23 @@ bool LandmarksInteractor::deleteLandmark()
     const bool removed = fm->landmarks()->erase(id);
     assert(removed);
     fm->setSaved(false);
-
-    const FaceControlSet& fcs = fm->faceControls();    // Remove from the visualisations
-    std::for_each( std::begin(fcs), std::end(fcs), [&](auto f){ _vis->refreshLandmark(f, id);});
-
+    _vis->updateLandmark( fm, id);
     fm->unlock();
 
     _drag = -1;
     return true;
-}   // end deletePath
-
-
-bool LandmarksInteractor::setDrag( int id, const QPoint& p)
-{
-    FaceControl *fc = hoverModel();
-    if ( !fc)
-        return false;
-
-    _drag = id;
-    leftDrag( p);
-    return true;
-}   // end setDrag
+}   // end deleteLandmark
 
 
 bool LandmarksInteractor::leftButtonDown( const QPoint& p)
 {
-    leavingModel();
     _drag = _hover;
+    _model = hoverModel();
     if ( _drag >= 0)
     {
         viewer()->setCursor(Qt::CrossCursor);
-        FaceControl *fc = hoverModel();
-        assert(fc);
-        FaceModel* fm = fc->data();
-        fm->lockForRead();
-        _origPos = fm->landmarks()->pos(_drag);
-        fm->unlock();
+        _vis->setLandmarkHighlighted( _model->data(), _drag, true);
+        showStatus( s_moveMsg, 10000);
     }   // end if
     return _drag >= 0;
 }   // end leftButtonDown
@@ -125,39 +106,26 @@ bool LandmarksInteractor::leftButtonDown( const QPoint& p)
 
 bool LandmarksInteractor::leftButtonUp( const QPoint& p)
 {
-    leavingModel();
     viewer()->setCursor(Qt::ArrowCursor);
+    if ( _drag >= 0)
+    {
+        _vis->setLandmarkHighlighted( _model->data(), _drag, false);
+        assert(_model);
+        emit onChangedData(_model);
+    }   // end if
+    _model = hoverModel();
+    _drag = -1;
     return false;
 }   // end leftButtonUp
 
 
-void LandmarksInteractor::leavingModel()
-{
-    FaceControl *fc = hoverModel();
-    assert(fc);
-    bool isChanged = false;
-    if ( _drag >= 0) // Did the postion of landmark change?
-    {
-        FaceModel* fm = fc->data();
-        fm->lockForRead();
-        isChanged = fm->landmarks()->pos(_drag) != _origPos;
-        fm->unlock();
-        _drag = -1;
-    }   // end if
-
-    if ( isChanged)
-        emit onChangedData(fc);
-}   // end leavingModel
-
-
 bool LandmarksInteractor::leftDrag( const QPoint& p)
 {
-    if ( _drag < 0)
+    if ( !_model || _drag < 0)
         return false;
 
+    FaceControl *fc = _model;
     // Get the position on the surface of the actor
-    FaceControl *fc = hoverModel();
-    assert(fc);
     cv::Vec3f hpos;
     if ( !viewer()->calcSurfacePosition( fc->view()->surfaceActor(), p, hpos))
         return false;
@@ -167,11 +135,7 @@ bool LandmarksInteractor::leftDrag( const QPoint& p)
     fm->lockForWrite();
     const bool setok = fm->landmarks()->set(_drag, hpos);
     assert(setok);
-
-    // Update visualisation over all associated FaceControls
-    for ( FaceControl* f : fm->faceControls())
-        _vis->refreshLandmark( f, _drag);
-
+    _vis->updateLandmark( fm, _drag);
     fm->unlock();
     fm->updateRenderers();
     return true;
@@ -181,23 +145,35 @@ bool LandmarksInteractor::leftDrag( const QPoint& p)
 // private slot
 void LandmarksInteractor::doOnEnterLandmark( const FaceControl* fc, int lm)
 {
-    assert(fc == hoverModel());
+    assert( fc);
+    assert( fc == hoverModel());
+    FaceModel* fm = fc->data();
     _hover = lm;
-    for ( auto f : fc->data()->faceControls())
-    {
-        _vis->refreshLandmark( f, lm);
-        _vis->setLandmarkHighlighted( f, lm, true);
-    }   // end for
-    fc->data()->updateRenderers();
+    _vis->updateLandmark( fm, lm);
+    _vis->setLandmarkHighlighted( fm, lm, true);
+    showStatus( s_moveMsg, 10000);
+    fm->updateRenderers();
 }   // end doOnEnterLandmark
+
+
+// protected
+void LandmarksInteractor::onEnabledStateChanged( bool v)
+{
+    ModelViewerInteractor::onEnabledStateChanged(v);
+    if ( v)
+        showStatus( s_defaultMsg, 10000);
+}   // end onEnabledStateChanged
 
 
 // private slot
 void LandmarksInteractor::doOnLeaveLandmark( const FaceControl* fc, int lm)
 {
-    assert(fc == hoverModel());
+    assert( fc);
+    assert( hoverModel() == fc);
+    FaceModel* fm = fc->data();
     _hover = -1;
-    for ( auto f : fc->data()->faceControls())
-        _vis->setLandmarkHighlighted( f, lm, false);
-    fc->data()->updateRenderers();
+    if ( _drag < 0)
+        _vis->setLandmarkHighlighted( fm, lm, false);
+    showStatus( s_defaultMsg, 10000);
+    fm->updateRenderers();
 }   // end doOnLeaveLandmark

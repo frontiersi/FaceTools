@@ -27,15 +27,6 @@ FaceActionGroup::FaceActionGroup() : _waction(NULL)
 }   // end ctor
 
 
-// public
-FaceActionGroup::~FaceActionGroup()
-{
-    std::for_each( std::begin(_alist), std::end(_alist), [](auto a){ a->deleteLater();});
-    if ( _waction)
-        _waction->deleteLater();
-}   // end dtor
-
-
 // protected
 bool FaceActionGroup::addAction( FaceAction* faction)
 {

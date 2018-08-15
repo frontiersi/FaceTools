@@ -62,7 +62,7 @@ void ActionToggleAxes::addViewer( FaceModelViewer* v)
 }   // end addViewer
 
 
-bool ActionToggleAxes::doAction( FaceControlSet&)
+bool ActionToggleAxes::doAction( FaceControlSet&, const QPoint&)
 {
     for ( auto p : _viewers)
     {

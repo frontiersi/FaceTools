@@ -30,6 +30,7 @@
 #include "FaceActionGroup.h"
 #include "ActionExecutionQueue.h"
 #include "VisualisationsManager.h"
+#include <ViewerInteractionManager.h>
 #include <FaceModelManager.h>
 #include <PluginsDialog.h>      // QTools
 #include <QMutex>
@@ -42,6 +43,8 @@ class FaceTools_EXPORT FaceActionManager : public QObject
 public:
     FaceActionManager( FaceModelViewer *defaultViewer, size_t llimit=UINT_MAX, QWidget* parent=nullptr);
     ~FaceActionManager() override;
+
+    void addViewer( FaceModelViewer* v) { _interactions->addViewer(v);}
 
     void loadPlugins();                     // Call once after construction and connecting slots to signals
     QDialog* dialog() { return _pdialog;}   // Get a standard dialog which shows the loaded plugins.
@@ -59,17 +62,18 @@ public:
 signals:
     void addedActionGroup( FaceActionGroup*);
     void addedAction( FaceAction*);
-    void onUpdateSelected();    // Emitted at the end of an action and when changing selection.
+    void onUpdateSelected( FaceControl*);
 
 private slots:
     void addPlugin( QTools::PluginInterface*);
     void doOnActionStarting();
-    void doOnChangedData( const FaceControl*);
+    void doOnChangedData( FaceControl*);
     void doOnActionFinished( ChangeEventSet, FaceControlSet, bool);
 
 private:
     QTools::PluginsDialog *_pdialog;
     FileIO::FaceModelManager *_fmm;
+    Interactor::ViewerInteractionManager *_interactions;
     ModelSelector _selector;
     std::unordered_set<FaceAction*> _actions;
     VisualisationsManager _vman;
@@ -80,7 +84,6 @@ private:
     void testPurge( FaceAction*, const ChangeEventSet*, const FaceModelSet*);
     void setReady( FaceControl*, bool);
     void close( FaceModel*);
-    void doLoadedModels( FaceControlSet*);
 
     FaceActionManager( const FaceActionManager&) = delete;
     void operator=( const FaceActionManager&) = delete;

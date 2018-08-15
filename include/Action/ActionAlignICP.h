@@ -29,9 +29,9 @@ public:
     ActionAlignICP( const QString& dname="ICP", const QIcon& icon=QIcon(), QProgressBar* pb=NULL);   // Async if pb not NULL
 
 protected slots:
-    bool testEnabled() const override;
-    bool doAction( FaceControlSet&) override;
-    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
+    bool testEnabled( const QPoint* mc=nullptr) const override;
+    bool doAction( FaceControlSet&, const QPoint&) override;
+    void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(AFFINE_CHANGE);}
 };  // end class
 
 }   // end namespace

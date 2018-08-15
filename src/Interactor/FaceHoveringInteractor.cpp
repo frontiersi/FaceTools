@@ -19,11 +19,12 @@
 #include <FaceModelViewer.h>
 #include <cassert>
 using FaceTools::Interactor::FaceHoveringInteractor;
+using FaceTools::Interactor::ModelViewerInteractor;
 
 
 // public
-FaceHoveringInteractor::FaceHoveringInteractor( FEEI *feei, FaceTools::Vis::BaseVisualisation *vis)
-    : _feei(feei), _vis(vis)
+FaceHoveringInteractor::FaceHoveringInteractor( FEEI *feei, FaceTools::Vis::BaseVisualisation *vis, QStatusBar* sbar)
+    : ModelViewerInteractor( nullptr, sbar), _feei(feei), _vis(vis)
 {
     assert(vis);
     assert(feei);

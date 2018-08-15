@@ -36,7 +36,7 @@ public:
 
     bool belongs( const vtkProp*, const FaceControl*) const override;
 
-    void apply( const FaceControl*) override;
+    bool apply( const FaceControl*, const QPoint* mc=nullptr) override;
     void addActors( const FaceControl*) override;
     void removeActors( const FaceControl*) override;
 

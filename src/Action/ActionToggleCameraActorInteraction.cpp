@@ -34,7 +34,7 @@ ActionToggleCameraActorInteraction::ActionToggleCameraActorInteraction( const QS
 }   // end ctor
 
 
-bool ActionToggleCameraActorInteraction::doAction( FaceControlSet&)
+bool ActionToggleCameraActorInteraction::doAction( FaceControlSet&, const QPoint&)
 {
     _interactor.setMoveModels( isChecked());
     return true;

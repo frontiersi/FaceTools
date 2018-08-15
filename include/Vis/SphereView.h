@@ -19,7 +19,7 @@
 #define FACE_TOOLS_SPHERE_VIEW_H
 
 #include <ModelViewer.h>
-#include <vtkActor.h>
+#include <VtkScalingActor.h>    // QTools
 #include <vtkSphereSource.h>
 #include <vtkCaptionActor2D.h>
 
@@ -29,7 +29,7 @@ namespace Vis {
 class FaceTools_EXPORT SphereView
 {
 public:
-    SphereView( const cv::Vec3f& centre, double radius, bool pickable=true);
+    SphereView( const cv::Vec3f& centre, double radius, bool pickable=true, bool fixedScale=false);
     virtual ~SphereView();
 
     void setResolution( int);   // Default 8
@@ -38,42 +38,43 @@ public:
     void setPickable( bool);
     bool pickable() const;
 
+    void setFixedScale( bool);
+    bool fixedScale() const;
+
+    void setScaleFactor( double);
+    double scaleFactor() const;
+
+    void setCentre( const cv::Vec3f&);                  // Update position of actor.
+    const cv::Vec3f& centre() const;                    // Return this view's position.
+
+    void setRadius( double);                            // Set radius
+    double radius() const;                              // Get radius
+
     void setOpacity( double);
     double opacity() const;
 
     void setColour( double r, double g, double b);      // Set colour as rgb components in [0,1].
     const double* colour() const;                       // Return a 3-tuple array for the rgb components.
 
-    void setCentre( const cv::Vec3f&);                  // Update position of actor.
-    cv::Vec3f centre() const;                           // Return this view's position.
+    void setCaption( const std::string&);               // Set caption used when highlighting.
+    void setHighlighted( bool);                         // Show the caption (only if already visible).
 
-    void setRadius( double);                            // Set radius
-    double radius() const;                              // Get radius
+    void setVisible( bool, ModelViewer*);               // Set visibility of actors.
+    bool visible() const { return _visible;}
 
-    void setCaption( const std::string&);               // Set highlight caption
-    void highlight( bool);                              // Show highlighted (only if already visible)
-    bool isHighlighted() const;                         // Returns true if highlighted
-
-    bool pointedAt( const QPoint&) const;               // Returns true if this actor under the given coordinates.
-    bool isProp( const vtkProp*) const;                 // Returns true if given prop is this actor.
-    const vtkProp* prop() const { return _actor;}
-
-    bool isVisible() const;                             // Returns true iff shown
-    void setVisible( bool, ModelViewer* viewer);        // Add/remove from viewer
+    const vtkProp* prop() const;     
 
     void pokeTransform( const vtkMatrix4x4*);
-    void fixTransform();
+    void fixTransform();                                // Fixes transform to Identity
 
 private:
-    ModelViewer* _viewer;
-    vtkSmartPointer<vtkSphereSource> _source;
-    vtkSmartPointer<vtkActor> _actor;
-    vtkSmartPointer<vtkCaptionActor2D> _caption;
-    bool _ishighlighted;
-    bool _isshown;
+    bool _visible;
+    QTools::VtkScalingActor* _actor;
+    vtkNew<vtkSphereSource> _source;
+    vtkNew<vtkCaptionActor2D> _caption;
 
-    SphereView( const SphereView&);     // No copy
-    void operator=( const SphereView&); // No copy
+    SphereView( const SphereView&) = delete;
+    void operator=( const SphereView&) = delete;
 };  // end class
 
 }   // end namespace

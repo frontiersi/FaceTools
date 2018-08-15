@@ -28,6 +28,7 @@
 #include <FaceTools_Export.h>
 #include <VtkActorCreator.h>    // RVTK
 #include <QColor>
+#include <QPoint>
 
 namespace FaceTools {
 class ModelViewer;
@@ -62,7 +63,8 @@ public:
     // If the given visualisation is "exclusive", it will replace any existing "exclusive"
     // visualisation (the actors of the existing exclusive visualisation will be removed).
     // Non-exclusive visualisations are added without replacing existing ones.
-    bool apply( BaseVisualisation *vis=nullptr);
+    // A pointer to mouse coordinates may be passed in for those visualsations that need it.
+    bool apply( BaseVisualisation *vis=nullptr, const QPoint* mc=nullptr);
 
     bool isApplied( const BaseVisualisation *vis) const;
 
@@ -73,16 +75,31 @@ public:
     BaseVisualisation* exclusiveVisualisation() const { return _visx;}
 
     // Allow a visualisation to use either the surface or the textured actors.
+    // Not returned as const because visualisations may want to change their properties.
     vtkActor* surfaceActor() const { return _sactor;}
     vtkActor* textureActor() const { return _tactor;}
+
+    // Returns true iff given prop is either surface actor or the texture actor.
+    bool isFace( const vtkProp* p) const;
 
     // The ObjModel to vtkActor polygon lookups for the surface model created upon bulding.
     // Can be used by visualisations to map information calculated about polygons on the
     // source ObjModel to polygons created for the vtkActor surface model.
     const IntIntMap& polyLookups() const { return _fmap;}
 
-    // Returns the visualisation that vtkProp belongs to or null.
+    // Returns the visualisation that vtkProp belongs to or null. If interested if the prop is part
+    // of the face specifically, test to see if it is the surface or texture actor.
     BaseVisualisation* belongs( const vtkProp*) const;
+
+    // Returns the surface or texture actor if the given point projects to intersect with either of them.
+    const vtkProp* isPointOnFace( const QPoint& p) const;
+
+    // Returns true and sets v on return with the position in space corresponding to the
+    // given point. Returns false if the point is not over the surface or texture actor.
+    // If another pickable prop is under the given point - even if the prop "belongs"
+    // to this face (is a prop of one of its visualisations) - this function returns false.
+    // The point is always projected onto the face (surface or texture actor) - not another prop.
+    bool pointToFace( const QPoint& p, cv::Vec3f& v) const;
 
     // Set/get the opacity of the surface and texture models.
     void setOpacity( double);

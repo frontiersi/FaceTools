@@ -36,7 +36,7 @@ namespace Interactor {
 class FaceTools_EXPORT FaceHoveringInteractor : public ModelViewerInteractor 
 { Q_OBJECT
 public:
-    FaceHoveringInteractor( FEEI*, Vis::BaseVisualisation*);
+    FaceHoveringInteractor( FEEI*, Vis::BaseVisualisation*, QStatusBar *sbar=nullptr);
 
     // Return the model being hovered over (null if nothing being hovered over).
     // It is guaranteed that this will return a non-null pointer if called from

@@ -63,12 +63,7 @@ bool FaceEntryExitInteractor::leftDrag( const QPoint& p) { emit onLeftDrag(); re
 bool FaceEntryExitInteractor::rightDrag( const QPoint& p) { return testPoint(p);}
 bool FaceEntryExitInteractor::middleDrag( const QPoint& p) { return testPoint(p);}
 bool FaceEntryExitInteractor::mouseMove( const QPoint& p) { return testPoint(p);}
-
-bool FaceEntryExitInteractor::mouseLeave( const QPoint& p)
-{
-    return testPoint(p);
-}   // end mouseLeave
-
+bool FaceEntryExitInteractor::mouseLeave( const QPoint& p) { return testPoint(p);}
 bool FaceEntryExitInteractor::mouseEnter( const QPoint& p) { return testPoint(p);}
 
 
@@ -104,7 +99,7 @@ bool FaceEntryExitInteractor::testPoint( const QPoint& p)
         {
             const LandmarksVisualisation* lvis = qobject_cast<const LandmarksVisualisation*>(vis);
             if ( lvis)  // Cast only works if prop pointed at was a landmark
-                lnow = lvis->landmarks( fc)->pointedAt( p); // Get the landmark being pointed at
+                lnow = lvis->landmarkProp( fc, prop);
         }   // end if
     }   // end if
 

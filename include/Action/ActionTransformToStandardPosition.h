@@ -30,7 +30,7 @@ public:
                                        const QIcon& icon=QIcon());
 
 private slots:
-    bool doAction( FaceControlSet&) override;
+    bool doAction( FaceControlSet&, const QPoint&) override;
     void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(AFFINE_CHANGE);}
 };  // end class
 

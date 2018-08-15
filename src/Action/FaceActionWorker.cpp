@@ -21,14 +21,14 @@ using FaceTools::Action::FaceActionWorker;
 using FaceTools::Action::FaceAction;
 using FaceTools::FaceControlSet;
 
-FaceActionWorker::FaceActionWorker( FaceAction* worker, FaceControlSet* rset)
-    : QThread(worker), _worker(worker), _rset(rset)
+FaceActionWorker::FaceActionWorker( FaceAction* worker, FaceControlSet* rset, const QPoint& tp)
+    : QThread(worker), _worker(worker), _rset(rset), _tp(tp)
 {
 }   // end ctor
 
 void FaceActionWorker::run()
 {
-    const bool rv = _worker->doAction( *_rset);
+    const bool rv = _worker->doAction( *_rset, _tp);
     emit workerFinished(rv);
 }   // end run
 

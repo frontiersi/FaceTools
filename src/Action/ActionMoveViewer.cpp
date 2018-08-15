@@ -48,7 +48,7 @@ bool ActionMoveViewer::testReady( const FaceControl* fc)
 
 
 // protected
-bool ActionMoveViewer::doAction( FaceControlSet &fcs)
+bool ActionMoveViewer::doAction( FaceControlSet &fcs, const QPoint&)
 {
     std::unordered_set<FaceModelViewer*> vwrs;
     for ( FaceControl* fc : fcs)
@@ -57,7 +57,7 @@ bool ActionMoveViewer::doAction( FaceControlSet &fcs)
         if ( _tviewer->get(fc->data()))
             _selector->removeFaceControl( _tviewer->get(fc->data()));
 
-        _selector->select( fc, false);  // De-select source FaceControl
+        _selector->setSelected( fc, false);  // De-select source FaceControl
         vwrs.insert(fc->viewer());  // Remember source viewer
         fc->viewer()->detach(fc);   // Detach from source viewer
 
@@ -78,17 +78,10 @@ bool ActionMoveViewer::doAction( FaceControlSet &fcs)
                 fc->view()->apply(vis);  // Does nothing if visualisation can't be applied
         }   // end if
 
-        _selector->select( fc, true);
+        _selector->setSelected( fc, true);
     }   // end foreach
 
     // target viewer rendering will be updated, but source needs updating too so do that here.
     std::for_each( std::begin(vwrs), std::end(vwrs), [](auto v){ v->updateRender();});
     return true;
 }   // end doAction
-
-
-// protected
-void ActionMoveViewer::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool)
-{ 
-    cs.insert(VIEW_CHANGE);
-}   // end doAfterAction

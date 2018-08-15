@@ -45,7 +45,7 @@ OutlinesVisualisation::~OutlinesVisualisation()
 }   // end dtor
 
 
-void OutlinesVisualisation::apply( const FaceControl* fc)
+bool OutlinesVisualisation::apply( const FaceControl* fc, const QPoint*)
 {
     if ( _views.count(fc) == 0)
     {
@@ -63,6 +63,7 @@ void OutlinesVisualisation::apply( const FaceControl* fc)
             ov->addLoop(line);  // Add actor
         }   // end for
     }   // end if
+    return true;
 }   // end apply
 
 

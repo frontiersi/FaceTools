@@ -64,26 +64,29 @@ BaseVisualisation::~BaseVisualisation()
 bool BaseVisualisation::isApplied( const FaceControl* fc) const { return fc->view()->isApplied(this);}
 
 
-void SurfaceVisualisation::apply( const FaceControl* fc)
+bool SurfaceVisualisation::apply( const FaceControl* fc, const QPoint*)
 {
     vtkActor* actor = fc->view()->surfaceActor();
     actor->GetMapper()->SetScalarVisibility(false);
     actor->GetProperty()->SetRepresentationToSurface();
     fc->viewer()->showLegend(false);
+    return true;
 }   // end apply
 
 
-void PointsVisualisation::apply( const FaceControl* fc)
+bool PointsVisualisation::apply( const FaceControl* fc, const QPoint*)
 {
     SurfaceVisualisation::apply(fc);
     fc->view()->surfaceActor()->GetProperty()->SetRepresentationToPoints();
+    return true;
 }   // end apply
 
 
-void WireframeVisualisation::apply( const FaceControl* fc)
+bool WireframeVisualisation::apply( const FaceControl* fc, const QPoint*)
 {
     SurfaceVisualisation::apply(fc);
     fc->view()->surfaceActor()->GetProperty()->SetRepresentationToWireframe();
+    return true;
 }   // end apply
 
 
@@ -91,9 +94,10 @@ void SurfaceVisualisation::addActors( const FaceControl* fc) { fc->viewer()->add
 void SurfaceVisualisation::removeActors( const FaceControl* fc) { fc->viewer()->remove(fc->view()->surfaceActor());}
 bool SurfaceVisualisation::belongs( const vtkProp *p, const FaceControl* fc) const { return fc->view()->surfaceActor() == p;}
 
-void TextureVisualisation::apply( const FaceControl* fc)
+bool TextureVisualisation::apply( const FaceControl* fc, const QPoint*)
 {
     fc->viewer()->showLegend(false);
+    return true;
 }   // end apply
 
 void TextureVisualisation::addActors( const FaceControl* fc) { fc->viewer()->add(fc->view()->textureActor());}

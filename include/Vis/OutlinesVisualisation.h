@@ -33,7 +33,7 @@ public:
 
     bool isExclusive() const override { return false;}
 
-    void apply( const FaceControl*) override;
+    bool apply( const FaceControl*, const QPoint* mc=nullptr) override;
     void addActors( const FaceControl*) override;
     void removeActors( const FaceControl*) override;
 

@@ -26,15 +26,14 @@ namespace Action {
 class FaceTools_EXPORT ActionSmooth : public FaceAction
 { Q_OBJECT
 public:
-    ActionSmooth( const QString& dname="Smooth", const QIcon& icon=QIcon(), QProgressBar* pb=NULL);   // Async if pb not NULL
+    ActionSmooth( const QString& dname="Smooth", const QIcon& icon=QIcon(), QProgressBar* pb=nullptr);   // Async if pb not null 
 
     void setMaxCurvature( double c) { _maxc = c;}
     double maxCurvature() const { return _maxc;}
 
 protected slots:
     bool testReady( const FaceControl*) override;
-    bool testEnabled() const override { return readyCount() == 1;}   // Only enabled for single selections
-    bool doAction( FaceControlSet&) override;
+    bool doAction( FaceControlSet&, const QPoint&) override;
     void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
 
 private:

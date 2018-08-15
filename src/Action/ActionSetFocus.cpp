@@ -29,36 +29,28 @@ using FaceTools::FaceControl;
 
 
 // public
-ActionSetFocus::ActionSetFocus( const QString& dn, FEEI* feei) : FaceAction( dn)
+ActionSetFocus::ActionSetFocus( const QString& dn) : FaceAction( dn)
 {
-    connect( feei, &FEEI::onEnterModel, [this](auto fc){ this->resetReady(fc);});
-    connect( feei, &FEEI::onLeaveModel, [this](auto fc){ this->clearReady();});
 }   // end ctor
 
 
-bool ActionSetFocus::doAction( FaceControlSet& fset)
+bool ActionSetFocus::testEnabled( const QPoint* p) const
 {
-    assert(fset.size() == 1);
-    FaceControl* fc = fset.first();
-    FaceTools::ModelViewer* mv = fc->viewer();
+    bool enabled = false;
+    if ( p && ready1())
+        enabled = ready1()->view()->isPointOnFace(*p) != nullptr;
+    return enabled;
+}   // end testEnabled
+
+
+bool ActionSetFocus::doAction( FaceControlSet&, const QPoint& p)
+{
+    FaceControl* fc = ready1();
+    assert(fc);
     cv::Vec3f nf;
-    const QPoint p = mv->getMouseCoords();
-    bool onModel = mv->calcSurfacePosition( fc->view()->surfaceActor(), p, nf);
-    if ( !onModel)
-        onModel = mv->calcSurfacePosition( fc->view()->textureActor(), p, nf);
+    const bool onModel = fc->view()->pointToFace( p, nf);
     assert(onModel);    // Must be or couldn't have been ready!
-
-    // If camera synchroniser is null, work on just the selected FaceControl's viewer,
-    // otherwise work over all viewers registered with the camera synchroniser.
-    typedef FaceTools::Action::ActionSynchroniseCameraMovement CamSynch;
-    const CamSynch* camSynch = CamSynch::get();
-    if ( !camSynch || !camSynch->isChecked())
-        mv->setFocus(nf);
-    else if ( camSynch && camSynch->isChecked())
-    {
-        const std::unordered_set<ModelViewer*>& vwrs = camSynch->viewers();
-        std::for_each( std::begin(vwrs), std::end(vwrs), [&](auto v){ v->setFocus( nf); v->updateRender();});
-    }   // end else if
-
+    fc->viewer()->setFocus(nf);
+    FaceTools::Action::ActionSynchroniseCameraMovement::sync();
     return true;
 }   // end doAction

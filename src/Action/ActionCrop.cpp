@@ -16,7 +16,6 @@
  ************************************************************************/
 
 #include <ActionCrop.h>
-#include <ActionRadialSelect.h>
 #include <FaceControl.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
@@ -34,22 +33,18 @@ using FaceTools::FaceControl;
 using FaceTools::FaceModel;
 
 
-ActionCrop::ActionCrop( const QString& dn, const QIcon& ico, QProgressBar* pb)
-    : FaceAction(dn, ico), _rsel(nullptr)
+ActionCrop::ActionCrop( const QString& dn, const QIcon& ico, ActionRadialSelect *rs, QProgressBar* pb)
+    : FaceAction(dn, ico), _rsel(rs)
 {
     if ( pb)
         setAsync(true, QTools::QProgressUpdater::create(pb));
 }   // end ctor
 
 
-bool ActionCrop::testEnabled() const
-{
-    assert(_rsel);
-    return _rsel && _rsel->isChecked();
-}   // end testEnabled
+bool ActionCrop::testEnabled( const QPoint*) const { return _rsel->isChecked();}
 
 
-bool ActionCrop::doAction( FaceControlSet& rset)
+bool ActionCrop::doAction( FaceControlSet& rset, const QPoint&)
 {
     assert(_rsel);
     assert(rset.size() == 1);
@@ -81,9 +76,3 @@ bool ActionCrop::doAction( FaceControlSet& rset)
     fm->unlock();
     return true;
 }   // end doAction
-
-
-void ActionCrop::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool)
-{ 
-    cs.insert(GEOMETRY_CHANGE);
-}   // end doAfterAction

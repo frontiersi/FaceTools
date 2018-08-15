@@ -39,7 +39,7 @@ ModelMoveResponder::ModelMoveResponder( ModelMoveInteractor* mmi)
 
 
 // public
-void ModelMoveResponder::doOnActorFinishPos( const FaceControl* fc)
+void ModelMoveResponder::doOnActorFinishPos( FaceControl* fc)
 {
     FaceModel* fm = fc->data();
     fm->lockForWrite();
@@ -50,7 +50,7 @@ void ModelMoveResponder::doOnActorFinishPos( const FaceControl* fc)
 
 
 // private
-void ModelMoveResponder::doOnActorChangedPos( const FaceControl* fc)
+void ModelMoveResponder::doOnActorChangedPos( FaceControl* fc)
 {
     FaceModel* fm = fc->data();
     vtkSmartPointer<vtkMatrix4x4> M = fc->view()->userTransform();  // The user transform (adjustment from I)

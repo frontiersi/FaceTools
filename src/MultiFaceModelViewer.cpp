@@ -48,16 +48,16 @@ void MultiFaceModelViewer::addCommonButtons( QLayout* l)
 
 
 // public
-MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent)
-    : QWidget(parent)
+MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent) : QWidget(parent)
 {
     _v0 = new FaceModelViewer( this); // Left
     _v1 = new FaceModelViewer( this); // Middle
     _v2 = new FaceModelViewer( this); // Right
-    connect( _v0, &FaceModelViewer::onDetached, [this](){ setLeftViewerVisible(  !_v0->attached().empty());});
-    connect( _v2, &FaceModelViewer::onDetached, [this](){ setRightViewerVisible( !_v2->attached().empty());});
-    connect( _v0, &FaceModelViewer::onAttached, [this](){ setLeftViewerVisible(  !_v0->attached().empty());});
-    connect( _v2, &FaceModelViewer::onAttached, [this](){ setRightViewerVisible( !_v2->attached().empty());});
+
+    connect( _v0, &FaceModelViewer::onAttached, [this](){ setViewerVisible( 0, !_v0->attached().empty());});
+    connect( _v0, &FaceModelViewer::onDetached, [this](){ setViewerVisible( 0, !_v0->attached().empty());});
+    connect( _v2, &FaceModelViewer::onAttached, [this](){ setViewerVisible( 2, !_v2->attached().empty());});
+    connect( _v2, &FaceModelViewer::onDetached, [this](){ setViewerVisible( 2, !_v2->attached().empty());});
 
     QVBoxLayout* v0layout = new QVBoxLayout;
     v0layout->setContentsMargins(0,0,0,0);
@@ -66,14 +66,22 @@ MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent)
     QVBoxLayout* v2layout = new QVBoxLayout;
     v2layout->setContentsMargins(0,0,0,0);
 
+    _copyButton.resize(4);
+    _moveButton.resize(4);
+    for ( int i = 0; i < 4; ++i)
+    {
+        _copyButton[i] = makeButton();
+        _moveButton[i] = makeButton();
+    }   // end for
+
     // Left panel
     v0layout->addWidget(_v0);
     QHBoxLayout* h0blayout = new QHBoxLayout;
     h0blayout->setContentsMargins(0,0,0,0);
     h0blayout->addStretch();
     addCommonButtons( h0blayout);
-    h0blayout->addWidget( _copyLCButton = makeButton());
-    h0blayout->addWidget( _moveLCButton = makeButton());
+    h0blayout->addWidget( _copyButton[0]);
+    h0blayout->addWidget( _moveButton[0]);
     h0blayout->addStretch();
     v0layout->addLayout(h0blayout);
 
@@ -82,11 +90,11 @@ MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent)
     QHBoxLayout* h1blayout = new QHBoxLayout;
     h1blayout->setContentsMargins(0,0,0,0);
     h1blayout->addStretch();
-    h1blayout->addWidget( _moveCLButton = makeButton());
-    h1blayout->addWidget( _copyCLButton = makeButton());
+    h1blayout->addWidget( _moveButton[1]);
+    h1blayout->addWidget( _copyButton[1]);
     addCommonButtons( h1blayout);
-    h1blayout->addWidget( _copyCRButton = makeButton());
-    h1blayout->addWidget( _moveCRButton = makeButton());
+    h1blayout->addWidget( _copyButton[2]);
+    h1blayout->addWidget( _moveButton[2]);
     h1blayout->addStretch();
     v1layout->addLayout( h1blayout);
 
@@ -95,8 +103,8 @@ MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent)
     QHBoxLayout* h2blayout = new QHBoxLayout;
     h2blayout->setContentsMargins(0,0,0,0);
     h2blayout->addStretch();
-    h2blayout->addWidget( _moveRCButton = makeButton());
-    h2blayout->addWidget( _copyRCButton = makeButton());
+    h2blayout->addWidget( _moveButton[3]);
+    h2blayout->addWidget( _copyButton[3]);
     addCommonButtons( h2blayout);
     h2blayout->addStretch();
     v2layout->addLayout(h2blayout);
@@ -116,9 +124,12 @@ MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent)
     setLayout( new QVBoxLayout);
     layout()->addWidget( _splitter);
 
-    _splitter->setCollapsible(1,false);
-    setLeftViewerVisible(false);
-    setRightViewerVisible(false);
+    _splitter->setCollapsible(0, false);
+    _splitter->setCollapsible(1, false);
+    _splitter->setCollapsible(2, false);
+
+    setViewerVisible( 0, false);
+    setViewerVisible( 2, false);
 }   // end ctor
 
 
@@ -131,51 +142,41 @@ MultiFaceModelViewer::~MultiFaceModelViewer()
 }   // end dtor
 
 
-// public
-void MultiFaceModelViewer::setCopyLeftToCentreAction( QAction *action) { _copyLCButton->setDefaultAction(action);}
-void MultiFaceModelViewer::setMoveLeftToCentreAction( QAction *action) { _moveLCButton->setDefaultAction(action);}
-void MultiFaceModelViewer::setMoveCentreToLeftAction( QAction *action) { _moveCLButton->setDefaultAction(action);}
-void MultiFaceModelViewer::setCopyCentreToLeftAction( QAction *action) { _copyCLButton->setDefaultAction(action);}
-void MultiFaceModelViewer::setCopyCentreToRightAction( QAction *action) { _copyCRButton->setDefaultAction(action);}
-void MultiFaceModelViewer::setMoveCentreToRightAction( QAction *action) { _moveCRButton->setDefaultAction(action);}
-void MultiFaceModelViewer::setMoveRightToCentreAction( QAction *action) { _moveRCButton->setDefaultAction(action);}
-void MultiFaceModelViewer::setCopyRightToCentreAction( QAction *action) { _copyRCButton->setDefaultAction(action);}
-
-
-// public
+// Left viewer
+void MultiFaceModelViewer::setCopyLeftToCentreAction( QAction *action) { _copyButton[0]->setDefaultAction(action);}
+void MultiFaceModelViewer::setMoveLeftToCentreAction( QAction *action) { _moveButton[0]->setDefaultAction(action);}
 void MultiFaceModelViewer::setLeftResetCameraAction( QAction *a) { _resetCameraButtons[0]->setDefaultAction(a);}
-void MultiFaceModelViewer::setCentreResetCameraAction( QAction *a) { _resetCameraButtons[1]->setDefaultAction(a);}
-void MultiFaceModelViewer::setRightResetCameraAction( QAction *a) { _resetCameraButtons[2]->setDefaultAction(a);}
 void MultiFaceModelViewer::setLeftSaveImageAction( QAction *a) { _saveImageButtons[0]->setDefaultAction(a);}
+
+// Centre viewer
+void MultiFaceModelViewer::setMoveCentreToLeftAction( QAction *action) { _moveButton[1]->setDefaultAction(action);}
+void MultiFaceModelViewer::setCopyCentreToLeftAction( QAction *action) { _copyButton[1]->setDefaultAction(action);}
+void MultiFaceModelViewer::setCopyCentreToRightAction( QAction *action) { _copyButton[2]->setDefaultAction(action);}
+void MultiFaceModelViewer::setMoveCentreToRightAction( QAction *action) { _moveButton[2]->setDefaultAction(action);}
+void MultiFaceModelViewer::setCentreResetCameraAction( QAction *a) { _resetCameraButtons[1]->setDefaultAction(a);}
 void MultiFaceModelViewer::setCentreSaveImageAction( QAction *a) { _saveImageButtons[1]->setDefaultAction(a);}
+
+// Right viewer
+void MultiFaceModelViewer::setMoveRightToCentreAction( QAction *action) { _moveButton[3]->setDefaultAction(action);}
+void MultiFaceModelViewer::setCopyRightToCentreAction( QAction *action) { _copyButton[3]->setDefaultAction(action);}
+void MultiFaceModelViewer::setRightResetCameraAction( QAction *a) { _resetCameraButtons[2]->setDefaultAction(a);}
 void MultiFaceModelViewer::setRightSaveImageAction( QAction *a) { _saveImageButtons[2]->setDefaultAction(a);}
 
 
 // public slot
-void MultiFaceModelViewer::setLeftViewerVisible(bool visible)
+void MultiFaceModelViewer::setViewerVisible( int idx, bool visible)
 {
+    assert(idx == 0 || idx == 2);
     setUpdatesEnabled(false);   // Pause widget update to lessen appearance of flicker
     QList<int> widths = _splitter->sizes();
     int sum = widths[0] + widths[1] + widths[2];
-    if ( visible && widths[0] == 0)
-        widths[0] = widths[1];
-    else if ( !visible && widths[0] > 0)
-        widths[0] = 0;
-    _splitter->setSizes( widths);
-    setUpdatesEnabled(true);
-}   // end setLeftViewerVisible
 
-
-// public slot
-void MultiFaceModelViewer::setRightViewerVisible(bool visible)
-{
-    setUpdatesEnabled(false);   // Pause widget update to lessen appearance of flicker
-    QList<int> widths = _splitter->sizes();
-    int sum = widths[0] + widths[1] + widths[2];
-    if ( visible && widths[2] == 0)
-        widths[2] = widths[1];
-    else if ( !visible && widths[2] > 0)
-        widths[2] = 0;
+    if ( visible && widths[idx] == 0)
+        widths[idx] = widths[1];
+    else if ( !visible && widths[idx] > 0)
+        widths[idx] = 0;
     _splitter->setSizes( widths);
+    _splitter->widget( idx)->setVisible(visible);
+
     setUpdatesEnabled(true);
-}   // end setRightViewerVisible
+}   // end setViewerVisible

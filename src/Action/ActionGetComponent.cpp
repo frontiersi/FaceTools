@@ -48,7 +48,7 @@ bool ActionGetComponent::testReady( const FaceControl* fc)
 }   // end testReady
 
 
-bool ActionGetComponent::doAction( FaceControlSet& rset)
+bool ActionGetComponent::doAction( FaceControlSet& rset, const QPoint&)
 {
     bool success = true;
     using namespace RFeatures;
@@ -97,10 +97,3 @@ bool ActionGetComponent::doAction( FaceControlSet& rset)
     }   // end for
     return success;
 }   // end doAction
-
-
-// protected
-void ActionGetComponent::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool)
-{ 
-    cs.insert(GEOMETRY_CHANGE);
-}   // end doAfterAction

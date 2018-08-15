@@ -28,24 +28,22 @@ using FaceTools::ModelViewer;
 
 // public
 LoopsView::LoopsView( float lw, float r, float g, float b)
-    : _viewer(nullptr), _visible(false), _lineWidth(lw), _colour(r,g,b)
+    : _visible(false), _lineWidth(lw), _colour(r,g,b)
 {
 }   // end ctor
 
 
 LoopsView::~LoopsView()
 {
-    removeActors();
+    deleteActors();
 }   // end dtor
 
 
-// public
-void LoopsView::removeActors()
+void LoopsView::deleteActors()
 {
-    setVisible( false, _viewer);
-    std::for_each( std::begin(_actors), std::end(_actors), [](auto d){ d->Delete();});
+    std::for_each( std::begin(_actors), std::end(_actors), [](auto a){ a->Delete();});
     _actors.clear();
-}   // end removeActors
+}   // end deleteActors
 
 
 // public
@@ -63,7 +61,7 @@ void LoopsView::addLoop( const std::list<cv::Vec3f>& line)
     property->SetAmbient( 1.0);
     property->SetDiffuse( 0.0);
     property->SetSpecular( 0.0);
-    
+   
     _actors.insert(actor);
 }   // end addLoop
 
@@ -86,19 +84,35 @@ void LoopsView::addPoints( const std::vector<cv::Vec3f>& pts)
 }   // end addPoints
 
 
+void LoopsView::setLineWidth( float lw)
+{
+    std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ a->GetProperty()->SetLineWidth( lw);});
+    _lineWidth = lw;
+}   // end setLineWidth
+
+
+void LoopsView::setColour( float r, float g, float b)
+{
+    std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ a->GetProperty()->SetColor( r, g, b);});
+    _colour[0] = r;
+    _colour[1] = g;
+    _colour[2] = b;
+}   // end setColour
+
+
+void LoopsView::setColour( const cv::Vec3f& c) { setColour( c[0], c[1], c[2]);}
+
+
 // public
 void LoopsView::setVisible( bool visible, ModelViewer* viewer)
 {
-    if ( _viewer != viewer && _viewer)
-        std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ _viewer->remove(a);});
     _visible = false;
-    _viewer = viewer;
-    if ( _viewer)
+    if ( viewer)
     {
         if ( visible)
-            std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ _viewer->add(a);});
+            std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ viewer->add(a);});
         else
-            std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ _viewer->remove(a);});
+            std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ viewer->remove(a);});
         _visible = visible;
     }   // end if
 }   // end setVisible

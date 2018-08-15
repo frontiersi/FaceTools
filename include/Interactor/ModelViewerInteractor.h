@@ -28,6 +28,7 @@
 
 #include <FaceTools_Export.h>
 #include <VtkViewerInteractor.h>    // QTools::VVI
+#include <QStatusBar>
 #include <QPoint>
 
 namespace FaceTools {
@@ -39,7 +40,7 @@ namespace Interactor {
 class FaceTools_EXPORT ModelViewerInteractor : public QTools::VVI
 { Q_OBJECT
 public:
-    explicit ModelViewerInteractor( ModelViewer *v=nullptr);
+    ModelViewerInteractor( ModelViewer *v=nullptr, QStatusBar *sbar=nullptr);
     virtual ~ModelViewerInteractor();       // Calls setViewer(nullptr) to detach.
 
     void setViewer( ModelViewer *v=nullptr);  // Attach to given viewer or detach from current (nullptr).
@@ -47,7 +48,7 @@ public:
     ModelViewer* viewer() const { return _viewer;} // Get attached viewer.
 
 signals:
-    void onChangedData( const FaceControl*);  // Interactors that change data should emit this.
+    void onChangedData( FaceControl*);  // Interactors that change data should emit this.
 
 protected:
     // Called immediately after attaching self. Can be used by derived types to add
@@ -61,8 +62,12 @@ protected:
     void setInteractionLocked( bool);   // May not result in unlocking if other interactors active.
     bool isInteractionLocked() const;   // Returns true iff interaction locked.
 
+    void showStatus( const QString&, int tmsecs=0);
+    void clearStatus();
+
 private:
     ModelViewer *_viewer;
+    QStatusBar *_sbar;
     int _ilock;
 };  // end class
 

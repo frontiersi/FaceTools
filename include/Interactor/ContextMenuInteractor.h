@@ -40,7 +40,7 @@ private:
 
     bool rightButtonDown( const QPoint&) override;
     bool rightButtonUp( const QPoint&) override;
-    size_t testEnabledActions() const;
+    size_t testEnabledActions( const QPoint&) const;
 };  // end class
 
 }   // end namespace

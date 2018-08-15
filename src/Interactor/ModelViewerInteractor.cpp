@@ -21,8 +21,8 @@
 using FaceTools::Interactor::ModelViewerInteractor;
 using FaceTools::ModelViewer;
 
-ModelViewerInteractor::ModelViewerInteractor( ModelViewer* mv)
-    : _viewer(nullptr), _ilock(0)
+ModelViewerInteractor::ModelViewerInteractor( ModelViewer* mv, QStatusBar* sb)
+    : _viewer(nullptr), _sbar(sb), _ilock(0)
 {
     setViewer(mv);
 }   // end ctor
@@ -70,3 +70,18 @@ bool ModelViewerInteractor::isInteractionLocked() const
 {
     return _viewer && _viewer->isInteractionLocked();
 }   // end isInteractionLocked
+
+
+void ModelViewerInteractor::showStatus( const QString& msg, int tmsecs)
+{
+    if ( _sbar)
+        _sbar->showMessage( msg, tmsecs);
+}   // end showStatus
+
+
+void ModelViewerInteractor::clearStatus()
+{
+    if ( _sbar)
+        _sbar->clearMessage();
+}   // end clearStatus
+

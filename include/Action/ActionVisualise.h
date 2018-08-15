@@ -28,7 +28,6 @@ class FaceTools_EXPORT ActionVisualise : public FaceAction
 { Q_OBJECT
 public:
     explicit ActionVisualise( Vis::BaseVisualisation*);
-    ~ActionVisualise() override { delete _vis;}
 
     QWidget* getWidget() const override { return _vis->getWidget();}
 
@@ -36,18 +35,22 @@ public:
 
     Vis::BaseVisualisation* visualisation() { return _vis;}
 
+    // Return true (default) if the visualisation manager should know about this visualisation.
+    virtual bool manageVisualisation() const { return true;}
+
 protected slots:
     bool testReady( const FaceControl*) override;
     void tellReady( FaceControl*, bool) override;   // Called whenever ready status changes
-    bool testEnabled() const override;
-    bool testChecked( FaceControl*) override;
-    bool doAction( FaceControlSet&) override;
+    bool testEnabled( const QPoint*) const override;
+    bool testChecked( const FaceControl *fc=nullptr) const override;
+    bool doAction( FaceControlSet&, const QPoint&) override;
     void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(VIEW_CHANGE);}
+    bool displayDebugStatusProgression() const override { return false;}
     void purge( const FaceModel*) override;
+    void clean( const FaceModel*) override;
 
 private:
-    bool displayDebugStatusProgression() const override { return false;}
-    void toggleVis( FaceControl*);
+    void toggleVis( FaceControl*, const QPoint*);
     Vis::BaseVisualisation *_vis; // The visualisation delegate
 };  // end class
 

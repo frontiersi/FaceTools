@@ -23,6 +23,7 @@
 #include <cassert>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionDeleteLandmark;
+using FaceTools::Action::ActionEditLandmarks;
 using FaceTools::Action::ChangeEventSet;
 using FaceTools::Interactor::LandmarksInteractor;
 using FaceTools::FaceControlSet;
@@ -30,28 +31,27 @@ using FaceTools::FaceControl;
 using FaceTools::FaceModel;
 
 
-ActionDeleteLandmark::ActionDeleteLandmark( const QString& dn, const QIcon& ico)
-    : FaceAction( dn, ico), _editor(nullptr)
+ActionDeleteLandmark::ActionDeleteLandmark( const QString& dn, const QIcon& ico, ActionEditLandmarks* e)
+    : FaceAction( dn, ico), _editor(e)
 {
 }   // end ctor
 
 
-bool ActionDeleteLandmark::testEnabled() const
+bool ActionDeleteLandmark::testEnabled( const QPoint*) const
 {
     bool enabled = false;
-    FaceControl* fc = nullptr;
     assert(_editor);
-    if ( readyCount() == 1 && _editor->isChecked())
+    if ( _editor->isChecked())
     {
         LandmarksInteractor* interactor = _editor->interactor();
-        fc = interactor->hoverModel();
+        const FaceControl* fc = interactor->hoverModel();
         enabled = isReady( fc) && interactor->hoverID() >= 0;
     }   // end if
     return enabled;
 }   // end testEnabled
 
 
-bool ActionDeleteLandmark::doAction( FaceControlSet& fcs)
+bool ActionDeleteLandmark::doAction( FaceControlSet& fcs, const QPoint&)
 {
     assert(_editor);
     LandmarksInteractor* interactor = _editor->interactor();
@@ -59,12 +59,6 @@ bool ActionDeleteLandmark::doAction( FaceControlSet& fcs)
     assert(hc);
     fcs.clear();
     if ( interactor->deleteLandmark())
-        fcs.insert( hc);
+        fcs.insert( hc->data());
     return !fcs.empty();
 }   // end doAction
-
-
-void ActionDeleteLandmark::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool)
-{
-    cs.insert( LANDMARKS_CHANGE);
-}   // end doAfterAction

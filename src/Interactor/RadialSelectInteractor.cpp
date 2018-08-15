@@ -18,67 +18,120 @@
 #include <RadialSelectInteractor.h>
 #include <RadialSelectVisualisation.h>
 #include <FaceModelViewer.h>
+#include <FaceModel.h>
+#include <FaceView.h>
 #include <cassert>
 using FaceTools::Interactor::RadialSelectInteractor;
-using FaceTools::Interactor::FaceHoveringInteractor;
+using FaceTools::Interactor::ModelViewerInteractor;
 using FaceTools::Vis::RadialSelectVisualisation;
 using FaceTools::FaceControl;
+using FaceTools::FaceModel;
+
+
+const QString RadialSelectInteractor::s_msg( tr("Reposition radial area by left-click and dragging the centre; change radius using the mouse wheel."));
 
 
 // public
-RadialSelectInteractor::RadialSelectInteractor( FEEI* feei, RadialSelectVisualisation* vis)
-    : FaceHoveringInteractor( feei, vis), _vis(vis), _move(false)
+RadialSelectInteractor::RadialSelectInteractor( FEEI* feei, RadialSelectVisualisation* vis, QStatusBar* sbar)
+    : ModelViewerInteractor( nullptr, sbar), _feei(feei), _vis(vis), _move(false)
 {
+    setEnabled(false);
 }   // end ctor
 
 
-// Double-click to reposition centre of boundary.
-bool RadialSelectInteractor::leftDoubleClick( const QPoint& p)
+bool RadialSelectInteractor::leftButtonDown( const QPoint& p)
 {
-    assert( hoverModel());
-    _move = true;
-    return leftDrag(p);
-}   // end leftDoubleClick
-
-
-// Left drag (but only after _move flag set with double-click)
-// to reposition the centre of the boundary.
-bool RadialSelectInteractor::leftDrag( const QPoint& p)
-{
-    assert( hoverModel());
-    bool swallowed = false;
-    if ( _move)
-    {
-        swallowed = true;
-        emit onSetNewCentre( hoverModel(), viewer()->project(p));
-    }   // end if
-    return swallowed;
-}   // end leftDrag
+    _move = testOnReticule( p); // _move set okay if the point is on the centre reticule
+    _vis->setPickable( _feei->model(), false); // So projecting points onto the face works
+    return _move;
+}   // end leftButtonDown
 
 
 bool RadialSelectInteractor::leftButtonUp( const QPoint&)
 {
-    assert( hoverModel());
-    _move = false;
-    return false;
+    _vis->setPickable( _feei->model(), true);
+    return _move = false;
 }   // end leftButtonUp
+
+
+// Left drag (but only after _move flag set with leftButtonDown)
+// to reposition the centre of the boundary.
+bool RadialSelectInteractor::leftDrag( const QPoint& p)
+{
+    FaceControl* fc = _feei->model();
+    if ( fc && _move)
+    {
+        cv::Vec3f v;
+        if ( fc->view()->pointToFace( p, v))
+        {
+            _vis->setCentre( fc->data(), v);
+            fc->data()->updateRenderers();
+        }   // end if
+    }   // end if
+    return _move;
+}   // end leftDrag
 
 
 // Increase the radius
 bool RadialSelectInteractor::mouseWheelForward( const QPoint& p)
 {
-    FaceControl* fc = hoverModel();
-    assert(fc);
-    emit onSetNewRadius( fc, _vis->radius(fc->data())+1);
-    return true;
+    const bool changeRadius = testOnReticule(p);
+    if ( changeRadius)
+    {
+        const FaceModel* fm = _feei->model()->data();
+        _vis->setRadius( fm, _vis->radius(fm)+1);
+        fm->updateRenderers();
+    }   // end if
+    return changeRadius;
 }   // end mouseWheelForward
 
 
 // Decrease the radius
 bool RadialSelectInteractor::mouseWheelBackward( const QPoint& p)
 {
-    FaceControl* fc = hoverModel();
-    assert(fc);
-    emit onSetNewRadius( fc, _vis->radius(fc->data())-1);
-    return true;
+    const bool changeRadius = testOnReticule(p);
+    if ( changeRadius)
+    {
+        const FaceModel* fm = _feei->model()->data();
+        _vis->setRadius( fm, _vis->radius(fm)-1);
+        fm->updateRenderers();
+    }   // end if
+    return changeRadius;
 }   // end mouseWheeBackward
+
+
+bool RadialSelectInteractor::mouseMove( const QPoint& p)
+{
+    const bool onReticule = testOnReticule(p);
+    if ( onReticule)
+        showStatus( s_msg, 10000);
+
+    FaceControl* fc = _feei->model();
+    if ( fc)
+    {
+        const FaceModel* fm = fc->data();
+        for ( FaceControl* f : fm->faceControls())
+            _vis->setHighlighted( f, onReticule);
+        fm->updateRenderers();
+    }   // end if
+    return false;
+}   // end mouseMove
+
+
+// protected
+void RadialSelectInteractor::onEnabledStateChanged( bool v)
+{
+    if ( v)
+        showStatus( s_msg, 10000);    // 10 seconds display time
+    else
+        clearStatus();
+}   // end onEnabledStateChanged
+
+
+// private
+bool RadialSelectInteractor::testOnReticule( const QPoint& p) const
+{
+    FaceControl* fc = _feei->model();
+    return fc && _vis->belongs( fc->viewer()->getPointedAt(p), fc);
+}   // end testOnReticule
+

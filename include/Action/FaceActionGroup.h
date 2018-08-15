@@ -31,7 +31,6 @@ class FaceTools_EXPORT FaceActionGroup : public FaceActionInterface
 { Q_OBJECT
 public:
     FaceActionGroup();
-    ~FaceActionGroup() override; // Deletes all actions added by addAction
 
     // Create menus / toolbars for the action group. By default, these functions create and return
     // new menus and toolbars containing the group's actions. The returned widgets should be parented
@@ -56,8 +55,7 @@ public:
     FaceAction* getInterface( const QString&) const override;
 
 protected slots:
-    // Add new FaceAction instances; the lifetimes of which will be managed
-    // by this parent class. Returns true iff the action was successfully
+    // Add new FaceAction instances. Returns true iff the action was successfully
     // added to the group. No actions with duplicate names allowed!
     bool addAction( FaceAction*);
 

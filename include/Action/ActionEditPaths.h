@@ -39,13 +39,12 @@ public:
     Interactor::PathSetInteractor* interactor() override { return _interactor;}
 
 protected slots:
-    void doOnEditedPath( const FaceControl*);
     void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
+    void doOnEditedPath( const FaceControl*);
 
 private:
     Vis::PathSetVisualisation *_vis;
     Interactor::PathSetInteractor *_interactor;
-    QStatusBar *_sbar;
 };  // end class
 
 }   // end namespace

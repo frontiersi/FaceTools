@@ -58,7 +58,7 @@ ActionTransformToStandardPosition::ActionTransformToStandardPosition( const QStr
 }   // end ctor
 
 
-bool ActionTransformToStandardPosition::doAction( FaceControlSet& rset)
+bool ActionTransformToStandardPosition::doAction( FaceControlSet& rset, const QPoint&)
 {
     const FaceModelSet& fms = rset.models();
     for ( FaceModel* fm : fms)

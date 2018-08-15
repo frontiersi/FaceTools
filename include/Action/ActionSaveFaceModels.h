@@ -28,11 +28,11 @@ namespace Action {
 class FaceTools_EXPORT ActionSaveFaceModels : public FaceAction
 { Q_OBJECT
 public:
-    ActionSaveFaceModels( const QString& dname, const QIcon&, const QKeySequence&, FileIO::FaceModelManager*, QWidget *parent=NULL);
+    ActionSaveFaceModels( const QString& dname, const QIcon&, const QKeySequence&, FileIO::FaceModelManager*, QWidget *parent=nullptr);
 
 protected slots:
     bool testReady( const FaceControl*) override;
-    bool doAction( FaceControlSet&) override;
+    bool doAction( FaceControlSet&, const QPoint&) override;
     void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
 
 private:

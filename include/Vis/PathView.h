@@ -23,6 +23,7 @@
  */
 
 #include "SphereView.h"
+#include <ModelViewer.h>
 #include <Path.h>
 
 namespace FaceTools {
@@ -39,6 +40,7 @@ public:
 
     bool isVisible() const { return _linePropID >= 0;}
     void setVisible( bool, ModelViewer*);  // Add/remove the path actors (handles and path) to the viewer.
+    const ModelViewer* viewer() const { return _viewer;}
 
     // Update the path actors from the internal Path data.
     // Call whenever the internally referenced Path instance is changed.
@@ -48,10 +50,8 @@ public:
     struct FaceTools_EXPORT Handle
     {
         cv::Vec3f pos() const { return _sv->centre();}
-        void highlight(bool v) { _sv->highlight(v);}
-        bool isHighlighted() const { return _sv->isHighlighted();}
-        PathView* host() const { return _host;}
         const vtkProp* prop() { return _sv->prop();}
+        PathView* host() const { return _host;}
 
     private:
         Handle( PathView*, const cv::Vec3f&, double);
@@ -75,8 +75,8 @@ private:
 
     void addPath();
     void removePath();
-    PathView( const PathView&);         // No copy
-    void operator=( const PathView&);   // No copy
+    PathView( const PathView&) = delete;
+    void operator=( const PathView&) = delete;
 };  // end class
 
 }   // end namespace

@@ -36,31 +36,46 @@ public:
     RadialSelectVisualisation( const QString& dname="Radial Select", const QIcon& icon=QIcon());
     ~RadialSelectVisualisation() override;
 
-    bool isAvailable( const FaceModel*) const override;
     bool isExclusive() const override { return false;}
+    bool isAvailable( const FaceControl*, const QPoint* mp=nullptr) const override;
+
+    bool belongs( const vtkProp*, const FaceControl*) const override;
 
     // Applies to all views of a single model.
     bool singleModel() const override { return true;}
 
-    void apply( const FaceControl*) override;
+    bool apply( const FaceControl*, const QPoint* mc=nullptr) override;
     void addActors( const FaceControl*) override;
     void removeActors( const FaceControl*) override;
+
+    // Set pickability for the sphereView on the associated view (if it exists).
+    void setPickable( const FaceControl*, bool);
+
+    // Set whether the visualisation is highlighted or not. Returns true if highlighting changed.
+    bool setHighlighted( const FaceControl*, bool);
 
     // Set/get new boundary radius/centre for the given FaceModel.
     void setCentre( const FaceModel*, const cv::Vec3f&);
     cv::Vec3f centre( const FaceModel*) const;
+
+    // Set a new radius (cannot be set lower than MIN_RADIUS).
     void setRadius( const FaceModel*, double);
     double radius( const FaceModel*) const;
+
+    static const double MIN_RADIUS;
 
 protected:
     void pokeTransform( const FaceControl*, const vtkMatrix4x4*) override;
     void fixTransform( const FaceControl*) override;
     void purge( const FaceControl*) override;
+    void purge( const FaceModel*) override;
 
 private:
-    void updateView( const FaceControl*);
-    std::unordered_map<const FaceControl*, LoopsView*> _views;
-    std::unordered_map<const FaceControl*, SphereView*> _views2;
+    void updateActors( const FaceModel*);
+    void createActors( const FaceControl*);
+    void resetRegionSelector( const FaceModel*, const cv::Vec3f&);
+    std::unordered_map<const FaceControl*, LoopsView*>  _lviews;
+    std::unordered_map<const FaceControl*, SphereView*> _sviews;
     std::unordered_map<const FaceModel*, RFeatures::ObjModelRegionSelector::Ptr> _rselectors;
     double _radius;
 };  // end class

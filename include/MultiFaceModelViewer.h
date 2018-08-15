@@ -28,7 +28,7 @@ namespace FaceTools {
 class FaceTools_EXPORT MultiFaceModelViewer : public QWidget
 { Q_OBJECT
 public:
-    MultiFaceModelViewer( QWidget *parent=NULL);
+    MultiFaceModelViewer( QWidget *parent=nullptr);
     ~MultiFaceModelViewer() override;
 
     FaceModelViewer* leftViewer() { return _v0;}
@@ -53,20 +53,11 @@ public:
     void setRightSaveImageAction( QAction*);
 
 public slots:
-    // Toggle visibility of left/right viewers
-    void setLeftViewerVisible(bool);
-    void setRightViewerVisible(bool);
+    void setViewerVisible(int, bool);
 
 private:
-    QToolButton *_copyLCButton;
-    QToolButton *_moveLCButton;
-    QToolButton *_moveCLButton;
-    QToolButton *_copyCLButton;
-    QToolButton *_copyCRButton;
-    QToolButton *_moveCRButton;
-    QToolButton *_moveRCButton;
-    QToolButton *_copyRCButton;
-
+    std::vector<QToolButton*> _copyButton;
+    std::vector<QToolButton*> _moveButton;
     std::vector<QToolButton*> _resetCameraButtons;
     std::vector<QToolButton*> _saveImageButtons;
 
@@ -77,8 +68,8 @@ private:
 
     void addCommonButtons( QLayout*);
 
-    MultiFaceModelViewer( const MultiFaceModelViewer&); // No copy
-    void operator=( const MultiFaceModelViewer&);       // No copy
+    MultiFaceModelViewer( const MultiFaceModelViewer&) = delete;
+    void operator=( const MultiFaceModelViewer&) = delete;
 };  // end class
 
 }   // end namespace

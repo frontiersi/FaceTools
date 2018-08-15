@@ -39,8 +39,8 @@ public:
     void setPickable( bool);
     bool pickable() const;
 
-    bool isVisible() const { return _visible;}
-    void setVisible( bool, ModelViewer* viewer);
+    void setVisible( bool, ModelViewer*);
+    bool visible() const { return _visible;}
 
     void pokeTransform( const vtkMatrix4x4*);
 

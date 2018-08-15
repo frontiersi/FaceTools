@@ -26,7 +26,6 @@
 #include "ActionVisualise.h"
 #include <RadialSelectVisualisation.h>
 #include <RadialSelectInteractor.h>
-#include <QStatusBar>
 
 namespace FaceTools {
 namespace Action {
@@ -42,15 +41,14 @@ public:
     double radius( const FaceControl *fc) const { return _vis->radius(fc->data());}
     cv::Vec3f centre( const FaceControl *fc) const { return _vis->centre(fc->data());}
 
-private slots:
+    bool manageVisualisation() const override { return false;}
+
+protected slots:
     void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
-    void doOnSetNewCentre( FaceControl*, const cv::Vec3f&);
-    void doOnSetNewRadius( FaceControl*, double);
 
 private:
     Vis::RadialSelectVisualisation *_vis;
     Interactor::RadialSelectInteractor *_interactor;
-    QStatusBar *_sbar;
 };  // end class
 
 }   // end namespace

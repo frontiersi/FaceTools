@@ -56,6 +56,7 @@ public:
 
     bool isExclusive() const override { return true;}
     bool isAvailable( const FaceModel*) const override { return true;}
+    bool isAvailable( const FaceControl*, const QPoint* p=nullptr) const override { return true;}
 
     // Should this visualisation be presented as user actionable?
     virtual bool isVisible() const { return true;}
@@ -64,8 +65,8 @@ public:
     // If singleModel is overridden, the visualisation is applied to all
     // views of the currently selected model in any viewer. If singleView
     // is overridden, the visualisation is applied just to the currently
-    // selected view. In both cases, the visualisation is only available
-    // if exactly one view of a model is selected.
+    // selected view. Note that these cannot both be logically true.
+    // If both are true, singleModel takes precedence.
     virtual bool singleModel() const { return false;}
     virtual bool singleView() const { return false;}
 
@@ -78,7 +79,7 @@ public:
     bool isApplied( const FaceControl*) const;
 
     // Derived types still need to provide overrides for:
-    // void apply( const FaceControl*)
+    // bool apply( const FaceControl*, const QPoint*);
     // void addActors( const FaceControl*)
     // void removeActors( const FaceControl*)
 
@@ -93,8 +94,10 @@ protected:
     // according to their current transform matrix (called by FaceView).
     virtual void fixTransform( const FaceControl*){}
 
-    // Destroy any cached data relating to the given FaceControl (called by ActionVisualise).
+    // Destroy any cached data associated with the given FaceControl (called by ActionVisualise).
     virtual void purge( const FaceControl*){}
+    // Destroy any cached data associated with the given FaceModel (called by ActionVisualise).
+    virtual void purge( const FaceModel*){}
 
     // Descendent classes should add events to the given set that this visualisation will be purged for.
     // NB visualisations will always be purged for GEOMETRY_CHANGE so there's no need to add that one.
@@ -129,7 +132,7 @@ public:
         : BaseVisualisation( displayName, icon, keys) {}
 
     // Hides the scalar legend.
-    void apply( const FaceControl*) override;
+    bool apply( const FaceControl*, const QPoint* p=nullptr) override;
 
     // Add and remove the texture actor.
     void addActors( const FaceControl* fc) override;
@@ -157,7 +160,7 @@ public:
  
     // Sets the scalar visibility to false and the representation to surface.
     // Hides the scalar legend.
-    void apply( const FaceControl*) override;
+    bool apply( const FaceControl*, const QPoint* p=nullptr) override;
 
     // Add and remove the surface actor.
     void addActors( const FaceControl* fc) override;
@@ -175,7 +178,7 @@ public:
                          const QIcon &icon=QIcon(":/icons/POINTS_VIS"),
                          const QKeySequence &keys=QKeySequence(Qt::Key_3))
         : SurfaceVisualisation( displayName, icon, keys) {}
-    void apply( const FaceControl*) override;   // Sets representation to vertices
+    bool apply( const FaceControl*, const QPoint* p=nullptr) override;   // Sets representation to vertices
 };  // end class
 
 
@@ -186,7 +189,7 @@ public:
                             const QIcon &icon=QIcon(":/icons/WIREFRAME_VIS"),
                             const QKeySequence &keys=QKeySequence(Qt::Key_4))
         : SurfaceVisualisation( displayName, icon, keys) {}
-    void apply( const FaceControl* fc) override;    // Sets representation to wireframe
+    bool apply( const FaceControl* fc, const QPoint* p=nullptr) override;    // Sets representation to wireframe
 };  // end class
 
 

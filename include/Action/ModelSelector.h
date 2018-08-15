@@ -32,10 +32,10 @@ class FaceActionManager;
 class FaceTools_EXPORT ModelSelector : public QObject
 { Q_OBJECT
 public:
-    Interactor::ModelSelectInteractor* interactor() { return _interactor;}
+    Interactor::ModelSelectInteractor* interactor() { return &_interactor;}
 
-    const FaceControlSet& selected() const { return _interactor->selected();}
-    const FaceControlSet& available() const { return _interactor->available();}
+    FaceControl* selected() const { return _interactor.selected();}
+    const FaceControlSet& available() const { return _interactor.available();}
 
     // Create a new FaceControl instances and attach it to the given viewer.
     // If given viewer is null , FaceControl added to currently selected viewer.
@@ -48,13 +48,20 @@ public:
     void remove( FaceModel*);
 
     // Programmatically select/deselect the given FaceControl.
-    void select( FaceControl*, bool);
+    void setSelected( FaceControl*, bool);
 
 signals:
     void onSelected( FaceControl*, bool);
 
+private slots:
+    // Set the selected FaceControl to be the one on the given viewer having
+    // the same FaceModel as the currently selected FaceControl. Does nothing
+    // if there's no FaceControl on the given viewer with the same FaceModel as
+    // the currently selected (or if there's no currently selected FaceControl).
+    void doSwitchSelectedToViewer( ModelViewer*);
+
 private:
-    Interactor::ModelSelectInteractor *_interactor;
+    Interactor::ModelSelectInteractor _interactor;
     explicit ModelSelector( FaceModelViewer* defaultViewer);
     ~ModelSelector() override;
     friend class FaceActionManager;

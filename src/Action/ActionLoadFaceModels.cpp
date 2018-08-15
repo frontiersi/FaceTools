@@ -47,10 +47,7 @@ bool ActionLoadFaceModels::loadModel( const QString& fname)
 }   // end loadModel
 
 
-bool ActionLoadFaceModels::testEnabled() const { return !_loadHelper->reachedLoadLimit();}
-
-
-bool ActionLoadFaceModels::doBeforeAction( FaceControlSet&)
+bool ActionLoadFaceModels::doBeforeAction( FaceControlSet&, const QPoint&)
 {
     if ( _loadHelper->filenames().empty())
     {
@@ -69,7 +66,7 @@ bool ActionLoadFaceModels::doBeforeAction( FaceControlSet&)
 }   // end doBeforeAction
 
 
-bool ActionLoadFaceModels::doAction( FaceControlSet&)
+bool ActionLoadFaceModels::doAction( FaceControlSet&, const QPoint&)
 {
     return _loadHelper->loadModels() > 0;   // Blocks
 }   // end doAction

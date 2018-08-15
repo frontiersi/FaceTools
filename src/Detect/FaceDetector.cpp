@@ -233,20 +233,20 @@ bool FaceDetector::detect( const ObjModelKDTree::Ptr kdt, Orientation& on, Landm
     if ( !_err.empty())
         return cleanUp();
 
-    using namespace FaceTools::Landmarks;
-    lset->set( NASAL_TIP, ntip);
-    lset->set( L_EYE_CENTRE, v0);
-    lset->set( R_EYE_CENTRE, v1);
-
     //findNewOrientation( ntip, v0, v1, on.norm(), on.up());
     if ( !FaceTools::Detect::findOrientation( kdt, v0, v1, on.norm(), on.up()))
         return cleanUp( "Unable to find orientation!");
 
     // Update the view to focus on the identified face centre using the landmark detection range.
-    const cv::Vec3f fc = FaceTools::calcFaceCentre( on.up(), lset->pos( L_EYE_CENTRE), lset->pos( R_EYE_CENTRE), lset->pos( NASAL_TIP));
+    const cv::Vec3f fc = FaceTools::calcFaceCentre( on.up(), v0, v1, ntip);
     _viewer->setCamera( RFeatures::CameraParams( _drng * on.norm() + fc, fc, on.up()));
     _viewer->updateRender();
     //RFeatures::showImage( snapshot(_viewer), "Updated detection image post orientation", false);
+
+    using namespace FaceTools::Landmarks;
+    lset->set( NASAL_TIP, ntip);
+    lset->set( L_EYE_CENTRE, v0);
+    lset->set( R_EYE_CENTRE, v1);
 
     if ( !FaceShapeLandmarks2DDetector::detect( _viewer, lset))
         return cleanUp( "Complete set of landmarks not found.");

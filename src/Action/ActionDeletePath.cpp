@@ -22,6 +22,7 @@
 #include <ChangeEvents.h>
 #include <cassert>
 using FaceTools::Action::FaceAction;
+using FaceTools::Action::ActionEditPaths;
 using FaceTools::Action::ActionDeletePath;
 using FaceTools::Action::ChangeEventSet;
 using FaceTools::Interactor::PathSetInteractor;
@@ -30,28 +31,27 @@ using FaceTools::FaceControl;
 using FaceTools::FaceModel;
 
 
-ActionDeletePath::ActionDeletePath( const QString& dn, const QIcon& ico)
-    : FaceAction( dn, ico), _editor(nullptr)
+ActionDeletePath::ActionDeletePath( const QString& dn, const QIcon& ico, ActionEditPaths* e)
+    : FaceAction( dn, ico), _editor(e)
 {
 }   // end ctor
 
 
-bool ActionDeletePath::testEnabled() const
+bool ActionDeletePath::testEnabled( const QPoint*) const
 {
     bool enabled = false;
-    FaceControl* fc = nullptr;
     assert(_editor);
-    if ( readyCount() == 1 && _editor->isChecked())
+    if ( gotReady() && _editor->isChecked())
     {
         PathSetInteractor* interactor = _editor->interactor();
-        fc = interactor->hoverModel();
+        const FaceControl* fc = interactor->hoverModel();
         enabled = isReady( fc) && interactor->hoverID() >= 0;
     }   // end if
     return enabled;
 }   // end testEnabled
 
 
-bool ActionDeletePath::doAction( FaceControlSet& fcs)
+bool ActionDeletePath::doAction( FaceControlSet& fcs, const QPoint&)
 {
     assert(_editor);
     PathSetInteractor* interactor = _editor->interactor();
@@ -59,12 +59,6 @@ bool ActionDeletePath::doAction( FaceControlSet& fcs)
     assert(hc);
     fcs.clear();
     if ( interactor->deletePath())
-        fcs.insert( hc);
+        fcs.insert( hc->data());
     return !fcs.empty();
 }   // end doAction
-
-
-void ActionDeletePath::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool)
-{
-    cs.insert( FaceTools::Action::METRICS_CHANGE);
-}   // end doAfterAction

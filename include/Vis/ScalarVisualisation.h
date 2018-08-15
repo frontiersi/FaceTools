@@ -59,7 +59,7 @@ public:
     // Returns true if the data to perform mapping are available.
     bool isAvailable( const FaceModel*) const override;
 
-    void apply( const FaceControl*) override;
+    bool apply( const FaceControl*, const QPoint* mc=nullptr) override;
     void addActors( const FaceControl*) override;
     void removeActors( const FaceControl*) override;
 

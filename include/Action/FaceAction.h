@@ -41,6 +41,7 @@ public:
 };  // end class
 
 
+class ActionVisualise;
 class FaceActionWorker;
 class FaceActionManager;
 
@@ -51,6 +52,8 @@ class FaceTools_EXPORT FaceAction : public FaceActionInterface
 { Q_OBJECT
 public:
     FaceAction();
+    ~FaceAction() override;
+
     // Constructor versions that take a display name, icon, and triggering key sequence.
     FaceAction( const QString& displayName);
     FaceAction( const QString& displayName, const QIcon& icon);
@@ -67,9 +70,9 @@ public:
     // Return this action's interactor (if defined). Only a single interactor per action is allowed.
     virtual Interactor::MVI* interactor() { return nullptr;}
 
-    // Returns the QAction as long as this action had init() called on it by child class.
+    // Returns the internal QAction.
     // Triggering the action calls this action's process function.
-    QAction* qaction();
+    QAction* qaction() { return &_action;}
 
     // Visibility does NOT use QAction::visible because changing the QAction's
     // visibility to false also causes its enabled status to be false!
@@ -85,10 +88,17 @@ public:
     inline void setChecked( bool b) { _action.setChecked(b);}
     inline bool isChecked() const { return _action.isChecked();}
 
-    // Test if this action should be enabled and set accordingly.
-    // Returns whether or not the action is enabled as a result.
-    bool testSetEnabled();
+    // Sets the FaceControl's this action will work over in the next call to process().
+    // Each FaceControl is first passed through this child class's implementation of testReady and
+    // so only FaceControl instances that adhere to the ready requirements of this action are admitted.
+    void setReady( FaceControl*, bool set=true);
+    void setReady( const FaceControlSet&, bool set=true);
 
+    // Test if this action should be enabled and set accordingly.
+    // Clients can call with a non null point (representing the current mouse position)
+    // for relevant actions to check. Internally when called, this function is always
+    // called with null as its parameter. Returns whether or not the action is enabled as a result.
+    bool testSetEnabled( const QPoint* mousePoint=nullptr);
 
     // Derived types and/or delegates must specify the ChangeEvents that they wish to be processed and purged for.
     // Purging the action (if necessary) always comes before process, so if the same ChangeEvent is set as
@@ -127,8 +137,8 @@ public slots:
 
     // These two versions of process replace the ready set with the given FaceControls and execute process.
     // On return, the action's ready set will be reset to the current set of selected FaceControls.
-    bool process( const FaceControlSet&, bool checkAction=true);
     bool process( FaceControl*, bool checkAction=true);
+    bool process( const FaceControlSet&, bool checkAction=true);
 
     // Add composite actions to this one that will be executed immediately after doAfterAction() returns.
     // This function can be called multiple times to add several actions. Asynchronous actions are executed
@@ -165,9 +175,6 @@ protected slots:
     /************** SETTING / GETTING DATA TO ACT UPON *************/
     /***************************************************************/
 
-    // Called by FaceActioManager or may be self called to set the ready state for the referenced FaceControl.
-    void setReady( FaceControl*, bool);
-
     // Function testReady is called to test whether the passed in FaceControl is in an appropriate state for
     // this action to be executed on. This function is called whenever the user selects or deselects a view.
     // By default, all non-null FaceControl instances are added to the ready set.
@@ -179,33 +186,34 @@ protected slots:
 
     // If this action is currently applied to the passed in FaceControl, it should return true.
     // By default, this function just returns the current checked state meaning no changes are made.
-    virtual bool testChecked( FaceControl*) { return isChecked();}
+    virtual bool testChecked( const FaceControl *fc=nullptr) const { return isChecked();}
 
-    // Reset the ready set with those members of the given set that pass the testReady check (above).
-    void resetReady( const FaceControlSet&);
-    void resetReady( FaceControl*);
-    void clearReady();  // Clear the ready set
-
-    // Is FaceControl in the ready set? Only valid before process().
-    bool isReady( FaceControl* fc) const { return _ready.has(fc);}
-
-    // Count of FaceControl instances in the ready set. Only valid before process().
-    size_t readyCount() const { return _ready.size();}
-
-    // Returns the current ready set itself.
-    const FaceControlSet& readySet() const { return _ready;}
+    // Reset the ready set with the given FaceControl if it passes the testReady check (above).
+    bool isReady( const FaceControl* fc) const { return _ready.has(fc);}
+    bool gotReady() const { return !_ready.empty();}
+    const FaceControlSet& ready() const { return _ready;}
+    // Returns non-null only if the ready set has exactly 1 member (which is returned).
+    FaceControl* ready1() const { return _ready.size() == 1 ? _ready.first() : nullptr;}
 
     // For most actions, whether to enable or disable the action depends upon whether there are
     // entries in the ready set and this is the default implementation. However, some actions may
     // want to provide a condition that tells whether this action should be enabled or disabled
     // for some other reason - for example for the action to be always enabled, override this
     // function to true. Or if the action should only be enabled if a single FaceControl is
-    // selected, override to return (_ready.size() == 1) etc.
-    virtual bool testEnabled() const { return !_ready.empty();}
+    // selected, override to return (_ready.size() == 1). Finally, the passed in mouse point
+    // may not be null and in those cases the action may want to check if the position of the
+    // mouse is important in determining whether the action should be enabled.
+    virtual bool testEnabled( const QPoint* mouseCoords=nullptr) const { return gotReady();}
 
     // Derived types may cache data for FaceModels even when not selected. This function is
     // called to purge these cached data because of ChangeEvents specified using addPurgeOn().
     virtual void purge( const FaceModel*){}
+
+    // Always called whenever a FaceModel is closed. Some actions may want to store information
+    // associated with a FaceModel even when the action is being purged for the FaceModel for
+    // other reasons (specified by addPurgeOn). This allows actions to hang on to data associated
+    // with a FaceModel until it's closed.
+    virtual void clean( const FaceModel* fm){ purge(fm);}
 
 
     /**************************************************************/
@@ -218,13 +226,13 @@ protected slots:
     // change its membership prior to it being passed to the doAction function (e.g. to remove FaceControl
     // instances that aren't suitable on further inspection, or the user wants to cancel actioning on).
     // Note that doAction may run in a different thread than the GUI thread.
-    virtual bool doBeforeAction( FaceControlSet&){ return true;}
+    virtual bool doBeforeAction( FaceControlSet&, const QPoint&){ return true;}
 
     // Implement the action; process() decides whether it runs asynchronously or not (or at all).
     // If doAction runs asynchronously, defer all GUI updates etc to doAfterAction(). Membership
     // of the provided FaceControlSet may be changed within this function for passing to the
     // doAfterAction function in the GUI thread afterwards.
-    virtual bool doAction( FaceControlSet&){ return true;}
+    virtual bool doAction( FaceControlSet&, const QPoint&){ return true;}
 
     // Called within the GUI thread immediately on the completion of doAction. This is where GUI
     // elements (dialogs etc) shown in doBeforeAction should be hidden or rendering updates made.
@@ -258,6 +266,7 @@ private:
     QMutex _pmutex;
     QTools::QProgressUpdater::Ptr _pupdater;
     FaceControlSet _ready, _wset;
+    QPoint _testPoint;
     ChangeEventSet _revents, _pevents;
     std::list<FaceAction*> _sacts;
     std::unordered_set<FaceAction*> _aacts;

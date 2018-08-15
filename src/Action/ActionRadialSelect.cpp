@@ -17,7 +17,6 @@
 
 #include <ActionRadialSelect.h>
 #include <FaceControl.h>
-#include <FaceModel.h>
 #include <FaceTools.h>
 #include <VtkTools.h>
 #include <FaceModelViewer.h>
@@ -28,15 +27,14 @@ using FaceTools::Vis::RadialSelectVisualisation;
 using FaceTools::Interactor::RadialSelectInteractor;
 using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
-using FaceTools::FaceModel;
 
 
 ActionRadialSelect::ActionRadialSelect( const QString& dn, const QIcon& ico, FEEI* feei, QStatusBar* sbar)
-    : ActionVisualise( _vis = new RadialSelectVisualisation( dn, ico)), _interactor(nullptr), _sbar(sbar)
+    : ActionVisualise( _vis = new RadialSelectVisualisation( dn, ico)),
+      _interactor( new RadialSelectInteractor( feei, _vis, sbar))
 {
-    _interactor = new RadialSelectInteractor( feei, _vis);
-    connect( _interactor, &RadialSelectInteractor::onSetNewCentre, this, &ActionRadialSelect::doOnSetNewCentre);
-    connect( _interactor, &RadialSelectInteractor::onSetNewRadius, this, &ActionRadialSelect::doOnSetNewRadius);
+    connect( feei, &FEEI::onEnterModel, [=](auto fc){ this->testSetEnabled( &feei->viewer()->mouseCoords());});
+    connect( feei, &FEEI::onLeaveModel, [this](auto fc){ this->testSetEnabled( nullptr);});
 }   // end ctor
 
 
@@ -47,33 +45,8 @@ ActionRadialSelect::~ActionRadialSelect()
 }   // end dtor
 
 
-// private slot
-void ActionRadialSelect::doOnSetNewCentre( FaceControl* fc, const cv::Vec3f& v)
-{
-    FaceModel* fm = fc->data();
-    _vis->setCentre( fm, v);
-    fm->updateRenderers();
-}   // end doOnSetNewCentre
-
-
-// private slot
-void ActionRadialSelect::doOnSetNewRadius( FaceControl* fc, double r)
-{
-    FaceModel *fm = fc->data();
-    _vis->setRadius( fm, r);
-    fm->updateRenderers();
-}   // end doOnSetNewRadius
-
-
 void ActionRadialSelect::doAfterAction( ChangeEventSet& cs, const FaceControlSet& fcs, bool v)
 {
-    const static QString smsg( tr("Reposition with double-left-click and drag; change size with mouse-wheel."));
-    if ( isChecked())
-        _sbar->showMessage(smsg, 10000);    // 10 sec temp
-    else
-    {
-        if ( _sbar->currentMessage() == smsg)
-            _sbar->clearMessage();
-    }   // end else
     ActionVisualise::doAfterAction( cs, fcs, v);
+    _interactor->setEnabled( isChecked());
 }   // end doAfterAction

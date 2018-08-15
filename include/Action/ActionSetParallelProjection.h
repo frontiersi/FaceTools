@@ -32,13 +32,13 @@ public:
     void addViewer( FaceModelViewer* v) { _viewers.push_back(v);}
 
 private slots:
-    bool testEnabled() const override { return true;}
-    bool doAction( FaceControlSet&) override;
+    bool testEnabled( const QPoint* mc=nullptr) const override { return true;}
+    bool doAction( FaceControlSet&, const QPoint&) override;
     void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(CAMERA_CHANGE);}
+    bool displayDebugStatusProgression() const override { return false;}
 
 private:
     std::vector<FaceModelViewer*> _viewers;
-    bool displayDebugStatusProgression() const override { return false;}
 };  // end class
 
 }   // end namespace

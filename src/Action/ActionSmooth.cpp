@@ -44,7 +44,7 @@ bool ActionSmooth::testReady( const FaceControl* fc)
 }   // end testReady
 
 
-bool ActionSmooth::doAction( FaceControlSet& rset)
+bool ActionSmooth::doAction( FaceControlSet& rset, const QPoint&)
 {
     assert(rset.size() == 1);
     FaceControl* fc = rset.first();

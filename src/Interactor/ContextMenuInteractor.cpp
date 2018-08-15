@@ -62,7 +62,7 @@ bool ContextMenuInteractor::rightButtonUp( const QPoint& p)
     // Use double-click interval for acceptable right button down time
     if (( tnow - _rDownTime) < (QApplication::doubleClickInterval()/2))
     {
-        if ( testEnabledActions() > 0)
+        if ( testEnabledActions(p) > 0)
             _cmenu.exec( viewer()->mapToGlobal(p));
     }   // end if
     _rDownTime = 0;
@@ -70,12 +70,14 @@ bool ContextMenuInteractor::rightButtonUp( const QPoint& p)
 }   // end rightButtonUp
 
 
-size_t ContextMenuInteractor::testEnabledActions() const
+size_t ContextMenuInteractor::testEnabledActions( const QPoint& p) const
 {
     size_t nenabled = 0;
     for ( FaceAction* a : _actions)
-    {
-        if ( a->testSetEnabled())
+    {   
+        //std::cerr << "Context menu checking action: " << a->getDisplayName().toStdString() << std::endl;
+        // Need to call on ALL actions since we need to recheck their enabled states
+        if ( a->testSetEnabled(&p))
             nenabled++;
     }   // end for
     return nenabled;

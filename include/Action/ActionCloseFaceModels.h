@@ -27,11 +27,10 @@ namespace Action {
 class FaceTools_EXPORT ActionCloseFaceModels : public FaceAction
 { Q_OBJECT
 public:
-    ActionCloseFaceModels( const QString& dname, const QIcon&, const QKeySequence&,
-                           FileIO::FaceModelManager*, QWidget* parent=nullptr);
+    ActionCloseFaceModels( const QString& dname, const QIcon&, const QKeySequence&, FileIO::FaceModelManager*, QWidget* parent=nullptr);
 
 private slots:
-    bool doBeforeAction( FaceControlSet&) override;
+    bool doBeforeAction( FaceControlSet&, const QPoint&) override;
     void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(CLOSE_MODEL);}
 
 private:

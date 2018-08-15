@@ -31,7 +31,7 @@ ActionResetCamera::ActionResetCamera( const QString& dn, const QIcon& ico, FaceM
 }   // end ctor
 
 
-bool ActionResetCamera::doAction( FaceControlSet &fset)
+bool ActionResetCamera::doAction( FaceControlSet &fset, const QPoint&)
 {
     if ( _viewers.empty())
     {

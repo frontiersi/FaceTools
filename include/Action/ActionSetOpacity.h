@@ -37,13 +37,13 @@ public:
 
 private slots:
     bool testReady( const FaceControl*) override;
-    bool testEnabled() const override;
-    bool doAction( FaceControlSet&) override;
+    bool testEnabled( const QPoint* mc=nullptr) const { return ready1() != nullptr;}
+    bool doAction( FaceControlSet&, const QPoint&) override;
     void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(VIEW_CHANGE);}
+    bool displayDebugStatusProgression() const override { return false;}
     void doOnValueChanged( double);
 
 private:
-    bool displayDebugStatusProgression() const override { return false;}
     void setOpacityValue( const FaceControlSet&, double);
     double _maxOpacityOnOverlap;
     QDoubleSpinBox *_opacitySpinBox;

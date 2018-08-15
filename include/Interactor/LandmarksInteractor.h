@@ -18,32 +18,33 @@
 #ifndef FACE_TOOLS_LANDMARKS_INTERACTOR_H
 #define FACE_TOOLS_LANDMARKS_INTERACTOR_H
 
-#include "FaceHoveringInteractor.h"
+#include "FaceEntryExitInteractor.h"
 #include <LandmarksVisualisation.h>
 
 namespace FaceTools {
 namespace Interactor {
 
-class FaceTools_EXPORT LandmarksInteractor : public FaceHoveringInteractor
+class FaceTools_EXPORT LandmarksInteractor : public ModelViewerInteractor
 { Q_OBJECT
 public:
-    LandmarksInteractor( FEEI*, Vis::LandmarksVisualisation*);
+    LandmarksInteractor( FEEI*, Vis::LandmarksVisualisation*, QStatusBar* sbar=nullptr);
 
     // Get the ID of the landmark being hovered over (if any).
     // Returns -1 if no handle hovered over. Use hoverModel() to get associated model.
     int hoverID() const { return _hover;}
+    FaceControl* hoverModel() const { return _feei->model();}
 
-    // Add a landmark on the hover model at the current mouse coords with the given label.
+    // Add a landmark on the hover model at the given coords with the given label.
     // Client should check for existing landmarks first before deciding to create a new one.
     // Return id of the newly added landmark or -1 if no landmark could be created
-    // (e.g. if the current mouse coords are not on the model).
-    int addLandmark( const std::string&);
+    // (e.g. if the given coords are not on the model).
+    int addLandmark( const std::string&, const QPoint&);
 
     // Deletes the landmark returned by hoverID returning true on success.
     bool deleteLandmark();
 
-    // Set landmark with given ID to the given point returning true on success.
-    bool setDrag( int id, const QPoint&);
+protected:
+    void onEnabledStateChanged( bool v);
 
 private slots:
     void doOnEnterLandmark( const FaceControl*, int);
@@ -54,11 +55,12 @@ private:
     bool leftButtonUp( const QPoint&) override;
     bool leftDrag( const QPoint&) override;
 
-    void leavingModel() override;
-
+    FEEI *_feei;
     Vis::LandmarksVisualisation *_vis;
     int _drag, _hover;  // IDs of the landmarks being dragged and hovered over.
-    cv::Vec3f _origPos;
+    FaceControl* _model;
+    static const QString s_defaultMsg;
+    static const QString s_moveMsg;
 };  // end class
 
 }   // end namespace

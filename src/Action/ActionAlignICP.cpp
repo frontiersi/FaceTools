@@ -37,15 +37,15 @@ ActionAlignICP::ActionAlignICP( const QString& dn, const QIcon& ico, QProgressBa
 }   // end ctor
 
 
-bool ActionAlignICP::testEnabled() const
+bool ActionAlignICP::testEnabled( const QPoint*) const
 {
     // Enabled only if a single model is selected and its viewer has other models.
-    const FaceControlSet& rset = readySet();
-    return rset.size() == 1 && rset.first()->viewer()->attached().size() >= 2;
+    FaceControl* fc = ready1();
+    return fc && fc->viewer()->attached().size() >= 2;
 }   // end testEnabled
 
 
-bool ActionAlignICP::doAction( FaceControlSet& rset)
+bool ActionAlignICP::doAction( FaceControlSet& rset, const QPoint&)
 {
     assert(rset.size() == 1);
     FaceControl* fc = rset.first();
@@ -71,9 +71,3 @@ bool ActionAlignICP::doAction( FaceControlSet& rset)
 
     return true;
 }   // end doAction
-
-
-void ActionAlignICP::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool)
-{ 
-    cs.insert(AFFINE_CHANGE);
-}   // end doAfterAction

@@ -62,7 +62,7 @@ void ModelViewer::showLegend( bool enable) { _scalarLegend->setVisible(enable); 
 
 // public
 ModelViewer::ModelViewer( QWidget* parent, bool floodFill)
-    : QWidget(parent), _qviewer( new QTools::VtkActorViewer( NULL)), _scalarLegend(NULL), _axes(NULL),
+    : QWidget(parent), _qviewer( new QTools::VtkActorViewer( nullptr)), _scalarLegend(nullptr), _axes(nullptr),
       _floodLightsEnabled(floodFill), _addedModelID(0)
 {
     _scalarLegend = new RVTK::ScalarLegend( _qviewer->GetInteractor());
@@ -149,7 +149,6 @@ cv::Point2f ModelViewer::projectProp( const cv::Vec3f& v) const { return _qviewe
 cv::Point ModelViewer::project( const cv::Vec3f& v) const { return _qviewer->projectToDisplay( v);}
 cv::Vec3f ModelViewer::project( const cv::Point2f& p) const { return _qviewer->pickWorldPosition( p);}
 cv::Vec3f ModelViewer::project( const cv::Point& p) const { return _qviewer->pickWorldPosition( p);}
-const vtkProp* ModelViewer::getPointedAt( const cv::Point& p) const { return _qviewer->pickActor( p);}
 void ModelViewer::setCursor( QCursor cursor) { _qviewer->setCursor(cursor);}
 void ModelViewer::add( const vtkProp* prop) { _qviewer->add(prop);}
 void ModelViewer::remove( const vtkProp* prop) { _qviewer->remove(prop);}
@@ -169,6 +168,10 @@ cv::Vec3f ModelViewer::project( const QPoint& q) const
 
 
 // public
+const vtkProp* ModelViewer::getPointedAt( const cv::Point& p) const { return _qviewer->pickActor( p);}
+const vtkProp* ModelViewer::getPointedAt( const QPoint& p) const { return _qviewer->pickActor( p);}
+
+// public
 const vtkProp* ModelViewer::getPointedAt( const cv::Point2f& p) const
 {
     const cv::Point preal = FaceTools::fromProportion( p, cv::Size2i( (int)getWidth(), (int)getHeight()));
@@ -177,23 +180,7 @@ const vtkProp* ModelViewer::getPointedAt( const cv::Point2f& p) const
 
 
 // public
-const vtkProp* ModelViewer::getPointedAt( const QPoint& q) const
-{
-    const cv::Point p(q.x(), q.y());
-    return _qviewer->pickActor( p);
-}   // end getPointedAt
-
-
-// public
-bool ModelViewer::getPointedAt( const QPoint* q, const vtkActor* actor) const
-{
-    if ( !q || !actor)
-        return false;
-    std::vector<vtkActor*> pactors(1);
-    pactors[0] = const_cast<vtkActor*>(actor);
-    const cv::Point p(q->x(), q->y());
-    return _qviewer->pickActor( p, pactors) == actor;
-}   // end getPointedAt
+bool ModelViewer::getPointedAt( const QPoint& q, const vtkActor* actor) const { return _qviewer->pointedAt( q, actor);}
 
 
 // public
@@ -289,7 +276,7 @@ int ModelViewer::add( vtkSmartPointer<vtkActor> actor, const std::string& ltitle
 // public
 vtkProp* ModelViewer::getProp( int mid)
 {
-    vtkProp* prop = NULL;
+    vtkProp* prop = nullptr;
     if ( _props.count(mid) > 0)
         prop = _props.at(mid);
     return prop;

@@ -109,7 +109,7 @@ void PathView::removePath()
 void PathView::addPath()
 {
     assert(_viewer);
-    const ModelViewer::VisOptions loptions( 1.0f,1.0f,1.0f,1.0f,false,1.0f, /*Line Width*/2.2f/**/);
+    const ModelViewer::VisOptions loptions( 1.0f,1.0f,1.0f,1.0f,false,1.0f, /*Line Width*/3.0f/**/);
     _linePropID = _viewer->addLine( _path.vtxs, false, loptions);
     vtkActor* lactor = static_cast<vtkActor*>( _viewer->getProp(_linePropID));
     lactor->SetPickable(false); // The measurement line shouldn't be pickable!
@@ -128,12 +128,8 @@ void PathView::addPath()
 
 // private
 PathView::Handle::Handle( PathView* pv, const cv::Vec3f& c, double r)
-    : _host(pv), _sv( new SphereView( c, r))
+    : _host(pv), _sv( new SphereView( c, r, true/*pickable*/, true/*fixed scale*/))
 {}   // end ctor
 
-
 // private
-PathView::Handle::~Handle()
-{
-    delete _sv;
-}   // end dtor
+PathView::Handle::~Handle() { delete _sv;}

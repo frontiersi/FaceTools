@@ -44,11 +44,12 @@ public:
     FaceControlSet operator()( const FaceModel*) const; // Return the set of FaceControls matching the given model.
 
     bool insert( FaceControl*);             // Returns true on successful insert.
-    bool erase( FaceControl*);              // Returns true on successful erasure.
-    bool erase( const FaceModel*);          // Erase all FaceControl instances that have the given FaceModel as their data.
+    bool erase( const FaceControl*);        // Returns true on successful erasure.
+    bool insert( const FaceModel*);         // Insert all FaceControl instances belonging to the given FaceModel.
+    bool erase( const FaceModel*);          // Erase all FaceControl instances belonging to the given FaceModel.
     void clear();                           // Clear contents.
 
-    bool has( FaceControl*) const;          // Returns true iff FaceControl present.
+    bool has( const FaceControl*) const;    // Returns true if the given FaceControl is present.
     bool has( const FaceModel*) const;      // Returns true iff at least one FaceControl with the given data is present.
     size_t size() const;                    // How many FaceControl instances.
     size_t size( const FaceModel*) const;   // Returns the number of FaceControl instances that map to the given FaceModel.

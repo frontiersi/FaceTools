@@ -23,6 +23,7 @@
 #include <QMessageBox>
 #include <cassert>
 using FaceTools::Action::FaceAction;
+using FaceTools::Action::ActionEditLandmarks;
 using FaceTools::Action::ActionRenameLandmark;
 using FaceTools::Action::ChangeEventSet;
 using FaceTools::FaceControlSet;
@@ -32,33 +33,30 @@ using FaceTools::Interactor::LandmarksInteractor;
 using FaceTools::Vis::LandmarksVisualisation;
 
 
-ActionRenameLandmark::ActionRenameLandmark( const QString& dn, const QIcon& ico, QWidget *parent)
-    : FaceAction(dn, ico), _editor(nullptr), _parent(parent)
+ActionRenameLandmark::ActionRenameLandmark( const QString& dn, const QIcon& ico, ActionEditLandmarks* e, QWidget *parent)
+    : FaceAction(dn, ico), _editor(e), _parent(parent)
 {
 }   // end ctor
 
 
-bool ActionRenameLandmark::testEnabled() const
+bool ActionRenameLandmark::testEnabled( const QPoint*) const
 {
     bool enabled = false;
     assert(_editor);
-    if ( _editor->isChecked() && readyCount() == 1)
+    if ( _editor->isChecked() && gotReady())
     {
         LandmarksInteractor* interactor = _editor->interactor();
-        FaceControl* fc = interactor->hoverModel();
+        const FaceControl* fc = interactor->hoverModel();
         enabled = fc && isReady(fc) && interactor->hoverID() >= 0;
     }   // end if
     return enabled;
 }   // end testEnabled
 
 
-bool ActionRenameLandmark::doAction( FaceControlSet& fcs)
+bool ActionRenameLandmark::doAction( FaceControlSet& fcs, const QPoint&)
 {
-    assert(fcs.size() == 1);
-    assert(_editor);
     FaceControl* fc = fcs.first();
     fcs.clear();
-    assert(fc);
     LandmarksInteractor* interactor = _editor->interactor();
     assert(fc == interactor->hoverModel());
     int id = interactor->hoverID();
@@ -98,15 +96,9 @@ bool ActionRenameLandmark::doAction( FaceControlSet& fcs)
         fm->landmarks()->get(id)->name = nlabel.toStdString();
         fm->setSaved(false);
         fm->unlock();
-        fcs.insert(fc);
-        qobject_cast<LandmarksVisualisation*>( _editor->visualisation())->refreshLandmark( fc, id);
+        fcs.insert(fm);
+        qobject_cast<LandmarksVisualisation*>( _editor->visualisation())->updateLandmark( fm, id);
     }   // end if
 
     return true;
 }   // end doAction
-
-
-void ActionRenameLandmark::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool)
-{ 
-    cs.insert(LANDMARKS_CHANGE);
-}   // end doAfterAction

@@ -32,7 +32,7 @@ ActionCloseAllFaceModels::ActionCloseAllFaceModels( const QString& dname, FaceMo
 }   // end ctor
 
 
-bool ActionCloseAllFaceModels::doBeforeAction( FaceControlSet& fcs)
+bool ActionCloseAllFaceModels::doBeforeAction( FaceControlSet& fcs, const QPoint&)
 {
     bool doclose = true; // If any of the open models aren't saved, ask user to confirm.
     const FaceModelSet& models = _fmm->opened();

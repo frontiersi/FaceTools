@@ -105,15 +105,11 @@ ActionAlignLandmarks::ActionAlignLandmarks( const QString& dn, const QIcon& ico,
 }   // end ctor
 
 
-bool ActionAlignLandmarks::testEnabled() const
+bool ActionAlignLandmarks::testEnabled( const QPoint*) const
 {
-    // Enabled only if a single model is selected and its viewer has other models
+    // Enabled only if the selected viewer has other models
     // and the other models share at least three landmarks in common.
-    const FaceControlSet& rset = readySet();
-    const FaceControl* fc = nullptr;
-    if ( rset.size() == 1)
-        fc = rset.first();
-
+    const FaceControl* fc = ready1();
     bool ready = false;
     if ( fc && fc->viewer()->attached().size() >= 2)
     {
@@ -125,7 +121,7 @@ bool ActionAlignLandmarks::testEnabled() const
             // Get the other models from the viewer.
             FaceModelSet fms = fc->viewer()->attached().models();
             fms.erase(fm);  // Remember not to include the source model.
-            // If there's at least one other model in the viewer with three or more shared landmarks, then enable this action.
+            // If at least one other model in the viewer with three or more shared landmarks, then enable this action.
             ready = findSharedLandmarksModels( fms, lmks) > 0;
         }   // end if
         fm->unlock();
@@ -135,7 +131,7 @@ bool ActionAlignLandmarks::testEnabled() const
 
 
 
-bool ActionAlignLandmarks::doAction( FaceControlSet& rset)
+bool ActionAlignLandmarks::doAction( FaceControlSet& rset, const QPoint&)
 {
     assert(rset.size() == 1);
     FaceControl* fc = rset.first();
@@ -172,9 +168,3 @@ bool ActionAlignLandmarks::doAction( FaceControlSet& rset)
 
     return true;
 }   // end doAction
-
-
-void ActionAlignLandmarks::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool)
-{ 
-    cs.insert(AFFINE_CHANGE);
-}   // end doAfterAction

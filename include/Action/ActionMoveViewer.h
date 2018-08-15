@@ -40,14 +40,14 @@ public:
 
 protected slots:
     bool testReady( const FaceControl*) override;
-    bool doAction( FaceControlSet&) override;
-    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
+    bool doAction( FaceControlSet&, const QPoint&) override;
+    void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(VIEW_CHANGE);}
+    bool displayDebugStatusProgression() const override { return false;}
 
 private:
     FaceModelViewer *_tviewer;
     ModelSelector *_selector;
     FaceModelViewer *_sviewer;
-    bool displayDebugStatusProgression() const override { return false;}
 };  // end class
 
 }   // end namespace

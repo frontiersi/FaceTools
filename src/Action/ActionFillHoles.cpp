@@ -57,7 +57,7 @@ bool ActionFillHoles::testReady( const FaceControl* fc)
 }   // end testReady
 
 
-bool ActionFillHoles::doAction( FaceControlSet& rset)
+bool ActionFillHoles::doAction( FaceControlSet& rset, const QPoint&)
 {
     assert(rset.size() == 1);
     FaceControl* fc = rset.first();
@@ -87,7 +87,8 @@ bool ActionFillHoles::doAction( FaceControlSet& rset)
                 const std::list<int>& blist = fmi->boundaries().boundary(i);
                 IntSet newPolys;
                 hfiller.fillHole( blist, &newPolys);
-                std::cerr << " Filled hole (boundary " << i << ") on component " << c << " with " << newPolys.size() << " polygons" << std::endl;
+                std::cerr << " Filled hole (boundary " << i << ") on component "
+                     << c << " with " << newPolys.size() << " polygons" << std::endl;
                 filledHole = true;
             }   // end for
         }   // end for

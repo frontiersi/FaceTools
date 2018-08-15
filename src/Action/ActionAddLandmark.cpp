@@ -25,6 +25,7 @@
 #include <cassert>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionAddLandmark;
+using FaceTools::Action::ActionEditLandmarks;
 using FaceTools::Action::ChangeEventSet;
 using FaceTools::Interactor::LandmarksInteractor;
 using FaceTools::FaceControlSet;
@@ -32,34 +33,34 @@ using FaceTools::FaceControl;
 using FaceTools::FaceModel;
 
 
-ActionAddLandmark::ActionAddLandmark( const QString& dn, const QIcon& ico, QWidget *parent)
-    : FaceAction( dn, ico), _editor(nullptr), _parent(parent)
+ActionAddLandmark::ActionAddLandmark( const QString& dn, const QIcon& ico, ActionEditLandmarks* e, QWidget *parent)
+    : FaceAction( dn, ico), _editor(e), _parent(parent)
 {
 }   // end ctor
 
 
-bool ActionAddLandmark::testEnabled() const
+bool ActionAddLandmark::testEnabled( const QPoint*) const
 {
     // Allow adding only if model being hovered over is same as selected
     // and no landmark is currently hovered over and editing is enabled.
-    bool enabled = false;
-    FaceControl* fc = nullptr;
-    assert(_editor);
-    if ( readyCount() == 1 && _editor->isChecked())
-    {
-        LandmarksInteractor* interactor = _editor->interactor();
-        fc = interactor->hoverModel();
-        enabled = isReady( fc) && interactor->hoverID() < 0;
-    }   // end if
-    return enabled;
+    LandmarksInteractor* interactor = _editor->interactor();
+    const FaceControl* fc = interactor->hoverModel();
+    return isReady( fc) && interactor->hoverID() < 0;
 }   // end testEnabled
 
 
-bool ActionAddLandmark::doAction( FaceControlSet& fcs)
+bool ActionAddLandmark::doBeforeAction( FaceControlSet&, const QPoint&)
+{
+    if ( !_editor->isChecked())
+        _editor->process( ready(), true);   // Flip the visualisation on if not already
+    return true;
+}   // end doBeforeAction
+
+
+bool ActionAddLandmark::doAction( FaceControlSet& fcs, const QPoint& p)
 {
     assert(_editor);
     LandmarksInteractor* interactor = _editor->interactor();
-    QPoint p = interactor->viewer()->getMouseCoords();
     FaceControl* fc = fcs.first();
     assert(fc);
     fcs.clear();
@@ -95,16 +96,10 @@ bool ActionAddLandmark::doAction( FaceControlSet& fcs)
     int id = -1;
     if ( !lname.isEmpty())
     {
-        id = interactor->addLandmark( lname.toStdString());
+        id = interactor->addLandmark( lname.toStdString(), p);
         if ( id >= 0)
-            fcs.insert( fc);
+            fcs.insert( fm);
     }   // end if
 
     return id >= 0;
 }   // end doAction
-
-
-void ActionAddLandmark::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool)
-{
-    cs.insert( LANDMARKS_CHANGE);
-}   // end doAfterAction

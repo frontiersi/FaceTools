@@ -44,7 +44,7 @@ bool ActionSaveFaceModels::testReady( const FaceControl* fc)
 }   // end testReady
 
 
-bool ActionSaveFaceModels::doAction( FaceControlSet& fset)
+bool ActionSaveFaceModels::doAction( FaceControlSet& fset, const QPoint&)
 {
     const FaceModelSet& fms = fset.models();
     for ( FaceModel* fm : fms)

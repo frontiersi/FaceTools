@@ -26,14 +26,12 @@ namespace Action {
 class FaceTools_EXPORT ActionRenamePath : public FaceAction
 { Q_OBJECT
 public:
-    ActionRenamePath( const QString& dname, const QIcon& ico=QIcon(), QWidget *parent=nullptr);
-
-    void setEditor( ActionEditPaths *e) { _editor = e;}
+    ActionRenamePath( const QString& dname, const QIcon&, ActionEditPaths*, QWidget *parent=nullptr);
 
 private slots:
-    bool testEnabled() const override;
-    bool doAction( FaceControlSet&) override;
-    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
+    bool testEnabled( const QPoint* mc=nullptr) const override;
+    bool doAction( FaceControlSet&, const QPoint&) override;
+    void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(METRICS_CHANGE);}
 
 private:
     ActionEditPaths *_editor;

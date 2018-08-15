@@ -48,7 +48,7 @@ bool ActionCopyViewer::testReady( const FaceControl* fc)
 
 
 // protected
-bool ActionCopyViewer::doAction( FaceControlSet& fcs)
+bool ActionCopyViewer::doAction( FaceControlSet& fcs, const QPoint&)
 {
     for ( FaceControl* fc : fcs)
     {
@@ -68,10 +68,3 @@ bool ActionCopyViewer::doAction( FaceControlSet& fcs)
     }   // end for
     return true;
 }   // end doAction
-
-
-// protected
-void ActionCopyViewer::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool)
-{ 
-    cs.insert(VIEW_CHANGE);
-}   // end doAfterAction

@@ -19,10 +19,9 @@
 #define FACE_TOOLS_MODEL_SELECT_INTERACTOR_H
 
 /**
- * ModelSelectInteractor is an interaction handler that allows the user to select single or
- * multiple FaceControls with onSelected fired for (de)selection events. Select models with
- * a right click or a double left click. Model selection can be temporarily enabled/disabled
- * with enableSelect (default true).
+ * ModelSelectInteractor is an interaction handler that allows the user to select a single
+ * FaceControl with onSelected fired for (de)selection events. Select models with left or
+ * right clicks.
  */
 
 #include "ModelViewerInteractor.h"
@@ -34,43 +33,31 @@ namespace Interactor {
 class FaceTools_EXPORT ModelSelectInteractor : public ModelViewerInteractor
 { Q_OBJECT
 public:
-    explicit ModelSelectInteractor( bool exclusiveSelect=false);
-
-    // Enable/disable user interaction (de)selection of models.
-    // Programmatic selection of models (e.g. using setSelected) NOT AFFECTED.
-    void enableUserSelect( bool);
-
-    // Initially a multi-model selector, call setExclusiveSelect(true) to set models to
-    // be selected exclusively. Exclusivity is enforced on subsequent model selects.
-    void setExclusiveSelect( bool);
-    bool isExclusiveSelect() const;
+    ModelSelectInteractor();
 
     void add( FaceControl*);    // Adds to available for selection and fires onSelected.
     void remove( FaceControl*); // Removes from available for selection and fires onSelected.
 
     void setSelected( FaceControl*, bool);  // Mark given model as (de)selected and fire onSelected.
 
-    bool isSelected( FaceControl*) const;   // Returns true iff model is selected.
-    bool isAvailable( FaceControl*) const;  // Returns true iff model was added and not yet removed.
+    inline bool isSelected( FaceControl* fc) const { return fc == _selected;}
+    inline bool isAvailable( FaceControl* fc) const { return _available.has(fc);}
 
-    const FaceControlSet& selected() const { return _selected;}     // Returns selected view/control instances.
     const FaceControlSet& available() const { return _available;}   // Returns view/control instances available to select.
+    FaceControl* selected() const { return _selected;}
 
 signals:
     void onSelected( FaceControl*, bool);   // Fired selection / deselection of a model.
 
 private:
-    bool _exclusive;
-    bool _enabled;
-    FaceControlSet _selected;
+    FaceControl* _selected;
     FaceControlSet _available;
 
-    bool leftButtonDown(const QPoint&) override;    // Fires onSelected
-    bool rightButtonDown( const QPoint&) override;  // Fires onSelected
-    bool leftDoubleClick( const QPoint&) override;  // Fires onSelected
-    void deselectAll();
-    void insertSelected( FaceControl*);
-    void eraseSelected( FaceControl*);
+    bool leftButtonDown( const QPoint&) override;
+    bool rightButtonDown( const QPoint&) override;
+    bool leftDoubleClick( const QPoint&) override;
+    void eraseSelected();
+    FaceControl* underPoint( const QPoint&) const;
 };  // end class
 
 }   // end namespace

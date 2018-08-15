@@ -47,9 +47,9 @@ public:
 
 protected slots:
     bool testReady( const FaceControl*) override;
-    bool testEnabled() const override;
-    bool doBeforeAction( FaceControlSet&) override;
-    bool doAction( FaceControlSet&) override;
+    bool testEnabled( const QPoint* mc=nullptr) const override;
+    bool doBeforeAction( FaceControlSet&, const QPoint&) override;
+    bool doAction( FaceControlSet&, const QPoint&) override;
     void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
     void purge( const FaceModel*) override;
 

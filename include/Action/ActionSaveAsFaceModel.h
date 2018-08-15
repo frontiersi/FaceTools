@@ -34,9 +34,8 @@ signals:
     void onSavedAs( const FaceControl*);
 
 protected slots:
-    bool testEnabled() const override { return readyCount() == 1;}    // Only enabled for a single selected FaceControl
-    bool doBeforeAction( FaceControlSet&) override;
-    bool doAction( FaceControlSet&) override;
+    bool doBeforeAction( FaceControlSet&, const QPoint&) override;
+    bool doAction( FaceControlSet&, const QPoint&) override;
     void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
 
 private:

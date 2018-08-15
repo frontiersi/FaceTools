@@ -28,10 +28,9 @@ class FaceTools_EXPORT LoopsView
 {
 public:
     LoopsView( float lineWidth=1.0f, float red=1.0f, float green=1.0f, float blue=1.0f);
-    ~LoopsView();
+    virtual ~LoopsView();
 
-    // Remove all actors from this view (ensuring removed from viewer as well).
-    void removeActors();
+    void deleteActors();
 
     // Add a new loop actor - does NOT set visible in viewer.
     void addLoop( const std::list<cv::Vec3f>&);
@@ -40,20 +39,20 @@ public:
     void addPoints( const std::vector<cv::Vec3f>&);
 
     // Set/get line width and colour.
-    void setLineWidth( float lw) { _lineWidth = lw;}
+    void setLineWidth( float lw);
     float lineWidth() const { return _lineWidth;}
-    void setColour( float r, float g, float b) { _colour[0] = r; _colour[1] = g; _colour[2] = b;}
-    void setColour( const cv::Vec3f& c) { _colour = c;}
+
+    void setColour( float red, float green, float blue);
+    void setColour( const cv::Vec3f& c);
     const cv::Vec3f& colour() const { return _colour;}
 
-    bool isVisible() const { return _visible;}
-    void setVisible( bool, ModelViewer* viewer);
+    void setVisible( bool, ModelViewer*);
+    bool visible() const { return _visible;}
 
     void pokeTransform( const vtkMatrix4x4*);
     void fixTransform();
 
 private:
-    ModelViewer *_viewer;
     bool _visible;
     float _lineWidth;
     cv::Vec3f _colour;

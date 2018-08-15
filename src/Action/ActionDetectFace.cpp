@@ -55,7 +55,7 @@ ActionDetectFace::~ActionDetectFace()
 }   // end dtor
 
 
-bool ActionDetectFace::doBeforeAction( FaceControlSet& rset)
+bool ActionDetectFace::doBeforeAction( FaceControlSet& rset, const QPoint&)
 {
     bool docheck = false;
     for ( FaceControl* fc : rset)
@@ -84,26 +84,30 @@ bool ActionDetectFace::doBeforeAction( FaceControlSet& rset)
 }   // end doBeforeAction
 
 
-bool ActionDetectFace::doAction( FaceControlSet& rset)
+bool ActionDetectFace::doAction( FaceControlSet& rset, const QPoint&)
 {
     _failSet.clear();
-    FaceModelSet fms = rset.models();   // Copy out
-    for ( FaceModel* fm : fms)
+    FaceControlSet sset;
+
+    for ( FaceControl* fc : rset)
     {
+        FaceModel* fm = fc->data();
         fm->lockForWrite();
+
         RFeatures::Orientation on;
         if ( _detector->detect( fm->kdtree(), on, fm->landmarks()))
         {
             std::cerr << "Detected orientation (norm,up) : " << on << std::endl;
             fm->setOrientation(on);
+            sset.insert(fc);
         }   // end if
         else
-        {
             _failSet.insert(fm);
-            rset.erase(fm);
-        }   // end else
+
         fm->unlock();
     }   // end for
+
+    rset = sset;
     return !rset.empty();   // Success if at least one detection
 }   // end doAction
 
@@ -112,10 +116,10 @@ void ActionDetectFace::doAfterAction( ChangeEventSet& cset, const FaceControlSet
 {
     if ( !_failSet.empty()) // Warn failure
     {
-        QString msg = tr("Face detection failed on the selected face!");
+        QString msg = tr("Face detection failed on the selected face! Move the face into a different position and try again.");
         if ( !rset.empty())
-            msg = tr("Face detection failed on one of the selected faces!");
-        QMessageBox::warning(_parent, tr("Detection Failed!"), msg);
+            msg = tr("Face detection failed on one of the selected faces! Move the faces into a different position and try again.");
+        QMessageBox::warning(_parent, tr("Face Detection Failed!"), msg);
     }   // end if
     _failSet.clear();
     cset.insert(LANDMARKS_CHANGE);

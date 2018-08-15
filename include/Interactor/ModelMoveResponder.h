@@ -37,14 +37,14 @@ public:
 
 signals:
     // Fired after finalising transform on the FaceModel through the given FaceControl.
-    void onAffineChange( const FaceControl*);
+    void onAffineChange( FaceControl*);
 
 public slots:
     // Update data using the actor transform matrix.
-    void doOnActorFinishPos( const FaceControl*);
+    void doOnActorFinishPos( FaceControl*);
 
 private slots:
-    void doOnActorChangedPos( const FaceControl*);
+    void doOnActorChangedPos( FaceControl*);
 
 private:
     ModelMoveResponder( const ModelMoveResponder&) = delete;

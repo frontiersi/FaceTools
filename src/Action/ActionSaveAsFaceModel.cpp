@@ -38,7 +38,7 @@ ActionSaveAsFaceModel::ActionSaveAsFaceModel( const QString& dn, const QIcon& ic
 }   // end ctor
 
 
-bool ActionSaveAsFaceModel::doBeforeAction( FaceControlSet& fset)
+bool ActionSaveAsFaceModel::doBeforeAction( FaceControlSet& fset, const QPoint&)
 {
     assert(fset.size() == 1);
     FaceModel* fm = fset.first()->data();
@@ -88,7 +88,7 @@ bool ActionSaveAsFaceModel::doBeforeAction( FaceControlSet& fset)
 }   // end doBeforeAction
 
 
-bool ActionSaveAsFaceModel::doAction( FaceControlSet& fset)
+bool ActionSaveAsFaceModel::doAction( FaceControlSet& fset, const QPoint&)
 {
     assert(fset.size() == 1);
     assert( !_filename.empty());

@@ -85,6 +85,10 @@ public:
     // Convenience function to update renderers on all associated FaceControls.
     void updateRenderers() const;
 
+    // Translate the given point to the surface of this model. First finds the
+    // closest point on the surface using the internal kd-tree.
+    double translateToSurface( cv::Vec3f&) const;
+
 private:
     bool _saved;
     std::string _description;   // Long form description

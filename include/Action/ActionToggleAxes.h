@@ -33,12 +33,12 @@ public:
     void addViewer( FaceModelViewer*);
 
 private slots:
-    bool testEnabled() const override { return true;}
-    bool doAction( FaceControlSet&) override;
+    bool testEnabled( const QPoint* mc=nullptr) const override { return true;}
+    bool doAction( FaceControlSet&, const QPoint&) override;
+    bool displayDebugStatusProgression() const override { return false;}
 
 private:
     std::unordered_map<FaceModelViewer*, vtkSmartPointer<vtkCubeAxesActor> > _viewers;
-    bool displayDebugStatusProgression() const override { return false;}
 };  // end class
 
 }   // end namespace

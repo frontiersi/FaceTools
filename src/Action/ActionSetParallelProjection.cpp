@@ -32,7 +32,7 @@ ActionSetParallelProjection::ActionSetParallelProjection( const QString& dn, con
 }   // end ctor
 
 
-bool ActionSetParallelProjection::doAction( FaceControlSet&)
+bool ActionSetParallelProjection::doAction( FaceControlSet&, const QPoint&)
 {
     for ( ModelViewer* viewer : _viewers)
     {

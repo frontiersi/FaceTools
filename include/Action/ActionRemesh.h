@@ -31,9 +31,8 @@ public:
     double maxTriangleArea() const { return _maxtarea;}
 
 private slots:
-    bool testEnabled() const override { return readyCount() == 1;}   // Only enabled for single selections
+    bool doAction( FaceControlSet&, const QPoint&) override;
     void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(GEOMETRY_CHANGE);}
-    bool doAction( FaceControlSet&) override;
 
 private:
     double _maxtarea;

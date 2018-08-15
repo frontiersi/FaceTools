@@ -59,14 +59,15 @@ private:
 
     QActionGroup _evis;     // Exclusive visualisation actions
     QActionGroup _nvis;     // Non-exclusive visualisation actions
+    std::unordered_set<FaceAction*> _actions;
+
     Vis::TextureVisualisation _tvis;
     Vis::SurfaceVisualisation _svis;
     Vis::WireframeVisualisation _wvis;
     Vis::PointsVisualisation _pvis;
-    std::unordered_set<FaceAction*> _actions;
 
-    VisualisationsManager( const VisualisationsManager&);   // No copy
-    void operator=( const VisualisationsManager&);          // No copy
+    VisualisationsManager( const VisualisationsManager&) = delete;
+    void operator=( const VisualisationsManager&) = delete;
 };  // end class
 
 }   // end namespace

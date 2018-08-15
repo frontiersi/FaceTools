@@ -24,6 +24,7 @@
 #include <cassert>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionRenamePath;
+using FaceTools::Action::ActionEditPaths;
 using FaceTools::Action::ChangeEventSet;
 using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
@@ -32,27 +33,27 @@ using FaceTools::Interactor::PathSetInteractor;
 using FaceTools::Vis::PathSetVisualisation;
 
 
-ActionRenamePath::ActionRenamePath( const QString& dn, const QIcon& ico, QWidget *parent)
-    : FaceAction(dn, ico), _editor(nullptr), _parent(parent)
+ActionRenamePath::ActionRenamePath( const QString& dn, const QIcon& ico, ActionEditPaths *e, QWidget *parent)
+    : FaceAction(dn, ico), _editor(e), _parent(parent)
 {
 }   // end ctor
 
 
-bool ActionRenamePath::testEnabled() const
+bool ActionRenamePath::testEnabled( const QPoint*) const
 {
     bool enabled = false;
     assert(_editor);
-    if ( _editor->isChecked() && readyCount() == 1)
+    if ( _editor->isChecked() && gotReady())
     {
         PathSetInteractor* interactor = _editor->interactor();
-        FaceControl* fc = interactor->hoverModel();
+        const FaceControl* fc = interactor->hoverModel();
         enabled = fc && isReady(fc) && interactor->hoverID() >= 0;
     }   // end if
     return enabled;
 }   // end testEnabled
 
 
-bool ActionRenamePath::doAction( FaceControlSet& fcs)
+bool ActionRenamePath::doAction( FaceControlSet& fcs, const QPoint&)
 {
     assert(fcs.size() == 1);
     assert(_editor);
@@ -86,9 +87,3 @@ bool ActionRenamePath::doAction( FaceControlSet& fcs)
 
     return true;
 }   // end doAction
-
-
-void ActionRenamePath::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool)
-{ 
-    cs.insert(METRICS_CHANGE);
-}   // end doAfterAction

@@ -30,9 +30,9 @@ public:
     ActionLoadDirFaceModels( const QString&, const QIcon&, FileIO::LoadFaceModelsHelper*);
 
 protected slots:
-    bool testEnabled() const override;
-    bool doBeforeAction( FaceControlSet&) override;
-    bool doAction( FaceControlSet&) override;
+    bool testEnabled( const QPoint* mc=nullptr) const override { return !_loadHelper->reachedLoadLimit();}
+    bool doBeforeAction( FaceControlSet&, const QPoint&) override;
+    bool doAction( FaceControlSet&, const QPoint&) override;
     void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
 
 private:

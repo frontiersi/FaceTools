@@ -30,8 +30,7 @@ public:
 
 private slots:
     bool testReady( const FaceControl*) override;
-    bool testEnabled() const override { return readyCount() == 1;}
-    bool doAction( FaceControlSet&) override;
+    bool doAction( FaceControlSet&, const QPoint&) override;
     void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(VIEW_CHANGE);}
 
 private:

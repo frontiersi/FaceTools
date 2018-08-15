@@ -47,23 +47,25 @@ bool ModelMoveInteractor::setInteractionMode( const QPoint& p)
     QTools::InteractionMode imode = QTools::CAMERA_INTERACTION;
     _affected = testPoint(p);
     if ( movingModels() && _affected)
+    {
         imode = QTools::ACTOR_INTERACTION;
+        viewer()->setCursor( Qt::DragMoveCursor);
+    }   // end if
     viewer()->setInteractionMode( imode);
     return false;
 }   // end setInteractionMode
 
 
 // private
-const FaceControl* ModelMoveInteractor::testPoint( const QPoint& p) const
+FaceControl* ModelMoveInteractor::testPoint( const QPoint& p) const
 {
     const vtkProp* prop = viewer()->getPointedAt(p);     // The prop pointed at
     if ( prop)
     {
         const FaceControlSet& fcs = qobject_cast<FaceModelViewer*>( viewer())->attached();
-        // Only count as on a model if on the exclusive prop model.
         for ( FaceControl* fc : fcs)
         {
-            if ( fc->view()->exclusiveVisualisation()->belongs( prop, fc))
+            if ( fc->view()->isFace(prop))
                 return fc;
         }   // end for
     }   // end if
@@ -76,4 +78,11 @@ bool ModelMoveInteractor::middleButtonDown( const QPoint& p) { return setInterac
 bool ModelMoveInteractor::rightButtonDown( const QPoint& p) { return setInteractionMode(p);}
 bool ModelMoveInteractor::mouseWheelForward( const QPoint& p) { return setInteractionMode(p);}
 bool ModelMoveInteractor::mouseWheelBackward( const QPoint& p) { return setInteractionMode(p);}
+
+
+void ModelMoveInteractor::actorStop()
+{
+    viewer()->setCursor( Qt::ArrowCursor);
+    emit onActorStop(_affected);
+}   // end actorStop
 

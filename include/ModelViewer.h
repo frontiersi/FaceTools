@@ -54,7 +54,8 @@ public:
     bool unlockInteraction( int lkey) { return _qviewer->unlockInteraction(lkey);}
     bool isInteractionLocked() const { return _qviewer->isInteractionLocked();}
 
-    QPoint getMouseCoords() const { return _qviewer->getMouseCoords();}
+    const QPoint& mouseCoords() const { return _qviewer->mouseCoords();}
+    bool mouseOnRenderer() const { return _qviewer->mouseOnRenderer();}
     QPoint mapToGlobal( const QPoint& p) const { return _qviewer->mapToGlobal(p);}
 
     void setSize( const cv::Size&);
@@ -152,7 +153,7 @@ public:
     const vtkProp* getPointedAt( const QPoint&) const;
 
     // Returns true iff given coords pick out the given actor.
-    bool getPointedAt( const QPoint*, const vtkActor*) const;
+    bool getPointedAt( const QPoint&, const vtkActor*) const;
 
     // Project the given point to a world position on the given prop, returning true.
     // Return false if the point doesn't project onto the given prop. Out param wpos
@@ -173,6 +174,7 @@ public:
     size_t getWidth() const;    // Return the width of the viewport in pixels
     size_t getHeight() const;   // Return the height of the viewport in pixels
 
+    vtkRenderer* getRenderer() { return _qviewer->getRenderer();}
     const vtkRenderer* getRenderer() const { return _qviewer->getRenderer();}
     const vtkRenderWindow* getRenderWindow() const { return _qviewer->getRenderWindow();}
 

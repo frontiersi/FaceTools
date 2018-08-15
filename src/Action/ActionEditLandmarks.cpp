@@ -32,10 +32,9 @@ using FaceTools::FaceModel;
 
 
 ActionEditLandmarks::ActionEditLandmarks( const QString& dn, const QIcon& ico, FEEI* feei, QStatusBar* sbar)
-    : ActionVisualise( _vis = new LandmarksVisualisation( dn, ico)), _interactor(nullptr), _sbar(sbar)
+    : ActionVisualise( _vis = new LandmarksVisualisation( dn, ico)),
+     _interactor( new LandmarksInteractor( feei, _vis, sbar))
 {
-    _interactor = new LandmarksInteractor( feei, _vis);
-    // Hijack this action's reportFinished signal to propagate path edits.
     connect( _interactor, &ModelViewerInteractor::onChangedData, this, &ActionEditLandmarks::doOnEditedLandmark);
 }   // end ctor
 
@@ -49,18 +48,8 @@ ActionEditLandmarks::~ActionEditLandmarks()
 
 void ActionEditLandmarks::doAfterAction( ChangeEventSet& cs, const FaceControlSet& fcs, bool v)
 {
-    if ( _sbar)
-    {
-        const static QString smsg( tr("Left-click and drag on landmarks to move; right-click to add/remove/rename."));
-        if ( isChecked())
-            _sbar->showMessage(smsg, 10000);    // 10 sec temp
-        else
-        {
-            if ( _sbar->currentMessage() == smsg)
-                _sbar->clearMessage();
-        }   // end else
-    }   // end if
     ActionVisualise::doAfterAction( cs, fcs, v);
+    _interactor->setEnabled(isChecked());
 }   // end doAfterAction
 
 

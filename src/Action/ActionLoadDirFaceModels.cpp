@@ -32,10 +32,7 @@ ActionLoadDirFaceModels::ActionLoadDirFaceModels( const QString& dn, const QIcon
 }   // end ctor
 
 
-bool ActionLoadDirFaceModels::testEnabled() const { return !_loadHelper->reachedLoadLimit();}
-
-
-bool ActionLoadDirFaceModels::doBeforeAction( FaceControlSet&)
+bool ActionLoadDirFaceModels::doBeforeAction( FaceControlSet&, const QPoint&)
 {
     // Don't use native dialog because there's some Windows 10 debug output stating that some element of the
     // dialog couldn't be found. On some Win10 machines, crashes occur unless non-native dialogs are used.
@@ -52,7 +49,7 @@ bool ActionLoadDirFaceModels::doBeforeAction( FaceControlSet&)
 }   // end doBeforeAction
 
 
-bool ActionLoadDirFaceModels::doAction( FaceControlSet&/*ignored*/)
+bool ActionLoadDirFaceModels::doAction( FaceControlSet&, const QPoint&)
 {
     return _loadHelper->loadModels() > 0;
 }   // end doAction

@@ -18,25 +18,20 @@
 #ifndef FACE_TOOLS_ACTION_CROP_H
 #define FACE_TOOLS_ACTION_CROP_H
 
-#include "FaceAction.h"
+#include "ActionRadialSelect.h"
 
 namespace FaceTools {
 namespace Action {
 
-class ActionRadialSelect;
-
-
 class FaceTools_EXPORT ActionCrop : public FaceAction
 { Q_OBJECT
 public:
-    ActionCrop( const QString& dname, const QIcon& icon, QProgressBar* pb=nullptr); // Async if pb not null
-
-    void setSelector( ActionRadialSelect *rs) { _rsel = rs;}
+    ActionCrop( const QString& dname, const QIcon&, ActionRadialSelect*, QProgressBar* pb=nullptr); // Async if pb not null
 
 private slots:
-    bool testEnabled() const override;
-    bool doAction( FaceControlSet&) override;
-    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
+    bool testEnabled( const QPoint* mc=nullptr) const override;
+    bool doAction( FaceControlSet&, const QPoint&) override;
+    void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(GEOMETRY_CHANGE);}
 
 private:
     ActionRadialSelect *_rsel;

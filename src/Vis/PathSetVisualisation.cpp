@@ -74,7 +74,7 @@ bool PathSetVisualisation::belongs( const vtkProp* prop, const FaceControl* fc) 
 }   // end belongs
 
 
-void PathSetVisualisation::apply( const FaceControl* fc)
+bool PathSetVisualisation::apply( const FaceControl* fc, const QPoint*)
 {
     if ( _views.count(fc) == 0)
     {
@@ -82,6 +82,7 @@ void PathSetVisualisation::apply( const FaceControl* fc)
         FaceTools::PathSet::Ptr paths = fm->paths();
         _views[fc] = new PathSetView( paths);
     }   // end if
+    return true;
 }   // end apply
 
 

@@ -30,27 +30,25 @@ public:
     LandmarksVisualisation( const QString &dname, const QIcon &icon);
     ~LandmarksVisualisation() override;
 
-    bool isAvailable( const FaceModel*) const override;
     bool isExclusive() const override { return false;}
-
+    bool singleModel() const override { return true;}    // Apply to all FaceControls of a FaceModel
     bool belongs( const vtkProp*, const FaceControl*) const override;
 
-    void apply( const FaceControl*) override;
+    bool apply( const FaceControl*, const QPoint* mc=nullptr) override;
     void addActors( const FaceControl*) override;
     void removeActors( const FaceControl*) override;
 
-    // Get the LandmarkSetView for the given FaceControl.
-    const LandmarkSetView* landmarks( const FaceControl*) const;
-
-public slots:
     // Show or hide the given landmark for the given FaceControl.
-    void setLandmarkVisible( const FaceControl*, int, bool);
+    void setLandmarkVisible( const FaceModel*, int, bool);
 
     // Set highlighted or not the given landmark for the given FaceControl.
-    void setLandmarkHighlighted( const FaceControl*, int, bool);
+    void setLandmarkHighlighted( const FaceModel*, int, bool);
 
     // Refresh information about the given landmark from its set for the given FaceControl.
-    void refreshLandmark( const FaceControl*, int);
+    void updateLandmark( const FaceModel*, int);
+
+    // Return ID of landmark if given prop is for a landmark or -1 if not.
+    int landmarkProp( const FaceControl*, const vtkProp*) const;
 
 protected:
     void pokeTransform( const FaceControl*, const vtkMatrix4x4*) override;
@@ -58,7 +56,7 @@ protected:
     void purge( const FaceControl*) override;
 
 private:
-    std::unordered_map<const FaceControl*, LandmarkSetView*> _lviews;
+    std::unordered_map<const FaceControl*, LandmarkSetView*> _views;
 };  // end class
 
 }   // end namespace

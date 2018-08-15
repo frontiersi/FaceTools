@@ -27,7 +27,7 @@ using FaceTools::ModelViewer;
 using FaceTools::Interactor::ModelMoveInteractor;
 
 
-const ActionSynchroniseCameraMovement* ActionSynchroniseCameraMovement::s_obj(nullptr);
+ActionSynchroniseCameraMovement* ActionSynchroniseCameraMovement::s_obj(nullptr);
 
 
 // public
@@ -45,13 +45,13 @@ ActionSynchroniseCameraMovement::ActionSynchroniseCameraMovement( const QString&
 }   // end ctor
 
 
-bool ActionSynchroniseCameraMovement::doAction( FaceControlSet&)
+bool ActionSynchroniseCameraMovement::doAction( FaceControlSet&, const QPoint&)
 {
     if ( isChecked())
     {
-        connect( _interactor, &ModelMoveInteractor::onCameraRotate, this, &ActionSynchroniseCameraMovement::doOnCameraMove);
-        connect( _interactor, &ModelMoveInteractor::onCameraDolly, this, &ActionSynchroniseCameraMovement::doOnCameraMove);
-        connect( _interactor, &ModelMoveInteractor::onCameraPan, this, &ActionSynchroniseCameraMovement::doOnCameraMove);
+        connect( _interactor, &ModelMoveInteractor::onCameraRotate, this, &ActionSynchroniseCameraMovement::doSyncActiveCamera);
+        connect( _interactor, &ModelMoveInteractor::onCameraDolly, this, &ActionSynchroniseCameraMovement::doSyncActiveCamera);
+        connect( _interactor, &ModelMoveInteractor::onCameraPan, this, &ActionSynchroniseCameraMovement::doSyncActiveCamera);
     }   // end if
     else
         _interactor->disconnect(this);
@@ -59,8 +59,16 @@ bool ActionSynchroniseCameraMovement::doAction( FaceControlSet&)
 }   // end doAction
 
 
-// private
-void ActionSynchroniseCameraMovement::doOnCameraMove()
+// public static
+void ActionSynchroniseCameraMovement::sync()
+{
+    if ( s_obj && s_obj->isChecked())
+        s_obj->doSyncActiveCamera();
+}   // end sync
+
+
+// public
+void ActionSynchroniseCameraMovement::doSyncActiveCamera()
 {
     ModelViewer* viewer = _interactor->viewer();
     RFeatures::CameraParams cp = viewer->getCamera();
@@ -72,4 +80,4 @@ void ActionSynchroniseCameraMovement::doOnCameraMove()
             v->updateRender();
         }   // end if
     }   // end for
-}   // end doOnCameraMove
+}   // end doSyncActiveCamera

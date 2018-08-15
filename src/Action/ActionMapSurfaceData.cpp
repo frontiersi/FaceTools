@@ -37,7 +37,7 @@ ActionMapSurfaceData::ActionMapSurfaceData()
 }   // end ctor
 
 
-bool ActionMapSurfaceData::doAction( FaceControlSet& rset)
+bool ActionMapSurfaceData::doAction( FaceControlSet& rset, const QPoint&)
 {
     for ( FaceModel* fm : rset.models())
     {

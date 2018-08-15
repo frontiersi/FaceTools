@@ -46,8 +46,7 @@ public:
 
 protected slots:
     bool testReady( const FaceControl*);
-    bool testEnabled() const override { return readyCount() == 1;}
-    bool doAction( FaceControlSet&) override;
+    bool doAction( FaceControlSet&, const QPoint&) override;
     void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override{ cs.insert(CAMERA_CHANGE);}
     bool displayDebugStatusProgression() const override { return false;}
 

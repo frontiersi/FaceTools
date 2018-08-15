@@ -44,10 +44,11 @@ BoundingVisualisation::~BoundingVisualisation()
 }   // end dtor
 
 
-void BoundingVisualisation::apply( const FaceControl* fc)
+bool BoundingVisualisation::apply( const FaceControl* fc, const QPoint*)
 {
     if ( _views.count(fc) == 0)
         _views[fc] = new BoundingView( fc->data()->bounds());
+    return true;
 }   // end apply
 
 

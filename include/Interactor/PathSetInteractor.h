@@ -34,22 +34,19 @@ namespace Interactor {
 class FaceTools_EXPORT PathSetInteractor : public FaceHoveringInteractor
 { Q_OBJECT
 public:
-    PathSetInteractor( FEEI*, Vis::PathSetVisualisation*);
+    PathSetInteractor( FEEI*, Vis::PathSetVisualisation*, QStatusBar *sbar=nullptr);
 
     // Get the ID of the path associated with the handle being hovered over (if any).
     // Returns -1 if no handle hovered over. Use hoverModel() to get associated model.
     int hoverID() const;
 
-    // Add a path on the hover model at the current mouse coords. Client should check for
+    // Add a path on the hover model at the given coords. Client should check for
     // existing paths first before deciding to create a new one. Returns -1 if no path
-    // could be created (e.g. if the current mouse coords are not on the model).
-    int addPath();
+    // could be created (e.g. if the given coords are not on the model).
+    int addPath( const QPoint&);
 
     // Deletes the path returned by hoverID returning true on success.
     bool deletePath();
-
-    // Set handle1 of the path with given ID to the given point returning true on success.
-    bool setDrag( int id, const QPoint&);
 
 private:
     bool leftButtonDown( const QPoint&) override;
@@ -57,7 +54,7 @@ private:
     bool mouseMove( const QPoint&) override;
     bool leftDrag( const QPoint&) override;
 
-    Vis::PathSetVisualisation *_pvis;
+    Vis::PathSetVisualisation *_vis;
     const Vis::PathView::Handle *_hdrag;
     const Vis::PathView::Handle *_hhover;
     cv::Vec3f _origPos;

@@ -36,10 +36,10 @@ public:
 
 signals:
     // Notify of rotate, pan, and dolly events for the actor providing affected FaceControl.
-    void onActorRotate( const FaceControl*);
-    void onActorPan( const FaceControl*);
-    void onActorDolly( const FaceControl*);
-    void onActorStop( const FaceControl*);
+    void onActorRotate( FaceControl*);
+    void onActorPan( FaceControl*);
+    void onActorDolly( FaceControl*);
+    void onActorStop( FaceControl*);
 
     // Notify of rotate, pan, and dolly events for the camera.
     void onCameraRotate();
@@ -49,7 +49,7 @@ signals:
 private:
     bool _moveModels;
     ModelMoveResponder *_moveResponder;
-    const FaceControl *_affected;
+    FaceControl *_affected;
 
     bool leftButtonDown( const QPoint&) override;
     bool middleButtonDown( const QPoint&) override;
@@ -64,10 +64,9 @@ private:
     void actorRotate() override { emit onActorRotate(_affected);}
     void actorDolly() override { emit onActorDolly(_affected);}
     void actorPan() override { emit onActorPan(_affected);}
+    void actorStop() override;
 
-    void actorStop() override { emit onActorStop(_affected);}
-
-    const FaceControl* testPoint( const QPoint&) const;
+    FaceControl* testPoint( const QPoint&) const;
     bool setInteractionMode( const QPoint&);
 };  // end class
 

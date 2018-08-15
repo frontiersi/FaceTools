@@ -36,41 +36,36 @@ namespace Vis {
 class FaceTools_EXPORT LandmarkSetView
 {
 public:
-    LandmarkSetView( const LandmarkSet&, double lmrad=1.5);
+    LandmarkSetView( const LandmarkSet&, double defaultRadius=1.0);
     virtual ~LandmarkSetView();
-
-    bool isVisible() const;                             // Returns true iff ANY landmark shown
-    void setVisible( bool, ModelViewer*);               // Show/hide all landmarks (also sets current viewer)
-
-    void showLandmark( bool, int lmID);                 // Show/hide individual landmark
-    bool isLandmarkVisible( int lmID) const;            // Returns true iff a particular landmark is shown
-    const std::unordered_set<int>& visible() const;     // IDs of the visible landmarks
-
-    void highlightLandmark( bool, int lmID);            // Highlights a (visible) landmark
-    bool isLandmarkHighlighted( int lmID) const;        // Returns true iff a particular landmark is highlighted
-    const std::unordered_set<int>& highlighted() const; // IDs of the highlighted landmarks
 
     void setLandmarkRadius( double);
     double landmarkRadius() const { return _lmrad;}
 
-    int pointedAt( const QPoint&) const;                // Returns ID of landmark under the given coordinates or -1 if none.
-    bool isLandmark( const vtkProp*) const;             // Returns true if given prop is landmark AND landmark is visible.
-    const SphereView* landmark( int lmID) const;        // Return the landmark view with this ID or NULL if not found.
+    void setVisible( bool, ModelViewer*);               // Show/hide all landmarks (also sets current viewer)
 
-    void pokeTransform( const vtkMatrix4x4*);                     
-    void fixTransform();
+    const std::unordered_set<int>& visible() const { return _visible;}  // IDs of visible landmarks
+    void showLandmark( bool, int lmID);                 // Show/hide individual landmark
+
+    const std::unordered_set<int>& highlighted() const { return _highlighted;} // IDs of highlighted landmarks
+    void highlightLandmark( bool, int lmID);            // Highlights a (visible) landmark
+
+    int landmark( const vtkProp*) const;                // Returns ID of landmark for prop or -1 if not found.
 
     // Refresh info about the given landmark from the set.
     // For lmids not in the set, the view is deleted. For lmids in the set, but not the view,
     // the landmark view is created. In all other cases, the landmark views are updated with
     // the current name and position of the landmark from the set.
-    void refreshLandmark( int lmid);
+    void updateLandmark( int lmID);
+
+    void pokeTransform( const vtkMatrix4x4*);                     
+    void fixTransform();
 
 private:
     const LandmarkSet& _lset;
     double _lmrad;
     ModelViewer *_viewer;
-    std::unordered_map<int, SphereView*> _lviews;
+    std::unordered_map<int, SphereView*> _views;
     std::unordered_map<const vtkProp*, int> _props; // Mapping of props to landmark IDs for fast lookup
     std::unordered_set<int> _highlighted;
     std::unordered_set<int> _visible;

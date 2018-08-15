@@ -19,7 +19,6 @@
 #define FACE_TOOLS_ACTION_SET_FOCUS_H
 
 #include "FaceAction.h"
-#include <FaceEntryExitInteractor.h>
 
 namespace FaceTools {
 namespace Action {
@@ -27,10 +26,11 @@ namespace Action {
 class FaceTools_EXPORT ActionSetFocus : public FaceAction
 { Q_OBJECT
 public:
-    ActionSetFocus( const QString& dname, FEEI*);
+    explicit ActionSetFocus( const QString& dname);
 
 protected slots:
-    bool doAction( FaceControlSet&) override;
+    bool testEnabled( const QPoint*) const override;
+    bool doAction( FaceControlSet&, const QPoint&) override;
     void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(CAMERA_CHANGE);}
     bool displayDebugStatusProgression() const override { return false;}
 };  // end class

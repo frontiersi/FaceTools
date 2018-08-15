@@ -39,9 +39,10 @@ class FaceTools_EXPORT VisualisationInterface : public QTools::PluginInterface
 { Q_OBJECT
 public:
     virtual bool isExclusive() const = 0;                   // Exclusive visualisations cannot be layered.
-    virtual bool isAvailable( const FaceModel*) const = 0;  // If the data for this visualisation are available.
+    virtual bool isAvailable( const FaceModel*) const = 0;  // Does the FaceModel allow this visualisation to be applied?
+    virtual bool isAvailable( const FaceControl*, const QPoint* mc=nullptr) const = 0; // Can visualise for given view and mouse coords?
 
-    virtual void apply( const FaceControl*) = 0;            // Apply visualisation post-processing.
+    virtual bool apply( const FaceControl*, const QPoint* mc=nullptr) = 0; // Apply visualisation returning true if applied okay.
     virtual void addActors( const FaceControl*) = 0;        // Add the visualisation specific actors.
     virtual void removeActors( const FaceControl*) = 0;     // Remove the view actors from viewer.
 };  // end class

@@ -38,7 +38,7 @@ public:
     // Used to bound the selected view - so should only be applied to a single FaceView.
     bool singleView() const override { return true;}
 
-    void apply( const FaceControl*) override;
+    bool apply( const FaceControl*, const QPoint* mc=nullptr) override;
     void addActors( const FaceControl*) override;
     void removeActors( const FaceControl*) override;
 

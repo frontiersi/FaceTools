@@ -32,111 +32,80 @@ using FaceTools::Landmark;
 LandmarkSetView::LandmarkSetView( const LandmarkSet& lset, double r)
     : _lset(lset), _lmrad(r), _viewer(nullptr)
 {
-    std::for_each( std::begin(lset.ids()), std::end(lset.ids()), [this](int lm){ this->refreshLandmark(lm);});
+    std::for_each( std::begin(lset.ids()), std::end(lset.ids()), [this](int lm){ this->updateLandmark(lm);});
 }   // end ctor
 
 
 // public
 LandmarkSetView::~LandmarkSetView()
 {
-    for ( const auto& lm : _lviews)
-    {
-        showLandmark( false, lm.first);
-        delete lm.second;
-    }   // end foreach
+    setVisible( false, nullptr);
+    std::for_each( std::begin(_views), std::end(_views), [](auto p){ delete p.second;});
 }   // end dtor
-
-
-// public
-bool LandmarkSetView::isVisible() const { return !_visible.empty();}
 
 
 // public
 void LandmarkSetView::setVisible( bool enable, ModelViewer* viewer)
 {
-    while ( isVisible())
-        showLandmark( false, *_visible.begin());
+    if ( _viewer)
+        std::for_each( std::begin(_views), std::end(_views), [this](auto p){ this->showLandmark( false, p.first);});
     _viewer = viewer;
-    if ( enable && _viewer)
-        std::for_each( std::begin(_lviews), std::end(_lviews), [this](auto p){ this->showLandmark( true, p.first);});
+    if ( _viewer && enable)
+        std::for_each( std::begin(_views), std::end(_views), [this](auto p){ this->showLandmark( true, p.first);});
 }   // end setVisible
-
-
-// public
-const std::unordered_set<int>& LandmarkSetView::visible() const { return _visible;}
-const std::unordered_set<int>& LandmarkSetView::highlighted() const { return _highlighted;}
 
 
 // public
 void LandmarkSetView::showLandmark( bool enable, int lm)
 {
-    assert( _lviews.count(lm) > 0);
-    _lviews.at(lm)->setVisible( enable, _viewer);
-
+    if ( _views.count(lm) == 0)
+        return;
+    _views.at(lm)->setVisible( enable, _viewer);
     _visible.erase(lm);
-    if ( isLandmarkVisible(lm))
+    if ( enable)
         _visible.insert(lm);
-
-    _highlighted.erase(lm);
-    if ( isLandmarkHighlighted(lm))
-        _highlighted.insert(lm);
 }   // end showLandmark
-
-
-// public
-bool LandmarkSetView::isLandmarkVisible( int lm) const { return _lviews.at(lm)->isVisible();}
-bool LandmarkSetView::isLandmarkHighlighted( int lm) const { return _lviews.at(lm)->isHighlighted();}
 
 
 // public
 void LandmarkSetView::highlightLandmark( bool enable, int lm)
 {
-    if ( _lviews.count(lm) == 0)
+    if ( _views.count(lm) == 0)
         return;
-
-    _lviews.at(lm)->highlight( isLandmarkVisible(lm) && enable);
+    enable = enable && _visible.count(lm) > 0;
+    _views.at(lm)->setHighlighted( enable);
     _highlighted.erase(lm);
-    if ( isLandmarkHighlighted(lm))
-    {
+    if ( enable)
         _highlighted.insert(lm);
-        assert( _visible.count(lm) > 0);
-    }   // end if
 }   // end highlightLandmark
 
 
 // public
 void LandmarkSetView::setLandmarkRadius( double r)
 {
-    std::for_each( std::begin(_lviews), std::end(_lviews), [&](auto p){ p.second->setRadius(r);});
     _lmrad = r;
+    std::for_each( std::begin(_views), std::end(_views), [&](auto p){ p.second->setRadius(r);});
 }   // end setLandmarkRadius
 
 
 // public
 void LandmarkSetView::pokeTransform( const vtkMatrix4x4* vm)
-{
-    std::for_each( std::begin(_lviews), std::end(_lviews), [=](auto p){ p.second->pokeTransform(vm);});
-}   // end pokeTransform
+{ std::for_each( std::begin(_views), std::end(_views), [=](auto p){ p.second->pokeTransform(vm);});}
+void LandmarkSetView::fixTransform() { std::for_each( std::begin(_views), std::end(_views), [=](auto p){ p.second->fixTransform();});}
+int LandmarkSetView::landmark( const vtkProp* prop) const { return _props.count(prop) > 0 ? _props.at(prop) : -1;}
 
 
 // public
-void LandmarkSetView::fixTransform()
-{
-    std::for_each( std::begin(_lviews), std::end(_lviews), [=](auto p){ p.second->fixTransform();});
-}   // end fixTransform
-
-
-// public
-void LandmarkSetView::refreshLandmark( int lm)
+void LandmarkSetView::updateLandmark( int lm)
 {
     assert(lm >= 0);
     if ( !_lset.has(lm))  // Delete landmark from view
     {
-        if ( _lviews.count(lm) > 0)
+        if ( _views.count(lm) > 0)
         {
             showLandmark( false, lm);
-            SphereView *sv = _lviews.at(lm);
-            _lviews.erase(lm);
+            SphereView *sv = _views.at(lm);
+            _views.erase(lm);
             _props.erase(sv->prop());
             delete sv;
         }   // end if
@@ -146,46 +115,17 @@ void LandmarkSetView::refreshLandmark( int lm)
         const Landmark* lmk = _lset.get(lm);
 
         SphereView *sv = nullptr;
-        if ( _lviews.count(lm) > 0) // Get the landmark sphere view to update
-            sv = _lviews.at(lm);
+        if ( _views.count(lm) > 0) // Get the landmark sphere view to update
+            sv = _views.at(lm);
         else    // Landmark was added
         {
-            sv = _lviews[lm] = new SphereView( lmk->pos, _lmrad);
-            sv->setResolution(30);
-            sv->setColour(1,1,0.2);
+            sv = _views[lm] = new SphereView( lmk->pos, _lmrad, true/*pickable*/, true/*fixed scale*/);
+            sv->setResolution(20);
+            sv->setColour(0.9,1.0,0.3);
             _props[sv->prop()] = lm;
         }   // end if
 
         sv->setCaption( lmk->name);
         sv->setCentre( lmk->pos);
     }   // end if
-}   // end refreshLandmark 
-
-
-// public
-int LandmarkSetView::pointedAt( const QPoint& p) const
-{
-    int id = -1;
-    const vtkProp* prop = _viewer->getPointedAt(p);
-    if ( prop && _props.count(prop) > 0)
-    {
-        id = _props.at(prop);
-        if ( _visible.count(id) == 0)   // Ignore if not visible
-            id = -1;
-    }   // end if
-    return id;
-}   // end pointedAt
-
-
-// public
-bool LandmarkSetView::isLandmark( const vtkProp* prop) const { return _props.count(prop) > 0;}
-
-
-// public
-const SphereView* LandmarkSetView::landmark( int lmid) const
-{
-    const SphereView* lv = nullptr;
-    if ( _lviews.count(lmid) > 0)
-        lv = _lviews.at(lmid);
-    return lv;
-}   // end landmark
+}   // end updateLandmark 

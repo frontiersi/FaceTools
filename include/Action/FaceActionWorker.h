@@ -21,6 +21,7 @@
 #include <FaceTools_Export.h>
 #include <opencv2/opencv.hpp>
 #include <QThread>
+#include <QPoint>
 
 namespace FaceTools {
 class FaceControlSet;
@@ -32,7 +33,7 @@ class FaceAction;
 class FaceTools_EXPORT FaceActionWorker : public QThread
 { Q_OBJECT
 public:
-    FaceActionWorker( FaceAction*, FaceControlSet*);
+    FaceActionWorker( FaceAction*, FaceControlSet*, const QPoint&);
     void run() override;
 
 signals:
@@ -41,6 +42,7 @@ signals:
 private:
     FaceAction* _worker;
     FaceControlSet* _rset;
+    QPoint _tp;
 };  // end class
 
 }   // end namespace

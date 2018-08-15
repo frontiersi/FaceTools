@@ -18,37 +18,34 @@
 #ifndef FACE_TOOLS_RADIAL_SELECT_INTERACTOR_H
 #define FACE_TOOLS_RADIAL_SELECT_INTERACTOR_H
 
-/**
- * Provides for user definition of a radial region on a model. Uses FaceEntryExitInteractor
- * so can only be attached to FaceModelViewer and not the base ModelViewer type.
- */
-
-#include "FaceHoveringInteractor.h"
+#include "FaceEntryExitInteractor.h"
 #include <RadialSelectVisualisation.h>
 
 namespace FaceTools {
 namespace Interactor {
 
-class FaceTools_EXPORT RadialSelectInteractor : public FaceHoveringInteractor 
+class FaceTools_EXPORT RadialSelectInteractor : public ModelViewerInteractor 
 { Q_OBJECT
 public:
-    RadialSelectInteractor( FEEI*, Vis::RadialSelectVisualisation*);
+    RadialSelectInteractor( FEEI*, Vis::RadialSelectVisualisation*, QStatusBar* sbar=nullptr);
 
-signals:
-    // Signals that notify client of the parameters needed to update
-    // the RadialSelectVisualisation for the given FaceControl.
-    void onSetNewCentre( FaceControl*, const cv::Vec3f&);
-    void onSetNewRadius( FaceControl*, double);
+protected:
+    void onEnabledStateChanged(bool) override;
 
 private:
-    bool leftDoubleClick( const QPoint&) override;
-    bool leftDrag( const QPoint&) override;
+    bool leftButtonDown( const QPoint&) override;
     bool leftButtonUp( const QPoint&) override;
+    bool leftDrag( const QPoint&) override;
+    bool mouseMove( const QPoint&) override;
     bool mouseWheelForward( const QPoint&) override;
     bool mouseWheelBackward( const QPoint&) override;
+    bool testOnReticule( const QPoint&) const;
 
+    FEEI *_feei;
     Vis::RadialSelectVisualisation *_vis;
     bool _move;
+    FaceControl* _model;
+    static const QString s_msg;
 };  // end class
 
 }   // end namespace

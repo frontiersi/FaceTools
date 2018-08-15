@@ -92,15 +92,9 @@ bool ActionSetOpacity::testReady( const FaceControl* fc)
 }   // end testReady
 
 
-bool ActionSetOpacity::testEnabled() const
-{
-    return readyCount() >= 1;
-}   // end testEnabled
-
-
 // Action is processed on affine change of the selected FaceControl, so check
 // its bounds for overlap against others in the same viewer.
-bool ActionSetOpacity::doAction( FaceControlSet& fcsin)
+bool ActionSetOpacity::doAction( FaceControlSet& fcsin, const QPoint&)
 {
     assert(fcsin.size() == 1);
     // If opacity is already <= _maxOpacityOnOverlap, do nothing.
@@ -140,18 +134,16 @@ bool ActionSetOpacity::doAction( FaceControlSet& fcsin)
 }   // end doAction
 
 
-
 void ActionSetOpacity::doOnValueChanged( double newValue)
 {
     if ( !isEnabled())  // Do nothing if not currently enabled
         return;
 
     // Change the opacity of the actors for all the FaceControls in the selected FaceControl's viewer.
-    const FaceControlSet& fcs = readySet();
-    assert(fcs.size() == 1);
-    setOpacityValue( fcs.first()->viewer()->attached(), newValue);
+    const FaceControl* fc = ready1();
+    assert(fc);
+    setOpacityValue( fc->viewer()->attached(), newValue);
 }   // end doOnValueChanged
-
 
 
 void ActionSetOpacity::setOpacityValue( const FaceControlSet& fcs, double v)

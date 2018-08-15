@@ -32,9 +32,9 @@ using FaceTools::FaceModel;
 
 
 ActionEditPaths::ActionEditPaths( const QString& dn, const QIcon& ico, FEEI* feei, QStatusBar* sbar)
-    : ActionVisualise( _vis = new PathSetVisualisation( dn, ico)), _interactor(nullptr), _sbar(sbar)
+    : ActionVisualise( _vis = new PathSetVisualisation( dn, ico)),
+      _interactor( new PathSetInteractor( feei, _vis, sbar))
 {
-    _interactor = new PathSetInteractor( feei, _vis);
     // Hijack this action's reportFinished signal to propagate path edits.
     connect( _interactor, &ModelViewerInteractor::onChangedData, this, &ActionEditPaths::doOnEditedPath);
 }   // end ctor
@@ -49,18 +49,8 @@ ActionEditPaths::~ActionEditPaths()
 
 void ActionEditPaths::doAfterAction( ChangeEventSet& cs, const FaceControlSet& fcs, bool v)
 {
-    if ( _sbar)
-    {
-        const static QString smsg( tr("Left-click and drag on path handles to move; right-click to add/remove/rename."));
-        if ( isChecked())
-            _sbar->showMessage(smsg, 10000);    // 10 sec temp
-        else
-        {
-            if ( _sbar->currentMessage() == smsg)
-                _sbar->clearMessage();
-        }   // end else
-    }   // end if
     ActionVisualise::doAfterAction( cs, fcs, v);
+    _interactor->setEnabled(isChecked());
 }   // end doAfterAction
 
 

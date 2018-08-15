@@ -41,7 +41,6 @@ protected slots:
 private:
     Vis::LandmarksVisualisation *_vis;
     Interactor::LandmarksInteractor *_interactor;
-    QStatusBar *_sbar;
 };  // end class
 
 }   // end namespace

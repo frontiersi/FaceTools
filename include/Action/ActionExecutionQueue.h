@@ -19,7 +19,6 @@
 #define FACE_TOOLS_ACTION_EXECUTION_QUEUE_H
 
 #include "FaceAction.h"
-#include <unordered_map>
 #include <list>
 
 namespace FaceTools {
@@ -28,18 +27,23 @@ namespace Action {
 class FaceTools_EXPORT ActionExecutionQueue
 {
 public:
-    // Test whether the given FaceAction should be added to the execution queue.
-    void testPush( FaceAction*, const ChangeEventSet*);
+    ActionExecutionQueue() {}
 
-    // Pop the next action to be worked on - setting pflag on return with the
-    // value to be passed to FaceAction::process. Returns null if no more actions.
-    FaceAction* pop( bool &pflag);
-
+    void pushIfShould( FaceAction*, const ChangeEventSet*);
     size_t size() const { return _queue.size();}
+
+    FaceAction* popOrClear( const FaceControlSet&, bool &pflag);
 
 private:
     std::list<FaceAction*> _queue;
     std::unordered_map<FaceAction*, bool> _actions;
+
+    void clear();
+    FaceAction* pop( bool &pflag);
+    bool testPush( FaceAction*, const ChangeEventSet*);
+
+    ActionExecutionQueue( const ActionExecutionQueue&) = delete;
+    void operator=( const ActionExecutionQueue&) = delete;
 };  // end class
 
 }   // end namespace
