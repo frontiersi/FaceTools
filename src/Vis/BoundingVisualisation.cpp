@@ -66,6 +66,18 @@ void BoundingVisualisation::removeActors( const FaceControl* fc)
 }   // end removeActors
 
 
+void BoundingVisualisation::setHighlighted( const FaceControl* fc, int c, bool v)
+{
+    if (_views.count(fc) > 0)
+    {
+        if ( c >= 0)
+            _views.at(fc)->setHighlighted( c, v);
+        else
+            _views.at(fc)->setHighlighted( v);
+    }   // end if
+}   // end setHighlighted
+
+
 // protected
 void BoundingVisualisation::pokeTransform( const FaceControl* fc, const vtkMatrix4x4* vm)
 {
@@ -89,6 +101,7 @@ void BoundingVisualisation::purge( const FaceControl* fc)
 {
     if (_views.count(fc) > 0)
     {
+        removeActors(fc);
         delete _views.at(fc);
         _views.erase(fc);
     }   // end if

@@ -3,8 +3,10 @@
 ## Prerequisites
 - [CGAL](http://www.cgal.org/)
 - [dlib](http://dlib.net/)
-- [rModelIO](../../../rModelIO)
-- [QTools](../../../QTools)
+- [rFeatures](https://github.com/richeytastic/rFeatures)
+- [rModelIO](https://github.com/richeytastic/rModelIO)
+- [rVTK](https://github.com/richeytastic/rVTK)
+- [QTools](https://github.com/richeytastic/QTools)
 
 dlib requires the `shape_predictor_68_face_landmark.dat`. Download from:
 <http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2>

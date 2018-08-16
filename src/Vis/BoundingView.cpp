@@ -27,7 +27,7 @@ using FaceTools::ModelViewer;
 
 // public
 BoundingView::BoundingView( const std::vector<cv::Vec6d>& bounds, float lw, float r, float g, float b)
-    : _viewer(nullptr), _visible(false), _pickable(false)
+    : _viewer(nullptr), _visible(false), _pickable(false), _lw(lw), _colour(r,g,b)
 {
     for ( const cv::Vec6d& cb : bounds)
     {
@@ -110,3 +110,33 @@ void BoundingView::setVisible( bool visible, ModelViewer* viewer)
         _visible = visible;
     }   // end if
 }   // end setVisible
+
+
+void BoundingView::setHighlighted( bool v)
+{
+    const int n = (int)_actors.size();
+    for ( int i = 0; i < n; ++i)
+        setHighlighted( i, v);
+}   // end setHighlighted
+
+
+void BoundingView::setHighlighted( int c, bool v)
+{
+    if ( c >= _actors.size() || c < 0)
+    {
+        std::cerr << "[ERROR] FaceTools::Vis::BoundingView::setHighlighted: Component index out of range!" << std::endl;
+        return;
+    }   // end if
+
+    vtkProperty* property = _actors.at(c)->GetProperty();
+    if ( v)
+    {
+        property->SetColor( _colour[2], _colour[0], _colour[1]);
+        property->SetLineWidth( 2*_lw);
+    }   // end if
+    else
+    {
+        property->SetColor( _colour[0], _colour[1], _colour[2]);
+        property->SetLineWidth( _lw);
+    }   // end else
+}   // end setHighlighted

@@ -127,8 +127,9 @@ bool ActionVisualise::doAction( FaceControlSet& fcs, const QPoint& mc)
 void ActionVisualise::purge( const FaceModel* fm)
 {
     const FaceControlSet& fcs = fm->faceControls();
-    // Purge the visualisation, but don't do this through the FaceView since that de-applies the visualisation.
-    std::for_each( std::begin(fcs), std::end(fcs), [=](auto fc){ _vis->removeActors(fc); _vis->purge(fc);});
+    // Purge the visualisation of any per view calculated components.
+    // Visualisations are responsible for removing actors if necessary.
+    std::for_each( std::begin(fcs), std::end(fcs), [=](auto fc){ _vis->purge(fc);});
     _vis->purge(fm);
 }   // end purge
 

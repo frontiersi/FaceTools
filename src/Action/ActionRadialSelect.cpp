@@ -29,12 +29,12 @@ using FaceTools::FaceControlSet;
 using FaceTools::FaceControl;
 
 
-ActionRadialSelect::ActionRadialSelect( const QString& dn, const QIcon& ico, FEEI* feei, QStatusBar* sbar)
+ActionRadialSelect::ActionRadialSelect( const QString& dn, const QIcon& ico, MEEI* meei, QStatusBar* sbar)
     : ActionVisualise( _vis = new RadialSelectVisualisation( dn, ico)),
-      _interactor( new RadialSelectInteractor( feei, _vis, sbar))
+      _interactor( new RadialSelectInteractor( meei, _vis, sbar))
 {
-    connect( feei, &FEEI::onEnterModel, [=](auto fc){ this->testSetEnabled( &feei->viewer()->mouseCoords());});
-    connect( feei, &FEEI::onLeaveModel, [this](auto fc){ this->testSetEnabled( nullptr);});
+    connect( meei, &MEEI::onEnterModel, [=](auto fc){ this->testSetEnabled( &meei->viewer()->mouseCoords());});
+    connect( meei, &MEEI::onLeaveModel, [this](auto fc){ this->testSetEnabled( nullptr);});
 }   // end ctor
 
 

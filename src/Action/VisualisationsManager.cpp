@@ -80,6 +80,7 @@ QList<QAction*> VisualisationsManager::actions() const
 
 bool VisualisationsManager::setDefaultVisualisation( FaceView* fv)
 {
+    //std::cerr << "VisMan::setDefaultVisualisation" << std::endl;
     bool setv = false;
     if ( fv->textureActor() != nullptr) // Try to apply the texture visualisation first
     {

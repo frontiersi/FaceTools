@@ -35,11 +35,11 @@ const QString LandmarksInteractor::s_defaultMsg( QObject::tr("Add/remove/rename 
 const QString LandmarksInteractor::s_moveMsg( QObject::tr("Reposition with left-click and drag; right click to remove/rename the landmark."));
 
 // public
-LandmarksInteractor::LandmarksInteractor( FEEI* feei, LandmarksVisualisation* vis, QStatusBar* sbar)
-    : ModelViewerInteractor( nullptr, sbar), _feei(feei), _vis(vis), _drag(-1), _hover(-1), _model(nullptr)
+LandmarksInteractor::LandmarksInteractor( MEEI* meei, LandmarksVisualisation* vis, QStatusBar* sbar)
+    : ModelViewerInteractor( nullptr, sbar), _meei(meei), _vis(vis), _drag(-1), _hover(-1), _model(nullptr)
 {
-    connect( feei, &FEEI::onEnterLandmark, this, &LandmarksInteractor::doOnEnterLandmark);
-    connect( feei, &FEEI::onLeaveLandmark, this, &LandmarksInteractor::doOnLeaveLandmark);
+    connect( meei, &MEEI::onEnterLandmark, this, &LandmarksInteractor::doOnEnterLandmark);
+    connect( meei, &MEEI::onLeaveLandmark, this, &LandmarksInteractor::doOnLeaveLandmark);
     setEnabled(false);
 }   // end ctor
 

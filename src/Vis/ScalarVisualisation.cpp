@@ -161,6 +161,9 @@ void ScalarVisualisation::removeActors( const FaceControl* fc)
 // protected
 void ScalarVisualisation::purge( const FaceControl* fc)
 {
+    // Note that this implementation of purge is different to most others in that the actor
+    // (i.e. the surface actor) is not also removed - only the colour mapping of the surface
+    // of that actor is reset.
     _added.erase(fc);
     _mappings.erase(fc);
     remapColourRange();

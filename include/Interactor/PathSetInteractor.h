@@ -34,7 +34,7 @@ namespace Interactor {
 class FaceTools_EXPORT PathSetInteractor : public FaceHoveringInteractor
 { Q_OBJECT
 public:
-    PathSetInteractor( FEEI*, Vis::PathSetVisualisation*, QStatusBar *sbar=nullptr);
+    PathSetInteractor( MEEI*, Vis::PathSetVisualisation*, QStatusBar *sbar=nullptr);
 
     // Get the ID of the path associated with the handle being hovered over (if any).
     // Returns -1 if no handle hovered over. Use hoverModel() to get associated model.

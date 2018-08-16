@@ -33,7 +33,7 @@ namespace Action {
 class FaceTools_EXPORT ActionEditPaths : public ActionVisualise
 { Q_OBJECT
 public:
-    ActionEditPaths( const QString& dname, const QIcon& icon, FEEI*, QStatusBar* sb=nullptr);
+    ActionEditPaths( const QString& dname, const QIcon& icon, MEEI*, QStatusBar* sb=nullptr);
     ~ActionEditPaths() override;
 
     Interactor::PathSetInteractor* interactor() override { return _interactor;}

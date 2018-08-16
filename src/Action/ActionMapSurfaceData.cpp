@@ -42,7 +42,10 @@ bool ActionMapSurfaceData::doAction( FaceControlSet& rset, const QPoint&)
     for ( FaceModel* fm : rset.models())
     {
         if ( !FaceModelSurfaceData::get()->isAvailable(fm))
+        {
+            fm->lockForRead();
             FaceModelSurfaceData::get()->calculate(fm);
+        }   // end if
     }   // end for
     return true;
 }   // end doAction
@@ -56,6 +59,7 @@ void ActionMapSurfaceData::purge( const FaceModel* fm)
 
 void ActionMapSurfaceData::doOnCalculated( const FaceModel* fm)
 {
+    fm->unlock();
     ChangeEventSet cset;
     cset.insert( SURFACE_DATA_CHANGE);
     emit reportFinished( cset, fm->faceControls(), true);

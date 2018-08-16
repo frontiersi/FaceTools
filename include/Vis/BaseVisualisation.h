@@ -107,7 +107,7 @@ protected:
     virtual void addProcessEvents( Action::ChangeEventSet&) const {}
 
     // Specifies if application of this visualisation should be automatically
-    // synchronised with a FaceControl's ready status.
+    // synchronised with a FaceControl's ready (selected) status.
     virtual bool applyOnReady() const { return false;}
 
     friend class Action::ActionVisualise;

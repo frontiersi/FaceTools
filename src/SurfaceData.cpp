@@ -67,8 +67,10 @@ int findMaxZPolygon( const ObjModel* model, const IntSet* vidxs)
 
 void createSurfaceData( SurfaceData* sd, const FaceModel* fm)
 {
+    assert(fm);
     const ObjModelInfo::Ptr info = fm->info();
     const int nc = (int)info->components().size();   // # components
+    assert(nc >= 1);
 
     // Parse all the components in the model to extract normals and polygon areas
     const ObjModel* model = info->cmodel();
@@ -105,6 +107,7 @@ void createSurfaceData( SurfaceData* sd, const FaceModel* fm)
         assert(cverts);
         sd->curvature->map( *cverts);
     }   // end for
+
     sd->metrics = new ObjModelCurvatureMetrics( sd->curvature.get());
 }   // end createSurfaceData
 
@@ -127,14 +130,12 @@ void SurfaceDataWorker::calculate()
 {
     working = true;
     lock.lockForWrite();
-    fmodel->lockForRead();
 
     // Create SurfaceData via a worker thread
     QThread *wthread = QThread::create( [=](){ createSurfaceData( surfaceData, fmodel);});
     moveToThread( wthread);
     connect( wthread, &QThread::finished, [=](){
             moveToThread( QApplication::instance()->thread());
-            fmodel->unlock();
             working = false;
             lock.unlock();
             emit onCalculated(fmodel);

@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_FACE_ENTRY_EXIT_INTERACTOR_H
-#define FACE_TOOLS_FACE_ENTRY_EXIT_INTERACTOR_H
+#ifndef FACE_TOOLS_MODEL_ENTRY_EXIT_INTERACTOR_H
+#define FACE_TOOLS_MODEL_ENTRY_EXIT_INTERACTOR_H
 
 /**
  * Deals with messages relating to position of the mouse cursor as it moves over a face model.
@@ -33,10 +33,10 @@ class FaceModelViewer;
 
 namespace Interactor {
 
-class FaceTools_EXPORT FaceEntryExitInteractor : public ModelViewerInteractor
+class FaceTools_EXPORT ModelEntryExitInteractor : public ModelViewerInteractor
 { Q_OBJECT
 public:
-    FaceEntryExitInteractor();
+    ModelEntryExitInteractor();
 
     inline FaceControl* model() const { return _mnow;} // Model cursor is currently over (NULL if none).
     inline int landmark() const { return _lnow;}       // Landmark cursor is over (-1 if none).
@@ -49,8 +49,8 @@ signals:
 
     // Enter and leave signals for landmarks will only be emitted if the given
     // FaceControl currently has a LandmarksVisualisation applied to its view.
-    void onEnterLandmark( FaceControl*, int lmkId);
-    void onLeaveLandmark( FaceControl*, int lmkId);
+    void onEnterLandmark( FaceControl*, int);
+    void onLeaveLandmark( FaceControl*, int);
 
     void onLeftDown();
     void onLeftDrag();
@@ -77,6 +77,7 @@ private:
     bool leftDrag( const QPoint&) override;
     bool leftButtonDown( const QPoint&) override;
     bool leftButtonUp( const QPoint&) override;
+    bool rightButtonDown( const QPoint&) override;
 
     bool testPoint( const QPoint&);
 };  // end class
@@ -84,6 +85,6 @@ private:
 }   // end namespace
 }   // end namespace
 
-typedef FaceTools::Interactor::FaceEntryExitInteractor FEEI;
+typedef FaceTools::Interactor::ModelEntryExitInteractor MEEI;
 
 #endif

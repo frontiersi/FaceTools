@@ -31,9 +31,9 @@ using FaceTools::FaceControl;
 using FaceTools::FaceModel;
 
 
-ActionEditPaths::ActionEditPaths( const QString& dn, const QIcon& ico, FEEI* feei, QStatusBar* sbar)
+ActionEditPaths::ActionEditPaths( const QString& dn, const QIcon& ico, MEEI* meei, QStatusBar* sbar)
     : ActionVisualise( _vis = new PathSetVisualisation( dn, ico)),
-      _interactor( new PathSetInteractor( feei, _vis, sbar))
+      _interactor( new PathSetInteractor( meei, _vis, sbar))
 {
     // Hijack this action's reportFinished signal to propagate path edits.
     connect( _interactor, &ModelViewerInteractor::onChangedData, this, &ActionEditPaths::doOnEditedPath);

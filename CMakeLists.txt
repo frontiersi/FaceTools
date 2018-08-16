@@ -35,6 +35,7 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionBackfaceCulling.h"
     "${INCLUDE_ACTION_DIR}/ActionCloseAllFaceModels.h"
     "${INCLUDE_ACTION_DIR}/ActionCloseFaceModels.h"
+    "${INCLUDE_ACTION_DIR}/ActionComponentSelect.h"
     "${INCLUDE_ACTION_DIR}/ActionCopyViewer.h"
     "${INCLUDE_ACTION_DIR}/ActionCrop.h"
     "${INCLUDE_ACTION_DIR}/ActionDeleteLandmark.h"
@@ -97,9 +98,9 @@ set( QOBJECTS
     "${INCLUDE_VIS_DIR}/VisualisationInterface.h"
 
     "${INCLUDE_INT_DIR}/ContextMenuInteractor.h"
-    "${INCLUDE_INT_DIR}/FaceEntryExitInteractor.h"
     "${INCLUDE_INT_DIR}/FaceHoveringInteractor.h"
     "${INCLUDE_INT_DIR}/LandmarksInteractor.h"
+    "${INCLUDE_INT_DIR}/ModelEntryExitInteractor.h"
     "${INCLUDE_INT_DIR}/ModelViewerEntryExitInteractor.h"
     "${INCLUDE_INT_DIR}/ModelMoveInteractor.h"
     "${INCLUDE_INT_DIR}/ModelMoveResponder.h"
@@ -173,6 +174,7 @@ set( SRC_FILES
     ${SRC_DIR}/Action/ActionBackfaceCulling
     ${SRC_DIR}/Action/ActionCloseAllFaceModels
     ${SRC_DIR}/Action/ActionCloseFaceModels
+    ${SRC_DIR}/Action/ActionComponentSelect
     ${SRC_DIR}/Action/ActionCopyViewer
     ${SRC_DIR}/Action/ActionCrop
     ${SRC_DIR}/Action/ActionDeleteLandmark
@@ -252,9 +254,9 @@ set( SRC_FILES
     ${SRC_DIR}/Vis/SphereView
 
     ${SRC_DIR}/Interactor/ContextMenuInteractor
-    ${SRC_DIR}/Interactor/FaceEntryExitInteractor
     ${SRC_DIR}/Interactor/FaceHoveringInteractor
     ${SRC_DIR}/Interactor/LandmarksInteractor
+    ${SRC_DIR}/Interactor/ModelEntryExitInteractor
     ${SRC_DIR}/Interactor/ModelViewerInteractor
     ${SRC_DIR}/Interactor/ModelMoveInteractor
     ${SRC_DIR}/Interactor/ModelMoveResponder

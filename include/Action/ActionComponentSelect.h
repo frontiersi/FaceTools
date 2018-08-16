@@ -15,40 +15,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_RADIAL_SELECT_H
-#define FACE_TOOLS_ACTION_RADIAL_SELECT_H
-
-/**
- * A visualisation with an internally constructed interactor to adjust
- * the radially visualised area on a set of views for a FaceModel.
- */
+#ifndef FACE_TOOLS_ACTION_COMPONENT_SELECT_H
+#define FACE_TOOLS_ACTION_COMPONENT_SELECT_H
 
 #include "ActionVisualise.h"
-#include <RadialSelectVisualisation.h>
-#include <RadialSelectInteractor.h>
+#include <BoundingVisualisation.h>
+#include <ModelEntryExitInteractor.h>
 
 namespace FaceTools {
 namespace Action {
 
-class FaceTools_EXPORT ActionRadialSelect : public ActionVisualise
+class FaceTools_EXPORT ActionComponentSelect : public ActionVisualise
 { Q_OBJECT
 public:
-    ActionRadialSelect( const QString& dname, const QIcon& icon, MEEI*, QStatusBar*);
-    ~ActionRadialSelect() override;
-
-    Interactor::MVI* interactor() override { return _interactor;}   // Return the interactor.
-
-    double radius( const FaceControl *fc) const { return _vis->radius(fc->data());}
-    cv::Vec3f centre( const FaceControl *fc) const { return _vis->centre(fc->data());}
+    explicit ActionComponentSelect( MEEI*);
+    ~ActionComponentSelect() override;
 
     bool manageVisualisation() const override { return false;}
 
-protected slots:
-    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
-
 private:
-    Vis::RadialSelectVisualisation *_vis;
-    Interactor::RadialSelectInteractor *_interactor;
+    Vis::BoundingVisualisation *_vis;
 };  // end class
 
 }   // end namespace

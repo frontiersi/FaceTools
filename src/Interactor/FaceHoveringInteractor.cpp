@@ -23,14 +23,14 @@ using FaceTools::Interactor::ModelViewerInteractor;
 
 
 // public
-FaceHoveringInteractor::FaceHoveringInteractor( FEEI *feei, FaceTools::Vis::BaseVisualisation *vis, QStatusBar* sbar)
-    : ModelViewerInteractor( nullptr, sbar), _feei(feei), _vis(vis)
+FaceHoveringInteractor::FaceHoveringInteractor( MEEI *meei, FaceTools::Vis::BaseVisualisation *vis, QStatusBar* sbar)
+    : ModelViewerInteractor( nullptr, sbar), _meei(meei), _vis(vis)
 {
     assert(vis);
-    assert(feei);
+    assert(meei);
     // Use the FaceEntryExitInteractor to ensure this interactor is enabled only when moving over a face.
-    connect( feei, &FEEI::onEnterModel, this, &FaceHoveringInteractor::doOnEnterModel);
-    connect( feei, &FEEI::onLeaveModel, this, &FaceHoveringInteractor::doOnLeaveModel);
+    connect( meei, &MEEI::onEnterModel, this, &FaceHoveringInteractor::doOnEnterModel);
+    connect( meei, &MEEI::onLeaveModel, this, &FaceHoveringInteractor::doOnLeaveModel);
     setEnabled(false);
 }   // end ctor
 

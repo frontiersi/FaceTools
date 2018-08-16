@@ -69,18 +69,19 @@ bool RadialSelectVisualisation::isAvailable( const FaceControl* fc, const QPoint
 // private
 void RadialSelectVisualisation::resetRegionSelector( const FaceModel* fm, const cv::Vec3f& cpos)
 {
+    fm->lockForRead();
     _rselectors[fm] = RFeatures::ObjModelRegionSelector::create( fm->info()->cmodel(), cpos, fm->kdtree()->find(cpos));
     _rselectors.at(fm)->setRadius(_radius);
+    fm->unlock();
 }   // end resetRegionSelector
 
 
 // private
 void RadialSelectVisualisation::createActors( const FaceControl* fc)
 {
-    const FaceModel* fm = fc->data();
     assert(_lviews.count(fc) == 0);
     _lviews[fc] = new LoopsView( 3.0f);
-    _sviews[fc] = new SphereView( _rselectors.at(fm)->centre(), MIN_RADIUS, true/*pickable*/);
+    _sviews[fc] = new SphereView( _rselectors.at(fc->data())->centre(), MIN_RADIUS, true/*pickable*/);
     _sviews[fc]->setResolution(101);
     setHighlighted( fc, false);
 }   // end createActors
@@ -100,6 +101,7 @@ bool RadialSelectVisualisation::apply( const FaceControl* fc, const QPoint* mc)
     {
         // The preferred position to initially place the region is on the nose tip,
         // but if this landmark isn't present, use any landmark.
+        fm->lockForRead();
         const FaceTools::LandmarkSet::Ptr lmks = fm->landmarks();
         if ( lmks->has( FaceTools::Landmarks::NASAL_TIP))
         {
@@ -111,6 +113,7 @@ bool RadialSelectVisualisation::apply( const FaceControl* fc, const QPoint* mc)
             cpos = lmks->pos( *lmks->ids().begin());
             applied = true;
         }   // end else if
+        fm->unlock();
     }   // end if
 
     if ( applied)
@@ -134,6 +137,7 @@ void RadialSelectVisualisation::updateActors( const FaceModel* fm)
 {
     assert(_rselectors.count(fm) > 0);
 
+    fm->lockForRead();
     // Get the current vertices forming the selected boundary loop.
     std::list<int> lvidxs;    // Get the vertices making the line
     const size_t nverts = _rselectors.at(fm)->getBoundary( lvidxs);
@@ -167,6 +171,7 @@ void RadialSelectVisualisation::updateActors( const FaceModel* fm)
         }   // end if
         _lviews.at(fc)->setVisible( visible, fc->viewer());
     }   // end for
+    fm->unlock();
 }   // end updateActors
 
 
@@ -203,6 +208,7 @@ void RadialSelectVisualisation::setCentre( const FaceModel* fm, const cv::Vec3f&
 {
     assert( _rselectors.count(fm) > 0);
 
+    fm->lockForRead();
     // If cpos is on the same model component that the selector is already calculated for,
     // just set the centre as normal. If it's on a different component though, reset it.
     int nvidx = fm->kdtree()->find(cpos);  // New vidx 
@@ -210,8 +216,9 @@ void RadialSelectVisualisation::setCentre( const FaceModel* fm, const cv::Vec3f&
 
     size_t nverts = 0;
     const RFeatures::ObjModelComponentFinder& cfinder = fm->info()->components();
-    if ( cfinder.componentVerticesFromVertex(nvidx) == cfinder.componentVerticesFromVertex(cvidx))
+    if ( cfinder.componentFromVertex(nvidx) == cfinder.componentFromVertex(cvidx))
         nverts = _rselectors.at(fm)->setCentre(cpos);
+    fm->unlock();
 
     if ( nverts == 0)
     {
@@ -302,6 +309,7 @@ void RadialSelectVisualisation::purge( const FaceControl* fc)
 {
     if (_lviews.count(fc) > 0)
     {
+        removeActors(fc);
         delete _lviews.at(fc);
         _lviews.erase(fc);
         delete _sviews.at(fc);

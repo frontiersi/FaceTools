@@ -31,8 +31,8 @@ using FaceTools::Path;
 
 
 // public
-PathSetInteractor::PathSetInteractor( FEEI* feei, PathSetVisualisation* vis, QStatusBar *sbar)
-    : FaceHoveringInteractor( feei, vis, sbar), _vis(vis), _hdrag(nullptr), _hhover(nullptr)
+PathSetInteractor::PathSetInteractor( MEEI* meei, PathSetVisualisation* vis, QStatusBar *sbar)
+    : FaceHoveringInteractor( meei, vis, sbar), _vis(vis), _hdrag(nullptr), _hhover(nullptr)
 {
 }   // end ctor
 
@@ -112,7 +112,6 @@ bool PathSetInteractor::deletePath()
     _vis->setCaptionsVisible( false);
     return true;
 }   // end deletePath
-
 
 
 bool PathSetInteractor::leftButtonDown( const QPoint& p)

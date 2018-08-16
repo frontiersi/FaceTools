@@ -19,7 +19,7 @@
 #define FACE_TOOLS_FACE_HOVERING_INTERACTOR_H
 
 /**
- * Uses FaceEntryExitInteractor to enable self only when mouse is over a model being
+ * Uses ModelEntryExitInteractor to enable self only when mouse is over a model being
  * visualised by the BaseVisualisation passed to the constructor (visualisation must be
  * applied to the hovered over model).
  * Note that functions enteringModel and leavingModel are provided for descendent
@@ -27,7 +27,7 @@
  * left button is down and the mouse is dragged off the model.
  */
 
-#include "FaceEntryExitInteractor.h"
+#include "ModelEntryExitInteractor.h"
 #include <BaseVisualisation.h>
 
 namespace FaceTools {
@@ -36,12 +36,12 @@ namespace Interactor {
 class FaceTools_EXPORT FaceHoveringInteractor : public ModelViewerInteractor 
 { Q_OBJECT
 public:
-    FaceHoveringInteractor( FEEI*, Vis::BaseVisualisation*, QStatusBar *sbar=nullptr);
+    FaceHoveringInteractor( MEEI*, Vis::BaseVisualisation*, QStatusBar *sbar=nullptr);
 
     // Return the model being hovered over (null if nothing being hovered over).
     // It is guaranteed that this will return a non-null pointer if called from
     // within overridden implementations of enteringModel and leavingModel.
-    inline FaceControl* hoverModel() const { return _feei->model();}
+    inline FaceControl* hoverModel() const { return _meei->model();}
 
 protected:
     // Calling hoverModel() from within overridden implementations of these functions
@@ -54,7 +54,7 @@ private slots:
     void doOnLeaveModel();
 
 private:
-    FEEI *_feei;
+    MEEI *_meei;
     Vis::BaseVisualisation *_vis;
 };  // end class
 

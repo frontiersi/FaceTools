@@ -128,6 +128,7 @@ void LandmarksVisualisation::purge( const FaceControl* fc)
 {
     if ( _views.count(fc) > 0)
     {
+        removeActors(fc);
         delete _views.at(fc);
         _views.erase(fc);
     }   // end if

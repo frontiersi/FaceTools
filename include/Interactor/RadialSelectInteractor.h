@@ -18,7 +18,7 @@
 #ifndef FACE_TOOLS_RADIAL_SELECT_INTERACTOR_H
 #define FACE_TOOLS_RADIAL_SELECT_INTERACTOR_H
 
-#include "FaceEntryExitInteractor.h"
+#include "ModelEntryExitInteractor.h"
 #include <RadialSelectVisualisation.h>
 
 namespace FaceTools {
@@ -27,7 +27,7 @@ namespace Interactor {
 class FaceTools_EXPORT RadialSelectInteractor : public ModelViewerInteractor 
 { Q_OBJECT
 public:
-    RadialSelectInteractor( FEEI*, Vis::RadialSelectVisualisation*, QStatusBar* sbar=nullptr);
+    RadialSelectInteractor( MEEI*, Vis::RadialSelectVisualisation*, QStatusBar* sbar=nullptr);
 
 protected:
     void onEnabledStateChanged(bool) override;
@@ -41,7 +41,7 @@ private:
     bool mouseWheelBackward( const QPoint&) override;
     bool testOnReticule( const QPoint&) const;
 
-    FEEI *_feei;
+    MEEI *_meei;
     Vis::RadialSelectVisualisation *_vis;
     bool _move;
     FaceControl* _model;

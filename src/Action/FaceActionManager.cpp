@@ -265,6 +265,7 @@ void FaceActionManager::testPurge( FaceAction* act, const ChangeEventSet* cset, 
     {
         if ( t->count(c) > 0)
         {
+            //std::cerr << "Purge from action " << act->debugActionName() << std::endl;
             std::for_each( std::begin(*fms), std::end(*fms), [=](auto fm){ act->purge(fm);});
             return;
         }   // end if

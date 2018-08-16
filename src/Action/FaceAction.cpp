@@ -96,8 +96,8 @@ bool FaceAction::testSetEnabled( const QPoint* p)
     else
         _testPoint = QPoint(-1,-1);
     setEnabled( enabled);
-    if ( !enabled && isCheckable())
-        setChecked(false);
+    //if ( !enabled && isCheckable())
+    //    setChecked(false);
     return isEnabled();
 }   // end testSetEnabled
 
@@ -162,6 +162,11 @@ float FaceAction::progress() const { return _pupdater ? _pupdater->progress() : 
 // protected
 void FaceAction::setReady( FaceControl* fc, bool v)
 {
+    /*
+    if ( debugActionName() == "\"Crop Face\"")
+        std::cerr << "Crop face action " << this << std::endl;
+    */
+
     const bool wasReady = isReady(fc);
     _ready.erase(fc);
     if ( v && fc && testReady(fc))

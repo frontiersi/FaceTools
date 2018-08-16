@@ -42,6 +42,10 @@ public:
     void addActors( const FaceControl*) override;
     void removeActors( const FaceControl*) override;
 
+    // Set the given component to be highlighted or not.
+    // If c == -1, then all components are referenced.
+    void setHighlighted( const FaceControl*, int c=-1, bool v=false);
+
 protected:
     void pokeTransform( const FaceControl*, const vtkMatrix4x4*) override;
     void fixTransform( const FaceControl*) override;

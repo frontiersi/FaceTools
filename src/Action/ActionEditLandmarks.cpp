@@ -31,9 +31,9 @@ using FaceTools::FaceControl;
 using FaceTools::FaceModel;
 
 
-ActionEditLandmarks::ActionEditLandmarks( const QString& dn, const QIcon& ico, FEEI* feei, QStatusBar* sbar)
+ActionEditLandmarks::ActionEditLandmarks( const QString& dn, const QIcon& ico, MEEI* meei, QStatusBar* sbar)
     : ActionVisualise( _vis = new LandmarksVisualisation( dn, ico)),
-     _interactor( new LandmarksInteractor( feei, _vis, sbar))
+     _interactor( new LandmarksInteractor( meei, _vis, sbar))
 {
     connect( _interactor, &ModelViewerInteractor::onChangedData, this, &ActionEditLandmarks::doOnEditedLandmark);
 }   // end ctor

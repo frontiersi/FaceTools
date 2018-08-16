@@ -42,6 +42,9 @@ public:
     void setVisible( bool, ModelViewer*);
     bool visible() const { return _visible;}
 
+    void setHighlighted( bool);         // Set all components highlighted or not.
+    void setHighlighted( int, bool);    // Set the given component to be highlighted or not.
+
     void pokeTransform( const vtkMatrix4x4*);
 
     // New bounds vector must be same length as existing # sources!
@@ -51,6 +54,8 @@ private:
     ModelViewer *_viewer;
     bool _visible;
     bool _pickable;
+    float _lw;
+    cv::Vec3f _colour;
     std::vector<vtkCubeSource*> _sources;
     std::vector<vtkActor*> _actors;   // The associated cuboid actors (one per component)
 

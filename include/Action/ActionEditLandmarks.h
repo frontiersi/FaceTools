@@ -29,7 +29,7 @@ namespace Action {
 class FaceTools_EXPORT ActionEditLandmarks : public ActionVisualise
 { Q_OBJECT
 public:
-    ActionEditLandmarks( const QString&, const QIcon&, FEEI*, QStatusBar* sb=nullptr);
+    ActionEditLandmarks( const QString&, const QIcon&, MEEI*, QStatusBar* sb=nullptr);
     ~ActionEditLandmarks() override;
 
     Interactor::LandmarksInteractor* interactor() override { return _interactor;}

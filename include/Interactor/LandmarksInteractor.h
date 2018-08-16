@@ -18,7 +18,7 @@
 #ifndef FACE_TOOLS_LANDMARKS_INTERACTOR_H
 #define FACE_TOOLS_LANDMARKS_INTERACTOR_H
 
-#include "FaceEntryExitInteractor.h"
+#include "ModelEntryExitInteractor.h"
 #include <LandmarksVisualisation.h>
 
 namespace FaceTools {
@@ -27,12 +27,12 @@ namespace Interactor {
 class FaceTools_EXPORT LandmarksInteractor : public ModelViewerInteractor
 { Q_OBJECT
 public:
-    LandmarksInteractor( FEEI*, Vis::LandmarksVisualisation*, QStatusBar* sbar=nullptr);
+    LandmarksInteractor( MEEI*, Vis::LandmarksVisualisation*, QStatusBar* sbar=nullptr);
 
     // Get the ID of the landmark being hovered over (if any).
     // Returns -1 if no handle hovered over. Use hoverModel() to get associated model.
     int hoverID() const { return _hover;}
-    FaceControl* hoverModel() const { return _feei->model();}
+    FaceControl* hoverModel() const { return _meei->model();}
 
     // Add a landmark on the hover model at the given coords with the given label.
     // Client should check for existing landmarks first before deciding to create a new one.
@@ -55,7 +55,7 @@ private:
     bool leftButtonUp( const QPoint&) override;
     bool leftDrag( const QPoint&) override;
 
-    FEEI *_feei;
+    MEEI *_meei;
     Vis::LandmarksVisualisation *_vis;
     int _drag, _hover;  // IDs of the landmarks being dragged and hovered over.
     FaceControl* _model;

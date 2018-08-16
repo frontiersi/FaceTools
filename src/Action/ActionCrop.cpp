@@ -41,7 +41,11 @@ ActionCrop::ActionCrop( const QString& dn, const QIcon& ico, ActionRadialSelect 
 }   // end ctor
 
 
-bool ActionCrop::testEnabled( const QPoint*) const { return _rsel->isChecked();}
+bool ActionCrop::testEnabled( const QPoint*) const
+{
+    //std::cerr << "ActionCrop::testEnabled " << std::boolalpha << (ready1() != nullptr) << " " << _rsel->isChecked() << std::endl;
+    return (ready1() != nullptr) && _rsel->isChecked();
+}   // end testEnabled
 
 
 bool ActionCrop::doAction( FaceControlSet& rset, const QPoint&)
