@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,9 +31,9 @@ public:
     MultiFaceModelViewer( QWidget *parent=nullptr);
     ~MultiFaceModelViewer() override;
 
-    FaceModelViewer* leftViewer() { return _v0;}
-    FaceModelViewer* centreViewer() { return _v1;}
-    FaceModelViewer* rightViewer() { return _v2;}
+    FMV * leftViewer() { return _v0;}
+    FMV* centreViewer() { return _v1;}
+    FMV* rightViewer() { return _v2;}
 
     void setCopyLeftToCentreAction( QAction*);
     void setMoveLeftToCentreAction( QAction*);
@@ -44,13 +44,13 @@ public:
     void setMoveRightToCentreAction( QAction*);
     void setCopyRightToCentreAction( QAction*);
 
-    void setLeftResetCameraAction( QAction*);
-    void setCentreResetCameraAction( QAction*);
-    void setRightResetCameraAction( QAction*);
+    void setLeftAction0( QAction*);
+    void setCentreAction0( QAction*);
+    void setRightAction0( QAction*);
 
-    void setLeftSaveImageAction( QAction*);
-    void setCentreSaveImageAction( QAction*);
-    void setRightSaveImageAction( QAction*);
+    void setLeftAction1( QAction*);
+    void setCentreAction1( QAction*);
+    void setRightAction1( QAction*);
 
 public slots:
     void setViewerVisible(int, bool);
@@ -58,12 +58,12 @@ public slots:
 private:
     std::vector<QToolButton*> _copyButton;
     std::vector<QToolButton*> _moveButton;
-    std::vector<QToolButton*> _resetCameraButtons;
-    std::vector<QToolButton*> _saveImageButtons;
+    std::vector<QToolButton*> _action0Buttons;
+    std::vector<QToolButton*> _action1Buttons;
 
-    FaceModelViewer *_v0;
-    FaceModelViewer *_v1;
-    FaceModelViewer *_v2;
+    FMV *_v0;
+    FMV *_v1;
+    FMV *_v2;
     QSplitter *_splitter;
 
     void addCommonButtons( QLayout*);

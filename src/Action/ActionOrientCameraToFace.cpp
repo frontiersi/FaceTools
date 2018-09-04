@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,63 +17,54 @@
 
 #include <ActionOrientCameraToFace.h>
 #include <ActionSynchroniseCameraMovement.h>
-#include <FaceShapeLandmarks2DDetector.h>   // namespace FaceTools::Landmarks
 #include <FaceModelViewer.h>
-#include <ChangeEvents.h>
-#include <FaceControl.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <Transformer.h>    // RFeatures
 #include <algorithm>
 using FaceTools::Action::ActionOrientCameraToFace;
-using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
+using FaceTools::FVS;
+using FaceTools::Vis::FV;
 using FaceTools::ModelViewer;
 
 
-ActionOrientCameraToFace::ActionOrientCameraToFace( const QString& dn, const QIcon& ico)
-    : FaceAction( dn, ico), _distance(450.0f), _urads(0.0f)
+ActionOrientCameraToFace::ActionOrientCameraToFace( const QString& dn, const QIcon& ico, float d, float r)
+    : FaceAction( dn, ico), _distance(d), _urads(r)
 {
 }   // end ctor
 
 
-bool ActionOrientCameraToFace::testReady( const FaceControl* fc)
+bool ActionOrientCameraToFace::testReady( const FV* fv)
 {
-    fc->data()->lockForRead();
-    const bool glmk = FaceTools::hasReqLandmarks( fc->data()->landmarks());
-    fc->data()->unlock();
+    const FaceModel* fm = fv->data();
+    fm->lockForRead();
+    const bool glmk = fm->centreSet();
+    fm->unlock();
     return glmk;
 }   // end testReady
 
 
-bool ActionOrientCameraToFace::doAction( FaceControlSet& fset, const QPoint&)
+bool ActionOrientCameraToFace::doAction( FVS& fset, const QPoint&)
 {
     assert(fset.size() == 1);
-    const FaceControl* fc = fset.first();
-    const FaceModel* fm = fc->data();
+    const FV* fv = fset.first();
+    const FaceModel* fm = fv->data();
 
     fm->lockForRead();
     RFeatures::Orientation on = fm->orientation();
-    FaceTools::LandmarkSet::Ptr lmks = fm->landmarks();
-    using namespace FaceTools::Landmarks;
-    const cv::Vec3f& leye = lmks->pos( L_EYE_CENTRE);
-    const cv::Vec3f& reye = lmks->pos( R_EYE_CENTRE);
-    const cv::Vec3f& ntip = lmks->pos( NASAL_TIP);
+    cv::Vec3f focus = fm->centre();
     fm->unlock();
-
-    const cv::Vec3f& uvec = on.up();
-    const cv::Vec3f& nvec = on.norm();
 
     // Rotate the orientation about its up vector by the set amount.
     RFeatures::Transformer transformer( _urads, on.up());
     on.rotate( transformer.matrix());
 
-    const cv::Vec3f focus = FaceTools::calcFaceCentre( leye, reye, ntip);
-    fc->viewer()->setCamera( focus, nvec, uvec, _distance);
+    // Set the camera as needed.
+    fv->viewer()->setCamera( focus, on.norm(), on.up(), _distance);
 
-    // If camera synchroniser is null, work on just the selected FaceControl's viewer,
+    // If camera synchroniser is null, work on just the selected FaceView's viewer,
     // otherwise work over all viewers registered with the camera synchroniser.
     FaceTools::Action::ActionSynchroniseCameraMovement::sync();
 

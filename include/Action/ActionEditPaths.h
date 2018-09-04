@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,10 +18,6 @@
 #ifndef FACE_TOOLS_ACTION_EDIT_PATHS_H
 #define FACE_TOOLS_ACTION_EDIT_PATHS_H
 
-/**
- * A visualisation with an internally constructed interactor to edit paths on FaceModels.
- */
-
 #include "ActionVisualise.h"
 #include <PathSetVisualisation.h>
 #include <PathSetInteractor.h>
@@ -33,14 +29,15 @@ namespace Action {
 class FaceTools_EXPORT ActionEditPaths : public ActionVisualise
 { Q_OBJECT
 public:
-    ActionEditPaths( const QString& dname, const QIcon& icon, MEEI*, QStatusBar* sb=nullptr);
+    ActionEditPaths( const QString& dname, const QIcon& icon, Interactor::MEEI*, QStatusBar* sb=nullptr);
     ~ActionEditPaths() override;
 
     Interactor::PathSetInteractor* interactor() override { return _interactor;}
 
 protected slots:
-    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
-    void doOnEditedPath( const FaceControl*);
+    bool doAction( FVS&, const QPoint&) override;
+    void doAfterAction( EventSet&, const FVS&, bool) override;
+    void doOnEditedPath( const Vis::FV*);
 
 private:
     Vis::PathSetVisualisation *_vis;

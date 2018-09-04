@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,10 +21,6 @@
 #include "FaceAction.h"
 
 namespace FaceTools {
-namespace Detect {
-class FaceDetector;
-}   // end namespace
-
 namespace Action {
 
 class FaceTools_EXPORT ActionDetectFace : public FaceAction
@@ -37,15 +33,15 @@ public:
     ~ActionDetectFace() override;
 
 protected slots:
+    bool testReady( const Vis::FV* fv) override;
     bool testEnabled( const QPoint* mc=nullptr) const override { return _detector && ready1();}
-    bool doBeforeAction( FaceControlSet&, const QPoint&) override;   // Warn if overwriting
-    bool doAction( FaceControlSet&, const QPoint&) override;
-    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
+    bool doBeforeAction( FVS&, const QPoint&) override;   // Warn if overwriting
+    bool doAction( FVS&, const QPoint&) override;
+    void doAfterAction( EventSet&, const FVS&, bool) override;
 
 private:
     QWidget *_parent;
     Detect::FaceDetector *_detector;
-    FaceModelSet _failSet;
 };  // end class
 
 }   // end namespace

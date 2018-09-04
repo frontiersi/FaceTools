@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@
 #include <FaceView.h>
 #include <PluginsLoader.h>  // QTools
 #include <QApplication>
-#include <QString>
 #include <algorithm>
 #include <sstream>
 #include <cassert>
@@ -29,33 +28,32 @@
 using FaceTools::Action::FaceActionManager;
 using FaceTools::Action::FaceActionGroup;
 using FaceTools::Action::ActionVisualise;
-using FaceTools::Action::ChangeEventSet;
 using FaceTools::Action::ModelSelector;
 using FaceTools::Action::FaceAction;
+using FaceTools::Action::EventSet;
 using FaceTools::FileIO::FaceModelManager;
 using FaceTools::FileIO::LoadFaceModelsHelper;
 using FaceTools::Interactor::MVI;
 using FaceTools::Interactor::ViewerInteractionManager;
-using FaceTools::FaceModelViewer;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceModelSet;
-using FaceTools::FaceControl;
-using FaceTools::FaceModel;
+using FaceTools::Vis::FV;
+using FaceTools::FMVS;
+using FaceTools::FMV;
+using FaceTools::FMS;
+using FaceTools::FVS;
+using FaceTools::FM;
 
 // public
-FaceActionManager::FaceActionManager( FaceModelViewer* viewer, size_t llimit, QWidget* parent)
+FaceActionManager::FaceActionManager( FMV* viewer, size_t llimit, QWidget* parent)
     : QObject(), _pdialog( new QTools::PluginsDialog( parent)),
         _fmm( new FaceModelManager( parent, llimit)),
         _interactions( new ViewerInteractionManager( viewer)),
+        _vman(nullptr),
         _selector(viewer)
 {
-    qRegisterMetaType<FaceTools::Action::ChangeEventSet>("FaceTools::Action::ChangeEventSet");
-    qRegisterMetaType<FaceTools::Action::ChangeEvent>("FaceTools::Action::ChangeEvent");
-    qRegisterMetaType<FaceTools::FaceControlSet>("FaceTools::FaceControlSet");
-
     //connect( _interactions, &ViewerInteractionManager::onActivatedViewer, &_selector, &ModelSelector::doSwitchSelectedToViewer);
-    connect( &_selector, &ModelSelector::onSelected, [this]( FaceControl* fc, bool v){ setReady(fc,v);});
-    _vman.makeDefault(this);
+    connect( &_selector, &ModelSelector::onSelected, [this]( FV* fv, bool v){ setReady(fv,v);});
+    _vman = new VisualisationsManager;
+    _vman->init(this);
 }   // end ctor
 
 
@@ -71,6 +69,7 @@ FaceActionManager::~FaceActionManager()
         _actions.erase(fa);
         delete fa;
     }   // end while
+    delete _vman;
     delete _interactions;
     delete _fmm;
     delete _pdialog;
@@ -116,12 +115,12 @@ QAction* FaceActionManager::addAction( FaceAction* fa)
 {
     if ( _actions.count(fa) == 0)
     {
-        //std::cerr << "[INFO] FaceTools::FaceActionManager::addAction: " << fa->debugActionName() << " @ " << fa << std::endl;
+        //std::cerr << "[INFO] FaceTools::FaceActionManager::addAction: " << fa->dname() << " @ " << fa << std::endl;
         _actions.insert(fa);
         connect( fa, &FaceAction::reportStarting, this, &FaceActionManager::doOnActionStarting);
         connect( fa, &FaceAction::reportFinished, this, &FaceActionManager::doOnActionFinished);
 
-        _vman.add(fa);  // Does nothing if not a visualisation action
+        _vman->add(fa);  // Does nothing if not a visualisation action
         fa->init();
 
         MVI* interactor = fa->interactor();
@@ -136,156 +135,154 @@ QAction* FaceActionManager::addAction( FaceAction* fa)
 
 
 // private slot
-void FaceActionManager::doOnChangedData( FaceControl *fc)
+void FaceActionManager::doOnChangedData( FV* fv)
 {
-    fc->data()->setSaved(false);
-    setReady( fc, true);    // Already selected
-    emit onUpdateSelected( fc);
+    fv->data()->setSaved(false);
+    setReady( fv, true);    // Already selected so fine to do
+    emit onUpdateSelected( fv);
 }   // end doOnChangedData
+
+
+namespace {
+void printActionInfo( const FaceAction* act, const EventSet* evs=nullptr)
+{
+    assert(act);
+    const std::string estr = evs ? "  FINISH " : "   START ";
+    std::cerr << estr << act->dname() << " <" << act << ">";
+    if ( act->isCheckable())
+        std::cerr << (act->isChecked() ? " {ON}" : " {OFF}");
+    if ( evs && !evs->empty())
+        std::cerr << " (" << evs->size() << " event" << (evs->size() > 1 ? "s" : "") << ")";
+    std::cerr << std::endl;
+}   // end printActionInfo
+}   // end namespace
 
 
 // private slot
 void FaceActionManager::doOnActionStarting()
 {
-    // Disable user actions upon an action starting.
+    _mutex.lock();
+    printActionInfo( qobject_cast<FaceAction*>(sender()));
+
+    // Disable actions upon an action starting.
+    // TODO Only disable actions that need to address the same data as the action that's just started.
     std::for_each(std::begin(_actions), std::end(_actions), [](auto a){ a->setEnabled(false);});
+    _mutex.unlock();
 }   // end doOnActionStarting
 
 
 // private slot
-void FaceActionManager::doOnActionFinished( ChangeEventSet cset, FaceControlSet workSet, bool)
+void FaceActionManager::doOnActionFinished( EventSet evs, FVS workSet, bool)
 {
     _mutex.lock();
     FaceAction* sact = qobject_cast<FaceAction*>(sender());
-    assert(sact);
-    /*
-    std::cerr << "[INFO] FaceTools::Action::FaceActionManager::doOnActionFinished: "
-              << sact->debugActionName() << " (" << sact << ") "
-              << cset.size() << " CHANGE EVENTS" << std::endl;
-    */
+    printActionInfo( sact, &evs);
 
-    FaceViewerSet vwrs = workSet.viewers();    // The viewers before processing (e.g. before load or close)
-
-    if ( !cset.empty())
+    FMVS vwrs = workSet.viewers();    // The viewers before processing (e.g. before load or close)
+    if ( !evs.empty())
     {
-        processFinishedAction( sact, &cset, &workSet);  // Process after action bits
-        FaceViewerSet vwrs1 = workSet.viewers();        // The viewers after processing (e.g. after load or close)
+        processFinishedAction( sact, evs, workSet);  // Process after action bits
+        FMVS vwrs1 = workSet.viewers();     // The viewers after processing (e.g. after load or close)
         vwrs.insert(vwrs1.begin(), vwrs1.end());
-
-        // If responding to LOADED_MODEL, each just loaded model now has a single FaceControl inside workSet,
-        // and cset now contains both LOADED_MODEL and GEOMETRY_CHANGE.
-
-        // Push actions to execute to the back of the cue (if any)
-        if ( !cset.empty())
-        {
-            _actions.erase(sact);   // Don't push the just completed action!
-            std::for_each( std::begin(_actions), std::end(_actions), [&](auto act){ _aqueue.pushIfShould( act, &cset);});
-            _actions.insert(sact);
-        }   // end if
+        // If responding to LOADED_MODEL, each just loaded model now has a single FaceView inside workSet,
+        // and evs now contains both LOADED_MODEL and GEOMETRY_CHANGE.
     }   // end if
 
-    // Visualisations will have been reapplied unless purging their data made them
-    // unavailable in which case these views need default visualisations setting.
-    _vman.enforceVisualisationConformance( &workSet);
-    std::for_each( std::begin(vwrs), std::end(vwrs), [](auto v){ v->updateRender();});
-
     bool pflag = false;
-    FaceAction* nact = _aqueue.popOrClear( workSet, pflag); // Prep the queued action (if any)
+    FaceAction* nact = _aqueue.pop( pflag); // Prep the queued action (if any)
  
-    _mutex.unlock();
-
     if ( nact)  // Execute the follow-on action (if any) - applied to every member of the worked on set.
     {
-        //std::cerr << " ++ Starting " << nact->debugActionName() << " with process flag " << std::boolalpha << pflag << std::endl;
+        _mutex.unlock();
         nact->process( pflag);
     }   // end if
     else
     {
-        // Update the ready state for all actions using the currently selected FaceControl (not the worked on set).
-        FaceControl* sel = _selector.selected();
-        std::for_each(std::begin(_actions), std::end(_actions), [&](auto a){ a->setReady( sel, true);});
+        // Update the ready state for all actions using the currently selected FaceView (not the worked on set).
+        FV* sel = _selector.selected();
+        std::for_each(std::begin(_actions), std::end(_actions), [=](auto a){ a->resetReady( sel);});
         emit onUpdateSelected( sel);
+        _mutex.unlock();
     }   // end else
+
+    std::for_each( std::begin(vwrs), std::end(vwrs), [](auto v){ v->updateRender();});
 }   // end doOnActionFinished
 
 
 // private
-void FaceActionManager::processFinishedAction( FaceAction* sact, ChangeEventSet *cset, FaceControlSet *workSet)
+void FaceActionManager::processFinishedAction( FaceAction* sact, EventSet &evs, FVS &workSet)
 {
-    if ( cset->count(CLOSE_MODEL) > 0)
+    if ( evs.count(CLOSE_MODEL) > 0)
     {
-        //std::cerr << "[INFO] FaceTools::Action::FaceActionManager::doOnActionFinished: closing model(s)" << std::endl;
-        const FaceModelSet& fms = workSet->models(); // Copy out the models
+        const FMS& fms = workSet.models(); // Copy out the models
         std::for_each( std::begin(fms), std::end(fms), [this](auto fm){ this->close(fm);});
-        cset->erase(CLOSE_MODEL);   // Close model done
-        workSet->clear();
+        evs.erase(CLOSE_MODEL);   // Close model done
+        workSet.clear();
     }   // end if
-    else if ( cset->count(LOADED_MODEL) > 0)
+    else if ( evs.count(LOADED_MODEL) > 0)
     {
-        // Obtain the FaceControl's for the just loaded FaceModels
-        assert(workSet->empty());
+        // Obtain the FaceView's for the just loaded FaceModels
+        workSet.clear();
         for ( const std::string& fpath : _fmm->loader()->lastLoaded())
         {
-            FaceModel* fm = _fmm->model(fpath);
+            FM* fm = _fmm->model(fpath);
             assert(fm);
-            workSet->insert( _selector.addFaceControl(fm));   // Causes ModelSelector::onSelected to be fired
+            FV* nfv = _selector.addFaceView(fm);
+            _selector.setSelected( nfv, true);
+            workSet.insert( nfv);
         }   // end for
-        cset->insert(GEOMETRY_CHANGE);
+        evs.insert(GEOMETRY_CHANGE);
     }   // end if
-    else if ( !cset->empty())   // Cause actions to respond to change events
+    else if ( !evs.empty())   // Cause actions to respond to change events
     {
-        const FaceModelSet& fms = workSet->models(); // The affected models
-        // Purge actions due to received change events.
-        _actions.erase(sact);    // Don't purge from the sending action!
-        std::for_each( std::begin(_actions), std::end(_actions), [&]( auto a){ this->testPurge( a, cset, &fms);});
+        FMS fms = workSet.models();   // Copy out
+
+        // Purge actions due to received change events (not the sending action)
+        _actions.erase(sact);
+        for ( FaceAction* act : _actions)
+        {
+            if ( std::any_of(std::begin(evs), std::end(evs), [=](auto ev){ return act->isPurgeEvent(ev);}))
+                std::for_each( std::begin(fms), std::end(fms), [=](auto fm){ act->purge(fm);});
+        }   // end for
         _actions.insert(sact);
 
-        // Geometry change events necessitate rebuilding the view models over all affected FaceControls.
-        if ( cset->count(GEOMETRY_CHANGE) > 0)
+        // Geometry change events require rebuilding the actors associated with the affected FaceModels.
+        // This means that workSet must be changed to hold all views of the affected models.
+        if ( evs.count(GEOMETRY_CHANGE) > 0)
         {
-            for ( FaceModel* fm : fms)
-            {
-                const FaceControlSet& fcs = fm->faceControls();
-                std::for_each( std::begin(fcs), std::end(fcs), [](auto fc){ fc->view()->reset();});
-            }   // end for
+            workSet.clear();
+            std::for_each( std::begin(fms), std::end(fms), [&](const FM* fm){ workSet.insert(fm);});
+            std::for_each( std::begin(workSet), std::end(workSet), [](FV* fv){ fv->reset();});
         }   // end if
     }   // end else if
+
+    _actions.erase(sact);   // Push candidate follow-on actions to the back of the execution queue (not the sending action).
+    std::for_each( std::begin(_actions), std::end(_actions), [&](FaceAction* act){ _aqueue.push(act, workSet, evs);});
+    _actions.insert(sact);
 }   // end processFinishedAction
 
 
-// purge action with fset if the intersection of action's purgeEvents() with cset is non-empty.
-void FaceActionManager::testPurge( FaceAction* act, const ChangeEventSet* cset, const FaceModelSet* fms)
-{
-    const ChangeEventSet* s = cset;
-    const ChangeEventSet* t = &act->purgeEvents();
-    if ( t->size() < s->size())
-        std::swap(s,t);
-
-    for ( auto c : *s)
-    {
-        if ( t->count(c) > 0)
-        {
-            //std::cerr << "Purge from action " << act->debugActionName() << std::endl;
-            std::for_each( std::begin(*fms), std::end(*fms), [=](auto fm){ act->purge(fm);});
-            return;
-        }   // end if
-    }   // end for
-}   // end testPurge
-
-
 // private
-void FaceActionManager::setReady( FaceControl* fc, bool v)
+void FaceActionManager::setReady( FV* fv, bool v)
 {
-    std::for_each(std::begin(_actions), std::end(_actions), [=](auto a){ a->setReady(fc,v);});
-    fc->data()->updateRenderers();
-    emit onUpdateSelected( fc);
+    std::for_each(std::begin(_actions), std::end(_actions), [=](auto a){ a->setReady(fv,v);});
+    fv->data()->updateRenderers();
+    emit onUpdateSelected( fv);
 }   // end setReady
 
 
 // private
-void FaceActionManager::close( FaceModel* fm)
+void FaceActionManager::close( FM* fm)
 {
-    std::for_each(std::begin(_actions), std::end(_actions), [=](auto a){ a->clean(fm);});
+    std::cerr << "[INFO] FaceTools::Action::FaceActionManager::close: closing model " << fm << std::endl;
+    fm->lockForWrite();
+    //const FVS& fvs = fm->fvs();
+    for ( FaceAction* a : _actions)
+    {
+        a->purge(fm);
+        a->clean(fm);
+    }   // end for
+    fm->unlock();
     _selector.remove(fm);
     _fmm->close(fm);
 

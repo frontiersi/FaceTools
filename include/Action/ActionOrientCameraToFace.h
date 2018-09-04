@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ namespace Action {
 class FaceTools_EXPORT ActionOrientCameraToFace : public FaceAction
 { Q_OBJECT
 public:
-    ActionOrientCameraToFace( const QString& dname="Orient Camera to Face", const QIcon& icon=QIcon());
+    ActionOrientCameraToFace( const QString& dname="Orient Camera to Face", const QIcon& icon=QIcon(), float d=450.0f, float r=0.0f);
 
     // Set/get the distance in world units to the face centre point
     // for the new position of the camera when transformed.
@@ -45,9 +45,9 @@ public:
     float angleAboutUpVector() const { return _urads;}
 
 protected slots:
-    bool testReady( const FaceControl*);
-    bool doAction( FaceControlSet&, const QPoint&) override;
-    void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override{ cs.insert(CAMERA_CHANGE);}
+    bool testReady( const Vis::FV*);
+    bool doAction( FVS&, const QPoint&) override;
+    void doAfterAction( EventSet& cs, const FVS&, bool) override{ cs.insert(CAMERA_CHANGE);}
     bool displayDebugStatusProgression() const override { return false;}
 
 private:

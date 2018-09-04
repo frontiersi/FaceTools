@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,27 +17,26 @@
 
 #include <ActionMapSurfaceData.h>
 #include <FaceModelSurfaceData.h>
-#include <FaceControl.h>
 #include <FaceModel.h>
 #include <QThread>
 #include <algorithm>
 using FaceTools::Action::ActionMapSurfaceData;
-using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::EventSet;
 using FaceTools::FaceModelSurfaceData;
-using FaceTools::FaceControlSet;
 using FaceTools::FaceModel;
+using FaceTools::FVS;
 
 
 // public
 ActionMapSurfaceData::ActionMapSurfaceData()
 {
-    addPurgeOn( GEOMETRY_CHANGE);
-    addProcessOn( GEOMETRY_CHANGE);
+    setPurgeOnEvent( GEOMETRY_CHANGE);
+    setRespondToEvent( GEOMETRY_CHANGE);
     connect( FaceModelSurfaceData::get(), &FaceModelSurfaceData::onCalculated, this, &ActionMapSurfaceData::doOnCalculated);
 }   // end ctor
 
 
-bool ActionMapSurfaceData::doAction( FaceControlSet& rset, const QPoint&)
+bool ActionMapSurfaceData::doAction( FVS& rset, const QPoint&)
 {
     for ( FaceModel* fm : rset.models())
     {
@@ -60,7 +59,7 @@ void ActionMapSurfaceData::purge( const FaceModel* fm)
 void ActionMapSurfaceData::doOnCalculated( const FaceModel* fm)
 {
     fm->unlock();
-    ChangeEventSet cset;
+    EventSet cset;
     cset.insert( SURFACE_DATA_CHANGE);
-    emit reportFinished( cset, fm->faceControls(), true);
+    emit reportFinished( cset, fm->fvs(), true);
 }   // end doOnCalculated

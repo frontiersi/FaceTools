@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,19 +82,12 @@ void Path::recalculate( RFeatures::ObjModelKDTree::Ptr kdt)
 PTree& FaceTools::operator<<( PTree& pathsNode, const Path& p)
 {
     PTree& pnode = pathsNode.add("path","");
-
     pnode.put( "<xmlattr>.name", p.name);
-
-    PTree& v0 = pnode.add( "v0", "");
-    RFeatures::putVertex( v0, *p.vtxs.begin());
-
-    PTree& v1 = pnode.add( "v1", "");
-    RFeatures::putVertex( v1, *p.vtxs.rbegin());
-
+    RFeatures::putNamedVertex( pnode, "v0", *p.vtxs.begin());
+    RFeatures::putNamedVertex( pnode, "v1", *p.vtxs.rbegin());
     PTree& metrics = pnode.add( "metrics", "");
     metrics.put("elen", p.elen);
     metrics.put("psum", p.psum);
-
     return pathsNode;
 }   // end operator<<
 

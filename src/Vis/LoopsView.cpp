@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 #include <LoopsView.h>
 #include <VtkActorCreator.h>    // RVTK
 #include <VtkTools.h>           // RVTK
+#include <Transformer.h>        // RFeatures
 #include <vtkProperty.h>
 #include <algorithm>
 #include <cassert>
@@ -33,6 +34,28 @@ LoopsView::LoopsView( float lw, float r, float g, float b)
 }   // end ctor
 
 
+LoopsView::LoopsView( const LoopsView& lv)
+{
+    *this = lv;
+}   // end ctor
+
+
+LoopsView& LoopsView::operator=( const LoopsView& lv)
+{
+    _visible = lv._visible;
+    _lineWidth = lv._lineWidth;
+    _colour = lv._colour;
+
+    for ( const auto& line : lv._lines)
+        addLoop( line);
+
+    for ( const auto& pts: lv._points)
+        addPoints( pts);
+
+    return *this;
+}   // end operator=
+
+
 LoopsView::~LoopsView()
 {
     deleteActors();
@@ -42,6 +65,8 @@ LoopsView::~LoopsView()
 void LoopsView::deleteActors()
 {
     std::for_each( std::begin(_actors), std::end(_actors), [](auto a){ a->Delete();});
+    _lines.clear();
+    _points.clear();
     _actors.clear();
 }   // end deleteActors
 
@@ -61,8 +86,9 @@ void LoopsView::addLoop( const std::list<cv::Vec3f>& line)
     property->SetAmbient( 1.0);
     property->SetDiffuse( 0.0);
     property->SetSpecular( 0.0);
-   
-    _actors.insert(actor);
+  
+    _lines.push_back(line); 
+    _actors.push_back(actor);
 }   // end addLoop
 
 
@@ -79,8 +105,9 @@ void LoopsView::addPoints( const std::vector<cv::Vec3f>& pts)
     property->SetAmbient( 1.0);
     property->SetDiffuse( 0.0);
     property->SetSpecular( 0.0);
-    
-    _actors.insert(actor);
+
+    _points.push_back(pts);
+    _actors.push_back(actor);
 }   // end addPoints
 
 
@@ -129,5 +156,18 @@ void LoopsView::pokeTransform( const vtkMatrix4x4* vm)
 // public
 void LoopsView::fixTransform()
 {
-    std::for_each( std::begin(_actors), std::end(_actors), [](auto a){ RVTK::transform( a, a->GetMatrix());});
+    if ( !_actors.empty())
+    {
+        vtkMatrix4x4* m = (*_actors.begin())->GetMatrix();
+        // Fix the actor transforms in place
+        std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ RVTK::transform( a, m);});
+        // Also transform the lines and points data
+        RFeatures::Transformer tr(RVTK::toCV(m));
+        const size_t nlines = _lines.size();
+        for ( size_t i = 0; i < nlines; ++i)
+            std::for_each( std::begin(_lines[i]), std::end(_lines[i]), [&](cv::Vec3f& v){ tr.transform(v);});
+        const size_t npts = _points.size();
+        for ( size_t i = 0; i < npts; ++i)
+            std::for_each( std::begin(_points[i]), std::end(_points[i]), [&](cv::Vec3f& v){ tr.transform(v);});
+    }   // end if
 }   // end fixTransform

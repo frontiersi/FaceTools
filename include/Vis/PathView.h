@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,13 +18,8 @@
 #ifndef FACE_TOOLS_PATH_VIEW_H
 #define FACE_TOOLS_PATH_VIEW_H
 
-/**
- * Represents the visualisation of path data between two points on a FaceModel.
- */
-
 #include "SphereView.h"
 #include <ModelViewer.h>
-#include <Path.h>
 
 namespace FaceTools {
 namespace Vis {
@@ -32,31 +27,27 @@ namespace Vis {
 class FaceTools_EXPORT PathView
 {
 public:
-    // Provide the Path instance that this view will be referencing for updates.
-    explicit PathView( const Path&);
+    PathView( int id, const std::vector<cv::Vec3f>& vtxs);
     virtual ~PathView();
 
-    const Path& path() const { return _path;}
+    // Call whenever given Path instance is changed (id of given path must match internal).
+    void update( const std::vector<cv::Vec3f>&);
 
-    bool isVisible() const { return _linePropID >= 0;}
+    int id() const { return _id;}
     void setVisible( bool, ModelViewer*);  // Add/remove the path actors (handles and path) to the viewer.
-    const ModelViewer* viewer() const { return _viewer;}
-
-    // Update the path actors from the internal Path data.
-    // Call whenever the internally referenced Path instance is changed.
-    // Path should already be visible (if not, this function makes it so).
-    void update();
 
     struct FaceTools_EXPORT Handle
     {
+        int handleId() const { return _hid;}
+        int pathId() const { return _pid;}
         cv::Vec3f pos() const { return _sv->centre();}
         const vtkProp* prop() { return _sv->prop();}
-        PathView* host() const { return _host;}
 
     private:
-        Handle( PathView*, const cv::Vec3f&, double);
+        Handle( int, int, const cv::Vec3f&, double);
         ~Handle();
-        PathView *_host;
+        int _hid;
+        int _pid;
         SphereView *_sv;
         friend class PathView;
     };  // end struct
@@ -69,12 +60,10 @@ public:
 
 private:
     ModelViewer *_viewer;
-    const Path& _path;
+    int _id;
     Handle *_h0, *_h1;
-    int _linePropID;
+    vtkActor* _lprop;
 
-    void addPath();
-    void removePath();
     PathView( const PathView&) = delete;
     void operator=( const PathView&) = delete;
 };  // end class

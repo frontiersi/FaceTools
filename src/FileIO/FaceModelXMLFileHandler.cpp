@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,10 +16,13 @@
  ************************************************************************/
 
 #include <FaceModelXMLFileHandler.h>
+#include <FaceShapeLandmarks2DDetector.h>   // FaceTools::Landmarks
+#include <FaceTools.h>  // calcFaceCentre
 #include <FaceModel.h>
 #include <MiscFunctions.h>
 #include <AssetImporter.h>
 #include <OBJExporter.h>
+#include <Orientation.h>    // RFeatures
 #include <QTemporaryDir>
 #include <quazip5/JlCompress.h>
 #include <boost/property_tree/xml_parser.hpp>
@@ -39,6 +42,8 @@ void writeFaceModel( const FaceModel* fm, const std::string& objfname, PTree& rn
     rnode.put( "description", fm->description());
     rnode.put( "source", fm->source());
     rnode << fm->orientation();
+    if ( fm->centreSet())
+        RFeatures::putNamedVertex( rnode, "centre", fm->centre());
     rnode << *fm->landmarks();
     rnode << *fm->paths();
 }   // end writeFaceModel
@@ -54,11 +59,31 @@ FaceModel* readFaceModel( const PTree& rnode, std::string& objfilename)
     RFeatures::Orientation on;
     rnode >> on;
     fm->setOrientation(on);
+    //std::cerr << "Read in orientation " << on << " with DP " << on.norm().dot( on.up()) << std::endl;
 
-    std::cerr << "Read in orientation " << on << " with DP " << on.norm().dot( on.up()) << std::endl;
+    cv::Vec3f c(0,0,0); // Get the centre if in the file
+    bool gotcentre = RFeatures::getNamedVertex( rnode, "centre", c);
 
+    // Get the landmarks
     FaceTools::LandmarkSet::Ptr lmks = fm->landmarks();
     rnode >> *lmks;
+
+    // Calculate the centre from the landmarks if unable to retrieve from the file
+    if (!gotcentre && FaceTools::hasReqLandmarks( lmks))
+    {
+        using namespace FaceTools::Landmarks;
+        c = FaceTools::calcFaceCentre( lmks->pos(L_EYE_CENTRE), lmks->pos(R_EYE_CENTRE), lmks->pos(NASAL_TIP));
+        gotcentre = true;
+    }   // end if
+
+    // Set the centre if read or calculated, otherwise it'll just be the middle of the largest component.
+    if ( gotcentre)
+    {
+        std::cerr << "Centre set to " << c << std::endl;
+        fm->setCentre(c);
+    }   // end if
+    else
+        std::cerr << "Centre set as centre of largest model component" << std::endl;
 
     FaceTools::PathSet::Ptr paths = fm->paths();
     rnode >> *paths;

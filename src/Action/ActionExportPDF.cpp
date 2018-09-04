@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,10 +31,10 @@
 #include <fstream>
 #include <cassert>
 using FaceTools::Action::ActionExportPDF;
-using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::EventSet;
 using FaceTools::Report::BaseReportTemplate;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
+using FaceTools::FVS;
+using FaceTools::Vis::FV;
 using FaceTools::FaceModel;
 
 using RModelIO::PDFGenerator;
@@ -63,25 +63,26 @@ bool ActionExportPDF::isAvailable()
 
 
 // public
-ActionExportPDF::ActionExportPDF( BaseReportTemplate* t, const QIcon& icon, QWidget* p, QProgressBar* pb)
+ActionExportPDF::ActionExportPDF( BaseReportTemplate* t, const QIcon& icon, const QString& email, QWidget* p, QProgressBar* pb)
     : FaceAction( t->getDisplayName(), icon), _template(t), _parent(p)
 {
     // Default author info
-    _author = "\\href{mailto:r.l.palmer@curtin.edu.au?subject=FaceTools\\%20PDF\\%20report}{Email}";
+    if ( !email.isEmpty())
+        _author = "\\href{mailto:" + email + "?subject=FaceTools::Action::ActionExportPDF}{Email}";
     if ( pb)
         setAsync(true, QTools::QProgressUpdater::create(pb));
 }   // end ctor
 
 
-bool ActionExportPDF::testReady( const FaceControl* fc) { return _template->isAvailable(fc->data());}
+bool ActionExportPDF::testReady( const FV* fv) { return _template->isAvailable(fv->data());}
 
 bool ActionExportPDF::testEnabled( const QPoint*) const { return gotReady() && isAvailable();}
 
 
 // Get the save filepath for the report
-bool ActionExportPDF::doBeforeAction( FaceControlSet& fcs, const QPoint&)
+bool ActionExportPDF::doBeforeAction( FVS& fvs, const QPoint&)
 {
-    const FaceControl* fc = fcs.first();
+    const FV* fv = fvs.first();
 
     //std::string outfile = "report.pdf";
     QFileDialog fileDialog;
@@ -119,10 +120,10 @@ bool ActionExportPDF::doBeforeAction( FaceControlSet& fcs, const QPoint&)
 }   // end doBeforeAction
 
 
-bool ActionExportPDF::doAction( FaceControlSet& fcs, const QPoint&)
+bool ActionExportPDF::doAction( FVS& fvs, const QPoint&)
 {
-    assert( fcs.size() == 1);
-    const FaceControl* fc = fcs.first();
+    assert( fvs.size() == 1);
+    const FV* fv = fvs.first();
     _err = "";
 
     QTemporaryDir tdir;
@@ -148,7 +149,7 @@ bool ActionExportPDF::doAction( FaceControlSet& fcs, const QPoint&)
     // Figure references need to be stored until after PDF generation since LaTeXU3DInserter destructor
     // will remove delete U3D instances from the filesystem.
     std::vector<FigIns> figs;
-    if ( !writeLaTeX( fc->data(), fc->viewer()->getCamera(), tdir.path().toStdString(), texpath, logopath, figs))
+    if ( !writeLaTeX( fv->data(), fv->viewer()->getCamera(), tdir.path().toStdString(), texpath, logopath, figs))
         _err = "Failed to create '" + texpath + "' for LaTeX parsing!";
     else
     {
@@ -170,7 +171,7 @@ bool ActionExportPDF::doAction( FaceControlSet& fcs, const QPoint&)
 }   // end doAction
 
 
-void ActionExportPDF::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool v)
+void ActionExportPDF::doAfterAction( EventSet& cs, const FVS&, bool v)
 {
     if ( !v)
     {
@@ -224,7 +225,8 @@ bool ActionExportPDF::writeLaTeX( const FaceModel* fm,
         os << "\\lhead{" << std::endl;
         os << "\\Large " << _template->reportTitle() << " \\\\" << std::endl;
         os << "\\large \\today \\\\" << std::endl;
-        os << "\\normalsize " << ainfo << " \\\\" << std::endl;
+        if ( !ainfo.empty())
+            os << "\\normalsize " << ainfo << " \\\\" << std::endl;
         os << "}" << std::endl;
 
         // Document

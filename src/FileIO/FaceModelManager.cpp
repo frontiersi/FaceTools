@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@
 using FaceTools::FileIO::FaceModelManager;
 using FaceTools::FileIO::FaceModelFileHandler;
 using FaceTools::FileIO::LoadFaceModelsHelper;
-using FaceTools::FaceModel;
+using FaceTools::FM;
 
 
 // public
@@ -48,8 +48,9 @@ void FaceModelManager::add( FaceModelFileHandler* fii) { if ( fii) _fhmap.add(fi
 
 
 // public
-bool FaceModelManager::hasPreferredFileFormat( FaceModel* fm) const
+bool FaceModelManager::hasPreferredFileFormat( FM* fm) const
 {
+    assert( fm != nullptr);
     assert( _models.count(fm) > 0);
     return isPreferredFileFormat( _mdata.at(fm));
 }   // end hasPreferredFileFormat
@@ -65,7 +66,7 @@ bool FaceModelManager::isPreferredFileFormat( const std::string& fname) const
 
 
 // private
-void FaceModelManager::setModelFilepath( FaceModel* fm, const std::string& fname)
+void FaceModelManager::setModelFilepath( FM* fm, const std::string& fname)
 {
     _models.insert(fm);
     _mdata[fm] = fname;
@@ -75,7 +76,7 @@ void FaceModelManager::setModelFilepath( FaceModel* fm, const std::string& fname
 
 
 // public
-bool FaceModelManager::write( FaceModel* fm, std::string* fpath)
+bool FaceModelManager::write( FM* fm, std::string* fpath)
 {
     assert( _models.count(fm) > 0);
     std::string savefilepath = _mdata.at(fm);
@@ -128,7 +129,7 @@ bool FaceModelManager::isOpen( const std::string& fname) const { return _mfiles.
 
 
 // public
-FaceModel* FaceModelManager::read( const std::string& fname)
+FM* FaceModelManager::read( const std::string& fname)
 {
     assert( !fname.empty());
 
@@ -143,7 +144,7 @@ FaceModel* FaceModelManager::read( const std::string& fname)
     std::cerr << "[INFO] FaceTools::FileIO::FaceModelManager::read: Reading in file \"" << fname << "\"" << std::endl;
 
     FaceModelFileHandler* fileio = nullptr;
-    FaceModel* fm = nullptr;
+    FM* fm = nullptr;
     if ( !boost::filesystem::exists( fname))
         _err = "File \"" + fname + "\" does not exist!";
     else if ( (fileio = _fhmap.getLoadInterface(fname)) == nullptr)
@@ -160,7 +161,7 @@ FaceModel* FaceModelManager::read( const std::string& fname)
 
 
 // public
-const std::string& FaceModelManager::filepath( FaceModel* fm) const
+const std::string& FaceModelManager::filepath( FM* fm) const
 {
     assert(_models.count(fm) > 0);
     return _mdata.at(fm);
@@ -168,9 +169,9 @@ const std::string& FaceModelManager::filepath( FaceModel* fm) const
 
 
 // public
-FaceModel* FaceModelManager::model( const std::string& fname) const
+FM* FaceModelManager::model( const std::string& fname) const
 {
-    FaceModel* fm = nullptr;
+    FM* fm = nullptr;
     if ( _mfiles.count(fname) > 0)
         fm = _mfiles.at(fname);
     return fm;
@@ -178,11 +179,12 @@ FaceModel* FaceModelManager::model( const std::string& fname) const
 
 
 // public
-void FaceModelManager::close( FaceModel* fm)
+void FaceModelManager::close( FM* fm)
 {
     assert(_models.count(fm) > 0);
     if ( !fm->isSaved())
         std::cerr << "[WARNING] FaceTools::FileIO::FaceModelManager::close: Model is unsaved!" << std::endl;
+    std::cerr << "[INFO] FaceTools::FileIO::FaceModelManager::close: closing model " << fm << std::endl;
     _mfiles.erase(_mdata.at(fm));
     _models.erase(fm);
     _mdata.erase(fm);

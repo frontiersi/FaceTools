@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 #define FACE_TOOLS_MOVE_VIEWER_H
 
 /**
- * Moves the currently selected FaceControl instances to the target viewer.
+ * Moves the currently selected Vis::FV instances to the target viewer.
  */
 
 #include "FaceAction.h"
@@ -33,15 +33,15 @@ class FaceTools_EXPORT ActionMoveViewer : public FaceAction
 { Q_OBJECT
 public:
     // If a source viewer is set (can be NULL), this action will only be enabled for
-    // the subset of the selected FaceControls that are in the source viewer.
+    // the subset of the selected Vis::FVs that are in the source viewer.
     ActionMoveViewer( FaceModelViewer* targetViewer, ModelSelector*,
                       FaceModelViewer* sourceViewer,
                       const QString&, const QIcon&);
 
 protected slots:
-    bool testReady( const FaceControl*) override;
-    bool doAction( FaceControlSet&, const QPoint&) override;
-    void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(VIEW_CHANGE);}
+    bool testReady( const Vis::FV*) override;
+    bool doAction( FVS&, const QPoint&) override;
+    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(VIEWER_CHANGE);}
     bool displayDebugStatusProgression() const override { return false;}
 
 private:

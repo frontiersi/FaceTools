@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,16 +18,10 @@
 #ifndef FACE_TOOLS_FILE_IO_LOAD_FACE_MODELS_HELPER_H
 #define FACE_TOOLS_FILE_IO_LOAD_FACE_MODELS_HELPER_H
 
-#include <FaceTools_Export.h>
-#include <Hashing.h>
-#include <QWidget>
-#include <QStringList>
-#include <unordered_map>
+#include <FaceTypes.h>
 
 namespace FaceTools {
-class FaceModel;
 namespace FileIO {
-class FaceModelManager;
 
 class FaceTools_EXPORT LoadFaceModelsHelper
 {

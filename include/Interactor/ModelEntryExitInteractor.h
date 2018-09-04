@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,11 +26,10 @@
  */
 
 #include "ModelViewerInteractor.h"
-#include <FaceControl.h>
+#include <FaceView.h>
+#include <vtkProp.h>
 
 namespace FaceTools {
-class FaceModelViewer;
-
 namespace Interactor {
 
 class FaceTools_EXPORT ModelEntryExitInteractor : public ModelViewerInteractor
@@ -38,19 +37,19 @@ class FaceTools_EXPORT ModelEntryExitInteractor : public ModelViewerInteractor
 public:
     ModelEntryExitInteractor();
 
-    inline FaceControl* model() const { return _mnow;} // Model cursor is currently over (NULL if none).
-    inline int landmark() const { return _lnow;}       // Landmark cursor is over (-1 if none).
+    inline Vis::FV* model() const { return _mnow;}  // Model cursor is currently over (null if none).
+    inline const vtkProp* prop() const { return _pnow;} // Prop cursor is over (null if none).
 
     bool isLeftDown() const { return _ldown;}
 
 signals:
-    void onEnterModel( FaceControl*) const;
-    void onLeaveModel( FaceControl*) const;
+    void onEnterModel( Vis::FV*) const;
+    void onLeaveModel( Vis::FV*) const;
 
-    // Enter and leave signals for landmarks will only be emitted if the given
-    // FaceControl currently has a LandmarksVisualisation applied to its view.
-    void onEnterLandmark( FaceControl*, int);
-    void onLeaveLandmark( FaceControl*, int);
+    // Enter and leave signals for props (not the main underlying surface/texture prop)
+    // will only be emitted if the props are pickable.
+    void onEnterProp( Vis::FV*, const vtkProp*);
+    void onLeaveProp( Vis::FV*, const vtkProp*);
 
     void onLeftDown();
     void onLeftDrag();
@@ -62,11 +61,11 @@ protected:
 
 private:
     FaceModelViewer* _viewer;
-    FaceControl* _mnow;
-    int _lnow;
+    Vis::FV* _mnow;
+    const vtkProp* _pnow;
     bool _ldown;
 
-    void testLeaveLandmark( FaceControl*, int);
+    void testLeaveProp( Vis::FV*, const vtkProp*);
     void testLeaveModel();
 
     bool mouseLeave( const QPoint&) override;
@@ -84,7 +83,5 @@ private:
 
 }   // end namespace
 }   // end namespace
-
-typedef FaceTools::Interactor::ModelEntryExitInteractor MEEI;
 
 #endif

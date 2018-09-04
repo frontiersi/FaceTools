@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,12 +18,12 @@
 #include <SampleReport.h>
 #include <FaceModel.h>
 using FaceTools::Report::SampleReport;
-using FaceTools::FaceModel;
 using RModelIO::LaTeXU3DInserter;
 using RFeatures::CameraParams;
+using FaceTools::FM;
 
 
-LaTeXU3DInserter::Ptr SampleReport::createFigure( size_t, const std::string& tdir, const FaceModel* fm, const CameraParams& cam)
+LaTeXU3DInserter::Ptr SampleReport::createFigure( size_t, const std::string& tdir, const FM* fm, const CameraParams& cam)
 {
     // Currently, the model itself is written out, not the VTK view (next version!)
     float widthMM = 160;

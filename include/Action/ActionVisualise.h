@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,31 +27,31 @@ namespace Action {
 class FaceTools_EXPORT ActionVisualise : public FaceAction
 { Q_OBJECT
 public:
-    explicit ActionVisualise( Vis::BaseVisualisation*);
+    ActionVisualise( Vis::BaseVisualisation*, bool visualiseOnLoad=false);
 
     QWidget* getWidget() const override { return _vis->getWidget();}
 
-    bool isExclusive() const { return _vis->isExclusive();}
-
     Vis::BaseVisualisation* visualisation() { return _vis;}
 
-    // Return true (default) if the visualisation manager should know about this visualisation.
-    virtual bool manageVisualisation() const { return true;}
-
 protected slots:
-    bool testReady( const FaceControl*) override;
-    void tellReady( FaceControl*, bool) override;   // Called whenever ready status changes
+    bool testReady( const Vis::FV*) override;
+    void tellReady( Vis::FV*, bool) override;   // Called whenever ready status changes
     bool testEnabled( const QPoint*) const override;
-    bool testChecked( const FaceControl *fc=nullptr) const override;
-    bool doAction( FaceControlSet&, const QPoint&) override;
-    void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(VIEW_CHANGE);}
+    bool testIfCheck( const Vis::FV *fc=nullptr) const override;
+    bool doAction( FVS&, const QPoint&) override;
+    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(VIEW_CHANGE);}
     bool displayDebugStatusProgression() const override { return false;}
-    void purge( const FaceModel*) override;
-    void clean( const FaceModel*) override;
+    void purge( const FM*) override;
+    void clean( const FM*) override;
 
 private:
-    void toggleVis( FaceControl*, const QPoint*);
+    bool toggleVis( Vis::FV*, const QPoint*);
     Vis::BaseVisualisation *_vis; // The visualisation delegate
+
+    bool isVisAvailable( const FM*) const;
+    bool isVisAvailable( const Vis::FV*, const QPoint* p=nullptr) const;
+    bool isVisAvailable( const FVS&, const QPoint* p=nullptr) const;
+    size_t setViewsToProcess( FVS&) const;
 };  // end class
 
 }   // end namespace

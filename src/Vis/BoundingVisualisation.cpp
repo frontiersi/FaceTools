@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,17 +18,16 @@
 #include <BoundingVisualisation.h>
 #include <ActionVisualise.h>
 #include <FaceModelViewer.h>
-#include <FaceControl.h>
 #include <FaceModel.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Vis::BoundingVisualisation;
 using FaceTools::Vis::BoundingView;
+using FaceTools::Vis::FV;
 using FaceTools::Action::ActionVisualise;
 using FaceTools::Action::FaceAction;
 using FaceTools::ModelViewer;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
+using FaceTools::FVS;
 
 
 BoundingVisualisation::BoundingVisualisation( const QString& dname)
@@ -40,69 +39,62 @@ BoundingVisualisation::BoundingVisualisation( const QString& dname)
 BoundingVisualisation::~BoundingVisualisation()
 {
     while (!_views.empty())
-        purge(_views.begin()->first);
+        purge(const_cast<FV*>(_views.begin()->first));
 }   // end dtor
 
 
-bool BoundingVisualisation::apply( const FaceControl* fc, const QPoint*)
+void BoundingVisualisation::apply( FV* fv, const QPoint*)
 {
-    if ( _views.count(fc) == 0)
-        _views[fc] = new BoundingView( fc->data()->bounds());
-    return true;
+    if ( _views.count(fv) == 0)
+        _views[fv] = new BoundingView( fv->data()->bounds());
+    _views.at(fv)->setVisible( true, fv->viewer());
 }   // end apply
 
 
-void BoundingVisualisation::addActors( const FaceControl* fc)
+void BoundingVisualisation::remove( FV* fv)
 {
-    if (_views.count(fc) > 0)
-        _views.at(fc)->setVisible( true, fc->viewer());
-}   // end addActors
+    if (_views.count(fv) > 0)
+        _views.at(fv)->setVisible( false, fv->viewer());
+}   // end remove
 
 
-void BoundingVisualisation::removeActors( const FaceControl* fc)
+void BoundingVisualisation::setHighlighted( const FV* fv, int c, bool v)
 {
-    if (_views.count(fc) > 0)
-        _views.at(fc)->setVisible( false, fc->viewer());
-}   // end removeActors
-
-
-void BoundingVisualisation::setHighlighted( const FaceControl* fc, int c, bool v)
-{
-    if (_views.count(fc) > 0)
+    if (_views.count(fv) > 0)
     {
         if ( c >= 0)
-            _views.at(fc)->setHighlighted( c, v);
+            _views.at(fv)->setHighlighted( c, v);
         else
-            _views.at(fc)->setHighlighted( v);
+            _views.at(fv)->setHighlighted( v);
     }   // end if
 }   // end setHighlighted
 
 
 // protected
-void BoundingVisualisation::pokeTransform( const FaceControl* fc, const vtkMatrix4x4* vm)
+void BoundingVisualisation::pokeTransform( const FV* fv, const vtkMatrix4x4* vm)
 {
-    if ( _views.count(fc) > 0)
-        _views.at(fc)->pokeTransform(vm);
+    if ( _views.count(fv) > 0)
+        _views.at(fv)->pokeTransform(vm);
 }   // end pokeTransform
 
 
 // protected
-void BoundingVisualisation::fixTransform( const FaceControl* fc)
+void BoundingVisualisation::fixTransform( const FV* fv)
 {
     // Instead of fixing the actor matrix in, new bounds are
     // generated so that the bounding box always remains upright at rest.
-    if ( _views.count(fc) > 0)
-        _views.at(fc)->updateBounds(fc->data()->bounds());
+    if ( _views.count(fv) > 0)
+        _views.at(fv)->updateBounds(fv->data()->bounds());
 }   // end fixTransform
 
 
 // protected
-void BoundingVisualisation::purge( const FaceControl* fc)
+void BoundingVisualisation::purge( FV* fv)
 {
-    if (_views.count(fc) > 0)
+    if (_views.count(fv) > 0)
     {
-        removeActors(fc);
-        delete _views.at(fc);
-        _views.erase(fc);
+        _views.at(fv)->setVisible( false, fv->viewer());
+        delete _views.at(fv);
+        _views.erase(fv);
     }   // end if
 }   // end purge

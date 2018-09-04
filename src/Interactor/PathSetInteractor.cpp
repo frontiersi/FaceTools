@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,209 +21,164 @@
 #include <FaceView.h>
 #include <cassert>
 using FaceTools::Interactor::PathSetInteractor;
-using FaceTools::Interactor::FaceHoveringInteractor;
+using FaceTools::Interactor::MEEI;
 using FaceTools::Vis::PathSetVisualisation;
 using FaceTools::Vis::PathView;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
-using FaceTools::FaceModel;
+using FaceTools::Vis::FV;
+using FaceTools::FM;
 using FaceTools::Path;
+
+
+const QString PathSetInteractor::s_msg0(
+        QObject::tr("Reposition path handle with left-click and drag; right click to remove/rename the path."));
+const QString PathSetInteractor::s_msg1(
+        QObject::tr("Right click on the model and select \"Add Path\" to place the end-point for a new path."));
 
 
 // public
 PathSetInteractor::PathSetInteractor( MEEI* meei, PathSetVisualisation* vis, QStatusBar *sbar)
-    : FaceHoveringInteractor( meei, vis, sbar), _vis(vis), _hdrag(nullptr), _hhover(nullptr)
+    : ModelViewerInteractor( nullptr, sbar), _meei(meei), _vis(vis), _drag(-1), _hover(-1), _handle(0)
 {
+    connect( meei, &MEEI::onEnterProp, [this](FV* fv, const vtkProp* p){ this->doOnEnterHandle(fv, _vis->pathHandle(fv, p));});
+    connect( meei, &MEEI::onLeaveProp, [this](FV* fv, const vtkProp* p){ this->doOnLeaveHandle(fv, _vis->pathHandle(fv, p));});
+    setEnabled(false);
 }   // end ctor
 
 
-// public
-int PathSetInteractor::hoverID() const
+// public slot
+void PathSetInteractor::doOnEnterHandle( const FV* fv, const PathView::Handle* h)
 {
-    int id = -1;
-    if ( _hhover)
+    if ( !h)
+        return;
+
+    _hover = h->pathId();
+    _handle = h->handleId();
+    assert(_handle == 0 || _handle == 1);
+    //fv->data()->lockForRead();
+    setCaptionInfo( fv->data(), _hover);
+    setCaptionAttachPoint( fv->data(), _hover);
+    //fv->data()->unlock();
+    _vis->setCaptionsVisible( true);
+    showStatus( s_msg0, 10000);
+    fv->data()->updateRenderers();
+}   // end doOnEnterHandle
+
+
+// public slot
+void PathSetInteractor::doOnLeaveHandle( const FV* fv, const PathView::Handle* h)
+{
+    _hover = -1;
+    if ( h && _drag < 0)
     {
-        const PathView* pview = _hhover->host();
-        assert(pview);
-        const Path& path = pview->path();
-        id = path.id;
+        _vis->setCaptionsVisible( false);
+        fv->data()->updateRenderers();
+        showStatus( s_msg1, 10000);
     }   // end if
-    return id;
-}   // end hoverID
+}   // end doOnLeaveHandle
 
 
 // public
-int PathSetInteractor::addPath( const QPoint& p)
+void PathSetInteractor::setPathDrag( int pid)
 {
-    FaceControl *fc = hoverModel();
-    if ( !fc)
-        return -1;
-
-    cv::Vec3f hpos; // Get the position of the new handle by projecting p onto the surface of the model.
-    if ( !viewer()->calcSurfacePosition( fc->view()->surfaceActor(), p, hpos))
-        return -1;
-
-    FaceModel* fm = fc->data();
-    fm->lockForWrite(); // Add path to the dataset
-    int pathId = fm->paths()->addPath(hpos);
-    fm->setSaved(false);
-
-    const FaceControlSet& fcs = fm->faceControls();    // Add to the visualisations
-    std::for_each( std::begin(fcs), std::end(fcs), [&](auto f){ _vis->addPath(f,pathId);});
-
-    fm->unlock();
-
-    _hhover = getPathViewHandle(p);
-    _vis->setCaptionsVisible(true);
-    if ( pathId >= 0)
-    {
-        _hdrag = _vis->pathHandle1( fc, pathId);
-        viewer()->setCursor(Qt::CrossCursor);
-        _origPos = _hdrag->pos();
-        leftDrag( p);
-    }   // end if
-
-    return pathId;
-}   // end addPath
+    _drag = pid;
+    viewer()->setCursor(Qt::CrossCursor);
+}   // end setPathDrag
 
 
 // public
-bool PathSetInteractor::deletePath()
+void PathSetInteractor::setCaptionInfo( const FM* fm, int pid)
 {
-    int pathId = hoverID();
-    if ( pathId < 0)
+    const Path* path = fm->paths()->path(pid);
+    assert(path);
+    // Set display caption at bottom right
+    _vis->setCaptions( path->name, path->elen, path->psum, (int)(viewer()->getWidth()) - 10, 10);
+}   // end setCaptionInfo
+
+
+// public
+void PathSetInteractor::setCaptionAttachPoint( const FM* fm, int pid)
+{
+    const Path* path = fm->paths()->path(pid);
+    assert(path);
+    assert(!path->vtxs.empty());
+    const cv::Vec3f attachPoint = path->vtxs[path->vtxs.size()/2];  // Halfway along path
+    _vis->setCaptionAttachPoint( attachPoint);
+}   // end setCaptionAttachPoint
+
+
+// public
+bool PathSetInteractor::moveDragHandle( const cv::Vec3f& hpos)
+{
+    if ( _drag < 0)
         return false;
 
-    FaceControl *fc = hoverModel();
-    assert(fc);
+    FV *fv = hoverModel();
+    if ( !fv)
+        return false;
 
-    FaceModel* fm = fc->data();
-    fm->lockForWrite();
-    fm->paths()->removePath(pathId);
-    fm->setSaved(false);
+    FM* fm = fv->data();
+    //fm->lockForWrite();
+    Path* path = fm->paths()->path(_drag);
+    assert(path);
+    assert(path->vtxs.size() >= 2);
 
-    const FaceControlSet& fcs = fm->faceControls();    // Remove from the visualisations
-    std::for_each( std::begin(fcs), std::end(fcs), [&](auto f){ _vis->updatePath(f, pathId);});
+    if ( _handle == 0)
+        *path->vtxs.begin() = hpos;
+    else
+        *path->vtxs.rbegin() = hpos;
+    path->recalculate( fm->kdtree());
 
-    fm->unlock();
+    // Update visualisation over all associated FVs
+    _vis->updatePath( fm, _drag);
+    setCaptionInfo( fm, _drag);
+    setCaptionAttachPoint( fm, _drag);
 
-    _hhover = nullptr;
-    _hdrag = nullptr;
-    _vis->setCaptionsVisible( false);
+    //fm->unlock();
     return true;
-}   // end deletePath
+}   // end moveDragHandle
 
 
 bool PathSetInteractor::leftButtonDown( const QPoint& p)
 {
     leftButtonUp(p);
-    _hdrag = getPathViewHandle(p);  // Look for the path handle by prop under the point.
-    if ( _hdrag)
-    {
-        viewer()->setCursor(Qt::CrossCursor);
-        _origPos = _hdrag->pos();
-    }   // end if
-    return mouseMove(p);
+    if ( _hover >= 0)
+        setPathDrag( _hover);
+    return _drag >= 0;
 }   // end leftButtonDown
 
 
 bool PathSetInteractor::leftButtonUp( const QPoint& p)
 {
-    if ( _hdrag && _hdrag->pos() != _origPos) // Did the postion of the drag handle change?
-    {
-        FaceControl *fc = hoverModel();
-        assert(fc);
-        emit onChangedData(fc);
-    }   // end if
     viewer()->setCursor(Qt::ArrowCursor);
-    _hdrag = nullptr;
+    _drag = -1;
+    FV *fv = hoverModel();
+    if ( !fv)
+        return false;
+    emit onChangedData(fv);
     return false;
 }   // end leftButtonUp
 
 
 bool PathSetInteractor::leftDrag( const QPoint& p)
 {
-    if ( !_hdrag)
-        return false;
-
-    // Get the position on the surface of the actor
-    FaceControl *fc = hoverModel();
-    assert(fc);
-    cv::Vec3f hpos;
-    if ( !viewer()->calcSurfacePosition( fc->view()->surfaceActor(), p, hpos))
-        return false;
-
-    // Update the position of the path handle
-    FaceModel* fm = fc->data();
-    fm->lockForWrite();
-    Path* path = fm->paths()->path( _hdrag->host()->path().id);
-    assert(path);
-    // Which handle to move?
-    if ( _hdrag == _hdrag->host()->handle0())
-        *path->vtxs.begin() = hpos;
-    else
-        *path->vtxs.rbegin() = hpos;
-    path->recalculate( fm->kdtree());
-
-    // Update visualisation over all associated FaceControls
-    for ( FaceControl* f : fm->faceControls())
-    {
-        _vis->updatePath( f, path->id);
-        _vis->setCaptions( f, path->id);
-    }   // end for
-
-    fm->unlock();
-    fm->updateRenderers();
-    return true;
+    bool rval = false;
+    FV *fv = hoverModel();
+    cv::Vec3f hpos; // Get the position on the surface of the actor
+    if ( fv && fv->projectToSurface( p, hpos))
+        rval = moveDragHandle( hpos);
+    if ( rval)
+        fv->data()->updateRenderers();
+    return rval;
 }   // end leftDrag
 
 
-bool PathSetInteractor::mouseMove( const QPoint& p)
+bool PathSetInteractor::mouseMove( const QPoint& p) { return leftDrag(p);}
+
+
+void PathSetInteractor::onEnabledStateChanged( bool v)
 {
-    if ( leftDrag(p))
-        return false;
-
-    const PathView::Handle* oldHover = _hhover;
-    _hhover = _hdrag;
-    if ( !_hhover)
-        _hhover = getPathViewHandle(p);
-
-    if ( oldHover != _hhover)
-    {
-        FaceControl *fc = hoverModel();
-        int id = -1;
-        if ( _hhover)
-        {
-            id = _hhover->host()->path().id;
-            if ( fc)
-            {
-                cv::Vec3f hpos;
-                viewer()->calcSurfacePosition( fc->view()->surfaceActor(), p, hpos);
-                _vis->setCaptions( fc, id);
-            }   // end if
-        }   // end if
-        _vis->setCaptionsVisible( id >= 0);
-
-        if ( fc)
-            fc->data()->updateRenderers();
-    }   // end if
-
-    const static QString smsg0 = tr("Reposition path handle with left-click and drag; right click to remove/rename the path.");
-    const static QString smsg1 = tr("Right click on the model and select \"Add Path\" to place the end-point for a new path.");
-    if ( _hhover)
-        showStatus( smsg0, 10000);
+    if ( v)
+        showStatus( s_msg1, 10000);
     else
-        showStatus( smsg1, 10000);
-
-    return _hdrag != nullptr;
-}   // end mouseMove
-
-
-// private
-const PathView::Handle* PathSetInteractor::getPathViewHandle( const QPoint& p) const
-{
-    FaceControl *fc = hoverModel();
-    if ( !fc)
-        return nullptr;
-    return _vis->pathHandle( fc, viewer()->getPointedAt(p));
-}   // end getPathViewHandle
+        clearStatus();
+}   // end onEnabledStateChanged

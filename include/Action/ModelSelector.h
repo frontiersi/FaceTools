@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 #define FACE_TOOLS_MODEL_SELECTOR_H
 
 /**
- * Handles FaceControl selections programmatically and via internal interactor.
+ * Handles FaceView selections programmatically and via internal interactor.
  */
 
 #include <FaceModelViewer.h>
@@ -34,30 +34,31 @@ class FaceTools_EXPORT ModelSelector : public QObject
 public:
     Interactor::ModelSelectInteractor* interactor() { return &_interactor;}
 
-    FaceControl* selected() const { return _interactor.selected();}
-    const FaceControlSet& available() const { return _interactor.available();}
+    Vis::FV* selected() const { return _interactor.selected();}
+    const FVS& available() const { return _interactor.available();}
 
-    // Create a new FaceControl instances and attach it to the given viewer.
-    // If given viewer is null , FaceControl added to currently selected viewer.
-    FaceControl* addFaceControl( FaceModel*, FaceModelViewer *v=nullptr);
+    // Create a new FaceView instances and attach it to the given viewer.
+    // If given viewer is null, FaceView added to currently selected viewer.
+    // Returned FaceView is NOT automatically selected.
+    Vis::FV* addFaceView( FM*, FaceModelViewer *v=nullptr);
 
-    // Detach the FaceControl from its viewer and delete it.
-    void removeFaceControl( FaceControl*);
+    // Detach the FaceView from its viewer and delete it.
+    void removeFaceView( Vis::FV*);
 
-    // Call removeFaceControl for ALL associated FaceControls of the given FaceModel.
-    void remove( FaceModel*);
+    // Call removeFaceView for ALL associated FaceViews of the given FaceModel.
+    void remove( FM*);
 
-    // Programmatically select/deselect the given FaceControl.
-    void setSelected( FaceControl*, bool);
+    // Programmatically select/deselect the given FaceView.
+    void setSelected( Vis::FV*, bool);
 
 signals:
-    void onSelected( FaceControl*, bool);
+    void onSelected( Vis::FV*, bool);
 
 private slots:
-    // Set the selected FaceControl to be the one on the given viewer having
-    // the same FaceModel as the currently selected FaceControl. Does nothing
-    // if there's no FaceControl on the given viewer with the same FaceModel as
-    // the currently selected (or if there's no currently selected FaceControl).
+    // Set the selected FaceView to be the one on the given viewer having
+    // the same FaceModel as the currently selected FaceView. Does nothing
+    // if there's no FaceView on the given viewer with the same FaceModel as
+    // the currently selected (or if there's no currently selected FaceView).
     void doSwitchSelectedToViewer( ModelViewer*);
 
 private:

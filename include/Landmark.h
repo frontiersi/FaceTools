@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,8 +23,8 @@
 #endif
 
 #include "FaceTools_Export.h"
+#include "Landmarks.h"
 #include <Orientation.h>    // RFeatures
-#include <string>
 
 namespace FaceTools {
 

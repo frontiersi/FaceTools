@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,95 +16,97 @@
  ************************************************************************/
 
 #include <ActionExecutionQueue.h>
+#include <EventProcessResponse.h>
+#include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionExecutionQueue;
-using FaceTools::Action::ChangeEventSet;
 using FaceTools::Action::FaceAction;
-using FaceTools::FaceControlSet;
+using FaceTools::Action::EventSet;
+using FaceTools::Action::EPR;
+using FaceTools::FVS;
 
 
 // public
-void ActionExecutionQueue::pushIfShould( FaceAction* act, const ChangeEventSet* cs)
+bool ActionExecutionQueue::push( FaceAction* act, const FVS& fvs, const EventSet& E)
 {
-    if ( testPush( act, cs))
-        _queue.push_back(act);
-}   // end pushIfShould
+    if (_actions.count(act) > 0)    // Don't push an action that's already on the queue.
+        return false;
 
+    const size_t qsize = _queue.size();
+    assert(act);
 
-// public
-FaceAction* ActionExecutionQueue::popOrClear( const FaceControlSet& wset, bool& pflag)
-{
-    FaceAction* nact = nullptr;
-    if ( !wset.empty())
+    // Get all event responses registered for the action.
+    std::unordered_set<const EPR*> eprs;
+    for ( EventId e : E)
     {
-        while ( !nact && !_queue.empty())
+        const EventProcessResponse* response = act->eventResponse(e);
+        if ( response)
+            eprs.insert(response);
+    }   // end for
+
+    // Of these, choose the response one that maximises the size of the FaceViewSet.
+    const EPR* bestResponse = nullptr;
+    FVS mfvs;   // Initially empty
+    bool pflag = true;
+    for ( const EPR* response : eprs)
+    {
+        FVS nfvs = fvs; // Copy out since in granting the response, the contents may change
+        const bool granted = response->grantResponse( nfvs);
+        if ( granted && nfvs.size() > mfvs.size())
         {
-            nact = pop( pflag);
-            if ( nact)
-            {
-                nact->setReady( wset, true);
-                if ( nact->isEnabled())
-                    break;
-                else
-                    nact = nullptr; // Will cause the next action to be popped
-            }   // end if
-        }   // end while
-    }   // end else
+            bestResponse = response;
+            mfvs = nfvs;
+            pflag = pflag && response->processFlag( mfvs);  // process flag must be true over ALL granted responses to stay true
+        }   // end if
+    }   // end for
 
-    if ( !nact)
+    if ( bestResponse)
     {
-        _queue.clear();
-        _actions.clear();
+        _queue.push_back( {act, FVS::create(mfvs), pflag});
+        _actions.insert(act);
+        std::cerr << " Q<<-- : " << act->dname() << " <" << act << "> (#FV = " << mfvs.size() << ")" << std::endl;
     }   // end if
-    return nact;
-}   // end popOrClear
+    return _queue.size() > qsize;
+}   // end push
 
 
-// Pop next action to work on - setting pflag on return with the value to be passed to FaceAction::process.
-// Returns null if no more actions.
+// public
 FaceAction* ActionExecutionQueue::pop( bool& pflag)
 {
-    FaceAction* act = nullptr;
-    if ( !_queue.empty())
+    FaceAction* nact = nullptr;
+
+    while ( !_queue.empty() && !nact)
     {
-        act = *_queue.begin();
-        pflag = _actions.at(act);  // Set the process flag
+        auto a = *_queue.begin();
         _queue.pop_front();
-    }   // end if
-    return act;
-}   // end pop
 
+        FaceAction* tact = a.act;
+        pflag = a.flag;
 
+        std::cerr << " Q-->> : " << tact->dname() << " <" << tact << ">";
 
-// Test if the given action should be pushed to the execution queue.
-bool ActionExecutionQueue::testPush( FaceAction* act, const ChangeEventSet* cs)
-{
-    const bool ispresent = _actions.count(act) > 0; // Is the action already in the queue?
-    bool add2q = false;
-    bool pflag = false;
-    if ( ispresent)
-        pflag = _actions.at(act);
-
-    // Check if the process flag should be true against the set of received change events.
-    if ( !pflag)
-    {
-        const ChangeEventSet* aset = &act->processEvents(); // Set of changes requiring the action to be processed
-        // Are any of the change events in the given set specified by the action
-        // as a trigger for processing it? If so, find and set the associated process
-        // flag and ensure that the add2q indicator is set.
-        for ( auto c : *cs)
+        tact->clearReady();
+        tact->setReady( *a.fvs, true);
+        if ( tact->isEnabled())
+            nact = tact;
+        else if ( tact->isCheckable() && tact->isChecked() != tact->defaultCheckState())
         {
-            if ( aset->count(c) > 0)
-            {
-                pflag = pflag || aset->find(c)->processFlag;
-                _actions[act] = pflag;  // Update the process flag
-                add2q = true;
-                if ( pflag) // Break out as soon as pflag is true
-                    break;
-            }   // end if
-        }   // end for
-    }   // end if
+            // Action not enabled, but if checkable and not in default check state, it must be set to the default state.
+            pflag = tact->defaultCheckState();
+            nact = tact;
+        }   // end else
+        else
+            std::cerr << " ** UNAVAILABLE ** (ready set size = " << tact->ready().size() << ")";
+        std::cerr << std::endl;
+    }   // end while
 
-    return add2q && !ispresent;   // Don't add if already present
-}   // end testPush
+#ifndef NDEBUG
+    if (!nact)
+        assert(_queue.empty());
+#endif
 
+    if ( _queue.empty())
+        _actions.clear();
+
+    return nact;
+}   // end pop

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,16 +17,15 @@
 
 #include <ActionAlignLandmarks.h>
 #include <FaceModelViewer.h>
-#include <FaceControl.h>
 #include <FaceModel.h>
 #include <algorithm>
 #include <ObjModelAligner.h>
 using FaceTools::Action::ActionAlignLandmarks;
-using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
-using FaceTools::FaceControlSet;
+using FaceTools::FVS;
 using FaceTools::FaceModelSet;
-using FaceTools::FaceControl;
+using FaceTools::Vis::FV;
 using FaceTools::LandmarkSet;
 using FaceTools::FaceModel;
 
@@ -109,17 +108,17 @@ bool ActionAlignLandmarks::testEnabled( const QPoint*) const
 {
     // Enabled only if the selected viewer has other models
     // and the other models share at least three landmarks in common.
-    const FaceControl* fc = ready1();
+    const FV* fv = ready1();
     bool ready = false;
-    if ( fc && fc->viewer()->attached().size() >= 2)
+    if ( fv && fv->viewer()->attached().size() >= 2)
     {
-        FaceModel* fm = fc->data();
+        FaceModel* fm = fv->data();
         fm->lockForRead();
         LandmarkSet::Ptr lmks = fm->landmarks();
         if ( lmks->size() >= 3) // Need at least three landmarks on the selected model
         {
             // Get the other models from the viewer.
-            FaceModelSet fms = fc->viewer()->attached().models();
+            FaceModelSet fms = fv->viewer()->attached().models();
             fms.erase(fm);  // Remember not to include the source model.
             // If at least one other model in the viewer with three or more shared landmarks, then enable this action.
             ready = findSharedLandmarksModels( fms, lmks) > 0;
@@ -131,18 +130,18 @@ bool ActionAlignLandmarks::testEnabled( const QPoint*) const
 
 
 
-bool ActionAlignLandmarks::doAction( FaceControlSet& rset, const QPoint&)
+bool ActionAlignLandmarks::doAction( FVS& rset, const QPoint&)
 {
     assert(rset.size() == 1);
-    FaceControl* fc = rset.first();
-    FaceModel* sfm = fc->data();    
-    rset.erase(fc); // Won't actually do work on the source FaceControl!
+    FV* fv = rset.first();
+    FaceModel* sfm = fv->data();    
+    rset.erase(fv); // Won't actually do work on the source FaceView!
 
     // Find the landmarks common across all models in the viewer.
     sfm->lockForRead();
     std::unordered_set<std::string> lmset = sfm->landmarks()->names();  // Initially all (copy out)
     sfm->unlock();
-    FaceModelSet fms = fc->viewer()->attached().models();
+    FaceModelSet fms = fv->viewer()->attached().models();
     fms.erase(sfm); // Erase the source
     const size_t ncommon = findCommonLandmarks( lmset, fms);
     assert(ncommon >= 3);   // Otherwise this shouldn't have been enabled!
@@ -160,8 +159,8 @@ bool ActionAlignLandmarks::doAction( FaceControlSet& rset, const QPoint&)
         RFeatures::ObjModel::Ptr m0 = makeModelFromLandmarks( fm->landmarks(), lmset);
         cv::Matx44d T = aligner->calcTransform( m0.get());
         fm->transform(T);
-        // Set the FaceControls adjusted as a result
-        for ( auto* f : fm->faceControls())
+        // Set the FaceViews adjusted as a result
+        for ( auto* f : fm->fvs())
             rset.insert(f);    // Worked on this view!
         fm->unlock();
     }   // end for

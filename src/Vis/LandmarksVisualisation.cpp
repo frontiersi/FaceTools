@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,16 +17,15 @@
 
 #include <LandmarksVisualisation.h>
 #include <FaceModelViewer.h>
-#include <FaceControl.h>
 #include <FaceModel.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Vis::LandmarksVisualisation;
 using FaceTools::Vis::BaseVisualisation;
 using FaceTools::Vis::LandmarkSetView;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
-using FaceTools::FaceModel;
+using FaceTools::Vis::FV;
+using FaceTools::FVS;
+using FaceTools::FM;
 
 
 LandmarksVisualisation::LandmarksVisualisation( const QString& dname, const QIcon& icon)
@@ -38,98 +37,115 @@ LandmarksVisualisation::LandmarksVisualisation( const QString& dname, const QIco
 LandmarksVisualisation::~LandmarksVisualisation()
 {
     while (!_views.empty())
-        purge(_views.begin()->first);
+        purge(const_cast<FV*>(_views.begin()->first));
 }   // end dtor
 
 
-bool LandmarksVisualisation::apply( const FaceControl* fc, const QPoint*)
+bool LandmarksVisualisation::isAvailable( const FM* fm) const
 {
-    if ( _views.count(fc) == 0)
-    {
-        const FaceModel* fm = fc->data();
-        FaceTools::LandmarkSet::Ptr lmks = fm->landmarks();
-        _views[fc] = new LandmarkSetView( *lmks);
-    }   // end if
-    return true;
+    assert(fm);
+    return !fm->landmarks()->empty();
+}   // end isAvailable
+
+
+void LandmarksVisualisation::apply( FV* fv, const QPoint*)
+{
+    assert(fv);
+    if ( !hasView(fv))
+        _views[fv] = new LandmarkSetView( fv->data()->landmarks());
+    _views.at(fv)->setVisible( true, fv->viewer());
 }   // end apply
 
 
-void LandmarksVisualisation::addActors( const FaceControl* fc)
+void LandmarksVisualisation::remove( FV* fv)
 {
-    if (_views.count(fc) > 0)
-        _views.at(fc)->setVisible( true, fc->viewer());
-}   // end addActors
+    assert(fv);
+    if ( hasView(fv))
+        _views.at(fv)->setVisible( false, fv->viewer());
+}   // end remove
 
 
-void LandmarksVisualisation::removeActors( const FaceControl* fc)
+void LandmarksVisualisation::setLandmarkVisible( const FM* fm, int lm, bool v)
 {
-    if (_views.count(fc) > 0)
-        _views.at(fc)->setVisible( false, fc->viewer());
-}   // end removeActors
-
-
-void LandmarksVisualisation::setLandmarkVisible( const FaceModel* fm, int lm, bool v)
-{
-    const FaceControlSet& fcs = fm->faceControls();
-    std::for_each( std::begin(fcs), std::end(fcs), [=](auto fc){ assert(_views.count(fc) > 0);});
-    std::for_each( std::begin(fcs), std::end(fcs), [=](auto fc){_views.at(fc)->showLandmark(v,lm);});
+    assert(fm);
+    const FVS& fvs = fm->fvs();
+    std::for_each( std::begin(fvs), std::end(fvs), [=](auto fv){ if ( this->hasView(fv)) _views.at(fv)->showLandmark(v,lm);});
 }   // end setLandmarkVisible
 
 
-void LandmarksVisualisation::setLandmarkHighlighted( const FaceModel* fm, int lm, bool v)
+void LandmarksVisualisation::setLandmarkHighlighted( const FM* fm, int lm, bool v)
 {
-    const FaceControlSet& fcs = fm->faceControls();
-    std::for_each( std::begin(fcs), std::end(fcs), [=](auto fc){ assert(_views.count(fc) > 0);});
-    std::for_each( std::begin(fcs), std::end(fcs), [=](auto fc){_views.at(fc)->highlightLandmark(v,lm);});
+    assert(fm);
+    const FVS& fvs = fm->fvs();
+    std::for_each( std::begin(fvs), std::end(fvs), [=](auto fv){ if ( this->hasView(fv)) _views.at(fv)->highlightLandmark(v,lm);});
 }   // end setLandmarkHighlighted
 
 
-void LandmarksVisualisation::updateLandmark( const FaceModel* fm, int lm)
+void LandmarksVisualisation::updateLandmark( const FM* fm, int lm)
 {
-    const FaceControlSet& fcs = fm->faceControls();
-    std::for_each( std::begin(fcs), std::end(fcs), [=](auto fc){ assert(_views.count(fc) > 0);});
-    std::for_each( std::begin(fcs), std::end(fcs), [=](auto fc){_views.at(fc)->updateLandmark(lm);});
+    assert(fm);
+    const FVS& fvs = fm->fvs();
+    std::for_each( std::begin(fvs), std::end(fvs), [=](auto fv){ if ( this->hasView(fv)) _views.at(fv)->updateLandmark(lm);});
 }   // end updateLandmark
 
 
-int LandmarksVisualisation::landmarkProp( const FaceControl* fc, const vtkProp* prop) const
+void LandmarksVisualisation::refresh( const FM* fm)
 {
-    return  _views.count(fc) > 0 ? _views.at(fc)->landmark( prop) : -1;
+    assert(fm);
+    const FVS& fvs = fm->fvs();
+    std::for_each( std::begin(fvs), std::end(fvs), [=](auto fv){ if ( this->hasView(fv)) _views.at(fv)->refresh();});
+}   // end refresh
+
+
+int LandmarksVisualisation::landmarkProp( const FV* fv, const vtkProp* prop) const
+{
+    return  hasView(fv) ? _views.at(fv)->landmark( prop) : -1;
 }   // end landmarkProp
 
 
-bool LandmarksVisualisation::belongs( const vtkProp* p, const FaceControl* fc) const
+bool LandmarksVisualisation::belongs( const vtkProp* p, const FV* fv) const
 {
     bool b = false;
-    if (_views.count(fc) > 0)
-        b = _views.at(fc)->landmark(p) >= 0;
+    if ( hasView(fv))
+        b = _views.at(fv)->landmark(p) >= 0;
     return b;
 }   // end belongs
 
 
 // protected
-void LandmarksVisualisation::pokeTransform( const FaceControl* fc, const vtkMatrix4x4* vm)
+void LandmarksVisualisation::pokeTransform( const FV* fv, const vtkMatrix4x4* vm)
 {
-    if ( _views.count(fc) > 0)
-        _views.at(fc)->pokeTransform(vm);
+    if ( hasView(fv))
+        _views.at(fv)->pokeTransform(vm);
 }   // end pokeTransform
 
 
 // protected
-void LandmarksVisualisation::fixTransform( const FaceControl* fc)
+void LandmarksVisualisation::fixTransform( const FV* fv)
 {
-    if ( _views.count(fc) > 0)
-        _views.at(fc)->fixTransform();
+    if ( hasView(fv))
+        _views.at(fv)->fixTransform();
 }   // end fixTransform
 
 
 // protected
-void LandmarksVisualisation::purge( const FaceControl* fc)
+void LandmarksVisualisation::purge( FV* fv)
 {
-    if ( _views.count(fc) > 0)
+    if ( hasView(fv))
     {
-        removeActors(fc);
-        delete _views.at(fc);
-        _views.erase(fc);
+        _views.at(fv)->setVisible( false, fv->viewer());
+        delete _views.at(fv);
+        _views.erase(fv);
     }   // end if
 }   // end purge
+
+
+// protected
+bool LandmarksVisualisation::allowShowOnLoad( const FM* fm) const
+{
+    return !fm->landmarks()->empty();
+}   // end allowShowOnLoad
+
+
+// private
+bool LandmarksVisualisation::hasView( const FV* fv) const { return _views.count(fv) > 0;}

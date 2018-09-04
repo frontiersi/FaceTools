@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,16 +17,16 @@
 
 #include <ActionBackfaceCulling.h>
 #include <FaceModelViewer.h>
-#include <FaceControl.h>
 #include <FaceModel.h>
 #include <FaceView.h>
 #include <cassert>
 using FaceTools::Action::ActionBackfaceCulling;
 using FaceTools::Action::FaceAction;
 using FaceTools::FaceModelViewer;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceViewerSet;
-using FaceTools::FaceControl;
+using FaceTools::FMVS;
+using FaceTools::Vis::FV;
+using FaceTools::FVS;
+using FaceTools::FMV;
 
 
 ActionBackfaceCulling::ActionBackfaceCulling( const QString& dn, const QIcon& ico)
@@ -36,24 +36,25 @@ ActionBackfaceCulling::ActionBackfaceCulling( const QString& dn, const QIcon& ic
 }   // end ctor
 
 
-bool ActionBackfaceCulling::testReady( const FaceControl* fc)
+bool ActionBackfaceCulling::testReady( const FV* fv)
 {
-    setChecked( fc->view()->backfaceCulling());
+    setChecked( fv->backfaceCulling());
     return true;
 }   // end testReady
 
 
-bool ActionBackfaceCulling::doAction( FaceControlSet& fcs, const QPoint&)
+bool ActionBackfaceCulling::doAction( FVS& fvs, const QPoint&)
 {
-    // Apply to all FaceControls in all directly selected viewers.
-    FaceViewerSet fvs = fcs.directViewers();
-    fcs.clear();
-    for ( const FaceModelViewer* v : fvs)
+    // Apply to all FaceViews in all directly selected viewers.
+    const bool ischecked = isChecked();
+    FMVS fmvs = fvs.directViewers();
+    fvs.clear();
+    for ( const FMV* v : fmvs)
     {
-        for ( FaceControl* f : v->attached())
+        for ( FV* f : v->attached())
         {
-            f->view()->setBackfaceCulling( isChecked());
-            fcs.insert(f);
+            f->setBackfaceCulling( ischecked);
+            fvs.insert(f);
         }   // end for
     }   // end for
     return true;

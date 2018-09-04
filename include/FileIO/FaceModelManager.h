@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,8 +26,6 @@
 
 #include "FaceModelFileHandlerMap.h"
 #include "LoadFaceModelsHelper.h"
-#include <FaceControlSet.h>
-#include <QWidget>
 
 namespace FaceTools {
 namespace FileIO {
@@ -47,7 +45,7 @@ public:
     void add( FaceModelFileHandler*);
 
     // Returns true iff given model is currently saved in the preferred file format (according to FaceModelFileHandlerMap).
-    bool hasPreferredFileFormat( FaceModel*) const;
+    bool hasPreferredFileFormat( FM*) const;
 
     // Does the given filename have the extension of the preferred file format?
     bool isPreferredFileFormat( const std::string&) const;
@@ -56,11 +54,11 @@ public:
     const FaceModelFileHandlerMap& fileFormats() const { return _fhmap;}
 
     // Save model to filepath (returns true on success).
-    // If fpath NULL try to save over the current file path associated with the model.
-    // If fpath not NULL but empty, try to save using the currently stored file path, and copy into fpath on return.
+    // If fpath null try to save over the current file path associated with the model.
+    // If fpath not null but empty, try to save using the currently stored file path, and copy into fpath on return.
     // If fpath points to a non-empty string, try to save to this new location and update the model's stored file path.
     // Generates and stores the model hash upon success.
-    bool write( FaceModel*, std::string* fpath=NULL);
+    bool write( FM*, std::string* fpath=nullptr);
 
     // Returns true iff the file at given path can be read in.
     bool canRead( const std::string&) const;
@@ -68,21 +66,21 @@ public:
     // Returns true iff the file matching the given filepath is already open.
     bool isOpen( const std::string&) const;
 
-    // Load in a model (returning NULL on fail). Also returns NULL if model already open.
+    // Load in a model (returning null on fail). Also returns null if model already open.
     // Also causes signal loadedModel() to fire.
-    FaceModel* read( const std::string&);
+    FM* read( const std::string&);
 
-    // Get the nature of the error if read returns NULL or write returns false.
+    // Get the nature of the error if read returns null or write returns false.
     const std::string& error() const { return _err;}
 
     // Return the filepath for the model.
-    const std::string& filepath( FaceModel*) const;
+    const std::string& filepath( FM*) const;
 
     // Return the open model for the given filepath or null if not open.
-    FaceModel* model( const std::string&) const;
+    FM* model( const std::string&) const;
 
     // Close given model and release memory (client must check if saved!).
-    void close( FaceModel*);
+    void close( FM*);
 
     // Returns the number of models currently open.
     size_t numOpen() const { return _mdata.size();}
@@ -98,10 +96,10 @@ private:
     const size_t _loadLimit;
     FaceModelFileHandlerMap _fhmap;
     FaceModelSet _models;
-    std::unordered_map<FaceModel*, std::string> _mdata;
-    std::unordered_map<std::string, FaceModel*> _mfiles;    // Lookup models by current filepath
+    std::unordered_map<FM*, std::string> _mdata;
+    std::unordered_map<std::string, FM*> _mfiles;    // Lookup models by current filepath
     std::string _err;
-    void setModelFilepath( FaceModel*, const std::string&);
+    void setModelFilepath( FM*, const std::string&);
 
     FaceModelManager( const FaceModelManager&) = delete;
     void operator=( const FaceModelManager&) = delete;

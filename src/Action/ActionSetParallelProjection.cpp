@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 #include <algorithm>
 using FaceTools::Action::ActionSetParallelProjection;
 using FaceTools::Action::FaceAction;
-using FaceTools::FaceControlSet;
+using FaceTools::FVS;
 using FaceTools::ModelViewer;
 
 
@@ -32,7 +32,7 @@ ActionSetParallelProjection::ActionSetParallelProjection( const QString& dn, con
 }   // end ctor
 
 
-bool ActionSetParallelProjection::doAction( FaceControlSet&, const QPoint&)
+bool ActionSetParallelProjection::doAction( FVS&, const QPoint&)
 {
     for ( ModelViewer* viewer : _viewers)
     {

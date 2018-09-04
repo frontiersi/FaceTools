@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,18 +29,29 @@ class FaceTools_EXPORT ActionExecutionQueue
 public:
     ActionExecutionQueue() {}
 
-    void pushIfShould( FaceAction*, const ChangeEventSet*);
-    size_t size() const { return _queue.size();}
+    // Push the given action to the queue along with the set of Vis::FVs to
+    // work on if any member of the given event set is an initiator for
+    // the action. The process flag for the action will be in agreement
+    // with all initiating events for the action. Returns true if the
+    // action was pushed onto the queue.
+    bool push( FaceAction*, const FVS&, const EventSet&);
 
-    FaceAction* popOrClear( const FaceControlSet&, bool &pflag);
+    // Get the next action from the queue or null if there's no next action.
+    // On return of non-null, pflag is set to the check state value for the
+    // returned action's process function.
+    FaceAction* pop( bool &pflag);
+
+    inline bool empty() const { return _queue.empty();}
 
 private:
-    std::list<FaceAction*> _queue;
-    std::unordered_map<FaceAction*, bool> _actions;
-
-    void clear();
-    FaceAction* pop( bool &pflag);
-    bool testPush( FaceAction*, const ChangeEventSet*);
+    struct QElem
+    {
+        FaceAction* act;
+        FVS::Ptr fvs;
+        bool flag;
+    };  // end struct
+    std::list<QElem> _queue;
+    std::unordered_set<FaceAction*> _actions;
 
     ActionExecutionQueue( const ActionExecutionQueue&) = delete;
     void operator=( const ActionExecutionQueue&) = delete;

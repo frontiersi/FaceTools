@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,45 +31,50 @@ public:
     PathSetVisualisation( const QString &dname, const QIcon &icon);
     ~PathSetVisualisation() override;
 
-    bool isExclusive() const override { return false;}
     bool singleModel() const override { return true;}
+    bool belongs( const vtkProp*, const FV*) const override;
+    bool isAvailable( const FM*) const override;
 
-    bool belongs( const vtkProp*, const FaceControl*) const override;
+    void apply( FV*, const QPoint* mc=nullptr) override;
+    void remove( FV*) override;
 
-    bool apply( const FaceControl*, const QPoint* mc=nullptr) override;
-    void addActors( const FaceControl*) override;
-    void removeActors( const FaceControl*) override;
-
-    // Creates a new path view for the given path - returning one of the handles (both initially in same position).
-    const PathView::Handle* addPath( const FaceControl*, int pathId);
-
-    // Returns the handle for a path by looking for it by prop.
-    const PathView::Handle* pathHandle( const FaceControl*, const vtkProp*) const;
-
-    // Returns handles 0 or 1 for the given path.
-    const PathView::Handle* pathHandle0( const FaceControl*, int pathID) const;
-    const PathView::Handle* pathHandle1( const FaceControl*, int pathID) const;
+    // Creates and shows the given path across all FaceViews for the FaceModel.
+    void addPath( const FM*, int pathId);
 
     // Update the position of the handles for the given path.
-    void updatePath( const FaceControl*, int pathId);
+    void updatePath( const FM*, int pathId);
 
-    // Set caption info to be for the given path. Caption will be anchored at
-    // the given attachment point, or halfway along the path if left null.
-    void setCaptions( const FaceControl*, int pathId, const cv::Vec3f* attachPoint=nullptr);
+    // Refresh visualisation of paths for the given FaceModel.
+    void refresh( const FM*);
 
-    // Show/hide the caption (distance) information.
+    // Returns the handle for a path by looking for it by prop.
+    const PathView::Handle* pathHandle( const FV*, const vtkProp*) const;
+    // Returns handles 0 or 1 for the given path.
+    const PathView::Handle* pathHandle0( const FV*, int pathID) const;
+    const PathView::Handle* pathHandle1( const FV*, int pathID) const;
+
+    // Set caption info name, Euclidean length and path sum.
+    // Caption will be displayed at render coordinates x,y.
+    void setCaptions( const std::string&, double elen, double psum, int x, int y);
+
+    // Set the point in space at which the caption should be attached.
+    void setCaptionAttachPoint( const cv::Vec3f&);
+
+    // Show/hide the captions.
     void setCaptionsVisible( bool v);
 
-protected:
-    void pokeTransform( const FaceControl*, const vtkMatrix4x4*) override;
-    void fixTransform( const FaceControl*) override;
-    void purge( const FaceControl*) override;
+    void pokeTransform( const FV*, const vtkMatrix4x4*) override;
+    void fixTransform( const FV*) override;
+
+    static std::string CAPTION_LENGTH_METRIC;   // Defaults to "mm"
 
 private:
-    // The paths associated with a FaceControl.
-    std::unordered_map<const FaceControl*, PathSetView*> _views;
+    // The paths associated with a FV.
+    std::unordered_map<const FV*, PathSetView*> _views;
     vtkSmartPointer<vtkCaptionActor2D> _caption; // Shared between all
     vtkSmartPointer<vtkTextActor> _text;         // Shared between all
+    bool hasView( const FV*) const;
+    void purge( FV*) override;
 };  // end class
 
 }   // end namespace

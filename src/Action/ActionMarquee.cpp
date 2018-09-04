@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,14 +17,14 @@
 
 #include <ActionMarquee.h>
 #include <FaceModelViewer.h>
-#include <FaceControlSet.h>
 #include <algorithm>
+#include <functional>
 using FaceTools::Action::ActionMarquee;
 using FaceTools::Action::CameraWorker;
 using FaceTools::Action::FaceAction;
-using FaceTools::FaceControlSet;
 using FaceTools::FaceModelViewer;
 using FaceTools::Interactor::ModelMoveInteractor;
+using FaceTools::FVS;
 
 
 // public
@@ -32,16 +32,10 @@ ActionMarquee::ActionMarquee( const QString& dn, const QIcon& ico, ModelMoveInte
     : FaceAction( dn, ico)
 {
     setCheckable(true, false);
-
-    connect( mmi, &ModelMoveInteractor::onCameraRotate, [this](){ if (isChecked()) process(false);});
-    connect( mmi, &ModelMoveInteractor::onCameraDolly,  [this](){ if (isChecked()) process(false);});
-    connect( mmi, &ModelMoveInteractor::onCameraPan,    [this](){ if (isChecked()) process(false);});
-
-    connect( mmi, &ModelMoveInteractor::onActorRotate,  [this](){ if (isChecked()) process(false);});
-    connect( mmi, &ModelMoveInteractor::onActorDolly,   [this](){ if (isChecked()) process(false);});
-    connect( mmi, &ModelMoveInteractor::onActorPan,     [this](){ if (isChecked()) process(false);});
-
-    addProcessOn( ChangeEvent(CAMERA_CHANGE,false));
+    std::function<void()> pred = [this](){ if ( isChecked()) process(false);};
+    connect( mmi, &ModelMoveInteractor::onCameraMove, pred);
+    connect( mmi, &ModelMoveInteractor::onActorMove, pred);
+    setRespondToEvent( CAMERA_CHANGE, false);
 }   // end ctor
 
 
@@ -57,7 +51,7 @@ void ActionMarquee::addViewer( FaceModelViewer* v)
 }   // end addViewer
 
 
-bool ActionMarquee::doAction( FaceControlSet&, const QPoint&)
+bool ActionMarquee::doAction( FVS&, const QPoint&)
 {
     if ( isChecked())
         std::for_each( std::begin(_workers), std::end(_workers), [](auto cw){cw->start();});

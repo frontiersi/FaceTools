@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 #define FACE_TOOLS_RADIAL_SELECT_INTERACTOR_H
 
 #include "ModelEntryExitInteractor.h"
-#include <RadialSelectVisualisation.h>
+#include <LoopSelectVisualisation.h>
 
 namespace FaceTools {
 namespace Interactor {
@@ -27,10 +27,12 @@ namespace Interactor {
 class FaceTools_EXPORT RadialSelectInteractor : public ModelViewerInteractor 
 { Q_OBJECT
 public:
-    RadialSelectInteractor( MEEI*, Vis::RadialSelectVisualisation*, QStatusBar* sbar=nullptr);
+    RadialSelectInteractor( MEEI*, Vis::LoopSelectVisualisation*, QStatusBar* sbar=nullptr);
 
-protected:
-    void onEnabledStateChanged(bool) override;
+signals:
+    void onIncreaseRadius( const Vis::FV*);
+    void onDecreaseRadius( const Vis::FV*);
+    void onSetCentre( const Vis::FV*, const cv::Vec3f&);
 
 private:
     bool leftButtonDown( const QPoint&) override;
@@ -39,12 +41,15 @@ private:
     bool mouseMove( const QPoint&) override;
     bool mouseWheelForward( const QPoint&) override;
     bool mouseWheelBackward( const QPoint&) override;
-    bool testOnReticule( const QPoint&) const;
+    void onEnabledStateChanged(bool) override;
+    void doOnEnterReticule();
+    void doOnLeaveReticule();
 
     MEEI *_meei;
-    Vis::RadialSelectVisualisation *_vis;
+    Vis::LoopSelectVisualisation *_vis;
     bool _move;
-    FaceControl* _model;
+    bool _onReticule;
+    Vis::FV* _model;
     static const QString s_msg;
 };  // end class
 

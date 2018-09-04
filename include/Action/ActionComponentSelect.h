@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,10 +28,8 @@ namespace Action {
 class FaceTools_EXPORT ActionComponentSelect : public ActionVisualise
 { Q_OBJECT
 public:
-    explicit ActionComponentSelect( MEEI*);
+    explicit ActionComponentSelect( Interactor::MEEI*);
     ~ActionComponentSelect() override;
-
-    bool manageVisualisation() const override { return false;}
 
 private:
     Vis::BoundingVisualisation *_vis;

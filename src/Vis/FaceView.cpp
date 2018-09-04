@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,53 +17,77 @@
 
 #include <FaceView.h>
 #include <FaceModel.h>
-#include <FaceControl.h>
-#include <ModelViewer.h>
+#include <FaceModelViewer.h>
 #include <BaseVisualisation.h>
 #include <vtkProperty.h>
+#include <vtkCellData.h>
 #include <VtkTools.h>   // RVTK::transform
 #include <QColor>
 #include <iostream>
 #include <cassert>
 using FaceTools::Vis::FaceView;
 using FaceTools::Vis::BaseVisualisation;
-using FaceTools::ModelViewer;
-using FaceTools::FaceControl;
-using RFeatures::ObjModel;
+using FaceTools::Vis::ScalarMapping;
+using FaceTools::FMV;
+using FaceTools::FM;
 
 
 // public
-FaceView::FaceView( const FaceControl* fc) : _fc(fc), _viewer(nullptr), _visx(nullptr)
+FaceView::FaceView( FM* fm, FMV* viewer)
+    : _data(fm), _actor(nullptr), _texture(nullptr), _viewer(nullptr), _scmap(nullptr), _xvis(nullptr)
 {
+    assert(viewer);
+    assert(fm);
+    _data->_fvs.insert(this);
+    setViewer(viewer);
+    reset();
 }   // end ctor
+
+
+FaceView::FaceView( const FaceView& fv)
+{
+    *this = fv;
+}   // end ctor
+
+
+FaceView& FaceView::operator=( const FaceView& fv)
+{
+    _data = fv.data();
+    _data->_fvs.insert(this);
+    _actor = nullptr;
+    _texture = nullptr;
+    _viewer = nullptr;
+    return *this;
+}   // end operator=
 
 
 // public
 FaceView::~FaceView()
 {
-    remove();
-    _sactor = _tactor = nullptr;
+    remove();   // Remove all
+    setViewer(nullptr);
+    _data->_fvs.erase(this);
+    if ( _actor)
+        _actor->Delete();
+    _texture = nullptr;
 }   // end dtor
 
 
 // public
-void FaceView::setViewer( ModelViewer* viewer)
+void FaceView::setViewer( FMV* viewer)
 {
     if ( _viewer)
-        std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](auto v){v->removeActors(_fc);});
+    {
+        _viewer->detach(this);
+        std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](auto v){v->remove(this);});
+        _viewer->remove(_actor);
+    }   // end if
     _viewer = viewer;
     if ( _viewer)
     {
-        decltype(_vlayers) nlayers;
-        for ( auto v : _vlayers)
-        {
-            if ( v->apply(_fc)) // Re-apply
-            {
-                v->addActors(_fc);  // Re-add
-                nlayers.insert(v);
-            }   // end if
-        }   // end for
-        _vlayers = nlayers;
+        _viewer->add(_actor);
+        std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](auto v){v->apply(this);});
+        _viewer->attach(this);
     }   // end if
 }   // end setViewer
 
@@ -71,142 +95,87 @@ void FaceView::setViewer( ModelViewer* viewer)
 // public
 void FaceView::reset()
 {
-    //std::cerr << "[INFO] FaceTools::Vis::FaceView::reset: Resetting view models" << std::endl;
-    std::unordered_set<BaseVisualisation*> vlayers = visualisations();  // Copy out
+    assert(_viewer);
+    std::cerr << "[INFO] FaceTools::Vis::FaceView::reset: <" << this << "> on viewer <" << _viewer << ">" << std::endl;
+
     bool bface = false;
+    bool tex = false;
     double op = 1.0;
     QColor cl(255,255,255);
-    if ( _sactor)
+
+    if ( _actor)
     {
         bface = backfaceCulling();
+        tex = textured();
         op = opacity();
         cl = colour();
+
+        _viewer->remove(_actor);    // Remove the actor
+        _actor->Delete();
     }   // end if
 
-    remove();   // Remove all
-
-    const FaceModel* fm = _fc->data();
-
-    const ObjModel* model = fm->info()->cmodel();
+    // Create the new actor from the data
     RVTK::VtkActorCreator ac;
-    _fmap.clear();  // Create the surface actor
+    _fmap.clear();
+    setActiveScalars(nullptr);
     ac.setObjToVTKUniqueFaceMap( &_fmap);
-
-    _sactor = ac.generateSurfaceActor( model);
-    _tactor = nullptr;
-    if ( model->getNumMaterials() == 1) // Create the textured actor
-    {
-        std::vector<vtkActor*> tactors;
-        ac.generateTexturedActors( model, tactors);
-        assert(tactors.size() == 1);
-        _tactor = tactors[0];
-    }   // end else
-    else
-    {
-        std::cerr << "[WARNING] FaceTools::Vis::FaceView::reset: Cannot build textured vtkActor; ";
-        if ( model->getNumMaterials() == 0)
-            std::cerr << "No texture maps found on provided model!";
-        else
-            std::cerr << "ObjModel has more than one material - merge them first!";
-        std::cerr << std::endl;
-    }   // end else
-
-    // Reapply visualisations and other aspects (colour, opacity, backface-culling)
-    for ( BaseVisualisation* vis : vlayers)
-        this->apply(vis);
+    const RFeatures::ObjModel* model = _data->info()->cmodel();
+    _actor = ac.generateActor( model, _texture);
+    if ( !_texture)
+        std::cerr << "[INFO] FaceTools::Vis::FaceView::reset: No texture found!" << std::endl;
 
     setBackfaceCulling(bface);
+    setTextured(tex);
     setOpacity(op);
     setColour(cl);
+
+    _viewer->add(_actor);   // Re-add the newly generated actor
+
+    // Re-apply the old visualisation layers - now unavailable ones are left unapplied.
+    auto vlayers = _vlayers;
+    _vlayers.clear();
+    _xvis = nullptr;
+    std::for_each( std::begin(vlayers), std::end(vlayers), [this](auto v){this->apply(v);});
 }   // end reset
 
 
 // public
 void FaceView::remove( BaseVisualisation* vis)
 {
-    if ( !vis)  // Remove all visualisations?
+    assert(_viewer);
+    if ( !vis)
     {
-        if ( _viewer)
-        {
-            std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](auto v){v->removeActors(_fc);});
-            std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](auto v){v->purge(_fc);});
-        }   // end if
-        _vlayers.clear();
-        _visx = nullptr;
+        if ( !_vlayers.empty())
+            remove( *_vlayers.begin());
+        return;
     }   // end if
-    else if ( _vlayers.count(vis) > 0)
-    {
-        if ( _viewer)
-        {
-            vis->removeActors(_fc);
-            vis->purge(_fc);
-        }   // end if
-        _vlayers.erase(vis);
-        if ( _visx == vis)
-            _visx = nullptr;
-    }   // end else
+    vis->remove(this);
+    _vlayers.erase(vis);
+    if ( _xvis == vis)
+        _xvis = nullptr;
 }   // end remove
 
 
 // public
 bool FaceView::apply( BaseVisualisation* vis, const QPoint* mc)
 {
-    assert(_sactor);
-    if ( !_sactor)
-    {
-        std::cerr << "[ERROR] FaceTools::Vis::FaceView::apply: "
-                  << "No surface vtkActor built! Must call reset() before apply()!" << std::endl;
-        return false;
-    }   // end if
-
+    assert( vis);
+    assert(_actor);
     assert(_viewer);
-    if ( !_viewer)
-    {
-        std::cerr << "[WARNING] FaceTools::Vis::FaceView::apply: "
-                  << "Cannot apply visualisations without a viewer set!" << std::endl;
+    assert( _vlayers.count(vis) == 0);
+
+    if ( !vis->isAvailable(_data))
         return false;
-    }   // end if
 
-    if ( !vis)
+    _data->lockForRead();
+    vis->apply( this, mc);
+    _vlayers.insert(vis);
+    if ( !vis->isToggled())
     {
-        auto vlayers = _vlayers;    // Copy out
-        std::for_each( std::begin(vlayers), std::end(vlayers), [this](auto v){this->apply(v);});
-        return true;
+        assert(_xvis == nullptr);
+        _xvis = vis;
     }   // end if
-
-    //assert( vis->isAvailable(_fc->data()));
-    if ( !vis->isAvailable(_fc->data()))
-    {
-        std::cerr << "[WARNING] FaceTools::Vis::FaceView::apply: "
-                  << "Cannot apply visualisations - " << vis->getDisplayName().toStdString()
-                  << " is not available for the FaceModel!" << std::endl;
-        return false;
-    }   // end if
-
-    remove(vis);
-
-    // First test if adding a new visualisation and if this will replace the existing exclusive visualisation,
-    // because we want to remove the actor(s) before applying the new visualisation. This ought not to make a
-    // difference but control over the removal of actors is delegated to some other BaseVisualisation derived
-    // type which may implement strange (incorrect) logic expecting the visualisation properties of the actor
-    // to be the same upon removal as when added (because it labels itself as exclusive). This ordering of
-    // removal first before applying is done to avoid this potential issue.
-    if ( vis->isExclusive())
-    {
-        if ( _visx)
-        {
-            _visx->removeActors(_fc);
-            _vlayers.erase(_visx);
-        }   // end if
-    }   // end if
-
-    if ( vis->apply(_fc, mc))
-    {
-        vis->addActors(_fc);
-        _vlayers.insert(vis);
-        if ( vis->isExclusive())
-            _visx = vis;
-    }   // end if
+    _data->unlock();
 
     return isApplied(vis);
 }   // end apply
@@ -217,142 +186,166 @@ bool FaceView::isApplied( const BaseVisualisation *vis) const { return _vlayers.
 
 
 // public
-bool FaceView::isFace( const vtkProp* prop) const
+BaseVisualisation* FaceView::layer( const vtkProp* prop) const
 {
-    return prop && (( _sactor == prop) || (_tactor == prop));
-}   // end isFace
-
-
-// public
-BaseVisualisation* FaceView::belongs( const vtkProp* prop) const
-{
-    if ( !prop)
-        return nullptr;
-    if ( _sactor == prop || _tactor == prop)
-        return _visx;
-    for ( BaseVisualisation* vis : _vlayers)    // Test all the visualisation layers
+    BaseVisualisation* vis = nullptr;
+    if ( prop && _actor != prop)
     {
-        if ( vis->belongs( prop, _fc))
-            return vis;
-    }   // end for
-    return nullptr;
-}   // end belongs
+        for ( BaseVisualisation* v : _vlayers)    // Test all the visualisation layers
+        {
+            if ( v->belongs( prop, this))
+            {
+                vis = v;
+                break;
+            }   // end if
+        }   // end for
+    }   // end if
+    return vis;
+}   // end layer
 
 
 // public
-bool FaceView::pointToFace( const QPoint& p, cv::Vec3f& v) const
+bool FaceView::isPointOnFace( const QPoint& p) const
 {
-    const vtkProp* prop = isPointOnFace( p);
-    if ( !prop)
-        return false;
-    if ( prop != _sactor && prop != _tactor)
-        return false;
-    return _viewer->calcSurfacePosition( prop, p, v);
-}   // end pointToFace
-
-
-// public
-const vtkProp* FaceView::isPointOnFace( const QPoint& p) const
-{
-    if ( !_viewer)
-        return nullptr;
-    const vtkProp* prop = _viewer->getPointedAt(p);
-    if ( prop == _sactor)
-        return _sactor;
-    if ( prop == _tactor)
-        return _tactor;
-    return nullptr;
+    assert(_viewer);
+    return _viewer->getPointedAt(p) == _actor;
 }   // end isPointOnFace
 
 
 // public
-double FaceView::opacity() const { return _sactor ? _sactor->GetProperty()->GetOpacity() : 0.0;}
+bool FaceView::projectToSurface( const QPoint& p, cv::Vec3f& v) const
+{
+    assert(_viewer);
+    return _viewer->calcSurfacePosition( _actor, p, v);
+}   // end projectToSurface
+
 
 // public
+double FaceView::opacity() const
+{
+    assert(_actor);
+    return _actor->GetProperty()->GetOpacity();
+}   // end opacity
+
 void FaceView::setOpacity( double v)
 {
-    if ( _sactor)
-        _sactor->GetProperty()->SetOpacity(v);
-    if ( _tactor)
-        _tactor->GetProperty()->SetOpacity(v);
+    assert(_actor);
+    _actor->GetProperty()->SetOpacity(v);
 }   // end setOpacity
 
 
 // public
 QColor FaceView::colour() const
 {
-    QColor c;
-    if ( _sactor)
-    {
-        double* vc = _sactor->GetProperty()->GetColor();
-        c = QColor::fromRgbF( vc[0], vc[1], vc[2]);
-    }   // end if
-    return c;
+    assert(_actor);
+    double* vc = _actor->GetProperty()->GetColor();
+    return QColor::fromRgbF( vc[0], vc[1], vc[2]);
 }   // end colour
-
 
 void FaceView::setColour( const QColor& c)
 {
-    if ( _sactor)
-        _sactor->GetProperty()->SetColor( c.redF(), c.greenF(), c.blueF());
+    assert(_actor);
+    _actor->GetProperty()->SetColor( c.redF(), c.greenF(), c.blueF());
 }   // end setColour
-
-
-bool FaceView::backfaceCulling() const
-{
-    bool bf = false;
-    if ( _sactor)
-        bf = _sactor->GetProperty()->GetBackfaceCulling();
-    return bf;
-}   // end backfaceCulling
 
 
 void FaceView::setBackfaceCulling( bool v)
 {
-    if ( _sactor)
-        _sactor->GetProperty()->SetBackfaceCulling( v);
-    if ( _tactor)
-        _tactor->GetProperty()->SetBackfaceCulling( v);
+    assert(_actor);
+    _actor->GetProperty()->SetBackfaceCulling( v);
 }   // end setBackfaceCulling
 
 
-// public
-vtkSmartPointer<vtkMatrix4x4> FaceView::userTransform() const
+bool FaceView::backfaceCulling() const
 {
-    assert(_sactor);
-    vtkSmartPointer<vtkMatrix4x4> umat = vtkMatrix4x4::New();
-    umat->Identity();   // Make identity
-    // Return the transform matrix for the actor of the exclusive visualisation.
-    if ( _visx->belongs(_sactor, _fc))
-        _sactor->GetMatrix( umat);
-    else if ( _tactor && _visx->belongs(_tactor, _fc))
-        _tactor->GetMatrix( umat);
-    return umat;
-}   // end userTransform
+    assert(_actor);
+    return _actor->GetProperty()->GetBackfaceCulling();
+}   // end backfaceCulling
 
 
-// public
-void FaceView::pokeTransform( const vtkMatrix4x4* M, bool transEx)
+void FaceView::setWireframe( bool v)
 {
-    assert(_sactor);
-    assert(_visx);
-    if ( transEx || !_visx->belongs( _sactor, _fc))
-        _sactor->PokeMatrix( const_cast<vtkMatrix4x4*>(M));
-    if ( _tactor && ( transEx || !_visx->belongs( _tactor, _fc)))
-        _tactor->PokeMatrix( const_cast<vtkMatrix4x4*>(M));
-    std::for_each( std::begin(_vlayers), std::end(_vlayers), [=](auto v){ v->pokeTransform( _fc, M);});
-}   // end pokeTransform
+    assert(_actor);
+    vtkProperty* p = _actor->GetProperty();
+    if (v)
+    {
+        p->SetEdgeColor(0,0,1);
+        p->SetLineWidth(0.4f);
+    }   // end if
+    p->SetEdgeVisibility(v);
+}   // end setWireframe
 
 
-// public
-void FaceView::fixTransform()
+bool FaceView::wireframe() const
 {
-    assert(_sactor);
-    RVTK::transform( _sactor, _sactor->GetMatrix());
-    if ( _tactor)
-        RVTK::transform( _tactor, _tactor->GetMatrix());
-    std::for_each( std::begin(_vlayers), std::end(_vlayers), [=](auto v){ v->fixTransform( _fc);});
-    vtkSmartPointer<vtkMatrix4x4> I = vtkMatrix4x4::New();
-    I->Identity();   // Make identity
-    pokeTransform( I, true);    // Set the user matrix back to the identity.
-}   // end fixTransform
+    assert(_actor);
+    return _actor->GetProperty()->GetEdgeVisibility();
+}   // end wireframe
+
+
+void FaceView::setTextured( bool v)
+{
+    assert(_actor);
+    _actor->SetTexture( v && _texture ? _texture : nullptr);
+    // Set the correct lighting
+    double aval = 0.0;
+    double dval = 1.0;
+    if ( textured())
+    {
+        aval = 1.0;
+        dval = 0.0;
+    }   // end if
+    vtkProperty* property = _actor->GetProperty();
+    property->SetAmbient(aval);
+    property->SetDiffuse(dval);
+    property->SetSpecular(0.0);
+}   // end setTextured
+
+
+bool FaceView::textured() const
+{
+    assert(_actor);
+    return _actor->GetTexture() != nullptr;
+}   // end textured
+
+
+bool FaceView::canTexture() const
+{
+    assert(_actor);
+    return _texture != nullptr;
+}   // end canTexture
+
+
+void FaceView::setActiveScalars( ScalarMapping* s)
+{
+    if ( _scmap)
+    {
+        _scmap->disconnect(this);
+        _scmap = nullptr;
+    }   // end if
+
+    if ( !_actor)
+        return;
+
+    vtkCellData* celldata = RVTK::getPolyData(_actor)->GetCellData();
+    std::string vname = "";
+    if ( s)
+    {
+        _scmap = s;
+        vname = _scmap->rangeName();
+        assert( !vname.empty());
+        assert( celldata->GetAbstractArray( vname.c_str()) != nullptr);   // Mapping must have taken place already!
+
+        auto updatefn = [this](){ _actor->GetMapper()->SetLookupTable( _scmap->lookupTable().vtk());
+                                  _actor->GetMapper()->SetScalarRange( _scmap->minVisible(), _scmap->maxVisible());};
+        connect( s, &ScalarMapping::rebuilt, this, updatefn);
+        updatefn();
+    }   // end if
+
+    celldata->SetActiveScalars( vname.c_str());
+    _actor->GetMapper()->SetScalarVisibility( _scmap != nullptr);
+}   // end setActiveScalars
+
+
+ScalarMapping* FaceView::activeScalars() const { return _scmap;}
+

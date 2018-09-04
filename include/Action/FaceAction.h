@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,16 +18,14 @@
 #ifndef FACE_TOOLS_ACTION_FACE_ACTION_H
 #define FACE_TOOLS_ACTION_FACE_ACTION_H
 
-#include "ChangeEvents.h"
+#include "EventProcessResponse.h"
 #include <ModelViewerInteractor.h>
-#include <FaceControlSet.h>
 #include <PluginInterface.h>    // QTools
 #include <QProgressUpdater.h>
 #include <QToolBar>
 #include <QToolButton>
 #include <QPushButton>
 #include <QAction>
-#include <QString>
 #include <QMutex>
 
 namespace FaceTools {
@@ -41,18 +39,12 @@ public:
 };  // end class
 
 
-class ActionVisualise;
-class FaceActionWorker;
-class FaceActionManager;
-
-
 // See FaceActionManager for further information on how to correctly descend from FaceAction
 // to ensure that application actions are able to respond to one another.
 class FaceTools_EXPORT FaceAction : public FaceActionInterface
 { Q_OBJECT
 public:
     FaceAction();
-    ~FaceAction() override;
 
     // Constructor versions that take a display name, icon, and triggering key sequence.
     FaceAction( const QString& displayName);
@@ -62,6 +54,8 @@ public:
     FaceAction( const QString& displayName, const QIcon* icon, const QKeySequence&);
     FaceAction( const QString& displayName, const QIcon& icon, const QKeySequence*);
     FaceAction( const QString& displayName, const QIcon* icon, const QKeySequence*);
+
+    std::string dname() const { return "\"" + getDisplayName().remove('&').toStdString() + "\"";}
 
     QString getDisplayName() const override;
     const QIcon* getIcon() const override;
@@ -76,23 +70,36 @@ public:
 
     // Visibility does NOT use QAction::visible because changing the QAction's
     // visibility to false also causes its enabled status to be false!
-    inline void setVisible( bool b) { _visible = b;}
-    inline bool isVisible() const { return _visible;}
+    void setVisible( bool b) { _visible = b;}
+    bool isVisible() const { return _visible;}
 
+    // WARNING: Manually setting this action to be enabled when not allowed to set
+    // its own enabled state (through calls to setReady and testSetEnabled) may cause
+    // this action to fail on operation!
     void setEnabled( bool b);   // Also enabled/disables associated widget (if any).
     inline bool isEnabled() const { return _action.isEnabled();}
 
-    inline void setCheckable( bool b, bool ival) { _action.setCheckable(b); _action.setChecked(ival);}
-    inline bool isCheckable() const { return _action.isCheckable();}
+    void setCheckable( bool b, bool defaultCheckState);
+    bool isCheckable() const { return _action.isCheckable();}
+    inline bool defaultCheckState() const { return _defaultCheckState;}
 
     inline void setChecked( bool b) { _action.setChecked(b);}
     inline bool isChecked() const { return _action.isChecked();}
 
-    // Sets the FaceControl's this action will work over in the next call to process().
-    // Each FaceControl is first passed through this child class's implementation of testReady and
-    // so only FaceControl instances that adhere to the ready requirements of this action are admitted.
-    void setReady( FaceControl*, bool set=true);
-    void setReady( const FaceControlSet&, bool set=true);
+    // Sets the Vis::FV's this action will work over in the next call to process().
+    // Each Vis::FV is first passed through this child class's implementation of testReady and
+    // so only Vis::FV instances that adhere to the ready requirements of this action are admitted.
+    void setReady( Vis::FV*, bool set=true);
+    void setReady( const FVS&, bool set=true);
+
+    void clearReady();  // Clear all entries from the ready set
+    void resetReady( Vis::FV*); // Replace the ready set with the single view.
+
+    inline bool isReady( const Vis::FV* fv) const { return _ready.has(fv);}
+    inline bool gotReady() const { return !_ready.empty();}
+    inline const FVS& ready() const { return _ready;}
+    // Returns non-null only if the ready set has exactly 1 member (which is returned).
+    inline const Vis::FV* ready1() const { return _ready.size() == 1 ? _ready.first() : nullptr;}
 
     // Test if this action should be enabled and set accordingly.
     // Clients can call with a non null point (representing the current mouse position)
@@ -100,14 +107,34 @@ public:
     // called with null as its parameter. Returns whether or not the action is enabled as a result.
     bool testSetEnabled( const QPoint* mousePoint=nullptr);
 
-    // Derived types and/or delegates must specify the ChangeEvents that they wish to be processed and purged for.
-    // Purging the action (if necessary) always comes before process, so if the same ChangeEvent is set as
-    // both a purge and a process event, the action will always be processed after purging for that event.
-    // Moreover, purging of all actions is completed before processing of any responding actions starts.
-    void addPurgeOn( const ChangeEvent&);
-    void addProcessOn( const ChangeEvent&);
-    const ChangeEventSet& purgeEvents() const { return _pevents;}   // Changes this Action will be purged for.
-    const ChangeEventSet& processEvents() const { return _revents;} // Changes this Action will be processed for.
+    // Derived types and/or delegates can specify the events that they wish to be purged for and/or respond to
+    // via their process() function. Purging (if specified for an event) always comes before process, so if the
+    // same event is set as both a purge and a process event, the action will always be processed after purging
+    // for that event. Moreover, purging of ALL actions is completed before processing of any responding actions starts.
+    void setPurgeOnEvent( EventId);
+    // Returns true iff the given event will cause this action to be purged on its receipt.
+    inline bool isPurgeEvent( EventId e) const { return _pevents.count(e) > 0;}
+
+    // This action's process function will be called in response to events set using the setRespondToEvent
+    // and setRespondToEventIf functions. By default, an action is not set to respond to any event unless
+    // set to do so either internally or externally. Parameter processFlag is passed to this action's process
+    // function if a response can be granted to a received event. Alternatively, a delegate predicte can be used
+    // to determine the process flag dynamically.
+    void setRespondToEvent( EventId, bool processFlag=true);
+    void setRespondToEvent( EventId, const ProcessFlagPredicate&);
+
+    // Use setRespondToEventIf if the calling of this action's process function should depend both on
+    // the event being received and the given predicate returning true. If this action is set to respond
+    // to more than one event, this action's process function be called if any of the corresponding
+    // response predicates return true for a given set of events.
+    void setRespondToEventIf( EventId, const ResponsePredicate&, bool processFlag);
+    void setRespondToEventIf( EventId, const ResponsePredicate&, const ProcessFlagPredicate&);
+
+    // setRespondToEventIfAllReady uses predicate function std::all_of over the ready set to determine response criteria.
+    void setRespondToEventIfAllReady( EventId, bool processFlag);
+
+    // Returns non-null iff the given event is in this action's response set.
+    inline const EPR* eventResponse( EventId e) const { return _eprs.count(e) > 0 ? &_eprs.at(e) : nullptr;}
 
     bool operator()( bool checkAction=true);  // Synonymous with process (see below).
 
@@ -115,7 +142,7 @@ signals:
     void reportStarting();   // Emitted from the GUI thread immediately before doBeforeAction executes.
 
     // Emitted from the GUI thread after doAfterAction returns (or after doBeforeAction returns false).
-    void reportFinished( ChangeEventSet, FaceControlSet, bool);
+    void reportFinished( EventSet, FVS, bool);
 
 
 public slots:
@@ -135,18 +162,10 @@ public slots:
     // True is returned from process() iff doAction was entered.
     bool process( bool checkAction=true);
 
-    // These two versions of process replace the ready set with the given FaceControls and execute process.
-    // On return, the action's ready set will be reset to the current set of selected FaceControls.
-    bool process( FaceControl*, bool checkAction=true);
-    bool process( const FaceControlSet&, bool checkAction=true);
-
-    // Add composite actions to this one that will be executed immediately after doAfterAction() returns.
-    // This function can be called multiple times to add several actions. Asynchronous actions are executed
-    // first (in no definite order) followed by the non-asynchronous actions which are executed sequentially
-    // in their order of addition. Only FaceAction instances that haven't already been added to this FaceAction
-    // (or added to any of the other already added FaceAction instances) can be added. Self adding is also
-    // not allowed. Returns true on the successful addition of the FaceAction.
-    bool execAfter( FaceAction*);
+    // These two versions of process replace the ready set with the given Vis::FVs and execute process.
+    // On return, the action's ready set will be reset to the current set of selected Vis::FVs.
+    bool process( Vis::FV*, bool checkAction=true);
+    bool process( const FVS&, bool checkAction=true);
 
 protected slots:
     /***************************************************************/
@@ -175,45 +194,38 @@ protected slots:
     /************** SETTING / GETTING DATA TO ACT UPON *************/
     /***************************************************************/
 
-    // Function testReady is called to test whether the passed in FaceControl is in an appropriate state for
+    // Function testReady is called to test whether the passed in Vis::FV is in an appropriate state for
     // this action to be executed on. This function is called whenever the user selects or deselects a view.
-    // By default, all non-null FaceControl instances are added to the ready set.
-    virtual bool testReady( const FaceControl *fc) { return fc != nullptr;}
+    // By default, all non-null Vis::FV instances are added to the ready set.
+    virtual bool testReady( const Vis::FV *fv) { return fv != nullptr;}
 
-    // Function tellReady is called when the given FaceControl changes its ready state.
+    // Function tellReady is called when the given Vis::FV changes its ready state.
     // It is always called after setEnabled(testEnabled()).
-    virtual void tellReady( FaceControl*, bool isReady) {}
+    virtual void tellReady( Vis::FV*, bool isReady) {}
 
-    // If this action is currently applied to the passed in FaceControl, it should return true.
+    // If this action is currently applied to the passed in Vis::FV, it should return true.
     // By default, this function just returns the current checked state meaning no changes are made.
-    virtual bool testChecked( const FaceControl *fc=nullptr) const { return isChecked();}
-
-    // Reset the ready set with the given FaceControl if it passes the testReady check (above).
-    bool isReady( const FaceControl* fc) const { return _ready.has(fc);}
-    bool gotReady() const { return !_ready.empty();}
-    const FaceControlSet& ready() const { return _ready;}
-    // Returns non-null only if the ready set has exactly 1 member (which is returned).
-    FaceControl* ready1() const { return _ready.size() == 1 ? _ready.first() : nullptr;}
+    virtual bool testIfCheck( const Vis::FV *fv=nullptr) const { return isChecked();}
 
     // For most actions, whether to enable or disable the action depends upon whether there are
     // entries in the ready set and this is the default implementation. However, some actions may
     // want to provide a condition that tells whether this action should be enabled or disabled
     // for some other reason - for example for the action to be always enabled, override this
-    // function to true. Or if the action should only be enabled if a single FaceControl is
+    // function to true. Or if the action should only be enabled if a single Vis::FV is
     // selected, override to return (_ready.size() == 1). Finally, the passed in mouse point
     // may not be null and in those cases the action may want to check if the position of the
     // mouse is important in determining whether the action should be enabled.
     virtual bool testEnabled( const QPoint* mouseCoords=nullptr) const { return gotReady();}
 
-    // Derived types may cache data for FaceModels even when not selected. This function is
-    // called to purge these cached data because of ChangeEvents specified using addPurgeOn().
-    virtual void purge( const FaceModel*){}
+    // Derived types may cache data for FMs even when not selected. This function is
+    // called to purge these cached data because of events specified using setPurgeOnEvent().
+    virtual void purge( const FM*){}
 
-    // Always called whenever a FaceModel is closed. Some actions may want to store information
-    // associated with a FaceModel even when the action is being purged for the FaceModel for
-    // other reasons (specified by addPurgeOn). This allows actions to hang on to data associated
-    // with a FaceModel until it's closed.
-    virtual void clean( const FaceModel* fm){ purge(fm);}
+    // Always called whenever a FM is closed. Some actions may want to store information
+    // associated with a FM even when the action is being purged for the FM for other reasons
+    // (specified by setPurgeOnEvent). This allows actions to hang on to data associated
+    // with a FM until it's closed.
+    virtual void clean( const FM* fm){ purge(fm);}
 
 
     /**************************************************************/
@@ -223,29 +235,27 @@ protected slots:
     // doBeforeAction always occurs in the GUI thread so this is where to show dialogs etc in order to get
     // user input. It is executed immediately before doAction which is only entered if the return value
     // from doBeforeAction is true. The ready set is passed in as non-const to allow the FaceAction to
-    // change its membership prior to it being passed to the doAction function (e.g. to remove FaceControl
+    // change its membership prior to it being passed to the doAction function (e.g. to remove Vis::FV
     // instances that aren't suitable on further inspection, or the user wants to cancel actioning on).
     // Note that doAction may run in a different thread than the GUI thread.
-    virtual bool doBeforeAction( FaceControlSet&, const QPoint&){ return true;}
+    virtual bool doBeforeAction( FVS&, const QPoint&){ return true;}
 
     // Implement the action; process() decides whether it runs asynchronously or not (or at all).
     // If doAction runs asynchronously, defer all GUI updates etc to doAfterAction(). Membership
-    // of the provided FaceControlSet may be changed within this function for passing to the
+    // of the provided FVS may be changed within this function for passing to the
     // doAfterAction function in the GUI thread afterwards.
-    virtual bool doAction( FaceControlSet&, const QPoint&){ return true;}
+    virtual bool doAction( FVS&, const QPoint&){ return true;}
 
     // Called within the GUI thread immediately on the completion of doAction. This is where GUI
     // elements (dialogs etc) shown in doBeforeAction should be hidden or rendering updates made.
-    // The ready set that was passed in to doAction is passed as a parameter. The ChangeEventSet
-    // should be set with the ChangeEvents made.
-    virtual void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool){}
+    // The ready set that was passed in to doAction is passed as a parameter. The EventSet
+    // should be set with the events made.
+    virtual void doAfterAction( EventSet&, const FVS&, bool){}
 
 
     /**************************************************************/
     /****************** UTILITY / MISCELLANEOUS *******************/
     /**************************************************************/
-
-    std::string debugActionName() const { return "\"" + getDisplayName().remove('&').toStdString() + "\"";}
 
     // For simple actions, may want to override this to false.
     virtual bool displayDebugStatusProgression() const { return true;}
@@ -260,30 +270,23 @@ private:
     const QKeySequence _keys;
     bool _init;
     bool _visible;
+    bool _defaultCheckState;
     QAction _action;
     bool _doasync;
-    ChangeEventSet* _cset;
     QMutex _pmutex;
     QTools::QProgressUpdater::Ptr _pupdater;
-    FaceControlSet _ready, _wset;
+    FVS _ready, _wset;
     QPoint _testPoint;
-    ChangeEventSet _revents, _pevents;
-    std::list<FaceAction*> _sacts;
-    std::unordered_set<FaceAction*> _aacts;
+    EventSet _pevents;  // Purge events
+    std::unordered_map<EventId, EPR> _eprs;  // How to respond to events
 
-    bool checkAfterActions( std::unordered_set<FaceAction*>&, FaceAction*) const;
-    void setChangeEventSet( ChangeEventSet*);
-
+    void checkOverwritingResponseEvent( EventId) const;
     friend class FaceActionManager;
-
     FaceAction( const FaceAction&) = delete;
     void operator=( const FaceAction&) = delete;
 };  // end class
 
 }   // end namespace
 }   // end namespace
-
-#define FaceToolsPluginFaceActionInterface_iid "com.github.richeytastic.FaceTools.v030.FaceActionInterface"
-Q_DECLARE_INTERFACE( FaceTools::Action::FaceActionInterface, FaceToolsPluginFaceActionInterface_iid)
 
 #endif

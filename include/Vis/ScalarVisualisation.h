@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,72 +20,50 @@
 
 /**
  * Provides abstract application of scalar colour visualisations to the surface of an actor.
- * Derived types must specify the min and max range values (rangeMin, rangeMax) and implement
- * mapSurfaceActor to map the actual values to do the mapping between the data accessible
- * through FaceControl and the surface actor accessible from its member FaceView. Since
- * scalar visualisations use a per viewer legend, onSelected is overridden to restore the
- * legend key for this visualisation when the corresponding FaceControl is selected.
  */
 
 #include "BaseVisualisation.h"
-#include "LegendScalarColourRangeMapper.h"
 #include <ColourMappingWidget.h>    // QTools
-#include <ObjModelCurvatureMetrics.h>
-#include <ChangeEvents.h>
-#include <unordered_map>
-#include <functional>
 
 namespace FaceTools {
-class FaceModel;
-class FaceControlSet;
-class FaceModelViewer;
-
-typedef std::function<float (const RFeatures::ObjModelCurvatureMetrics*, int)> ScalarMappingFunction;
-
 namespace Vis {
 
-class FaceTools_EXPORT ScalarVisualisation : public SurfaceVisualisation
+class FaceTools_EXPORT ScalarVisualisation : public BaseVisualisation
 { Q_OBJECT
 public:
     // Pass in delegate functions to return a floating point value from a polygon.
     ScalarVisualisation( const QString& dname, const QIcon&, const QKeySequence&);
     ScalarVisualisation( const QString& dname, const QIcon&);
     explicit ScalarVisualisation( const QString& dname);
-    ~ScalarVisualisation() override;
 
     // Provide the delegate that maps a scalar to a model polygon.
-    void setMappingFunction( const ScalarMappingFunction& mf) { _mfunc = mf;}
+    void setMappingFunction( const ScalarMappingFn& mf) { _mfunc = mf;}
+
+    bool isToggled() const override { return false;}    // Makes this exclusive
 
     // Returns true if the data to perform mapping are available.
-    bool isAvailable( const FaceModel*) const override;
+    bool isAvailable( const FM*) const override;
 
-    bool apply( const FaceControl*, const QPoint* mc=nullptr) override;
-    void addActors( const FaceControl*) override;
-    void removeActors( const FaceControl*) override;
+    void apply( FV*, const QPoint* mc=nullptr) override;
+    void remove( FV*) override;
 
-    // Update colour mappings for the given FaceControl from a colour mapping widget.
-    // Update only occurs if this visualisation already has a legend mapping for the FaceControl.
-    // Returns true iff this visualisation is updated in viewer.
-    bool updateColourMapping( const FaceControl* fc, const QTools::ColourMappingWidget*);
-
-    // Update the widget to reflect the colour mappings for the given FaceControl.
-    // Update only occurs if this visualisation already has a legend mapping for the FaceControl.
-    // Returns true iff the widget was updated.
-    bool updateWidget( QTools::ColourMappingWidget*, const FaceControl* fc) const;
+    // Update colour mappings from a colour mapping widget.
+    void updateFrom( const QTools::ColourMappingWidget*);
+    // Update the widget from this visualisation's colour mappings.
+    void updateTo( QTools::ColourMappingWidget*) const;
 
 protected:
-    void addPurgeEvents( Action::ChangeEventSet& ces) const override { ces.insert(Action::SURFACE_DATA_CHANGE);}
-    void purge( const FaceControl*) override;
+    void purge( FV*) override;
+    void addPurgeEvents( Action::EventSet& ces) const override { ces.insert(Action::SURFACE_DATA_CHANGE);}
+    bool allowShowOnLoad( const FM*) const override { return false;}
 
 private:
-    LegendScalarColourRangeMapper *_lrng;
-    ScalarMappingFunction _mfunc;
-    std::unordered_map<const FaceControl*, std::pair<float,float> > _mappings;
-    std::unordered_set<const FaceControl*> _added;
+    ScalarMapping _scmap;
+    ScalarMappingFn _mfunc;
+    std::unordered_map<FV*, std::pair<float,float> > _mappings;
 
-    // (Re)map this visualisation's scalar data to the FaceControl's surface actor.
-    std::pair<float,float> mapActor( const FaceControl*) const;
-    void remapColourRange();
+    // (Re)map this visualisation's scalar data to the FaceView's surface actor.
+    std::pair<float,float> mapActor( FV*) const;
 };  // end class
 
 }   // end namespace

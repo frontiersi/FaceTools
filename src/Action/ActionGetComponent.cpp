@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,15 +17,14 @@
 
 #include <ActionGetComponent.h>
 #include <FaceShapeLandmarks2DDetector.h>   // FaceTools::Landmarks
-#include <FaceControl.h>
 #include <FaceModel.h>
 #include <ObjModelCopier.h> // RFeatures
 #include <cassert>
 using FaceTools::Action::ActionGetComponent;
-using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
+using FaceTools::FVS;
+using FaceTools::Vis::FV;
 using FaceTools::FaceModel;
 
 
@@ -37,9 +36,9 @@ ActionGetComponent::ActionGetComponent( const QString& dn, const QIcon& ico, QPr
 }   // end ctor
 
 
-bool ActionGetComponent::testReady( const FaceControl* fc)
+bool ActionGetComponent::testReady( const FV* fv)
 {
-    const FaceModel* fm = fc->data();
+    const FaceModel* fm = fv->data();
     fm->lockForRead();
     const FaceTools::LandmarkSet::Ptr lmks = fm->landmarks();
     const bool rval = lmks->has( FaceTools::Landmarks::NASAL_TIP) && fm->info()->components().size() > 1;
@@ -48,7 +47,7 @@ bool ActionGetComponent::testReady( const FaceControl* fc)
 }   // end testReady
 
 
-bool ActionGetComponent::doAction( FaceControlSet& rset, const QPoint&)
+bool ActionGetComponent::doAction( FVS& rset, const QPoint&)
 {
     bool success = true;
     using namespace RFeatures;

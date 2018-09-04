@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,20 +16,18 @@
  ************************************************************************/
 
 #include <ActionCopyViewer.h>
-#include <FaceControl.h>
 #include <FaceModel.h>
 #include <FaceView.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionCopyViewer;
-using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::EventSet;
 using FaceTools::Action::ModelSelector;
 using FaceTools::Action::FaceAction;
 using FaceTools::FaceModelViewer;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
-using FaceTools::FaceModel;
-using FaceTools::Vis::BaseVisualisation;
+using FaceTools::Vis::FV;
+using FaceTools::FVS;
+using FaceTools::FM;
 
 
 ActionCopyViewer::ActionCopyViewer( FaceModelViewer *tv, ModelSelector* s, FaceModelViewer *sv, const QString& dn, const QIcon& ico)
@@ -38,33 +36,39 @@ ActionCopyViewer::ActionCopyViewer( FaceModelViewer *tv, ModelSelector* s, FaceM
 }   // end ctor
 
 
-bool ActionCopyViewer::testReady( const FaceControl* fc)
+bool ActionCopyViewer::testReady( const FV* fv)
 {
-    bool allowed = !_tviewer->isAttached(fc->data());   // Allowed if data not already on the target viewer
+    bool allowed = !_tviewer->isAttached(fv->data());   // Allowed if data not already on the target viewer
     if ( allowed && _sviewer != nullptr)
-        allowed = _sviewer->isAttached(fc);
+        allowed = _sviewer->isAttached(fv);
     return allowed;
 }   // end testReady
 
 
 // protected
-bool ActionCopyViewer::doAction( FaceControlSet& fcs, const QPoint&)
+bool ActionCopyViewer::doAction( FVS& fvs, const QPoint&)
 {
-    for ( FaceControl* fc : fcs)
+    FVS fvsin = fvs;    // copy of pointers to source views
+    fvs.clear();        // fvs will hold copied views on output
+    for ( FV* fv : fvsin)
     {
-        // If there exist FaceControl's in the target viewer, set their visualisations
-        // to the copied over new FaceControl. Otherwise, copy over the visualisations
-        // from the source FaceControl.
-        FaceControl* cfc = _tviewer->attached().first();
-        if ( cfc == nullptr)
-            cfc = fc;
+        // If there exist FVs in the target viewer, copy their visualisations
+        // to the new FV. Otherwise, copy over visualisations from source FV.
+        FV* cfv = _tviewer->attached().first();
+        if ( cfv == nullptr)
+            cfv = fv;
 
-        // Create the new FaceControl from the underlying data.
-        FaceControl* nfc = _selector->addFaceControl( fc->data(), _tviewer);
+        FM* fm = fv->data();
+        fm->lockForRead();
+        FV* nfv = _selector->addFaceView( fm, _tviewer); // Create the new FV from the underlying data.
+        fm->unlock();
 
         // Copy over visualisations
-        for ( BaseVisualisation* vis : fc->view()->visualisations())
-            nfc->view()->apply(vis);    // Will do nothing if visualisation can't be applied
+        for ( auto vl : cfv->visualisations())
+            nfv->apply(vl);
+
+        _selector->setSelected( nfv, true); // Select the new FV
+        fvs.insert(nfv);
     }   // end for
     return true;
 }   // end doAction

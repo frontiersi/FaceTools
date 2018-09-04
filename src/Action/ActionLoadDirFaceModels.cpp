@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,11 +18,11 @@
 #include <ActionLoadDirFaceModels.h>
 #include <QFileDialog>
 using FaceTools::Action::ActionLoadDirFaceModels;
-using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
 using FaceTools::FileIO::LoadFaceModelsHelper;
 using FaceTools::FileIO::FaceModelManager;
-using FaceTools::FaceControlSet;
+using FaceTools::FVS;
 
 
 ActionLoadDirFaceModels::ActionLoadDirFaceModels( const QString& dn, const QIcon& ico, LoadFaceModelsHelper* lhelper)
@@ -32,7 +32,7 @@ ActionLoadDirFaceModels::ActionLoadDirFaceModels( const QString& dn, const QIcon
 }   // end ctor
 
 
-bool ActionLoadDirFaceModels::doBeforeAction( FaceControlSet&, const QPoint&)
+bool ActionLoadDirFaceModels::doBeforeAction( FVS&, const QPoint&)
 {
     // Don't use native dialog because there's some Windows 10 debug output stating that some element of the
     // dialog couldn't be found. On some Win10 machines, crashes occur unless non-native dialogs are used.
@@ -49,13 +49,13 @@ bool ActionLoadDirFaceModels::doBeforeAction( FaceControlSet&, const QPoint&)
 }   // end doBeforeAction
 
 
-bool ActionLoadDirFaceModels::doAction( FaceControlSet&, const QPoint&)
+bool ActionLoadDirFaceModels::doAction( FVS&, const QPoint&)
 {
     return _loadHelper->loadModels() > 0;
 }   // end doAction
 
 
-void ActionLoadDirFaceModels::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool loaded)
+void ActionLoadDirFaceModels::doAfterAction( EventSet& cs, const FVS&, bool loaded)
 {
     _loadHelper->showLoadErrors();
     if ( loaded)

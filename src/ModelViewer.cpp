@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +30,6 @@
 #include <cassert>
 #include <QVBoxLayout>
 using FaceTools::ModelViewer;
-using RFeatures::ObjModel;
 using RFeatures::CameraParams;
 using FaceTools::Interactor::MVI;
 using QTools::VtkViewerInteractorManager;
@@ -63,7 +62,7 @@ void ModelViewer::showLegend( bool enable) { _scalarLegend->setVisible(enable); 
 // public
 ModelViewer::ModelViewer( QWidget* parent, bool floodFill)
     : QWidget(parent), _qviewer( new QTools::VtkActorViewer( nullptr)), _scalarLegend(nullptr), _axes(nullptr),
-      _floodLightsEnabled(floodFill), _addedModelID(0)
+      _floodLightsEnabled(floodFill)
 {
     _scalarLegend = new RVTK::ScalarLegend( _qviewer->GetInteractor());
     _axes = new RVTK::Axes( _qviewer->GetInteractor());
@@ -150,9 +149,10 @@ cv::Point ModelViewer::project( const cv::Vec3f& v) const { return _qviewer->pro
 cv::Vec3f ModelViewer::project( const cv::Point2f& p) const { return _qviewer->pickWorldPosition( p);}
 cv::Vec3f ModelViewer::project( const cv::Point& p) const { return _qviewer->pickWorldPosition( p);}
 void ModelViewer::setCursor( QCursor cursor) { _qviewer->setCursor(cursor);}
-void ModelViewer::add( const vtkProp* prop) { _qviewer->add(prop);}
-void ModelViewer::remove( const vtkProp* prop) { _qviewer->remove(prop);}
-size_t ModelViewer::getNumLegendColours() const { return _scalarLegend->getNumColours();}
+
+void ModelViewer::add( vtkProp* prop) { if ( prop) _qviewer->add(prop);}
+void ModelViewer::remove( vtkProp* prop) { if ( prop) _qviewer->remove(prop);}
+
 void ModelViewer::setCamera( const CameraParams& cp) { _qviewer->setCamera( cp);}
 size_t ModelViewer::getWidth() const { return _qviewer->getWidth();}
 size_t ModelViewer::getHeight() const { return _qviewer->getHeight();}
@@ -211,239 +211,11 @@ bool ModelViewer::calcSurfacePosition( const vtkProp *prop, const cv::Point2f& p
 
 
 // public
-int ModelViewer::add( const ObjModel* model, const ModelViewer::VisOptions& vo)
-{
-    // If a textured model was selected but the model has no texture, set the wireframe visualisation instead.
-    ModelViewer::Visualisation mvis = vo.vis;
-    if ( mvis == TEXTURE_VISUALISATION && model->getNumMaterials() == 0)
-    {
-        std::cerr << "ModelViewer: Texture visualisation requested but texture not present!" << std::endl;
-        mvis = WIREFRAME_VISUALISATION;
-    }   // end if
-
-    RVTK::VtkActorCreator actorCreator;
-    vtkSmartPointer<vtkActor> actor;
-    if ( mvis == TEXTURE_VISUALISATION)
-    {
-        std::vector<vtkActor*> actors;
-        actorCreator.generateTexturedActors( model, actors);
-        assert( actors.size() == 1);    // Because all models should only have 1 texture!
-        actor = actors[0];
-    }   // end if
-    else
-    {
-        actor = actorCreator.generateSurfaceActor( model);
-        switch ( mvis)
-        {
-            case POINTS_VISUALISATION:
-                actor->GetProperty()->SetRepresentationToPoints();
-                break;
-            case WIREFRAME_VISUALISATION:
-                actor->GetProperty()->SetRepresentationToWireframe();
-                break;
-            case SURFACE_VISUALISATION:
-                actor->GetProperty()->SetRepresentationToSurface();
-                break;
-        }   // end switch
-
-        actor->GetProperty()->SetOpacity( vo.a);
-        actor->GetProperty()->SetColor( vo.r, vo.g, vo.b);
-        actor->GetProperty()->SetPointSize(vo.pointSize);
-        actor->GetProperty()->SetLineWidth(vo.lineWidth);
-        actor->GetMapper()->SetScalarVisibility(true);
-    }   // end if
-
-    actor->GetProperty()->SetBackfaceCulling( vo.backfaceCulling);
-
-    const int modelID = _addedModelID++;
-    _props[modelID] = actor;
-    add( actor);
-    return modelID;
-}   // end add
-
-
-// public
-int ModelViewer::add( vtkSmartPointer<vtkActor> actor, const std::string& ltitle, float minv, float maxv)
-{
-    setLegendLookup( actor->GetMapper(), ltitle, minv, maxv);
-    const int modelID = _addedModelID++;
-    _props[modelID] = actor;
-    add(actor);
-    return modelID;
-}   // end add
-
-
-// public
-vtkProp* ModelViewer::getProp( int mid)
-{
-    vtkProp* prop = nullptr;
-    if ( _props.count(mid) > 0)
-        prop = _props.at(mid);
-    return prop;
-}   // end getProp
-
-
-// public
-void ModelViewer::setLegendLookup( vtkMapper* mapper, const std::string& ltitle, float minv, float maxv)
+void ModelViewer::setLegend( const std::string& ltitle, vtkLookupTable* table)
 {
     _scalarLegend->setTitle( ltitle);
-    _scalarLegend->setLookupTable( mapper, minv, maxv);
-}   // end setLegendLookup
-
-
-// public
-void ModelViewer::setLegendColours( const cv::Vec3b& col0, const cv::Vec3b& col1, size_t ncols)
-{
-    const vtkColor3ub minCol( col0[0], col0[1], col0[2]);
-    const vtkColor3ub maxCol( col1[0], col1[1], col1[2]);
-    _scalarLegend->setColours( minCol, maxCol, ncols);
-}   // end setLegendColours
-
-
-// public
-void ModelViewer::setLegendColours( const QColor& col0, const QColor& col1, size_t ncols)
-{
-    const cv::Vec3b cvcol0( col0.red(), col0.green(), col0.blue());
-    const cv::Vec3b cvcol1( col1.red(), col1.green(), col1.blue());
-    setLegendColours( cvcol0, cvcol1, ncols);
-}   // end setLegendColours
-
-
-// public
-void ModelViewer::setLegendColours( const cv::Vec3b& col0, const cv::Vec3b& col1, const cv::Vec3b& col2, size_t ncols0, size_t ncols1)
-{
-    const vtkColor3ub c0( col0[0], col0[1], col0[2]);
-    const vtkColor3ub c1( col1[0], col1[1], col1[2]);
-    const vtkColor3ub c2( col2[0], col2[1], col2[2]);
-    _scalarLegend->setColours( c0, c1, c2, ncols0, ncols1);
-}   // end setLegendColours
-
-
-// public
-void ModelViewer::setLegendColours( const QColor& col0, const QColor& col1, const QColor& col2, size_t ncols0, size_t ncols1)
-{
-    const vtkColor3ub c0( col0.red(), col0.green(), col0.blue());
-    const vtkColor3ub c1( col1.red(), col1.green(), col1.blue());
-    const vtkColor3ub c2( col2.red(), col2.green(), col2.blue());
-    _scalarLegend->setColours( c0, c1, c2, ncols0, ncols1);
-}   // end setLegendColours
-
-
-// private
-int ModelViewer::addPointsActor( vtkSmartPointer<vtkActor> actor, const ModelViewer::VisOptions& vo, bool asSpheres)
-{
-    actor->GetProperty()->SetRepresentationToPoints();
-    //actor->GetProperty()->SetRenderPointsAsSpheres( asSpheres && vo.pointSize >= 2.0f);
-    actor->GetProperty()->SetPointSize( vo.pointSize);
-    actor->GetProperty()->SetColor( vo.r, vo.g, vo.b);
-    actor->GetProperty()->SetOpacity( vo.a);
-
-    const int modelID = _addedModelID++;
-    _props[modelID] = actor;
-    add(actor);
-    return modelID;
-}   // end addPointsActor
-
-
-// public
-int ModelViewer::addPoint( const cv::Vec3f& vpt, const ModelViewer::VisOptions& vo)
-{
-    vtkSmartPointer<vtkSphereSource> sphere = vtkSmartPointer<vtkSphereSource>::New();
-    sphere->SetRadius( vo.pointSize);
-    sphere->SetCenter( vpt[0], vpt[1], vpt[2]);
-    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputConnection( sphere->GetOutputPort());
-    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
-    actor->SetMapper(mapper);
-
-    actor->GetProperty()->SetPointSize( vo.pointSize);
-    actor->GetProperty()->SetColor( vo.r, vo.g, vo.b);
-    actor->GetProperty()->SetOpacity( vo.a);
-
-    const int modelID = _addedModelID++;
-    _props[modelID] = actor;
-    add(actor);
-    return modelID;
-}   // end addPoint
-
-
-int ModelViewer::addPoints( const std::vector<cv::Vec3f>& vpts, const ModelViewer::VisOptions& vo, bool asSpheres)
-{
-    return addPointsActor( RVTK::VtkActorCreator::generatePointsActor( vpts), vo, asSpheres);
-}   // end addPoints
-
-
-int ModelViewer::addPoints( const ObjModel* model, const ModelViewer::VisOptions& vo, bool asSpheres)
-{
-    return addPointsActor( RVTK::VtkActorCreator::generatePointsActor( model), vo, asSpheres);
-}   // end addPoints
-
-
-int ModelViewer::addPoints( const ObjModel* model, const std::unordered_set<int>& vidxs, const ModelViewer::VisOptions& vo, bool asSpheres)
-{
-    int i = 0;
-    std::vector<cv::Vec3f> vpts(vidxs.size());
-    std::for_each( std::begin(vidxs), std::end(vidxs), [&](int vidx){ vpts[i++] = model->vtx(vidx);});
-    return addPoints( vpts, vo, asSpheres);
-}   // end addPoints
-
-
-int ModelViewer::addLine( const std::vector<cv::Vec3f>& vpts, bool joinEnds, const ModelViewer::VisOptions& vo)
-{
-    vtkSmartPointer<vtkActor> actor = RVTK::VtkActorCreator::generateLineActor( vpts, joinEnds);
-    actor->GetProperty()->SetRepresentationToWireframe();
-    //actor->GetProperty()->SetRenderPointsAsSpheres( vo.pointSize >= 2.0f);
-    //actor->GetProperty()->SetRenderPointsAsSpheres( false);
-    //actor->GetProperty()->SetRenderLinesAsTubes( vo.lineWidth >= 2.0f);
-    actor->GetProperty()->SetRenderLinesAsTubes( false);
-    actor->GetProperty()->SetPointSize( vo.pointSize);
-    actor->GetProperty()->SetLineWidth( vo.lineWidth);
-    actor->GetProperty()->SetColor( vo.r, vo.g, vo.b);
-    actor->GetProperty()->SetOpacity( vo.a);
-
-    const int modelID = _addedModelID++;
-    _props[modelID] = actor;
-    add(actor);
-    return modelID;
-}   // end addLine
-
-
-int ModelViewer::addLinePairs( const std::vector<cv::Vec3f>& lps, const ModelViewer::VisOptions& vo)
-{
-    vtkSmartPointer<vtkActor> actor = RVTK::VtkActorCreator::generateLinePairsActor( lps);
-    actor->GetProperty()->SetRepresentationToWireframe();
-    //actor->GetProperty()->SetRenderPointsAsSpheres( vo.pointSize >= 2.0f);
-    //actor->GetProperty()->SetRenderPointsAsSpheres( false);
-    //actor->GetProperty()->SetRenderLinesAsTubes( vo.lineWidth >= 2.0f);
-    actor->GetProperty()->SetRenderLinesAsTubes( false);
-    actor->GetProperty()->SetPointSize( vo.pointSize);
-    actor->GetProperty()->SetLineWidth( vo.lineWidth);
-    actor->GetProperty()->SetColor( vo.r, vo.g, vo.b);
-    actor->GetProperty()->SetOpacity( vo.a);
-
-    const int modelID = _addedModelID++;
-    _props[modelID] = actor;
-    add(actor);
-    return modelID;
-}   // end addLinePairs
-
-
-bool ModelViewer::remove( int modelID)
-{
-    if ( !_props.count(modelID))
-        return false;
-
-    remove( _props.at(modelID));
-    _props.erase(modelID);
-    return true;
-}   // end remove
-
-
-void ModelViewer::removeAll()
-{
-    std::for_each( std::begin(_props), std::end(_props), [this]( auto& pp){ this->remove(pp.second);});
-    _props.clear();
-}   // end removeAll
+    _scalarLegend->setLookupTable( table);
+}   // end setLegend
 
 
 CameraParams ModelViewer::getCamera() const

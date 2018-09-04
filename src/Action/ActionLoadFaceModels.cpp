@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,11 +18,11 @@
 #include <ActionLoadFaceModels.h>
 #include <QFileDialog>
 using FaceTools::Action::ActionLoadFaceModels;
-using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
 using FaceTools::FileIO::LoadFaceModelsHelper;
 using FaceTools::FileIO::FaceModelManager;
-using FaceTools::FaceControlSet;
+using FaceTools::FVS;
 
 
 ActionLoadFaceModels::ActionLoadFaceModels( const QString& dn, const QIcon& ico, const QKeySequence& ks, LoadFaceModelsHelper* lhelper)
@@ -47,7 +47,7 @@ bool ActionLoadFaceModels::loadModel( const QString& fname)
 }   // end loadModel
 
 
-bool ActionLoadFaceModels::doBeforeAction( FaceControlSet&, const QPoint&)
+bool ActionLoadFaceModels::doBeforeAction( FVS&, const QPoint&)
 {
     if ( _loadHelper->filenames().empty())
     {
@@ -66,13 +66,13 @@ bool ActionLoadFaceModels::doBeforeAction( FaceControlSet&, const QPoint&)
 }   // end doBeforeAction
 
 
-bool ActionLoadFaceModels::doAction( FaceControlSet&, const QPoint&)
+bool ActionLoadFaceModels::doAction( FVS&, const QPoint&)
 {
     return _loadHelper->loadModels() > 0;   // Blocks
 }   // end doAction
 
 
-void ActionLoadFaceModels::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool loaded)
+void ActionLoadFaceModels::doAfterAction( EventSet& cs, const FVS&, bool loaded)
 {
     _loadHelper->showLoadErrors();
     if ( loaded)

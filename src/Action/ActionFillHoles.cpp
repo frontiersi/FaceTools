@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,15 +17,14 @@
 
 #include <ActionFillHoles.h>
 #include <FaceModelViewer.h>
-#include <FaceControl.h>
 #include <FaceModel.h>
 #include <ObjModelHoleFiller.h>
 #include <algorithm>
 using FaceTools::Action::ActionFillHoles;
-using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
+using FaceTools::FVS;
+using FaceTools::Vis::FV;
 using FaceTools::FaceModel;
 
 
@@ -37,9 +36,9 @@ ActionFillHoles::ActionFillHoles( const QString& dn, const QIcon& ico, QProgress
 }   // end ctor
 
 
-bool ActionFillHoles::testReady( const FaceControl* fc)
+bool ActionFillHoles::testReady( const FV* fv)
 {
-    const FaceModel* fm = fc->data();
+    const FaceModel* fm = fv->data();
     fm->lockForRead();
     // Ready if there's more than one boundary on any component.
     bool rval = false;
@@ -57,11 +56,11 @@ bool ActionFillHoles::testReady( const FaceControl* fc)
 }   // end testReady
 
 
-bool ActionFillHoles::doAction( FaceControlSet& rset, const QPoint&)
+bool ActionFillHoles::doAction( FVS& rset, const QPoint&)
 {
     assert(rset.size() == 1);
-    FaceControl* fc = rset.first();
-    FaceModel* fm = fc->data();
+    FV* fv = rset.first();
+    FaceModel* fm = fv->data();
 
     fm->lockForWrite();
 

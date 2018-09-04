@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,9 +29,9 @@ public:
     ActionFillHoles( const QString& dname="Fill Holes", const QIcon& icon=QIcon(), QProgressBar* pb=nullptr);   // Async if pb not null
 
 private slots:
-    bool testReady( const FaceControl*) override;
-    bool doAction( FaceControlSet&, const QPoint&) override;
-    void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(GEOMETRY_CHANGE);}
+    bool testReady( const Vis::FV*) override;
+    bool doAction( FVS&, const QPoint&) override;
+    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(GEOMETRY_CHANGE);}
 };  // end class
 
 }   // end namespace

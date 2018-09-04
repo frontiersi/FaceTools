@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,9 +22,8 @@
 #include <algorithm>
 using FaceTools::Action::ActionSetOpacity;
 using FaceTools::Action::FaceAction;
-using FaceTools::FaceModelViewer;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
+using FaceTools::FVS;
+using FaceTools::Vis::FV;
 
 namespace {
 
@@ -70,10 +69,11 @@ ActionSetOpacity::ActionSetOpacity( const QString& dname, double mooo, double mi
 
     connect( _opacitySpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ActionSetOpacity::doOnValueChanged);
 
-    // Whenever this action is notified of an affine change to FaceControls, run doAction to
+    // Whenever this action is notified of an affine change to FVs, run doAction to
     // check for overlaps and top out the maximum opacity to the constructor given value.
-    addProcessOn( AFFINE_CHANGE);
-    addProcessOn( VIEW_CHANGE);
+    setRespondToEvent( GEOMETRY_CHANGE);
+    setRespondToEvent( AFFINE_CHANGE);
+    setRespondToEvent( VIEWER_CHANGE);
 }   // end ctor
 
 
@@ -84,36 +84,37 @@ double ActionSetOpacity::setOpacityOnOverlap( double v)
 }   // end setOpacityOnOverlap
 
 
-bool ActionSetOpacity::testReady( const FaceControl* fc)
+bool ActionSetOpacity::testEnabled( const QPoint* mc) const { return ready1() != nullptr;}
+
+
+void ActionSetOpacity::tellReady( FV* fv, bool v)
 {
-    // Update the opacity slider to match the opacity of the selected view.
-    _opacitySpinBox->setValue( fc->view()->opacity());
-    return true;
-}   // end testReady
+    if ( v)
+    {
+        _opacitySpinBox->disconnect(this);
+        _opacitySpinBox->setValue( fv->opacity());
+        connect( _opacitySpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ActionSetOpacity::doOnValueChanged);
+    }   // end if
+}   // end tellReady
 
 
-// Action is processed on affine change of the selected FaceControl, so check
-// its bounds for overlap against others in the same viewer.
-bool ActionSetOpacity::doAction( FaceControlSet& fcsin, const QPoint&)
+// Check overlap bounds to set opacity.
+bool ActionSetOpacity::doAction( FVS& fvsin, const QPoint&)
 {
-    assert(fcsin.size() == 1);
-    // If opacity is already <= _maxOpacityOnOverlap, do nothing.
-    if ( _opacitySpinBox->value() <= _maxOpacityOnOverlap)
-        return true;
-
+    assert(fvsin.size() == 1);
     // Check for overlaps and set the maximum opacity if overlap is found.
-    FaceControl* fc = fcsin.first();
+    FV* fv = fvsin.first();
     // For efficiency, calculate the superbounds (single cuboid containing all bounds)
-    const cv::Vec6d b0 = calcSuperBounds( fc->data()->bounds());
+    const cv::Vec6d b0 = calcSuperBounds( fv->data()->bounds());
 
-    // Get the other FaceControls in the same viewer
-    FaceControlSet fcs = fc->viewer()->attached();
-    fcs.erase(fc); // Remove the source
+    // Get the other FVs in the same viewer
+    FVS fvs = fv->viewer()->attached();
+    fvs.erase(fv); // Remove the source
 
     // If any of the bounds of these others overlap with the source bounds, set
-    // the maximum opacity setting for ALL of the other FaceControls in the viewer.
+    // the maximum opacity setting for ALL of the other FVs in the viewer.
     bool overlap = false;
-    for ( FaceControl* f : fcs)
+    for ( FV* f : fvs)
     {
         const cv::Vec6d b1 = calcSuperBounds( f->data()->bounds());
         if ( intersect( b0, b1) || intersect( b1, b0))
@@ -123,13 +124,22 @@ bool ActionSetOpacity::doAction( FaceControlSet& fcsin, const QPoint&)
         }   // end if
     }   // end for
 
+    double newVal = std::min( fv->opacity(), _maxOpacityOnOverlap);
+    fvs.insert(fv); // Reinsert the source
     if ( overlap)
     {
-        fcs.insert(fc); // Reinsert the source
-        _opacitySpinBox->setValue(_maxOpacityOnOverlap);
-        setOpacityValue( fcs, _maxOpacityOnOverlap);
+        for ( FV* fv : fvs)
+            fv->setOpacity(newVal);
     }   // end if
+    else if ( fv->opacity() <= _maxOpacityOnOverlap)
+    {
+        newVal = 1.0;
+        fv->setOpacity(newVal);
+    }   // end else if
 
+    _opacitySpinBox->setValue(newVal);
+
+    fvsin = fvs;
     return true;
 }   // end doAction
 
@@ -139,19 +149,11 @@ void ActionSetOpacity::doOnValueChanged( double newValue)
     if ( !isEnabled())  // Do nothing if not currently enabled
         return;
 
-    // Change the opacity of the actors for all the FaceControls in the selected FaceControl's viewer.
-    const FaceControl* fc = ready1();
-    assert(fc);
-    setOpacityValue( fc->viewer()->attached(), newValue);
+    assert(gotReady());
+    const FVS& fvs = ready().first()->viewer()->attached();
+    for ( FV* fv : fvs)
+        fv->setOpacity(newValue);
+    EventSet cset;
+    doAfterAction( cset, fvs, true);
+    emit reportFinished( cset, fvs, true);
 }   // end doOnValueChanged
-
-
-void ActionSetOpacity::setOpacityValue( const FaceControlSet& fcs, double v)
-{
-    for ( FaceControl* fc : fcs)
-        fc->view()->setOpacity(v);
-    ChangeEventSet cset;
-    cset.insert(VIEW_CHANGE);
-    emit reportFinished( cset, fcs, true);
-}   // end setOpacityValue
-

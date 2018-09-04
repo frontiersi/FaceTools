@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,10 +18,28 @@
 #include <MiscFunctions.h>
 #include <DijkstraShortestPathFinder.h>
 #include <FeatureUtils.h>
+#include <QTextStream>
+#include <QString>
+#include <QFile>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <algorithm>
 using RFeatures::ObjModel;
+
+
+std::string FaceTools::loadTextFromFile( const std::string& fname)
+{
+    std::string contents;
+    QFile f(fname.c_str());
+    if ( f.open(QFile::ReadOnly | QFile::Text))
+    {
+        QTextStream in(&f);
+        contents = in.readAll().toStdString();
+    }   // end if
+    else
+        std::cerr << "[ERROR] FaceTools::loadTextFromFile: Unable to load from file " << fname << std::endl;
+    return contents;
+}   // end loadTextFromFile
 
 
 /*

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,8 +22,8 @@
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionCloseFaceModels;
 using FaceTools::FileIO::FaceModelManager;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceModel;
+using FaceTools::FVS;
+using FaceTools::FM;
 
 
 ActionCloseFaceModels::ActionCloseFaceModels( const QString& dname, const QIcon& ico, const QKeySequence& keys,
@@ -33,11 +33,13 @@ ActionCloseFaceModels::ActionCloseFaceModels( const QString& dname, const QIcon&
 }   // end ctor
 
 
-bool ActionCloseFaceModels::doBeforeAction( FaceControlSet& fcs, const QPoint&)
+bool ActionCloseFaceModels::doBeforeAction( FVS& fvs, const QPoint&)
 {
-    FaceModelSet fms = fcs.models();
-    for ( FaceModel* fm : fms)
+    FaceModelSet fms = fvs.models();
+    fvs.clear();
+    for ( FM* fm : fms)
     {
+        fm->lockForRead();
         bool inPreferredFormat = _fmm->hasPreferredFileFormat(fm);
 
         // If FaceModel hasn't been saved and the user doesn't want to close it (after prompting), remove from action set.
@@ -51,15 +53,12 @@ bool ActionCloseFaceModels::doBeforeAction( FaceControlSet& fcs, const QPoint&)
             if ( !inPreferredFormat)
                 msg = tr("Model not saved in preferred file format (.3df); close anyway?");
 
-            if ( QMessageBox::Yes == QMessageBox::question( _parent, tr("Unsaved changes!"), msg,
-                                                QMessageBox::Yes | QMessageBox::No, QMessageBox::No))
-            {
-                doclose = true;
-            }   // end if
+            doclose = QMessageBox::Yes == QMessageBox::question( _parent, tr("Unsaved changes!"), msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
         }   // end if
+        fm->unlock();
 
-        if ( !doclose)
-            fcs.erase(fm);
+        if ( doclose)
+            fvs.insert(fm);
     }   // end for
-    return !fcs.empty();
+    return !fvs.empty();
 }   // end doBeforeAction

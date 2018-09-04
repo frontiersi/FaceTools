@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,37 +16,33 @@
  ************************************************************************/
 
 #include <ModelMoveInteractor.h>
-#include <ModelMoveResponder.h>
 #include <BaseVisualisation.h>
 #include <FaceModelViewer.h>
-#include <FaceControl.h>
+#include <FaceModel.h>
 #include <FaceView.h>
 using FaceTools::Interactor::ModelViewerInteractor;
 using FaceTools::Interactor::ModelMoveInteractor;
-using FaceTools::Interactor::ModelMoveResponder;
-using FaceTools::FaceModelViewer;
-using FaceTools::FaceControl;
+using FaceTools::Vis::FV;
+using FaceTools::FMV;
+using FaceTools::FVS;
+using FaceTools::FM;
 
-ModelMoveInteractor::ModelMoveInteractor()
-    : _moveModels(false), _moveResponder(nullptr), _affected(nullptr)
-{
-    _moveResponder = new ModelMoveResponder(this);
-    connect( _moveResponder, &ModelMoveResponder::onAffineChange, this, &ModelViewerInteractor::onChangedData);
-}   // end ctor
+ModelMoveInteractor::ModelMoveInteractor() : _moveModels(false), _afv(nullptr) {}
 
 
-ModelMoveInteractor::~ModelMoveInteractor()
-{
-    delete _moveResponder;
-}   // end dtor
+bool ModelMoveInteractor::leftButtonDown( const QPoint& p) { return setInteractionMode(p);}
+bool ModelMoveInteractor::middleButtonDown( const QPoint& p) { return setInteractionMode(p);}
+bool ModelMoveInteractor::rightButtonDown( const QPoint& p) { return setInteractionMode(p);}
+bool ModelMoveInteractor::mouseWheelForward( const QPoint& p) { return setInteractionMode(p);}
+bool ModelMoveInteractor::mouseWheelBackward( const QPoint& p) { return setInteractionMode(p);}
 
 
 // private
 bool ModelMoveInteractor::setInteractionMode( const QPoint& p)
 {
     QTools::InteractionMode imode = QTools::CAMERA_INTERACTION;
-    _affected = testPoint(p);
-    if ( movingModels() && _affected)
+    setAffected(p);
+    if ( movingModels() && _afv)
     {
         imode = QTools::ACTOR_INTERACTION;
         viewer()->setCursor( Qt::DragMoveCursor);
@@ -57,32 +53,43 @@ bool ModelMoveInteractor::setInteractionMode( const QPoint& p)
 
 
 // private
-FaceControl* ModelMoveInteractor::testPoint( const QPoint& p) const
+void ModelMoveInteractor::setAffected( const QPoint& p)
 {
+    _afv = nullptr;
     const vtkProp* prop = viewer()->getPointedAt(p);     // The prop pointed at
     if ( prop)
     {
-        const FaceControlSet& fcs = qobject_cast<FaceModelViewer*>( viewer())->attached();
-        for ( FaceControl* fc : fcs)
+        const FVS& fvs = qobject_cast<FMV*>( viewer())->attached();
+        for ( FV* fv : fvs)
         {
-            if ( fc->view()->isFace(prop))
-                return fc;
+            if ( fv->actor() == prop)
+            {
+                _afv = fv;
+                return;
+            }   // end if
         }   // end for
     }   // end if
-    return nullptr;
-}   // end testPoint
+}   // end setAffected
 
 
-bool ModelMoveInteractor::leftButtonDown( const QPoint& p) { return setInteractionMode(p);}
-bool ModelMoveInteractor::middleButtonDown( const QPoint& p) { return setInteractionMode(p);}
-bool ModelMoveInteractor::rightButtonDown( const QPoint& p) { return setInteractionMode(p);}
-bool ModelMoveInteractor::mouseWheelForward( const QPoint& p) { return setInteractionMode(p);}
-bool ModelMoveInteractor::mouseWheelBackward( const QPoint& p) { return setInteractionMode(p);}
+// private
+void ModelMoveInteractor::pokeTransform()
+{
+    assert(_afv);
+    vtkMatrix4x4* m = _afv->actor()->GetMatrix();   // The moved actor's transform to be poked everywhere. LOL.
+    _afv->data()->pokeTransform( m); // Poke everything.
+    _afv->data()->updateRenderers();
+}   // end pokeTransform
 
 
+// private
 void ModelMoveInteractor::actorStop()
 {
     viewer()->setCursor( Qt::ArrowCursor);
-    emit onActorStop(_affected);
+    assert(_afv);
+    FM* fm = _afv->data();
+    fm->lockForWrite();
+    fm->transform( RVTK::toCV( _afv->actor()->GetMatrix()));
+    fm->unlock();
+    emit onChangedData( _afv);
 }   // end actorStop
-

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,6 @@
  ************************************************************************/
 
 #include <MultiFaceModelViewer.h>
-#include <FaceControl.h>
 #include <QVBoxLayout>
 using FaceTools::MultiFaceModelViewer;
 using FaceTools::FaceModelViewer;
@@ -40,24 +39,24 @@ void MultiFaceModelViewer::addCommonButtons( QLayout* l)
 {
     QToolButton* ss = makeButton();
     l->addWidget(ss);
-    _saveImageButtons.push_back(ss);
+    _action0Buttons.push_back(ss);
     QToolButton* cb = makeButton();
     l->addWidget(cb);
-    _resetCameraButtons.push_back( cb);
+    _action1Buttons.push_back( cb);
 }   // end addCommonButtons
 
 
 // public
 MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent) : QWidget(parent)
 {
-    _v0 = new FaceModelViewer( this); // Left
-    _v1 = new FaceModelViewer( this); // Middle
-    _v2 = new FaceModelViewer( this); // Right
+    _v0 = new FMV( this); // Left
+    _v1 = new FMV( this); // Middle
+    _v2 = new FMV( this); // Right
 
-    connect( _v0, &FaceModelViewer::onAttached, [this](){ setViewerVisible( 0, !_v0->attached().empty());});
-    connect( _v0, &FaceModelViewer::onDetached, [this](){ setViewerVisible( 0, !_v0->attached().empty());});
-    connect( _v2, &FaceModelViewer::onAttached, [this](){ setViewerVisible( 2, !_v2->attached().empty());});
-    connect( _v2, &FaceModelViewer::onDetached, [this](){ setViewerVisible( 2, !_v2->attached().empty());});
+    connect( _v0, &FMV::onAttached, [this](){ setViewerVisible( 0, !_v0->attached().empty());});
+    connect( _v0, &FMV::onDetached, [this](){ setViewerVisible( 0, !_v0->attached().empty());});
+    connect( _v2, &FMV::onAttached, [this](){ setViewerVisible( 2, !_v2->attached().empty());});
+    connect( _v2, &FMV::onDetached, [this](){ setViewerVisible( 2, !_v2->attached().empty());});
 
     QVBoxLayout* v0layout = new QVBoxLayout;
     v0layout->setContentsMargins(0,0,0,0);
@@ -145,22 +144,22 @@ MultiFaceModelViewer::~MultiFaceModelViewer()
 // Left viewer
 void MultiFaceModelViewer::setCopyLeftToCentreAction( QAction *action) { _copyButton[0]->setDefaultAction(action);}
 void MultiFaceModelViewer::setMoveLeftToCentreAction( QAction *action) { _moveButton[0]->setDefaultAction(action);}
-void MultiFaceModelViewer::setLeftResetCameraAction( QAction *a) { _resetCameraButtons[0]->setDefaultAction(a);}
-void MultiFaceModelViewer::setLeftSaveImageAction( QAction *a) { _saveImageButtons[0]->setDefaultAction(a);}
+void MultiFaceModelViewer::setLeftAction0( QAction *a) { _action0Buttons[0]->setDefaultAction(a);}
+void MultiFaceModelViewer::setLeftAction1( QAction *a) { _action1Buttons[0]->setDefaultAction(a);}
 
 // Centre viewer
 void MultiFaceModelViewer::setMoveCentreToLeftAction( QAction *action) { _moveButton[1]->setDefaultAction(action);}
 void MultiFaceModelViewer::setCopyCentreToLeftAction( QAction *action) { _copyButton[1]->setDefaultAction(action);}
 void MultiFaceModelViewer::setCopyCentreToRightAction( QAction *action) { _copyButton[2]->setDefaultAction(action);}
 void MultiFaceModelViewer::setMoveCentreToRightAction( QAction *action) { _moveButton[2]->setDefaultAction(action);}
-void MultiFaceModelViewer::setCentreResetCameraAction( QAction *a) { _resetCameraButtons[1]->setDefaultAction(a);}
-void MultiFaceModelViewer::setCentreSaveImageAction( QAction *a) { _saveImageButtons[1]->setDefaultAction(a);}
+void MultiFaceModelViewer::setCentreAction0( QAction *a) { _action0Buttons[1]->setDefaultAction(a);}
+void MultiFaceModelViewer::setCentreAction1( QAction *a) { _action1Buttons[1]->setDefaultAction(a);}
 
 // Right viewer
 void MultiFaceModelViewer::setMoveRightToCentreAction( QAction *action) { _moveButton[3]->setDefaultAction(action);}
 void MultiFaceModelViewer::setCopyRightToCentreAction( QAction *action) { _copyButton[3]->setDefaultAction(action);}
-void MultiFaceModelViewer::setRightResetCameraAction( QAction *a) { _resetCameraButtons[2]->setDefaultAction(a);}
-void MultiFaceModelViewer::setRightSaveImageAction( QAction *a) { _saveImageButtons[2]->setDefaultAction(a);}
+void MultiFaceModelViewer::setRightAction0( QAction *a) { _action0Buttons[2]->setDefaultAction(a);}
+void MultiFaceModelViewer::setRightAction1( QAction *a) { _action1Buttons[2]->setDefaultAction(a);}
 
 
 // public slot

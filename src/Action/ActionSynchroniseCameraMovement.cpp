@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,13 +16,12 @@
  ************************************************************************/
 
 #include <ActionSynchroniseCameraMovement.h>
-#include <FaceControlSet.h>
 #include <ModelViewer.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionSynchroniseCameraMovement;
 using FaceTools::Action::FaceAction;
-using FaceTools::FaceControlSet;
+using FaceTools::FVS;
 using FaceTools::ModelViewer;
 using FaceTools::Interactor::ModelMoveInteractor;
 
@@ -45,7 +44,7 @@ ActionSynchroniseCameraMovement::ActionSynchroniseCameraMovement( const QString&
 }   // end ctor
 
 
-bool ActionSynchroniseCameraMovement::doAction( FaceControlSet&, const QPoint&)
+bool ActionSynchroniseCameraMovement::doAction( FVS&, const QPoint&)
 {
     if ( isChecked())
     {

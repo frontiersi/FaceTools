@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <FaceShapeLandmarks2DDetector.h>
+#include <Landmarks.h>
 
 #include <algorithm>
 #include <iostream>
@@ -54,7 +55,7 @@ void setLandmarks( const RVTK::Viewer::Ptr viewer,
 {
     const int np = (int)foundVec.size();
     assert( np == (int)cpts.size());
-    RVTK::RendererPicker rpicker( viewer->getRenderer(), RVTK::RendererPicker::TOP_LEFT);
+    RVTK::RendererPicker rpicker( viewer->renderer(), RVTK::RendererPicker::TOP_LEFT);
     std::vector<cv::Vec3f> vpts(np);
     // Vertices < 17 ignored since these are boundary vertices
     for ( int i = 17; i < np; ++i)
@@ -178,9 +179,9 @@ bool FaceShapeLandmarks2DDetector::detect( RVTK::Viewer::Ptr viewer, LandmarkSet
         return false;
     }   // end if
 
-    const int nrows = viewer->getHeight();
-    const int ncols = viewer->getWidth();
-    cv::Mat_<cv::Vec3b> map = RVTK::ImageGrabber(viewer).colour();
+    const int nrows = viewer->height();
+    const int ncols = viewer->width();
+    cv::Mat_<cv::Vec3b> map = RVTK::ImageGrabber(*viewer).colour();
     dlib::cv_image<dlib::bgr_pixel> img(map);
 
     dlib::frontal_face_detector faceDetector( dlib::get_frontal_face_detector());

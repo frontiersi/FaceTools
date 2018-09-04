@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 #include <LandmarkSet.h>
 #include <ObjModelKDTree.h> // RFeatures
 #include <Orientation.h>    // RFeatures
-#include <Viewer.h>         // RVTK
+#include <vtkActor.h>
 #include <string>
 
 namespace FaceTools {
@@ -44,8 +44,7 @@ public:
     FaceDetector( float orientationDetectRange=700.0f, float landmarksDetectRange=288.0f);
     virtual ~FaceDetector(){}
 
-    // Find orientation and landmarks on the face ObjModel attached to the kd-tree.
-    // Returns false if detection fails (use err() to get the error message).
+    // Find orientation and landmarks on the given model. Returns true iff detection succeeds.
     bool detect( const RFeatures::ObjModelKDTree::Ptr, RFeatures::Orientation&, LandmarkSet::Ptr);
 
     const std::string& err() const { return _err;} // Error message relating to last call to detect()
@@ -54,13 +53,11 @@ private:
     static bool s_initOk;
     float _orng, _drng;
     std::string _err;
-    RVTK::Viewer::Ptr _viewer;
-    std::vector<vtkActor*> _actors;
 
     bool cleanUp();
     bool cleanUp( std::string);
-    FaceDetector( const FaceDetector&);     // No copy
-    void operator=( const FaceDetector&);   // No copy
+    FaceDetector( const FaceDetector&) = delete;
+    void operator=( const FaceDetector&) = delete;
 };  // end class
 
 }   // end namespace

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,20 +16,18 @@
  ************************************************************************/
 
 #include <ActionCrop.h>
-#include <FaceControl.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <VtkTools.h>
 #include <FaceModelViewer.h>
-#include <ObjModelRegionSelector.h>
 #include <ObjModelCopier.h>
 #include <cassert>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionCrop;
 using FaceTools::Action::ActionRadialSelect;
-using FaceTools::Action::ChangeEventSet;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
+using FaceTools::Action::EventSet;
+using FaceTools::FVS;
+using FaceTools::Vis::FV;
 using FaceTools::FaceModel;
 
 
@@ -48,35 +46,28 @@ bool ActionCrop::testEnabled( const QPoint*) const
 }   // end testEnabled
 
 
-bool ActionCrop::doAction( FaceControlSet& rset, const QPoint&)
+bool ActionCrop::doAction( FVS& rset, const QPoint&)
 {
     assert(_rsel);
     assert(rset.size() == 1);
-    FaceControl* fc = rset.first();
+    FV* fv = rset.first();
+    FaceModel* fm = fv->data();
 
-    double rad = _rsel->radius( fc);
-    cv::Vec3f v = _rsel->centre( fc);
-
-    FaceModel* fm = fc->data();
-    fm->lockForWrite();
-    int s = fm->kdtree()->find(v);
-
-    using namespace RFeatures;
-    ObjModelRegionSelector::Ptr cropper = ObjModelRegionSelector::create( fm->info()->cmodel(), v, s);
-    cropper->setRadius( rad);
     IntSet cfids;
-    cropper->getRegionFaces( cfids);
+    _rsel->selectedFaces( fm, cfids);
 
     // Copy the subset of faces into a new model
     if ( !cfids.empty())
     {
+        using namespace RFeatures;
+        fm->lockForWrite();
         ObjModelCopier copier( fm->info()->cmodel());
         std::for_each( std::begin(cfids), std::end(cfids), [&](int fid){ copier.addTriangle(fid);});
         ObjModel::Ptr nmodel = copier.getCopiedModel();
         ObjModelInfo::Ptr nfo = ObjModelInfo::create(nmodel);
         fm->update( nfo);
+        fm->unlock();
     }   // end if
 
-    fm->unlock();
     return true;
 }   // end doAction

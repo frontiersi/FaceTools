@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@ public:
     ActionMapSurfaceData();
 
 protected slots:
-    bool doAction( FaceControlSet&, const QPoint&) override;
+    bool doAction( FVS&, const QPoint&) override;
     void purge( const FaceModel*) override;
     void doOnCalculated( const FaceModel*);
     bool displayDebugStatusProgression() const override { return false;}

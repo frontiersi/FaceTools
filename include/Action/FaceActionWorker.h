@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@
 #include <QPoint>
 
 namespace FaceTools {
-class FaceControlSet;
+class FaceViewSet;
 
 namespace Action {
 
@@ -33,7 +33,7 @@ class FaceAction;
 class FaceTools_EXPORT FaceActionWorker : public QThread
 { Q_OBJECT
 public:
-    FaceActionWorker( FaceAction*, FaceControlSet*, const QPoint&);
+    FaceActionWorker( FaceAction*, FaceViewSet*, const QPoint&);
     void run() override;
 
 signals:
@@ -41,7 +41,7 @@ signals:
 
 private:
     FaceAction* _worker;
-    FaceControlSet* _rset;
+    FaceViewSet* _rset;
     QPoint _tp;
 };  // end class
 

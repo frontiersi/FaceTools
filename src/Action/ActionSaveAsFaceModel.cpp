@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,17 +16,16 @@
  ************************************************************************/
 
 #include <ActionSaveAsFaceModel.h>
-#include <FaceControl.h>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <boost/filesystem.hpp>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionSaveAsFaceModel;
-using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
 using FaceTools::FileIO::FaceModelManager;
-using FaceTools::FaceControlSet;
+using FaceTools::FVS;
 using FaceTools::FaceModel;
 
 
@@ -38,7 +37,7 @@ ActionSaveAsFaceModel::ActionSaveAsFaceModel( const QString& dn, const QIcon& ic
 }   // end ctor
 
 
-bool ActionSaveAsFaceModel::doBeforeAction( FaceControlSet& fset, const QPoint&)
+bool ActionSaveAsFaceModel::doBeforeAction( FVS& fset, const QPoint&)
 {
     assert(fset.size() == 1);
     FaceModel* fm = fset.first()->data();
@@ -88,7 +87,7 @@ bool ActionSaveAsFaceModel::doBeforeAction( FaceControlSet& fset, const QPoint&)
 }   // end doBeforeAction
 
 
-bool ActionSaveAsFaceModel::doAction( FaceControlSet& fset, const QPoint&)
+bool ActionSaveAsFaceModel::doAction( FVS& fset, const QPoint&)
 {
     assert(fset.size() == 1);
     assert( !_filename.empty());
@@ -96,10 +95,10 @@ bool ActionSaveAsFaceModel::doAction( FaceControlSet& fset, const QPoint&)
 }   // end doAction
 
 
-void ActionSaveAsFaceModel::doAfterAction( ChangeEventSet&, const FaceControlSet &fcs, bool success)
+void ActionSaveAsFaceModel::doAfterAction( EventSet&, const FVS &fvs, bool success)
 {
     if (success)
-        emit onSavedAs( fcs.first());
+        emit onSavedAs( fvs.first());
     else
     {
         QString msg( ("\nUnable to save to \"" + _filename + "\"!").c_str());

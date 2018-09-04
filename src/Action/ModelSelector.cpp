@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,83 +18,83 @@
 #include <ModelSelector.h>
 #include <BoundingVisualisation.h>
 #include <FaceModelViewer.h>
-#include <FaceControl.h>
+#include <FaceView.h>
 #include <FaceModel.h>
 using FaceTools::Action::ModelSelector;
 using FaceTools::Action::ActionVisualise;
 using FaceTools::Interactor::ModelSelectInteractor;
 using FaceTools::FaceModelViewer;
-using FaceTools::FaceModelSet;
-using FaceTools::FaceControl;
-using FaceTools::FaceModel;
 using FaceTools::ModelViewer;
+using FaceTools::Vis::FV;
+using FaceTools::FMS;
+using FaceTools::FM;
 
 // private
 ModelSelector::ModelSelector( FaceModelViewer *viewer)
 {
     _interactor.setViewer(viewer);
-    connect( &_interactor, &ModelSelectInteractor::onSelected, [this](FaceControl* fc, bool v){ emit onSelected( fc,v);});
+    connect( &_interactor, &ModelSelectInteractor::onSelected, this, &ModelSelector::onSelected);
 }   // end ctor
 
 
 // private
 ModelSelector::~ModelSelector()
 {
-    FaceModelSet fms = _interactor.available().models();  // Copy out
+    FMS fms = _interactor.available().models();  // Copy out
     std::for_each( std::begin(fms), std::end(fms), [this](auto fm){ this->remove(fm);});
 }   // end dtor
 
 
 // public
-FaceControl* ModelSelector::addFaceControl( FaceModel* fm, FaceModelViewer* tv)
+FV* ModelSelector::addFaceView( FM* fm, FaceModelViewer* tv)
 {
     if ( !tv)
         tv = static_cast<FaceModelViewer*>(_interactor.viewer());
-    FaceControl* fc = new FaceControl( fm, tv); // Attaches the viewer and creates the base models (calls FaceView::reset)
-    _interactor.add(fc);   // Will cause onSelected(fc, true) to fire
-    return fc;
-}   // end addFaceControl
+    FV* fv = new FV( fm, tv); // Attaches the viewer and creates the base models (calls FaceView::reset)
+    _interactor.add(fv);    // Does NOT cause onSelected(fv, true) to fire
+    return fv;
+}   // end addFaceView
 
 
 // public
-void ModelSelector::removeFaceControl( FaceControl* fc)
+void ModelSelector::removeFaceView( FV* fv)
 {
-    _interactor.remove(fc);    // Called *before* the viewer is detached from the FaceControl.
-    FaceModelViewer* viewer = fc->viewer();
-    delete fc;
-    viewer->updateRender(); // Extra render needed after detaching the viewer.
-}   // end removeFaceControl
+    _interactor.remove(fv);    // Called *before* the viewer is detached from the FaceView.
+    FaceModelViewer* vwr = fv->viewer();
+    delete fv;
+    vwr->updateRender(); // Extra render needed after detaching the viewer.
+    std::cerr << "[INFO] FaceTools::Action::ModelSelector::removeFaceView: " << vwr->attached().size() << " attached" << std::endl;
+}   // end removeFaceView
 
 
 // public
-void ModelSelector::remove( FaceModel* fm)
+void ModelSelector::remove( FM* fm)
 {
-    while ( !fm->faceControls().empty())
-        removeFaceControl( fm->faceControls().first());
+    while ( !fm->fvs().empty())
+        removeFaceView( fm->fvs().first());
 }   // end remove
 
 
 // public
-void ModelSelector::setSelected( FaceControl* fc, bool enable)
+void ModelSelector::setSelected( FV* fv, bool enable)
 {
-    if ( _interactor.isSelected(fc) != enable)    // Do nothing if no change in selection
-        _interactor.setSelected( fc, enable);
+    if ( _interactor.isSelected(fv) != enable)    // Do nothing if no change in selection
+        _interactor.setSelected( fv, enable);
 }   // end setSelected
 
 
 // private
 void ModelSelector::doSwitchSelectedToViewer( ModelViewer* vwr)
 {
-    FaceControl* fc = _interactor.selected();
-    if ( !fc)
+    FV* fv = _interactor.selected();
+    if ( !fv)
         return;
 
-    const FaceControlSet& fcs = fc->data()->faceControls();
-    for ( FaceControl* f : fcs)
+    for ( FV* f : fv->data()->fvs())
     {
-        if ( f != fc && f->viewer() == vwr)
+        if ( f != fv && f->viewer() == vwr)
         {
-            setSelected( fc, false);
+            setSelected( fv, false);
             setSelected( f, true);
             break;
         }   // end if

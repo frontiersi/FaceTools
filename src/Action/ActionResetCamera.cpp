@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,8 +19,9 @@
 #include <algorithm>
 using FaceTools::Action::ActionResetCamera;
 using FaceTools::Action::FaceAction;
-using FaceTools::FaceModelViewer;
-using FaceTools::FaceControlSet;
+using FaceTools::FMVS;
+using FaceTools::FMV;
+using FaceTools::FVS;
 
 
 ActionResetCamera::ActionResetCamera( const QString& dn, const QIcon& ico, FaceModelViewer *mv)
@@ -31,12 +32,12 @@ ActionResetCamera::ActionResetCamera( const QString& dn, const QIcon& ico, FaceM
 }   // end ctor
 
 
-bool ActionResetCamera::doAction( FaceControlSet &fset, const QPoint&)
+bool ActionResetCamera::doAction( FVS &fset, const QPoint&)
 {
     if ( _viewers.empty())
     {
-        FaceViewerSet vwrs = fset.viewers();
-        for ( FaceModelViewer* v : vwrs)
+        FMVS vwrs = fset.viewers();
+        for ( FMV* v : vwrs)
             v->resetCamera();
     }   // end if
     else

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 #include <cassert>
 using FaceTools::Interactor::FaceHoveringInteractor;
 using FaceTools::Interactor::ModelViewerInteractor;
+using FaceTools::Interactor::MEEI;
 
 
 // public
@@ -36,10 +37,10 @@ FaceHoveringInteractor::FaceHoveringInteractor( MEEI *meei, FaceTools::Vis::Base
 
 
 // private slot
-void FaceHoveringInteractor::doOnEnterModel( FaceTools::FaceControl* fc)
+void FaceHoveringInteractor::doOnEnterModel( FaceTools::Vis::FV* fv)
 {
     this->enteringModel();
-    setEnabled( _vis->isApplied(fc));
+    setEnabled( fv->isApplied(_vis));
 }   // end doOnEnterModel
 
 

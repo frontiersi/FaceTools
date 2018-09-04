@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +29,9 @@ namespace Vis {
 class FaceTools_EXPORT SphereView
 {
 public:
-    SphereView( const cv::Vec3f& centre, double radius, bool pickable=true, bool fixedScale=false);
+    SphereView( const cv::Vec3f& centre=cv::Vec3f(0,0,0), double radius=1.0, bool pickable=true, bool fixedScale=false);
+    SphereView( const SphereView&);
+    SphereView& operator=( const SphereView&);
     virtual ~SphereView();
 
     void setResolution( int);   // Default 8
@@ -44,8 +46,8 @@ public:
     void setScaleFactor( double);
     double scaleFactor() const;
 
-    void setCentre( const cv::Vec3f&);                  // Update position of actor.
-    const cv::Vec3f& centre() const;                    // Return this view's position.
+    void setCentre( const cv::Vec3f&);
+    cv::Vec3f centre() const;
 
     void setRadius( double);                            // Set radius
     double radius() const;                              // Get radius
@@ -54,10 +56,14 @@ public:
     double opacity() const;
 
     void setColour( double r, double g, double b);      // Set colour as rgb components in [0,1].
+    void setColour( const double[3]);
     const double* colour() const;                       // Return a 3-tuple array for the rgb components.
 
     void setCaption( const std::string&);               // Set caption used when highlighting.
+    std::string caption() const;
+
     void setHighlighted( bool);                         // Show the caption (only if already visible).
+    bool highlighted() const;
 
     void setVisible( bool, ModelViewer*);               // Set visibility of actors.
     bool visible() const { return _visible;}
@@ -72,9 +78,7 @@ private:
     QTools::VtkScalingActor* _actor;
     vtkNew<vtkSphereSource> _source;
     vtkNew<vtkCaptionActor2D> _caption;
-
-    SphereView( const SphereView&) = delete;
-    void operator=( const SphereView&) = delete;
+    void init();
 };  // end class
 
 }   // end namespace

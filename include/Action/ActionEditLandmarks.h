@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,14 +29,15 @@ namespace Action {
 class FaceTools_EXPORT ActionEditLandmarks : public ActionVisualise
 { Q_OBJECT
 public:
-    ActionEditLandmarks( const QString&, const QIcon&, MEEI*, QStatusBar* sb=nullptr);
+    ActionEditLandmarks( const QString&, const QIcon&, Interactor::MEEI*, QStatusBar* sb=nullptr, bool visOnLoad=false);
     ~ActionEditLandmarks() override;
 
     Interactor::LandmarksInteractor* interactor() override { return _interactor;}
 
 protected slots:
-    void doOnEditedLandmark( const FaceControl*);
-    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
+    void doOnEditedLandmark( const Vis::FV*);
+    bool doAction( FVS&, const QPoint&) override;
+    void doAfterAction( EventSet&, const FVS&, bool) override;
 
 private:
     Vis::LandmarksVisualisation *_vis;

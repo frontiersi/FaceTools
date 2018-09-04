@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,10 +22,10 @@
 #include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionSetFocus;
-using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
+using FaceTools::FVS;
+using FaceTools::Vis::FV;
 
 
 // public
@@ -38,19 +38,19 @@ bool ActionSetFocus::testEnabled( const QPoint* p) const
 {
     bool enabled = false;
     if ( p && ready1())
-        enabled = ready1()->view()->isPointOnFace(*p) != nullptr;
+        enabled = ready1()->isPointOnFace(*p);
     return enabled;
 }   // end testEnabled
 
 
-bool ActionSetFocus::doAction( FaceControlSet&, const QPoint& p)
+bool ActionSetFocus::doAction( FVS& fvs, const QPoint& p)
 {
-    FaceControl* fc = ready1();
-    assert(fc);
+    assert(fvs.size() == 1);
+    FV* fv = fvs.first();
+    assert(fv);
     cv::Vec3f nf;
-    const bool onModel = fc->view()->pointToFace( p, nf);
-    assert(onModel);    // Must be or couldn't have been ready!
-    fc->viewer()->setFocus(nf);
+    fv->projectToSurface( p, nf);
+    fv->viewer()->setFocus(nf);
     FaceTools::Action::ActionSynchroniseCameraMovement::sync();
     return true;
 }   // end doAction

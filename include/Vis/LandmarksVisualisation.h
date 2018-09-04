@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,33 +30,38 @@ public:
     LandmarksVisualisation( const QString &dname, const QIcon &icon);
     ~LandmarksVisualisation() override;
 
-    bool isExclusive() const override { return false;}
     bool singleModel() const override { return true;}    // Apply to all FaceControls of a FaceModel
-    bool belongs( const vtkProp*, const FaceControl*) const override;
+    bool belongs( const vtkProp*, const FV*) const override;
+    bool isAvailable( const FM*) const override;
 
-    bool apply( const FaceControl*, const QPoint* mc=nullptr) override;
-    void addActors( const FaceControl*) override;
-    void removeActors( const FaceControl*) override;
+    void apply( FV*, const QPoint* mc=nullptr) override;
+    void remove( FV*) override;
 
-    // Show or hide the given landmark for the given FaceControl.
-    void setLandmarkVisible( const FaceModel*, int, bool);
+    // Show or hide the given landmark for the given FM.
+    void setLandmarkVisible( const FM*, int, bool);
 
-    // Set highlighted or not the given landmark for the given FaceControl.
-    void setLandmarkHighlighted( const FaceModel*, int, bool);
+    // Set highlighted or not the given landmark for the given FM.
+    void setLandmarkHighlighted( const FM*, int, bool);
 
-    // Refresh information about the given landmark from its set for the given FaceControl.
-    void updateLandmark( const FaceModel*, int);
+    // Refresh information about the given landmark from its set for the given FM.
+    void updateLandmark( const FM*, int);
 
     // Return ID of landmark if given prop is for a landmark or -1 if not.
-    int landmarkProp( const FaceControl*, const vtkProp*) const;
+    int landmarkProp( const FV*, const vtkProp*) const;
+
+    // Refresh visualisation of landmarks for the given FaceModel.
+    void refresh( const FM*);
+
+    void pokeTransform( const FV*, const vtkMatrix4x4*) override;
+    void fixTransform( const FV*) override;
 
 protected:
-    void pokeTransform( const FaceControl*, const vtkMatrix4x4*) override;
-    void fixTransform( const FaceControl*) override;
-    void purge( const FaceControl*) override;
+    void purge( FV*) override;
+    bool allowShowOnLoad( const FM* fm) const override;
 
 private:
-    std::unordered_map<const FaceControl*, LandmarkSetView*> _views;
+    std::unordered_map<const FV*, LandmarkSetView*> _views;
+    bool hasView( const FV*) const;
 };  // end class
 
 }   // end namespace

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,14 +17,13 @@
 
 #include <ActionRemesh.h>
 #include <FaceModelViewer.h>
-#include <FaceControl.h>
 #include <FaceModel.h>
 #include <ObjModelVertexAdder.h>   // RFeatures
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionRemesh;
-using FaceTools::Action::ChangeEventSet;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
+using FaceTools::Action::EventSet;
+using FaceTools::FVS;
+using FaceTools::Vis::FV;
 using FaceTools::FaceModel;
 
 
@@ -36,11 +35,11 @@ ActionRemesh::ActionRemesh( const QString& dn, const QIcon& ico, QProgressBar* p
 }   // end ctor
 
 
-bool ActionRemesh::doAction( FaceControlSet& rset, const QPoint&)
+bool ActionRemesh::doAction( FVS& rset, const QPoint&)
 {
     assert(rset.size() == 1);
-    FaceControl* fc = rset.first();
-    FaceModel* fm = fc->data();
+    FV* fv = rset.first();
+    FaceModel* fm = fv->data();
 
     fm->lockForWrite();
 

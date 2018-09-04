@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ namespace Vis {
 class FaceTools_EXPORT LandmarkSetView
 {
 public:
-    LandmarkSetView( const LandmarkSet&, double defaultRadius=1.0);
+    LandmarkSetView( LandmarkSet::Ptr, double defaultRadius=1.0);
     virtual ~LandmarkSetView();
 
     void setLandmarkRadius( double);
@@ -58,11 +58,14 @@ public:
     // the current name and position of the landmark from the set.
     void updateLandmark( int lmID);
 
+    // Refresh the visualised landmarks against what's in the stored LandmarkSet.
+    void refresh();
+
     void pokeTransform( const vtkMatrix4x4*);                     
     void fixTransform();
 
 private:
-    const LandmarkSet& _lset;
+    LandmarkSet::Ptr _lset;
     double _lmrad;
     ModelViewer *_viewer;
     std::unordered_map<int, SphereView*> _views;

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,9 +31,9 @@ public:
     ActionSaveFaceModels( const QString& dname, const QIcon&, const QKeySequence&, FileIO::FaceModelManager*, QWidget *parent=nullptr);
 
 protected slots:
-    bool testReady( const FaceControl*) override;
-    bool doAction( FaceControlSet&, const QPoint&) override;
-    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
+    bool testReady( const Vis::FV*) override;
+    bool doAction( FVS&, const QPoint&) override;
+    void doAfterAction( EventSet&, const FVS&, bool) override;
 
 private:
     FileIO::FaceModelManager *_fmm;

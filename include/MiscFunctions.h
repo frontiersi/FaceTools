@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,6 +28,9 @@ typedef unsigned char byte;
 
 
 namespace FaceTools {
+
+// Returns the string context of the given file or an empty string on failure.
+FaceTools_EXPORT std::string loadTextFromFile( const std::string& fname);
 
 // Removes all occurances of "(*)" in s (where * is any character).
 FaceTools_EXPORT void removeParentheticalContent( std::string& s);

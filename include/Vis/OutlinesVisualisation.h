@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
 
 #include "BaseVisualisation.h"
 #include "LoopsView.h"
-#include <unordered_map>
 
 namespace FaceTools {
 namespace Vis {
@@ -31,19 +30,15 @@ public:
     OutlinesVisualisation( const QString &dname, const QIcon &icon, const QKeySequence &keys);
     ~OutlinesVisualisation() override;
 
-    bool isExclusive() const override { return false;}
+    void apply( FV*, const QPoint* mc=nullptr) override;
+    void remove( FV*) override;
 
-    bool apply( const FaceControl*, const QPoint* mc=nullptr) override;
-    void addActors( const FaceControl*) override;
-    void removeActors( const FaceControl*) override;
-
-protected:
-    void pokeTransform( const FaceControl*, const vtkMatrix4x4*) override;
-    void fixTransform( const FaceControl*) override;
-    void purge( const FaceControl*) override;
+    void pokeTransform( const FV*, const vtkMatrix4x4*) override;
+    void fixTransform( const FV*) override;
 
 private:
-    std::unordered_map<const FaceControl*, LoopsView*> _views;
+    void purge( FV*) override;
+    std::unordered_map<const FV*, LoopsView*> _views;
 };  // end class
 
 }   // end namespace

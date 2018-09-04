@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,48 +18,46 @@
 #ifndef FACE_TOOLS_PATH_SET_INTERACTOR_H
 #define FACE_TOOLS_PATH_SET_INTERACTOR_H
 
-/**
- * Manages mouse interactions for the defining of measurements between points by interfacing with a
- * provided PathSetSet which maintains the data for individual PathSet instances. Clients
- * should connect to the signals fired from this MeasureInstance. Visualisation of the paths
- * must be handled elsewhere.
- */
-
-#include "FaceHoveringInteractor.h"
+#include "ModelEntryExitInteractor.h"
 #include <PathSetVisualisation.h>
 
 namespace FaceTools {
 namespace Interactor {
 
-class FaceTools_EXPORT PathSetInteractor : public FaceHoveringInteractor
+class FaceTools_EXPORT PathSetInteractor : public ModelViewerInteractor
 { Q_OBJECT
 public:
     PathSetInteractor( MEEI*, Vis::PathSetVisualisation*, QStatusBar *sbar=nullptr);
 
+    inline Vis::FV* hoverModel() const { return _meei->model();}
+
     // Get the ID of the path associated with the handle being hovered over (if any).
     // Returns -1 if no handle hovered over. Use hoverModel() to get associated model.
-    int hoverID() const;
+    inline int hoverPathId() const { return _hover;}
 
-    // Add a path on the hover model at the given coords. Client should check for
-    // existing paths first before deciding to create a new one. Returns -1 if no path
-    // could be created (e.g. if the given coords are not on the model).
-    int addPath( const QPoint&);
+    void setPathDrag( int pid);
+    bool moveDragHandle( const cv::Vec3f&);
+    void setCaptionInfo( const FM*, int);
+    void setCaptionAttachPoint( const FM*, int);
 
-    // Deletes the path returned by hoverID returning true on success.
-    bool deletePath();
+public slots:
+    void doOnEnterHandle( const Vis::FV*, const Vis::PathView::Handle*);
+    void doOnLeaveHandle( const Vis::FV*, const Vis::PathView::Handle *h=nullptr);
 
 private:
     bool leftButtonDown( const QPoint&) override;
     bool leftButtonUp( const QPoint&) override;
-    bool mouseMove( const QPoint&) override;
     bool leftDrag( const QPoint&) override;
+    bool mouseMove( const QPoint&) override;
+    void onEnabledStateChanged(bool) override;
 
+    MEEI *_meei;
     Vis::PathSetVisualisation *_vis;
-    const Vis::PathView::Handle *_hdrag;
-    const Vis::PathView::Handle *_hhover;
-    cv::Vec3f _origPos;
-
-    const Vis::PathView::Handle* getPathViewHandle( const QPoint&) const;
+    int _drag;  // Path currently being dragged
+    int _hover; // Path hovered over
+    int _handle;// Handle hovered over or being dragged (0|1) - only valid if _hover >= 0 or _drag >= 0
+    static const QString s_msg0;
+    static const QString s_msg1;
 };  // end class
 
 }   // end namespace

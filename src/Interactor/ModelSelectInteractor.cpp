@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 using FaceTools::Interactor::ModelSelectInteractor;
 using FaceTools::Interactor::ModelViewerInteractor;
 using FaceTools::ModelViewer;
-using FaceTools::FaceControl;
+using FaceTools::Vis::FV;
 
 
 ModelSelectInteractor::ModelSelectInteractor() : _selected(nullptr)
@@ -29,43 +29,43 @@ ModelSelectInteractor::ModelSelectInteractor() : _selected(nullptr)
 }   // end ctor
 
 
-void ModelSelectInteractor::add( FaceControl* fc)
+void ModelSelectInteractor::add( FV* fv)
 {
-    assert(fc);
-    if ( !fc)
+    assert(fv);
+    if ( !fv)
         return;
-    assert( !isSelected(fc));
-    assert( !isAvailable(fc));
-    _available.insert(fc);
-    setSelected( fc, true);
+    assert( !isSelected(fv));
+    assert( !isAvailable(fv));
+    _available.insert(fv);
 }   // end add
 
 
-void ModelSelectInteractor::remove( FaceControl* fc)
+void ModelSelectInteractor::remove( FV* fv)
 {
-    assert(fc);
-    if ( !fc)
+    assert(fv);
+    if ( !fv)
         return;
-    assert( isAvailable(fc));
-    _available.erase(fc);
-    setSelected( fc, false);
+    assert( isAvailable(fv));
+    _available.erase(fv);
+    if ( isSelected(fv))
+        setSelected( fv, false);
 }   // end remove
 
 
-void ModelSelectInteractor::setSelected( FaceControl* fc, bool selected)
+void ModelSelectInteractor::setSelected( FV* fv, bool selected)
 {
-    if ( !fc)
+    if ( !fv)
         return;
 
-    if ( isSelected(fc) == selected)    // Only change if needing to
+    if ( isSelected(fv) == selected)    // Only change if needing to
         return;
 
     eraseSelected();
     if ( selected)
     {
-        assert( _available.has(fc));
-        _selected = fc;
-        emit onSelected( fc, true);
+        assert( _available.has(fv));
+        _selected = fv;
+        emit onSelected( fv, true);
     }   // end if
 }   // end setSelected
 
@@ -73,14 +73,14 @@ void ModelSelectInteractor::setSelected( FaceControl* fc, bool selected)
 // private
 void ModelSelectInteractor::eraseSelected()
 {
-    FaceControl* fc = _selected;
+    FV* fv = _selected;
     _selected = nullptr;
-    if ( fc)
-        emit onSelected( fc, false);
+    if ( fv)
+        emit onSelected( fv, false);
 }   // end eraseSelected
 
 
-FaceControl* ModelSelectInteractor::underPoint( const QPoint& p) const
+FV* ModelSelectInteractor::underPoint( const QPoint& p) const
 {
     return _available.find( viewer()->getPointedAt(p));
 }   // end underPoint
@@ -98,9 +98,9 @@ bool ModelSelectInteractor::rightButtonDown( const QPoint& p) { return leftButto
 
 bool ModelSelectInteractor::leftDoubleClick( const QPoint& p)
 {
-    FaceControl* fc = underPoint(p);
-    if ( fc)
-        setSelected( fc, true);
+    FV* fv = underPoint(p);
+    if ( fv)
+        setSelected( fv, true);
     else // deselect if double clicked off a model
         eraseSelected();
     return true;   // All double clicks swallowed

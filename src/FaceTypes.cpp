@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,37 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_HASHING_H
-#define FACE_TOOLS_HASHING_H
+#include <FaceTypes.h>
+#include <FaceViewSet.h>
 
-/**
- * Provide template specialisations of std::hash for QString and other non-standard library types as needed.
- */
-#include <QString>
-#include <vtkSmartPointer.h>
-#include <string>
-#include <functional>
-
-namespace std {
-
-template <>
-struct hash<QString>
+void FaceTools::registerTypes()
 {
-    size_t operator()( const QString& x) const
-    {
-        return hash<std::string>()( x.toStdString());
-    }   // end operator()
-};  // end struct
-
-template <class T>
-struct hash<vtkSmartPointer<T> >
-{
-    size_t operator()( const vtkSmartPointer<T>& x) const
-    {
-        return hash<void*>()( x.GetPointer());
-    }   // end operator()
-};  // end struct
-
-}   // end namespace
-
-#endif
+    qRegisterMetaType<FaceTools::Action::EventSet>("FaceTools::Action::EventSet");
+    qRegisterMetaType<FaceTools::Action::EventId>("FaceTools::Action::EventId");
+//    qRegisterMetaType<FaceTools::Vis::FaceView>("FaceTools::Vis::FaceView");
+    qRegisterMetaType<FaceTools::FaceViewSet>("FaceTools::FaceViewSet");
+}   // end registerTypes

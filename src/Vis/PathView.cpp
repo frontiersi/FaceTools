@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,20 +16,20 @@
  ************************************************************************/
 
 #include <PathView.h>
-#include <VtkTools.h>       // RVTK
+#include <VtkActorCreator.h>    // RVTK
+#include <VtkTools.h>           // RVTK
 #include <vtkProperty.h>
 #include <cassert>
 using FaceTools::Vis::PathView;
 using FaceTools::ModelViewer;
-using FaceTools::Path;
 
 
 // public
-PathView::PathView( const Path& path)
-    : _viewer(nullptr), _path(path), _h0(nullptr), _h1(nullptr), _linePropID(-1)
+PathView::PathView( int id, const std::vector<cv::Vec3f>& vtxs)
+    : _viewer(nullptr), _id(id), _h0(nullptr), _h1(nullptr), _lprop(nullptr)
 {
-    _h0 = new Handle(this, *path.vtxs.begin(), 1.4);
-    _h1 = new Handle(this, *path.vtxs.rbegin(), 1.4);
+    _h0 = new Handle( 0, _id, *vtxs.begin(), 1.4);
+    _h1 = new Handle( 1, _id, *vtxs.rbegin(), 1.4);
 
     _h0->_sv->setResolution(30);
     _h0->_sv->setColour( 1.0, 0.0, 0.0);
@@ -38,13 +38,15 @@ PathView::PathView( const Path& path)
     _h1->_sv->setResolution(30);
     _h1->_sv->setColour( 0.0, 0.0, 1.0);
     _h1->_sv->setOpacity( 0.4);
+
+    update( vtxs);
 }   // end ctor
 
 
 // public
 PathView::~PathView()
 {
-    removePath();
+    setVisible( false, nullptr);
     delete _h0;
     delete _h1;
 }   // end dtor
@@ -54,81 +56,69 @@ PathView::~PathView()
 void PathView::setVisible( bool enable, ModelViewer *viewer)
 {
     if ( _viewer)
-        removePath();
+    {
+        _h0->_sv->setVisible( false, _viewer);
+        _h1->_sv->setVisible( false, _viewer);
+        _viewer->remove(_lprop);
+    }   // end if
+
     _viewer = viewer;
+
     if ( enable && _viewer)
-        addPath();
+    {
+        _h0->_sv->setVisible( true, _viewer);
+        _h1->_sv->setVisible( true, _viewer);
+        _viewer->add(_lprop);
+    }   // end if
 }   // end setVisible
 
 
 // public
-void PathView::update()
+void PathView::update( const std::vector<cv::Vec3f>& vtxs)
 {
-    setVisible( true, _viewer);
+    _h0->_sv->setCentre( *vtxs.begin());
+    _h1->_sv->setCentre( *vtxs.rbegin());
+    if ( _lprop)
+    {
+        if ( _viewer)
+            _viewer->remove(_lprop);
+        _lprop->Delete();
+    }   // end if
+
+    _lprop = RVTK::VtkActorCreator::generateLineActor( vtxs);
+    _lprop->SetPickable(false);
+
+    vtkProperty* property = _lprop->GetProperty();
+    property->SetRepresentationToWireframe();
+    property->SetRenderLinesAsTubes(false);
+    property->SetLineWidth( 3.0);
+    property->SetColor( 1,1,1);
+    property->SetAmbient( 1.0);
+    property->SetDiffuse( 0.0);
+    property->SetSpecular(0.0);
 }   // end update
 
 
 // public
 void PathView::pokeTransform( const vtkMatrix4x4* vm)
 {
-    assert(_viewer);
     _h0->_sv->pokeTransform( vm);
     _h1->_sv->pokeTransform( vm);
-    // Transform every vertex in the line actor
-    assert(_linePropID >= 0);
-    vtkActor* lp = static_cast<vtkActor*>(_viewer->getProp(_linePropID));
-    assert(lp);
-    lp->PokeMatrix( const_cast<vtkMatrix4x4*>(vm));
+    _lprop->PokeMatrix( const_cast<vtkMatrix4x4*>(vm));
 }   // end transform
 
 
 void PathView::fixTransform()
 {
-    assert(_viewer);
     _h0->_sv->fixTransform();
     _h1->_sv->fixTransform();
-    vtkActor* lp = static_cast<vtkActor*>(_viewer->getProp(_linePropID));
-    assert(lp);
-    RVTK::transform( lp, lp->GetMatrix());
+    RVTK::transform( _lprop, _lprop->GetMatrix());
 }   // end fixTransform
 
 
 // private
-void PathView::removePath()
-{
-    assert(_viewer);
-    _h0->_sv->setVisible( false, _viewer);
-    _h1->_sv->setVisible( false, _viewer);
-    if ( _linePropID >= 0)
-        _viewer->remove(_linePropID);
-    _linePropID = -1;
-}   // end removePath
-
-
-// private
-void PathView::addPath()
-{
-    assert(_viewer);
-    const ModelViewer::VisOptions loptions( 1.0f,1.0f,1.0f,1.0f,false,1.0f, /*Line Width*/3.0f/**/);
-    _linePropID = _viewer->addLine( _path.vtxs, false, loptions);
-    vtkActor* lactor = static_cast<vtkActor*>( _viewer->getProp(_linePropID));
-    lactor->SetPickable(false); // The measurement line shouldn't be pickable!
-    vtkProperty* property = lactor->GetProperty();
-    property->SetAmbient( 1.0);
-    property->SetDiffuse( 0.0);
-    property->SetSpecular(0.0);
-
-    _h0->_sv->setCentre( *_path.vtxs.begin());
-    _h0->_sv->setVisible( true, _viewer);
-
-    _h1->_sv->setCentre( *_path.vtxs.rbegin());
-    _h1->_sv->setVisible( true, _viewer);
-}   // end addPath
-
-
-// private
-PathView::Handle::Handle( PathView* pv, const cv::Vec3f& c, double r)
-    : _host(pv), _sv( new SphereView( c, r, true/*pickable*/, true/*fixed scale*/))
+PathView::Handle::Handle( int hid, int pid, const cv::Vec3f& c, double r)
+    : _hid(hid), _pid(pid), _sv( new SphereView( c, r, true/*pickable*/, true/*fixed scale*/))
 {}   // end ctor
 
 // private

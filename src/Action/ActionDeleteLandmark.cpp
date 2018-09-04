@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,19 +16,17 @@
  ************************************************************************/
 
 #include <ActionDeleteLandmark.h>
-#include <FaceControl.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
-#include <ChangeEvents.h>
 #include <cassert>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionDeleteLandmark;
 using FaceTools::Action::ActionEditLandmarks;
-using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::EventSet;
 using FaceTools::Interactor::LandmarksInteractor;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
-using FaceTools::FaceModel;
+using FaceTools::FVS;
+using FaceTools::Vis::FV;
+using FaceTools::FM;
 
 
 ActionDeleteLandmark::ActionDeleteLandmark( const QString& dn, const QIcon& ico, ActionEditLandmarks* e)
@@ -43,22 +41,29 @@ bool ActionDeleteLandmark::testEnabled( const QPoint*) const
     assert(_editor);
     if ( _editor->isChecked())
     {
-        LandmarksInteractor* interactor = _editor->interactor();
-        const FaceControl* fc = interactor->hoverModel();
-        enabled = isReady( fc) && interactor->hoverID() >= 0;
+        const FV* fv = _editor->interactor()->hoverModel();
+        enabled = isReady( fv) && _editor->interactor()->hoverId() >= 0;
     }   // end if
     return enabled;
 }   // end testEnabled
 
 
-bool ActionDeleteLandmark::doAction( FaceControlSet& fcs, const QPoint&)
+bool ActionDeleteLandmark::doAction( FVS& fvs, const QPoint&)
 {
     assert(_editor);
-    LandmarksInteractor* interactor = _editor->interactor();
-    FaceControl* hc = fcs.first();
-    assert(hc);
-    fcs.clear();
-    if ( interactor->deleteLandmark())
-        fcs.insert( hc->data());
-    return !fcs.empty();
+    FV* fv = fvs.first();
+    assert( _editor->interactor()->hoverModel() == fv);
+    fvs.clear();
+
+    FM* fm = fv->data();
+    //fm->lockForWrite();
+
+    const int id = _editor->interactor()->hoverId();
+    const bool remok = fm->landmarks()->erase(id);
+    assert(remok);
+    fm->setSaved(false);
+    //fm->unlock();
+    
+    fvs.insert( fm);
+    return !fvs.empty();
 }   // end doAction

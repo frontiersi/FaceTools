@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,12 +18,10 @@
 #ifndef FACE_TOOLS_REPORT_INTERFACE_H
 #define FACE_TOOLS_REPORT_INTERFACE_H
 
-#include <FaceTools_Export.h>
+#include <FaceTypes.h>
 #include <PluginInterface.h>    // QTools
 
 namespace FaceTools {
-class FaceModel;
-
 namespace Report {
 
 // ReportInterface is pure virtual to allow it to be a plugin type.
@@ -35,8 +33,5 @@ public:
 
 }   // end namespace
 }   // end namespace
-
-#define FaceToolsPluginReportReportInterface_iid "com.github.richeytastic.FaceTools.v030.Report.ReportInterface"
-Q_DECLARE_INTERFACE( FaceTools::Report::ReportInterface, FaceToolsPluginReportReportInterface_iid)
 
 #endif

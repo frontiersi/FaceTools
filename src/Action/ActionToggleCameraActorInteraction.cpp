@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,31 +21,31 @@ using FaceTools::Action::ActionToggleCameraActorInteraction;
 using FaceTools::Interactor::ModelViewerInteractor;
 using FaceTools::Action::FaceAction;
 using FaceTools::FaceModelViewer;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
+using FaceTools::FVS;
+using FaceTools::Vis::FV;
 
 
 ActionToggleCameraActorInteraction::ActionToggleCameraActorInteraction( const QString& dn, const QIcon& ico)
     : FaceAction( dn, ico)
 {
     setCheckable( true, false);
-    // Hijack this action's reportFinished signal to push through affine transform changes on FaceModels to other actions.
+    // Use this action's reportFinished signal to push through affine transform changes on FaceModels to other actions.
     connect( &_interactor, &ModelViewerInteractor::onChangedData, this, &ActionToggleCameraActorInteraction::doOnAffineChange);
 }   // end ctor
 
 
-bool ActionToggleCameraActorInteraction::doAction( FaceControlSet&, const QPoint&)
+bool ActionToggleCameraActorInteraction::doAction( FVS&, const QPoint&)
 {
     _interactor.setMoveModels( isChecked());
     return true;
 }   // end doAction
 
 
-void ActionToggleCameraActorInteraction::doOnAffineChange( const FaceControl* fc)
+void ActionToggleCameraActorInteraction::doOnAffineChange( const FV* fv)
 {
-    ChangeEventSet cset;
+    EventSet cset;
     cset.insert(AFFINE_CHANGE);
-    FaceControlSet fcs;
-    fcs.insert(const_cast<FaceControl*>(fc));
-    emit reportFinished( cset, fcs, true);
+    FVS fvs;
+    fvs.insert(const_cast<FV*>(fv));
+    emit reportFinished( cset, fvs, true);
 }   // end doOnAffineChange

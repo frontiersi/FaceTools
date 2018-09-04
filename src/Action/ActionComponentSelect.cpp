@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,20 +16,20 @@
  ************************************************************************/
 
 #include <ActionComponentSelect.h>
-#include <FaceControl.h>
 #include <FaceTools.h>
 #include <FaceModelViewer.h>
 using FaceTools::Action::ActionComponentSelect;
 using FaceTools::Action::ActionVisualise;
 using FaceTools::Vis::BoundingVisualisation;
-using FaceTools::FaceControl;
+using FaceTools::Interactor::MEEI;
+using FaceTools::Vis::FV;
 
 
 ActionComponentSelect::ActionComponentSelect( MEEI* meei)
     : ActionVisualise( _vis = new BoundingVisualisation)
 {
-    //connect( meei, &MEEI::onEnterComponent, [=](auto fc, int c){ _vis->setHighlighted( fc, c, true); fc->viewer()->updateRender();});
-    //connect( meei, &MEEI::onLeaveComponent, [=](auto fc, int c){ _vis->setHighlighted( fc, c, false); fc->viewer()->updateRender();});
+    //connect( meei, &MEEI::onEnterComponent, [=](auto fv, int c){ _vis->setHighlighted( fv, c, true); fv->viewer()->updateRender();});
+    //connect( meei, &MEEI::onLeaveComponent, [=](auto fv, int c){ _vis->setHighlighted( fv, c, false); fv->viewer()->updateRender();});
 }   // end ctor
 
 

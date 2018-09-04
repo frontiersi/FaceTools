@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,10 +28,10 @@ using QTools::VtkScalingActor;
 using FaceTools::Vis::SphereView;
 using FaceTools::ModelViewer;
 
-
-SphereView::SphereView( const cv::Vec3f& c, double r, bool p, bool fixed)
-    : _visible(false), _actor(nullptr)
+// private
+void SphereView::init()
 {
+    _visible = false;
     _caption->BorderOff();
     _caption->GetCaptionTextProperty()->BoldOff();
     _caption->GetCaptionTextProperty()->ItalicOff();
@@ -44,12 +44,41 @@ SphereView::SphereView( const cv::Vec3f& c, double r, bool p, bool fixed)
     _caption->SetPickable(false);
 
     _actor = new VtkScalingActor( _source);
+}   // end init
 
+
+SphereView::SphereView( const cv::Vec3f& c, double r, bool p, bool fixed)
+{
+    init();
     setCentre(c);
     setRadius(r);
     setPickable(p);
     setFixedScale(fixed);
 }   // end ctor
+
+
+SphereView::SphereView( const SphereView& sv)
+{
+    *this = sv;
+}   // end ctor
+
+
+SphereView& SphereView::operator=( const SphereView& sv)
+{
+    init();
+    _visible = sv._visible;
+    setResolution( sv.resolution());
+    setPickable( sv.pickable());
+    setFixedScale( sv.fixedScale());
+    setScaleFactor( sv.scaleFactor());
+    setCentre( sv.centre());
+    setRadius( sv.radius());
+    setOpacity( sv.opacity());
+    setColour( sv.colour());
+    setCaption( sv.caption());
+    setHighlighted( sv.highlighted());
+    return *this;
+}   // end operator=
 
 
 SphereView::~SphereView() { delete _actor;}   // end dtor
@@ -79,7 +108,7 @@ void SphereView::setCentre( const cv::Vec3f& pos)
     _caption->SetAttachmentPoint( attachPoint);
 }   // end setCentre
 
-const cv::Vec3f& SphereView::centre() const { return _actor->position();}
+cv::Vec3f SphereView::centre() const { return _actor->position();}
 
 void SphereView::setRadius( double r) { _source->SetRadius(r);}
 double SphereView::radius() const { return _source->GetRadius();}
@@ -88,10 +117,18 @@ void SphereView::setOpacity( double v) { _actor->setOpacity(v);}
 double SphereView::opacity() const { return _actor->opacity();}
 
 void SphereView::setColour( double r, double g, double b) { _actor->setColour(r,g,b);}
+void SphereView::setColour( const double c[]) { _actor->setColour(c);}
 const double* SphereView::colour() const { return _actor->colour();}
 
 void SphereView::setCaption( const std::string& lname) { _caption->SetCaption( lname.c_str());}
+std::string SphereView::caption() const
+{
+    const char* cap = _caption->GetCaption();
+    return cap == nullptr ? "" : cap;
+}   // end caption
+
 void SphereView::setHighlighted( bool v) { _caption->SetVisibility( v);}
+bool SphereView::highlighted() const { return (bool)_caption->GetVisibility();}
 
 const vtkProp* SphereView::prop() const { return _actor->prop();}
 

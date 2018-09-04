@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,6 @@
 
 #include <ActionRenamePath.h>
 #include <ActionEditPaths.h>
-#include <FaceControl.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <QInputDialog>
@@ -25,12 +24,12 @@
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionRenamePath;
 using FaceTools::Action::ActionEditPaths;
-using FaceTools::Action::ChangeEventSet;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
-using FaceTools::FaceModel;
+using FaceTools::Action::EventSet;
 using FaceTools::Interactor::PathSetInteractor;
 using FaceTools::Vis::PathSetVisualisation;
+using FaceTools::FVS;
+using FaceTools::Vis::FV;
+using FaceTools::FM;
 
 
 ActionRenamePath::ActionRenamePath( const QString& dn, const QIcon& ico, ActionEditPaths *e, QWidget *parent)
@@ -45,31 +44,30 @@ bool ActionRenamePath::testEnabled( const QPoint*) const
     assert(_editor);
     if ( _editor->isChecked() && gotReady())
     {
-        PathSetInteractor* interactor = _editor->interactor();
-        const FaceControl* fc = interactor->hoverModel();
-        enabled = fc && isReady(fc) && interactor->hoverID() >= 0;
+        const FV* fv = _editor->interactor()->hoverModel();
+        enabled = fv && isReady(fv) && _editor->interactor()->hoverPathId() >= 0;
     }   // end if
     return enabled;
 }   // end testEnabled
 
 
-bool ActionRenamePath::doAction( FaceControlSet& fcs, const QPoint&)
+bool ActionRenamePath::doAction( FVS& fvs, const QPoint&)
 {
-    assert(fcs.size() == 1);
     assert(_editor);
-    FaceControl* fc = fcs.first();
-    fcs.clear();
-    assert(fc);
-    PathSetInteractor* interactor = _editor->interactor();
-    assert(fc == interactor->hoverModel());
-    int pathID = interactor->hoverID();
-    assert(pathID >= 0);
+    assert(fvs.size() == 1);
+    FV* fv = fvs.first();
+    assert(fv);
+    assert(fv == _editor->interactor()->hoverModel());
+    fvs.clear();
 
-    FaceModel* fm = fc->data();
-    fm->lockForRead();
-    QString clabel = fm->paths()->path(pathID)->name.c_str();
-    fm->unlock();
+    FM* fm = fv->data();
 
+    const int pid = _editor->interactor()->hoverPathId();
+    assert(pid >= 0);
+
+    //fm->lockForRead();
+    QString clabel = fm->paths()->path(pid)->name.c_str();
+    //fm->unlock();
     bool ok = false;
     QString nlabel = QInputDialog::getText( _parent, tr("Rename path"), tr("New path name:"), QLineEdit::Normal, clabel, &ok);
     if ( !ok)
@@ -77,12 +75,12 @@ bool ActionRenamePath::doAction( FaceControlSet& fcs, const QPoint&)
 
     if ( !nlabel.isEmpty() && nlabel != clabel)
     {
-        fm->lockForWrite();
-        fm->paths()->path(pathID)->name = nlabel.toStdString();
+        //fm->lockForWrite();
+        fm->paths()->path(pid)->name = nlabel.toStdString();
         fm->setSaved(false);
-        fm->unlock();
-        fcs.insert(fc);
-        qobject_cast<PathSetVisualisation*>( _editor->visualisation())->setCaptions( fc, pathID);
+        fvs.insert(fm);
+        _editor->interactor()->setCaptionInfo( fm, pid);
+        //fm->unlock();
     }   // end if
 
     return true;

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,11 @@
  ************************************************************************/
 
 #include <FaceModelViewer.h>
-#include <FaceControl.h>
-#include <FaceModel.h>
+#include <FaceView.h>
 #include <cassert>
 using FaceTools::FaceModelViewer;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
+using FaceTools::Vis::FV;
+using FaceTools::FM;
 
 FaceModelViewer::FaceModelViewer( QWidget *parent) : ModelViewer(parent)
 {
@@ -33,38 +32,32 @@ void FaceModelViewer::saveScreenshot() const { saveSnapshot();}
 void FaceModelViewer::resetCamera() { resetDefaultCamera( 650.0f);}
 
 
-bool FaceModelViewer::attach( FaceControl* fc)
+bool FaceModelViewer::attach( FV* fv)
 {
-    if ( _models.count(fc->data()) > 0) // Don't add view if its model is already in the viewer.
+    if ( _models.count(fv->data()) > 0) // Don't add view if its model is already in the viewer.
         return false;
-    if ( _attached.empty())
-        resetCamera();
-    _attached.insert(fc);
-    _models[fc->data()] = fc;
-    fc->setViewer( this);
-    emit onAttached(fc);
+    _attached.insert(fv);
+    _models[fv->data()] = fv;
+    emit onAttached(fv);
     return true;
 }   // end attach
 
 
-bool FaceModelViewer::detach( FaceControl* fc)
+bool FaceModelViewer::detach( FV* fv)
 {
-    if ( fc == NULL || !_attached.has(fc))
+    if ( fv == nullptr || !_attached.has(fv))
         return false;
-    _attached.erase(fc);
-    _models.erase(fc->data());
-    fc->setViewer(NULL);
-    if ( _attached.empty())   // Reset camera to default if now empty
-        resetCamera();
-    emit onDetached(fc);
+    _attached.erase(fv);
+    _models.erase(fv->data());
+    emit onDetached(fv);
     return true;
 }   // end detach
 
 
-FaceControl* FaceModelViewer::get( FaceTools::FaceModel* fm) const
+FV* FaceModelViewer::get( const FM* fm) const
 {
     if ( _models.count(fm) == 0)
-        return NULL;
+        return nullptr;
     return _models.at(fm);
 }   // end get
 

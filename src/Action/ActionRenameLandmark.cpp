@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,6 @@
  ************************************************************************/
 
 #include <ActionRenameLandmark.h>
-#include <FaceControl.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <QInputDialog>
@@ -25,12 +24,12 @@
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionEditLandmarks;
 using FaceTools::Action::ActionRenameLandmark;
-using FaceTools::Action::ChangeEventSet;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
-using FaceTools::FaceModel;
+using FaceTools::Action::EventSet;
 using FaceTools::Interactor::LandmarksInteractor;
 using FaceTools::Vis::LandmarksVisualisation;
+using FaceTools::FVS;
+using FaceTools::Vis::FV;
+using FaceTools::FM;
 
 
 ActionRenameLandmark::ActionRenameLandmark( const QString& dn, const QIcon& ico, ActionEditLandmarks* e, QWidget *parent)
@@ -45,25 +44,23 @@ bool ActionRenameLandmark::testEnabled( const QPoint*) const
     assert(_editor);
     if ( _editor->isChecked() && gotReady())
     {
-        LandmarksInteractor* interactor = _editor->interactor();
-        const FaceControl* fc = interactor->hoverModel();
-        enabled = fc && isReady(fc) && interactor->hoverID() >= 0;
+        const FV* fv = _editor->interactor()->hoverModel();
+        enabled = fv && isReady(fv) && _editor->interactor()->hoverId() >= 0;
     }   // end if
     return enabled;
 }   // end testEnabled
 
 
-bool ActionRenameLandmark::doAction( FaceControlSet& fcs, const QPoint&)
+bool ActionRenameLandmark::doAction( FVS& fvs, const QPoint&)
 {
-    FaceControl* fc = fcs.first();
-    fcs.clear();
-    LandmarksInteractor* interactor = _editor->interactor();
-    assert(fc == interactor->hoverModel());
-    int id = interactor->hoverID();
+    FV* fv = fvs.first();
+    fvs.clear();
+    assert(fv == _editor->interactor()->hoverModel());
+    const int id = _editor->interactor()->hoverId();
     assert(id >= 0);
 
-    FaceModel* fm = fc->data();
-    fm->lockForRead();
+    FM* fm = fv->data();
+    //fm->lockForWrite();
     QString clabel = fm->landmarks()->get(id)->name.c_str();
 
     QString nlabel;
@@ -80,25 +77,21 @@ bool ActionRenameLandmark::doAction( FaceControlSet& fcs, const QPoint&)
         // If label is the same as some other landmark - and not the current label, advise the user to choose something different.
         if ( fm->landmarks()->has(nlabel.toStdString()) && nlabel != clabel)
         {
-            static const QString msg = tr("A different landmark with that name already exists! ") +
-                                        tr("Landmark labels must be unique - use something else.");
+            static const QString msg = tr("That label is already used for a different landmark; use something else!");
             QMessageBox::information( _parent, tr("Non-unique name!"), msg, QMessageBox::Ok);
         }   // end if
         else
             break;
     }   // end while
 
-    fm->unlock();
-
     if ( !nlabel.isEmpty())
     {
-        fm->lockForWrite();
         fm->landmarks()->get(id)->name = nlabel.toStdString();
         fm->setSaved(false);
-        fm->unlock();
-        fcs.insert(fm);
-        qobject_cast<LandmarksVisualisation*>( _editor->visualisation())->updateLandmark( fm, id);
+        fvs.insert(fm);
     }   // end if
+
+    //fm->unlock();
 
     return true;
 }   // end doAction

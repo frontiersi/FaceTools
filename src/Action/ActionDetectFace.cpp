@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,25 +18,23 @@
 #include <ActionDetectFace.h>
 #include <FaceDetector.h>   // FaceTools
 #include <FaceShapeLandmarks2DDetector.h>   // FaceTools::Landmarks
-#include <FaceControl.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <QMessageBox>
+#include <cassert>
 using FaceTools::Action::ActionDetectFace;
-using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
-using FaceTools::FaceModelViewer;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceModelSet;
-using FaceTools::FaceControl;
-using FaceTools::FaceModel;
-
 using FaceTools::Detect::FaceDetector;
+using FaceTools::Vis::FV;
+using FaceTools::FVS;
+using FaceTools::FMS;
+using FaceTools::FM;
 
 
 ActionDetectFace::ActionDetectFace( const QString& dn, const QIcon& icon,
         const QString& haar, const QString& lmks, QWidget *parent, QProgressBar* pb)
-    : FaceAction(dn, icon), _parent(parent), _detector(NULL)
+    : FaceAction(dn, icon), _parent(parent), _detector(nullptr)
 {
     if ( FaceDetector::initialise( haar.toStdString(), lmks.toStdString()))
         _detector = new FaceDetector;
@@ -55,73 +53,62 @@ ActionDetectFace::~ActionDetectFace()
 }   // end dtor
 
 
-bool ActionDetectFace::doBeforeAction( FaceControlSet& rset, const QPoint&)
+bool ActionDetectFace::testReady( const Vis::FV* fv) { return fv->canTexture();}
+
+
+bool ActionDetectFace::doBeforeAction( FVS& fvs, const QPoint&)
 {
-    bool docheck = false;
-    for ( FaceControl* fc : rset)
-    {
-        FaceModel* fm = fc->data();
-        // Warn if about to overwrite!
-        if ( FaceTools::Detect::FaceShapeLandmarks2DDetector::numDetectionLandmarks( fm->landmarks()) > 0)
-        {
-            docheck = true;
-            break;
-        }   // end if
-    }   // end for
+    assert(fvs.size() == 1);
+    FM* fm = fvs.first()->data();
 
     bool go = true;
-    if ( docheck)
+    fm->lockForRead(); // Warn if about to overwrite!
+    if ( FaceTools::Detect::FaceShapeLandmarks2DDetector::numDetectionLandmarks( fm->landmarks()) > 0)
     {
-        QString msg = tr("Selected model's face detection will be overwritten! Continue?");
-        if ( rset.size() > 1)
-            msg = tr("Selected models' face detections will be overwritten! Continue?");
-
-        // Check go?
+        static const QString msg = tr("Selected model's face detection will be overwritten! Continue?");
         go = QMessageBox::Yes == QMessageBox::question( _parent, tr("Overwrite face detection(s)?"), msg,
                                  QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     }   // end if
+    fm->unlock();
     return go;
 }   // end doBeforeAction
 
 
-bool ActionDetectFace::doAction( FaceControlSet& rset, const QPoint&)
+bool ActionDetectFace::doAction( FVS& fvs, const QPoint&)
 {
-    _failSet.clear();
-    FaceControlSet sset;
+    assert(fvs.size() == 1);
+    FM* fm = fvs.first()->data();
+    fvs.clear();
 
-    for ( FaceControl* fc : rset)
+    fm->lockForWrite();
+    FV* fv = fm->fvs().first(); // Doesn't matter which view's actor we use since it'll be separately rendered
+
+    RFeatures::Orientation on;
+    LandmarkSet::Ptr lmks = fm->landmarks();
+    if ( _detector->detect( fm->kdtree(), on, lmks))
     {
-        FaceModel* fm = fc->data();
-        fm->lockForWrite();
+        //std::cerr << "Detected orientation (norm,up) : " << on << std::endl;
+        fm->setOrientation(on);
+        using namespace FaceTools::Landmarks;
+        cv::Vec3f c = calcFaceCentre( lmks->pos(L_EYE_CENTRE), lmks->pos(R_EYE_CENTRE), lmks->pos(NASAL_TIP));
+        fm->setCentre(c);
+        fvs.insert(fm);
+    }   // end if
+    fm->unlock();
 
-        RFeatures::Orientation on;
-        if ( _detector->detect( fm->kdtree(), on, fm->landmarks()))
-        {
-            std::cerr << "Detected orientation (norm,up) : " << on << std::endl;
-            fm->setOrientation(on);
-            sset.insert(fc);
-        }   // end if
-        else
-            _failSet.insert(fm);
-
-        fm->unlock();
-    }   // end for
-
-    rset = sset;
-    return !rset.empty();   // Success if at least one detection
+    return !fvs.empty();
 }   // end doAction
 
 
-void ActionDetectFace::doAfterAction( ChangeEventSet& cset, const FaceControlSet& rset, bool v)
+void ActionDetectFace::doAfterAction( EventSet& cset, const FVS& rset, bool v)
 {
-    if ( !_failSet.empty()) // Warn failure
+    if ( !v) // Warn failure
     {
         QString msg = tr("Face detection failed on the selected face! Move the face into a different position and try again.");
         if ( !rset.empty())
             msg = tr("Face detection failed on one of the selected faces! Move the faces into a different position and try again.");
         QMessageBox::warning(_parent, tr("Face Detection Failed!"), msg);
     }   // end if
-    _failSet.clear();
-    cset.insert(LANDMARKS_CHANGE);
     cset.insert(ORIENTATION_CHANGE);
+    cset.insert(LANDMARKS_CHANGE);
 }   // end doAfterAction

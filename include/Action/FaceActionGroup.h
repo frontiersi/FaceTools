@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,8 +64,8 @@ private:
     std::unordered_map<std::string, FaceAction*> _actions;
     QList<FaceAction*> _alist;
 
-    FaceActionGroup( const FaceActionGroup&);   // No copy
-    void operator=( const FaceActionGroup&);    // No copy
+    FaceActionGroup( const FaceActionGroup&) = delete;
+    void operator=( const FaceActionGroup&) = delete;
 };  // end class
 
 }   // end namespace

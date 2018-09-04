@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ PathSetView::PathSetView( const PathSet::Ptr paths) : _paths(paths), _viewer(nul
 // public
 PathSetView::~PathSetView()
 {
-    std::for_each( std::begin(_pviews), std::end(_pviews), [](auto p){ delete p.second;});
+    std::for_each( std::begin(_views), std::end(_views), [](auto p){ delete p.second;});
 }   // end dtor
 
 
@@ -51,33 +51,45 @@ void PathSetView::setVisible( bool enable, ModelViewer *viewer)
         showPath( false, *_visible.begin());
     _viewer = viewer;
     if ( enable && _viewer)
-        std::for_each( std::begin(_pviews), std::end(_pviews), [this](auto p){ this->showPath(true, p.first);});
+        std::for_each( std::begin(_views), std::end(_views), [this](auto p){ this->showPath(true, p.first);});
 }   // end setVisible
 
 
 // public
 void PathSetView::showPath( bool enable, int id)
 {
-    assert( _pviews.count(id) > 0);
-    _pviews.at(id)->setVisible( enable, _viewer);
+    assert( _views.count(id) > 0);
+    _views.at(id)->setVisible( enable, _viewer);
     _visible.erase(id);
-    if ( isPathVisible(id))
+    if ( enable)
         _visible.insert(id);
 }   // end showPath
 
 
 // public
-bool PathSetView::isPathVisible( int id) const { return _pviews.at(id)->isVisible();}
+bool PathSetView::isPathVisible( int id) const { return _visible.count(id) > 0;}
 const std::unordered_set<int>& PathSetView::visible() const { return _visible;}
 
 
 // public
 PathView::Handle* PathSetView::addPath( int id)
 {
+    if ( _views.count(id) > 0)
+    {
+        std::cerr << "[WARNING] FaceTools::Vis::PathSetView::addPath: Trying to add path but PathView already present!" << std::endl;
+        return _views.at(id)->handle0();
+    }   // end if
+
     const Path* path = _paths->path(id);
     assert(path);
-    PathView* pv = new PathView( *path);
-    _pviews[id] = pv;
+    if ( !path)
+    {
+        std::cerr << "[ERROR] FaceTools::Vis::PathSetView::addPath: Path data doesn't exist for path ID " << id << std::endl;
+        return nullptr;
+    }   // end if
+
+    PathView* pv = new PathView( id, path->vtxs);
+    _views[id] = pv;
     // Map handle props to the handles themselves for fast lookup.
     _handles[pv->handle0()->prop()] = pv->handle0();
     _handles[pv->handle1()->prop()] = pv->handle1();
@@ -99,8 +111,8 @@ PathView::Handle* PathSetView::handle( const vtkProp* prop) const
 PathView* PathSetView::pathView( int id) const
 {
     PathView* pv = nullptr;
-    if ( _pviews.count(id) > 0)
-        pv = _pviews.at(id);
+    if ( _views.count(id) > 0)
+        pv = _views.at(id);
     return pv;
 }   // end pathView
 
@@ -108,39 +120,48 @@ PathView* PathSetView::pathView( int id) const
 // public
 void PathSetView::updatePath( int id)
 {
+    assert(id >= 0);
     if ( _paths->has(id))
     {
-        assert(_pviews.count(id) > 0);
-        _pviews.at(id)->update();
+        if ( _views.count(id) == 0)
+            addPath(id);
+        else
+            _views.at(id)->update( _paths->path(id)->vtxs);
+        showPath( true, id);
     }   // end if
-    else if (_pviews.count(id) > 0)
-    {   // Delete the path if no longer in the dataset and was shown previously
+    else if (_views.count(id) > 0)
+    {   // Delete the path if no longer in the dataset
         showPath(false, id);
-        PathView* pv = _pviews.at(id);
+        PathView* pv = _views.at(id);
         _handles.erase(pv->handle0()->prop());
         _handles.erase(pv->handle1()->prop());
-        _pviews.erase(id);
+        _views.erase(id);
         delete pv;
     }   // end else if
 }   // end updatePath
 
 
 // public
-void PathSetView::updatePaths()
-{
-    std::for_each( std::begin(_pviews), std::end(_pviews), [this](auto p){ this->updatePath(p.first);});
-}   // end updatePaths
-
-
-// public
 void PathSetView::pokeTransform( const vtkMatrix4x4* m)
 {
-    std::for_each( std::begin(_pviews), std::end(_pviews), [=](auto p){ p.second->pokeTransform(m);});
+    std::for_each( std::begin(_views), std::end(_views), [=](auto p){ p.second->pokeTransform(m);});
 }   // end pokeTransform
 
 
 // public
 void PathSetView::fixTransform()
 {
-    std::for_each( std::begin(_pviews), std::end(_pviews), [=](auto p){ p.second->fixTransform();});
+    std::for_each( std::begin(_views), std::end(_views), [=](auto p){ p.second->fixTransform();});
 }   // end fixTransform
+
+
+// public
+void PathSetView::refresh()
+{
+    std::unordered_set<int> pids;   // Will be union of path IDs both currently visualised and not.
+    std::for_each( std::begin(_views), std::end(_views), [&](auto p){ pids.insert(p.first);});
+    // Add the current path IDs in from the data
+    std::for_each( std::begin(_paths->ids()), std::end(_paths->ids()), [&](int p){ pids.insert(p);});
+    // Run updatePath for all pids
+    std::for_each( std::begin(pids), std::end(pids), [this](int p){ this->updatePath(p);});
+}   // end refresh

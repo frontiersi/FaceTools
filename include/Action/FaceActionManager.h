@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,49 +41,46 @@ namespace Action {
 class FaceTools_EXPORT FaceActionManager : public QObject
 { Q_OBJECT
 public:
-    FaceActionManager( FaceModelViewer *defaultViewer, size_t llimit=UINT_MAX, QWidget* parent=nullptr);
+    FaceActionManager( FMV *defaultViewer, size_t llimit=UINT_MAX, QWidget* parent=nullptr);
     ~FaceActionManager() override;
 
-    void addViewer( FaceModelViewer* v) { _interactions->addViewer(v);}
+    void addViewer( FMV* v) { _interactions->addViewer(v);}
 
     void loadPlugins();                     // Call once after construction and connecting slots to signals
     QDialog* dialog() { return _pdialog;}   // Get a standard dialog which shows the loaded plugins.
     QAction* addAction( FaceAction*);       // Return added action's QAction if added okay (duplicates not allowed).
 
-    // Get the selector for programmatic selection of FaceControl instances.
+    // Get the selector for programmatic selection of Vis::FV instances.
     ModelSelector* selector() { return &_selector;}
 
     FileIO::FaceModelManager* modelManager() { return _fmm;}
 
-    // Returns the visualisations manager which determines the selection exclusivity
-    // of visualisations and allows clients to add the corresponding actions to widgets.
-    const VisualisationsManager& visualisations() const { return _vman;}
+    QList<QAction*> visualisations() const { return _vman->actions();}
 
 signals:
     void addedActionGroup( FaceActionGroup*);
     void addedAction( FaceAction*);
-    void onUpdateSelected( FaceControl*);
+    void onUpdateSelected( Vis::FV*);
 
 private slots:
     void addPlugin( QTools::PluginInterface*);
     void doOnActionStarting();
-    void doOnChangedData( FaceControl*);
-    void doOnActionFinished( ChangeEventSet, FaceControlSet, bool);
+    void doOnChangedData( Vis::FV*);
+    void doOnActionFinished( EventSet, FVS, bool);
 
 private:
     QTools::PluginsDialog *_pdialog;
     FileIO::FaceModelManager *_fmm;
     Interactor::ViewerInteractionManager *_interactions;
+    VisualisationsManager *_vman;
     ModelSelector _selector;
     std::unordered_set<FaceAction*> _actions;
-    VisualisationsManager _vman;
     ActionExecutionQueue _aqueue;
     QMutex _mutex;
 
-    void processFinishedAction( FaceAction*, ChangeEventSet*, FaceControlSet*);
-    void testPurge( FaceAction*, const ChangeEventSet*, const FaceModelSet*);
-    void setReady( FaceControl*, bool);
-    void close( FaceModel*);
+    void processFinishedAction( FaceAction*, EventSet&, FVS&);
+    void setReady( Vis::FV*, bool);
+    void close( FM*);
 
     FaceActionManager( const FaceActionManager&) = delete;
     void operator=( const FaceActionManager&) = delete;

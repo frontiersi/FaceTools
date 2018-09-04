@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,12 +20,12 @@
 
 /**
  * ModelSelectInteractor is an interaction handler that allows the user to select a single
- * FaceControl with onSelected fired for (de)selection events. Select models with left or
+ * FaceView with onSelected fired for (de)selection events. Select models with left or
  * right clicks.
  */
 
 #include "ModelViewerInteractor.h"
-#include <FaceControlSet.h>
+#include <FaceViewSet.h>
 
 namespace FaceTools {
 namespace Interactor {
@@ -35,29 +35,29 @@ class FaceTools_EXPORT ModelSelectInteractor : public ModelViewerInteractor
 public:
     ModelSelectInteractor();
 
-    void add( FaceControl*);    // Adds to available for selection and fires onSelected.
-    void remove( FaceControl*); // Removes from available for selection and fires onSelected.
+    void add( Vis::FV*);    // Adds to available for selection - does NOT fire onSelected.
+    void remove( Vis::FV*); // Removes from available for selection and fires onSelected if FV was selected.
 
-    void setSelected( FaceControl*, bool);  // Mark given model as (de)selected and fire onSelected.
+    void setSelected( Vis::FV*, bool);  // Mark given model as (de)selected and fire onSelected.
 
-    inline bool isSelected( FaceControl* fc) const { return fc == _selected;}
-    inline bool isAvailable( FaceControl* fc) const { return _available.has(fc);}
+    inline bool isSelected( Vis::FV* fv) const { return fv == _selected;}
+    inline bool isAvailable( Vis::FV* fv) const { return _available.has(fv);}
 
-    const FaceControlSet& available() const { return _available;}   // Returns view/control instances available to select.
-    FaceControl* selected() const { return _selected;}
+    const FVS& available() const { return _available;}   // Returns view/control instances available to select.
+    Vis::FV* selected() const { return _selected;}
 
 signals:
-    void onSelected( FaceControl*, bool);   // Fired selection / deselection of a model.
+    void onSelected( Vis::FV*, bool);   // Fired selection / deselection of a model.
 
 private:
-    FaceControl* _selected;
-    FaceControlSet _available;
+    Vis::FV* _selected;
+    FVS _available;
 
     bool leftButtonDown( const QPoint&) override;
     bool rightButtonDown( const QPoint&) override;
     bool leftDoubleClick( const QPoint&) override;
     void eraseSelected();
-    FaceControl* underPoint( const QPoint&) const;
+    Vis::FV* underPoint( const QPoint&) const;
 };  // end class
 
 }   // end namespace

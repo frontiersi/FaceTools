@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,22 +16,18 @@
  ************************************************************************/
 
 #include <ModelEntryExitInteractor.h>
-#include <LandmarksVisualisation.h>
 #include <FaceModelViewer.h>
-#include <FaceControl.h>
 #include <FaceView.h>
 #include <cassert>
 using FaceTools::Interactor::ModelEntryExitInteractor;
 using FaceTools::Interactor::ModelViewerInteractor;
-using FaceTools::FaceModelViewer;
-using FaceTools::FaceControl;
-using FaceTools::Vis::BaseVisualisation;
-using FaceTools::Vis::LandmarksVisualisation;
+using FaceTools::Vis::FV;
+using FaceTools::FMV;
 
 
 // public
 ModelEntryExitInteractor::ModelEntryExitInteractor()
-    : _mnow(nullptr), _lnow(-1), _ldown(false)
+    : _mnow(nullptr), _pnow(nullptr), _ldown(false)
 {
 }   // end ctor
 
@@ -53,9 +49,9 @@ void ModelEntryExitInteractor::onAttached()
 void ModelEntryExitInteractor::onDetached()
 {
     _viewer = nullptr;
-    testLeaveLandmark(nullptr,-1);
+    testLeaveProp(nullptr, nullptr);
     testLeaveModel();
-    _lnow = -1;
+    _pnow = nullptr;
 }   // end onDetached
 
 
@@ -94,56 +90,53 @@ bool ModelEntryExitInteractor::leftButtonUp( const QPoint&)
 // private
 bool ModelEntryExitInteractor::testPoint( const QPoint& p)
 {
-    const vtkProp* prop = _viewer->getPointedAt(p);     // The prop pointed at
-    FaceControl* fc = _viewer->attached().find(prop);   // The FaceControl that the prop belongs to (if any)
+    const vtkProp* pnow = _viewer->getPointedAt(p);     // The prop pointed at (may not be on current model)
+    FV* fv = _viewer->attached().find(pnow);            // The FaceControl that the prop belongs to (if any)
 
-    int lnow = -1;  // Will be the ID of the landmark pointed at now (may not be on current model)
-    if ( fc)
+    testLeaveProp( fv, pnow);
+
+    if ( _mnow != fv)
     {
-        const BaseVisualisation* vis = fc->view()->belongs(prop);
-        if ( vis)
+        testLeaveModel();
+        _mnow = fv; // Must be updated before signal fired!
+        if ( fv)    // Inform entering model
         {
-            const LandmarksVisualisation* lvis = qobject_cast<const LandmarksVisualisation*>(vis);
-            if ( lvis)  // Cast only works if prop pointed at was a landmark
-                lnow = lvis->landmarkProp( fc, prop);
+            //std::cerr << "Entered model" << std::endl;
+            emit onEnterModel( fv);
         }   // end if
     }   // end if
 
-    testLeaveLandmark( fc, lnow);
-
-    if ( _mnow != fc)
+    if ( _pnow != pnow)
     {
-        testLeaveModel();
-        _mnow = fc; // Must be updated before signal fired!
-        if ( fc)    // Inform entering model
-            emit onEnterModel( fc);
-    }   // end if
-
-    if ( _lnow != lnow)
-    {
-        _lnow = lnow;   // Must be updated before signal is fired!
-        if ( lnow >= 0) // Inform entering landmark
-            emit onEnterLandmark( fc, lnow);
+        _pnow = pnow;   // Must be updated before signal is fired!
+        if ( pnow)      // Inform entering prop
+        {
+            //std::cerr << "Entered prop (model is " << fv << ") " << "viewer has " << _viewer->attached().size() << " FVs" << std::endl;
+            assert(fv);
+            emit onEnterProp( fv, pnow);
+        }   // end if
     }   // end if
 
     return false;
 }   // end testPoint
 
 
-void ModelEntryExitInteractor::testLeaveLandmark( FaceControl* fc, int lnow)
+void ModelEntryExitInteractor::testLeaveProp( FV* fv, const vtkProp* pnow)
 {
-    if ( _lnow >= 0 && (_lnow != lnow || _mnow != fc))  // Leave previous landmark?
+    if ( _pnow && (_pnow != pnow || _mnow != fv))  // Leave previous prop?
     {
+        //std::cerr << "Leaving prop (model is " << _mnow << ")" << std::endl;
         assert( _mnow);
-        emit onLeaveLandmark( _mnow, _lnow);
+        emit onLeaveProp( _mnow, _pnow);
     }   // end if
-}   // end testLeaveLandmark
+}   // end testLeaveProp
 
 
 void ModelEntryExitInteractor::testLeaveModel()
 {
     if ( _mnow) // Inform leaving model
     {
+        //std::cerr << "Leaving model " << _mnow << std::endl;
         emit onLeaveModel( _mnow);
         _mnow = nullptr;
     }   // end if

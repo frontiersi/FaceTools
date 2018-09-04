@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,21 +16,20 @@
  ************************************************************************/
 
 #include <ActionAddLandmark.h>
-#include <FaceControl.h>
 #include <FaceModel.h>
+#include <FaceView.h>
 #include <FaceTools.h>
-#include <ChangeEvents.h>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <cassert>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionAddLandmark;
 using FaceTools::Action::ActionEditLandmarks;
-using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::EventSet;
 using FaceTools::Interactor::LandmarksInteractor;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
-using FaceTools::FaceModel;
+using FaceTools::FVS;
+using FaceTools::Vis::FV;
+using FaceTools::FM;
 
 
 ActionAddLandmark::ActionAddLandmark( const QString& dn, const QIcon& ico, ActionEditLandmarks* e, QWidget *parent)
@@ -41,32 +40,21 @@ ActionAddLandmark::ActionAddLandmark( const QString& dn, const QIcon& ico, Actio
 
 bool ActionAddLandmark::testEnabled( const QPoint*) const
 {
-    // Allow adding only if model being hovered over is same as selected
-    // and no landmark is currently hovered over and editing is enabled.
-    LandmarksInteractor* interactor = _editor->interactor();
-    const FaceControl* fc = interactor->hoverModel();
-    return isReady( fc) && interactor->hoverID() < 0;
+    const bool g = _editor->interactor()->hoverId() < 0;
+    const FV* fv = _editor->interactor()->hoverModel();
+    return isReady( fv) && g;
 }   // end testEnabled
 
 
-bool ActionAddLandmark::doBeforeAction( FaceControlSet&, const QPoint&)
-{
-    if ( !_editor->isChecked())
-        _editor->process( ready(), true);   // Flip the visualisation on if not already
-    return true;
-}   // end doBeforeAction
-
-
-bool ActionAddLandmark::doAction( FaceControlSet& fcs, const QPoint& p)
+bool ActionAddLandmark::doAction( FVS& fvs, const QPoint& p)
 {
     assert(_editor);
-    LandmarksInteractor* interactor = _editor->interactor();
-    FaceControl* fc = fcs.first();
-    assert(fc);
-    fcs.clear();
+    FV* fv = fvs.first();
+    assert(fv);
+    fvs.clear();
 
-    FaceModel *fm = fc->data();
-    fm->lockForRead();
+    FM* fm = fv->data();
+    //fm->lockForWrite();
 
     // Get the name for the new landmark
     QString lname;
@@ -91,15 +79,19 @@ bool ActionAddLandmark::doAction( FaceControlSet& fcs, const QPoint& p)
             break;
     }   // end while
 
-    fm->unlock();
-
     int id = -1;
     if ( !lname.isEmpty())
     {
-        id = interactor->addLandmark( lname.toStdString(), p);
-        if ( id >= 0)
-            fcs.insert( fm);
+        cv::Vec3f hpos; // Get landmark position by projecting to model surface
+        if ( fv->projectToSurface(p, hpos))
+        {
+            id = fm->landmarks()->set( lname.toStdString(), hpos);
+            fm->setSaved(false);
+            fvs.insert( fm);
+        }   // end if
     }   // end if
+
+    //fm->unlock();
 
     return id >= 0;
 }   // end doAction

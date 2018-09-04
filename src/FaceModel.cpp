@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,17 +16,19 @@
  ************************************************************************/
 
 #include <FaceModel.h>
-#include <FaceControl.h>
 #include <FaceModelViewer.h>
+#include <BaseVisualisation.h>
+#include <ObjModelSurfacePointFinder.h>
 #include <FaceTools.h>
-#include <FaceView.h>
 #include <VtkTools.h>       // RVTK
 #include <algorithm>
 #include <cassert>
 using FaceTools::PathSet;
 using FaceTools::FaceModel;
 using FaceTools::LandmarkSet;
-using FaceTools::FaceModelViewer;
+using FaceTools::FMVS;
+using FaceTools::Vis::VisualisationLayers;
+using FaceTools::Vis::BaseVisualisation;
 using RFeatures::ObjModelKDTree;
 using RFeatures::ObjModelInfo;
 using RFeatures::ObjModel;
@@ -75,11 +77,31 @@ std::vector<cv::Vec3d> toPoints( const cv::Vec6d& bds)
     return pts;
 }   // end toPoints
 
+
+// Find and return index to largest rectangular volume from the given vector of bounds.
+int findLargest( const std::vector<cv::Vec6d>& bounds)
+{
+    int j = 0;
+    double maxA = 0;    // Max area
+    int n = (int)bounds.size();
+    for ( int i = 0; i < n; ++i)
+    {
+        const cv::Vec6d& b = bounds[i];
+        double a = (b[1] - b[0]) * (b[3] - b[2]) * (b[5] - b[4]);
+        if ( a > maxA)
+        {
+            maxA = a;
+            j = i;
+        }   // end if
+    }   // end for
+    return j;
+}   // end findLargest
+
 }   // end namespace
 
 
 FaceModel::FaceModel( RFeatures::ObjModelInfo::Ptr minfo)
-    : _saved(false), _description(""), _source("")
+    : _saved(false), _description(""), _source(""), _centreSet(false), _centre(0,0,0)
 {
     assert(minfo);
     _landmarks = LandmarkSet::create();
@@ -89,7 +111,7 @@ FaceModel::FaceModel( RFeatures::ObjModelInfo::Ptr minfo)
 
 
 FaceModel::FaceModel()
-    : _saved(false), _description(""), _source("")
+    : _saved(false), _description(""), _source(""), _centreSet(false), _centre(0,0,0)
 {
     _landmarks = LandmarkSet::create();
     _paths = PathSet::create();
@@ -112,7 +134,7 @@ bool FaceModel::update( ObjModelInfo::Ptr nfo)
 
     _kdtree = ObjModelKDTree::create( _minfo->cmodel());
     FaceTools::translateLandmarksToSurface( _kdtree, _landmarks);   // Ensure landmarks remapped to surface
-    _paths->recalculate( _kdtree);                             // Ensure stored paths remap to the new surface.
+    _paths->recalculate( _kdtree);                                  // Ensure stored paths remap to the new surface.
     calculateBounds();
 
     _saved = false;
@@ -129,6 +151,8 @@ void FaceModel::transform( const cv::Matx44d& m)
     _paths->transform(m);       // Transform the paths
     RFeatures::Transformer transformer(m);
     transformer.transform( _minfo->model()); // Adjust vertices of the model in-place
+    transformer.transform( _centre);    // Transform the centre point in-place
+
     _minfo->rebuildInfo();
     _kdtree = ObjModelKDTree::create( _minfo->cmodel());
 
@@ -137,14 +161,62 @@ void FaceModel::transform( const cv::Matx44d& m)
     calculateBounds();
 
     vtkSmartPointer<vtkMatrix4x4> vm = RVTK::toVTK(m);
-    for ( FaceControl* fc : _fcs)
-    {
-        fc->view()->pokeTransform( vm);
-        fc->view()->fixTransform(); // "Hard" transform of VTK data.
-    }   // end for
-
+    pokeTransform( vm);
+    fixTransform( vm);  // Fix the transform across all actors associated with this model.
     _saved = false;
 }   // end transform
+
+
+// public
+void FaceModel::pokeTransform( vtkMatrix4x4* m)
+{
+    // Get all of the layers. We do this instead of allowing each FaceView to poke its own
+    // layers because some layers are currently unapplied for some FaceViews. However, we
+    // still need to poke the main actor in the FaceView.
+    VisualisationLayers vlayers;
+    for ( Vis::FV* fv : _fvs)
+    {
+        fv->actor()->PokeMatrix(m);
+        const VisualisationLayers& vl = fv->visualisations();
+        vlayers.insert( std::begin(vl), std::end(vl));
+    }   // end for
+    for ( BaseVisualisation* vis : vlayers)
+        std::for_each( std::begin(_fvs), std::end(_fvs), [=]( Vis::FV* fv){ vis->pokeTransform( fv, m);});
+}   // end pokeTransform
+
+
+// private
+void FaceModel::fixTransform( vtkMatrix4x4* m)
+{
+    VisualisationLayers vlayers;
+    for ( Vis::FV* fv : _fvs)
+    {
+        RVTK::transform( fv->actor(), m);
+        const VisualisationLayers& vl = fv->visualisations();
+        vlayers.insert( std::begin(vl), std::end(vl));
+    }   // end for
+    for ( BaseVisualisation* vis : vlayers)
+        std::for_each( std::begin(_fvs), std::end(_fvs), [=]( Vis::FV* fv){ vis->fixTransform( fv);});
+
+    // Probably not needed
+    vtkNew<vtkMatrix4x4> I;
+    I->Identity();
+    pokeTransform( I);
+}   // end fixTransform
+
+
+// public
+cv::Vec3f FaceModel::findClosestSurfacePoint( const cv::Vec3f& v) const
+{
+    int notused;
+    cv::Vec3f fv;
+    lockForRead();
+    const RFeatures::ObjModelSurfacePointFinder spfinder( _kdtree->model());
+    int vidx = _kdtree->find(v);
+    spfinder.find( v, vidx, notused, fv);
+    unlock();
+    return fv;
+}   // end findClosestSurfacePoint
 
 
 // private
@@ -157,6 +229,12 @@ void FaceModel::calculateBounds()
     _cbounds.resize(nc);
     for ( int c = 0; c < nc; ++c)
         _cbounds[c] = getComponentBounds( _minfo->cmodel(), *components.componentBounds(c));
+
+    if ( !centreSet())
+    {   // calculate centre of largest component.
+        const cv::Vec6d& bd = _cbounds[ findLargest( _cbounds)];
+        _centre = cv::Vec3f( (bd[0] + bd[1])/2, (bd[2] + bd[3])/2, (bd[4] + bd[5])/2);
+    }   // end if
 }   // end calculateBounds
 
 
@@ -177,7 +255,7 @@ bool FaceModel::hasMetaData() const
 // public
 void FaceModel::updateRenderers() const
 {
-    FaceViewerSet fvs = _fcs.viewers();
+    FMVS fvs = _fvs.viewers();
     std::for_each( std::begin(fvs), std::end(fvs), [](auto v){ v->updateRender();});
 }   // end updateRenderers
 
@@ -193,3 +271,5 @@ double FaceModel::translateToSurface( cv::Vec3f& pos) const
     pos = fv;
     return sdiff;
 }   // end translateToSurface
+
+

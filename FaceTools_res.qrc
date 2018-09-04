@@ -14,10 +14,7 @@
     <file alias="COPY_LEFT">res/icons/icons8-new-copy-80.png</file>
     <file alias="COPY_RIGHT">res/icons/icons8-new-copy-80.png</file>
 
-    <file alias="TEXTURE_VIS">res/icons/icons8-cloth-80.png</file>
-    <file alias="SURFACE_VIS">res/icons/icons8-mesh-filled-80.png</file>
-    <file alias="WIREFRAME_VIS">res/icons/icons8-mesh-80.png</file>
-    <file alias="POINTS_VIS">res/icons/icons8-mesh-dots-80.png</file>
+    <file alias="TEXTURE">res/icons/if_stock_3d-material_29242.png</file>
 </qresource>
 </RCC>
 

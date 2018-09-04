@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,34 +31,23 @@ public:
 
     // Get the ID of the landmark being hovered over (if any).
     // Returns -1 if no handle hovered over. Use hoverModel() to get associated model.
-    int hoverID() const { return _hover;}
-    FaceControl* hoverModel() const { return _meei->model();}
-
-    // Add a landmark on the hover model at the given coords with the given label.
-    // Client should check for existing landmarks first before deciding to create a new one.
-    // Return id of the newly added landmark or -1 if no landmark could be created
-    // (e.g. if the given coords are not on the model).
-    int addLandmark( const std::string&, const QPoint&);
-
-    // Deletes the landmark returned by hoverID returning true on success.
-    bool deleteLandmark();
-
-protected:
-    void onEnabledStateChanged( bool v);
+    inline int hoverId() const { return _hover;}
+    inline Vis::FV* hoverModel() const { return _meei->model();}
 
 private slots:
-    void doOnEnterLandmark( const FaceControl*, int);
-    void doOnLeaveLandmark( const FaceControl*, int);
+    void doOnEnterLandmark( const Vis::FV*, int);
+    void doOnLeaveLandmark( const Vis::FV*, int);
 
 private:
     bool leftButtonDown( const QPoint&) override;
     bool leftButtonUp( const QPoint&) override;
     bool leftDrag( const QPoint&) override;
+    void onEnabledStateChanged( bool v);
 
     MEEI *_meei;
     Vis::LandmarksVisualisation *_vis;
     int _drag, _hover;  // IDs of the landmarks being dragged and hovered over.
-    FaceControl* _model;
+    Vis::FV* _view;
     static const QString s_defaultMsg;
     static const QString s_moveMsg;
 };  // end class

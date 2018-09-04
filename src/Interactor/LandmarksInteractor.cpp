@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,82 +22,82 @@
 #include <cassert>
 using FaceTools::Interactor::LandmarksInteractor;
 using FaceTools::Interactor::ModelViewerInteractor;
+using FaceTools::Interactor::MEEI;
 using FaceTools::Vis::LandmarksVisualisation;
 using FaceTools::Vis::LandmarkSetView;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
-using FaceTools::FaceModel;
+using FaceTools::Vis::FV;
+using FaceTools::FM;
 using FaceTools::Path;
 
 
-const QString LandmarksInteractor::s_defaultMsg( QObject::tr("Add/remove/rename landmarks from the context menu; reposition by left-click and dragging."));
+const QString LandmarksInteractor::s_defaultMsg(
+        QObject::tr("Add/remove/rename landmarks from the context menu."));
 
-const QString LandmarksInteractor::s_moveMsg( QObject::tr("Reposition with left-click and drag; right click to remove/rename the landmark."));
+const QString LandmarksInteractor::s_moveMsg(
+        QObject::tr("Reposition landmark by left-click and dragging; right click to remove/rename the landmark."));
 
 // public
 LandmarksInteractor::LandmarksInteractor( MEEI* meei, LandmarksVisualisation* vis, QStatusBar* sbar)
-    : ModelViewerInteractor( nullptr, sbar), _meei(meei), _vis(vis), _drag(-1), _hover(-1), _model(nullptr)
+    : ModelViewerInteractor( nullptr, sbar), _meei(meei), _vis(vis), _drag(-1), _hover(-1), _view(nullptr)
 {
-    connect( meei, &MEEI::onEnterLandmark, this, &LandmarksInteractor::doOnEnterLandmark);
-    connect( meei, &MEEI::onLeaveLandmark, this, &LandmarksInteractor::doOnLeaveLandmark);
+    connect( meei, &MEEI::onEnterProp, [this](FV* fv, const vtkProp* p){ this->doOnEnterLandmark(fv, _vis->landmarkProp(fv, p));});
+    connect( meei, &MEEI::onLeaveProp, [this](FV* fv, const vtkProp* p){ this->doOnLeaveLandmark(fv, _vis->landmarkProp(fv, p));});
     setEnabled(false);
 }   // end ctor
 
 
-// public
-int LandmarksInteractor::addLandmark( const std::string& lname, const QPoint& p)
+// private slot
+void LandmarksInteractor::doOnEnterLandmark( const FV* fv, int lm)
 {
-    FaceControl *fc = hoverModel();
-    if ( !fc)
-        return -1;
+    if ( lm < 0)
+        return;
 
-    cv::Vec3f hpos; // Get the position of the new landmark by projecting p onto the surface of the model.
-    if ( !viewer()->calcSurfacePosition( fc->view()->surfaceActor(), p, hpos))
-        return -1;
-
-    FaceModel* fm = fc->data();
-    fm->lockForWrite(); // Add landmark
-    int id = fm->landmarks()->set( lname, hpos);
-    fm->setSaved(false);
-    _vis->updateLandmark( fm, id);
-    _vis->setLandmarkVisible( fm, id, true);
-    fm->unlock();
-
-    return id;
-}   // end addLandmark
+    _hover = lm;
+    FM* fm = fv->data();
+    _vis->updateLandmark( fm, lm);
+    _vis->setLandmarkHighlighted( fm, lm, true);
+    showStatus( s_moveMsg, 10000);
+    fm->updateRenderers();
+}   // end doOnEnterLandmark
 
 
-// public
-bool LandmarksInteractor::deleteLandmark()
+// private slot
+void LandmarksInteractor::doOnLeaveLandmark( const FV* fv, int lm)
 {
-    int id = _hover;
-    if ( id < 0)
-        return false;
+    if ( _hover < 0)
+        return;
 
-    FaceControl *fc = hoverModel();
-    assert(fc);
+    FM* fm = fv->data();
+    if ( _drag < 0 && lm >= 0)
+    {
+        _vis->setLandmarkHighlighted( fm, _hover, false);
+        fm->updateRenderers();
+        showStatus( s_defaultMsg, 10000);
+    }   // end if
+    _hover = -1;
+}   // end doOnLeaveLandmark
 
-    FaceModel* fm = fc->data();
-    fm->lockForWrite();
-    const bool removed = fm->landmarks()->erase(id);
-    assert(removed);
-    fm->setSaved(false);
-    _vis->updateLandmark( fm, id);
-    fm->unlock();
 
-    _drag = -1;
-    return true;
-}   // end deleteLandmark
+// protected
+void LandmarksInteractor::onEnabledStateChanged( bool v)
+{
+    ModelViewerInteractor::onEnabledStateChanged(v);
+    if ( v)
+        showStatus( s_defaultMsg, 10000);
+    else
+        clearStatus();
+}   // end onEnabledStateChanged
+
 
 
 bool LandmarksInteractor::leftButtonDown( const QPoint& p)
 {
     _drag = _hover;
-    _model = hoverModel();
+    _view = hoverModel();
     if ( _drag >= 0)
     {
         viewer()->setCursor(Qt::CrossCursor);
-        _vis->setLandmarkHighlighted( _model->data(), _drag, true);
+        _vis->setLandmarkHighlighted( _view->data(), _drag, true);
         showStatus( s_moveMsg, 10000);
     }   // end if
     return _drag >= 0;
@@ -109,11 +109,11 @@ bool LandmarksInteractor::leftButtonUp( const QPoint& p)
     viewer()->setCursor(Qt::ArrowCursor);
     if ( _drag >= 0)
     {
-        _vis->setLandmarkHighlighted( _model->data(), _drag, false);
-        assert(_model);
-        emit onChangedData(_model);
+        _vis->setLandmarkHighlighted( _view->data(), _drag, false);
+        assert(_view);
+        emit onChangedData(_view);
     }   // end if
-    _model = hoverModel();
+    _view = hoverModel();
     _drag = -1;
     return false;
 }   // end leftButtonUp
@@ -121,59 +121,19 @@ bool LandmarksInteractor::leftButtonUp( const QPoint& p)
 
 bool LandmarksInteractor::leftDrag( const QPoint& p)
 {
-    if ( !_model || _drag < 0)
+    if ( !_view || _drag < 0)
         return false;
 
-    FaceControl *fc = _model;
-    // Get the position on the surface of the actor
-    cv::Vec3f hpos;
-    if ( !viewer()->calcSurfacePosition( fc->view()->surfaceActor(), p, hpos))
+    FV *fv = _view;
+    cv::Vec3f hpos; // Get the position on the surface of the actor
+    if ( !fv->projectToSurface( p, hpos))
         return false;
 
     // Update the position of the landmark
-    FaceModel* fm = fc->data();
-    fm->lockForWrite();
+    FM* fm = fv->data();
     const bool setok = fm->landmarks()->set(_drag, hpos);
     assert(setok);
     _vis->updateLandmark( fm, _drag);
-    fm->unlock();
     fm->updateRenderers();
     return true;
 }   // end leftDrag
-
-
-// private slot
-void LandmarksInteractor::doOnEnterLandmark( const FaceControl* fc, int lm)
-{
-    assert( fc);
-    assert( fc == hoverModel());
-    FaceModel* fm = fc->data();
-    _hover = lm;
-    _vis->updateLandmark( fm, lm);
-    _vis->setLandmarkHighlighted( fm, lm, true);
-    showStatus( s_moveMsg, 10000);
-    fm->updateRenderers();
-}   // end doOnEnterLandmark
-
-
-// protected
-void LandmarksInteractor::onEnabledStateChanged( bool v)
-{
-    ModelViewerInteractor::onEnabledStateChanged(v);
-    if ( v)
-        showStatus( s_defaultMsg, 10000);
-}   // end onEnabledStateChanged
-
-
-// private slot
-void LandmarksInteractor::doOnLeaveLandmark( const FaceControl* fc, int lm)
-{
-    assert( fc);
-    assert( hoverModel() == fc);
-    FaceModel* fm = fc->data();
-    _hover = -1;
-    if ( _drag < 0)
-        _vis->setLandmarkHighlighted( fm, lm, false);
-    showStatus( s_defaultMsg, 10000);
-    fm->updateRenderers();
-}   // end doOnLeaveLandmark

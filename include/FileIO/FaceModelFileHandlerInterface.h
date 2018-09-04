@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,9 +20,6 @@
 
 #include <PluginInterface.h>    // QTools
 #include <FaceModel.h>          // FaceTools
-#include <Hashing.h>
-#include <unordered_set>
-typedef std::unordered_set<QString> QStringSet;
 
 namespace FaceTools {
 namespace FileIO {
@@ -53,8 +50,5 @@ public:
 
 }   // end namespace
 }   // end namespace
-
-#define FaceToolsFileIOPluginFaceModelFileHandlerInterface_iid "com.github.richeytastic.FaceTools.FileIO.v030.FaceModelFileHandlerInterface"
-Q_DECLARE_INTERFACE( FaceTools::FileIO::FaceModelFileHandlerInterface, FaceToolsFileIOPluginFaceModelFileHandlerInterface_iid)
 
 #endif

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,16 +16,18 @@
  ************************************************************************/
 
 #include <ActionSaveScreenshot.h>
+#include <FaceModelViewer.h>
 #include <FeatureUtils.h>
 #include <QImageTools.h>
 #include <algorithm>
 using FaceTools::Action::ActionSaveScreenshot;
 using FaceTools::Action::FaceAction;
-using FaceTools::FaceModelViewer;
-using FaceTools::FaceControlSet;
+using FaceTools::FMV;
+using FaceTools::Vis::FV;
+using FaceTools::FVS;
 
 
-ActionSaveScreenshot::ActionSaveScreenshot( const QString& dn, const QIcon& ico, const FaceModelViewer *mv)
+ActionSaveScreenshot::ActionSaveScreenshot( const QString& dn, const QIcon& ico, FMV *mv)
     : FaceAction( dn, ico)
 {
     if ( mv)
@@ -33,17 +35,17 @@ ActionSaveScreenshot::ActionSaveScreenshot( const QString& dn, const QIcon& ico,
 }   // end ctor
 
 
-bool ActionSaveScreenshot::doAction( FaceControlSet& fset, const QPoint&)
+bool ActionSaveScreenshot::doAction( FVS& fset, const QPoint&)
 {
     if ( _viewers.empty())
     {
-        for ( FaceControl* fc : fset)
-            fc->viewer()->saveScreenshot();
+        for ( FV* fv : fset)
+            fv->viewer()->saveScreenshot();
     }   // end if
     else
     {
         std::vector<cv::Mat> mimgs;
-        for ( const FaceModelViewer *v : _viewers)
+        for ( const FMV *v : _viewers)
         {
             if ( v->width() > 0 && v->height() > 0)
                 mimgs.push_back( v->grabImage());

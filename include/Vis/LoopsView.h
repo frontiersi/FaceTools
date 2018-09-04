@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,8 +18,8 @@
 #ifndef FACE_TOOLS_LOOPS_VIEW_H
 #define FACE_TOOLS_LOOPS_VIEW_H
 
+#include <FaceTypes.h>
 #include <ModelViewer.h>
-#include <Hashing.h>
 
 namespace FaceTools {
 namespace Vis {
@@ -28,6 +28,8 @@ class FaceTools_EXPORT LoopsView
 {
 public:
     LoopsView( float lineWidth=1.0f, float red=1.0f, float green=1.0f, float blue=1.0f);
+    LoopsView( const LoopsView&);
+    LoopsView& operator=( const LoopsView&);
     virtual ~LoopsView();
 
     void deleteActors();
@@ -56,10 +58,9 @@ private:
     bool _visible;
     float _lineWidth;
     cv::Vec3f _colour;
-    std::unordered_set<vtkActor*> _actors;
-
-    LoopsView( const LoopsView&) = delete;
-    void operator=( const LoopsView&) = delete;
+    std::vector<vtkActor*> _actors;
+    std::vector< std::list<cv::Vec3f> > _lines;
+    std::vector< std::vector<cv::Vec3f> > _points;
 };  // end class
 
 }   // end namespace

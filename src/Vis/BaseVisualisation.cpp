@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,22 +17,19 @@
 
 #include <BaseVisualisation.h>
 #include <FaceModelViewer.h>
-#include <FaceControl.h>
 #include <FaceModel.h>
 #include <FaceView.h>
 #include <vtkProperty.h>
 #include <vtkMapper.h>
 using FaceTools::Vis::BaseVisualisation;
-using FaceTools::Vis::SurfaceVisualisation;
-using FaceTools::Vis::PointsVisualisation;
 using FaceTools::Vis::WireframeVisualisation;
 using FaceTools::Vis::TextureVisualisation;
-using FaceTools::FaceControl;
-using FaceTools::FaceModel;
+using FaceTools::Vis::FV;
+using FaceTools::FM;
 
 
 BaseVisualisation::BaseVisualisation( const QString& dname, const QIcon& icon, const QKeySequence& keys)
-    : _dname(dname), _icon(NULL), _keys(NULL)
+    : _dname(dname), _icon(nullptr), _keys(nullptr)
 {
     _icon = new QIcon(icon);
     _keys = new QKeySequence(keys);
@@ -40,14 +37,14 @@ BaseVisualisation::BaseVisualisation( const QString& dname, const QIcon& icon, c
 
 
 BaseVisualisation::BaseVisualisation( const QString& dname, const QIcon& icon)
-    : _dname(dname), _icon(NULL), _keys(NULL)
+    : _dname(dname), _icon(nullptr), _keys(nullptr)
 {
     _icon = new QIcon(icon);
 }   // end ctor
 
 
 BaseVisualisation::BaseVisualisation( const QString& dname)
-    : _dname(dname), _icon(NULL), _keys(NULL)
+    : _dname(dname), _icon(nullptr), _keys(nullptr)
 {
 }   // end ctor
 
@@ -61,50 +58,11 @@ BaseVisualisation::~BaseVisualisation()
 }   // end dtor
 
 
-bool BaseVisualisation::isApplied( const FaceControl* fc) const { return fc->view()->isApplied(this);}
+void TextureVisualisation::apply( FV* fv, const QPoint*) { fv->setTextured(true);}
+void TextureVisualisation::remove( FV* fv) { fv->setTextured(false); }
+bool TextureVisualisation::belongs( const vtkProp *p, const FV* fv) const { return fv->actor() == p;}
+bool TextureVisualisation::isAvailable( const FM* fm) const { return fm->fvs().first()->canTexture();}
 
-
-bool SurfaceVisualisation::apply( const FaceControl* fc, const QPoint*)
-{
-    vtkActor* actor = fc->view()->surfaceActor();
-    actor->GetMapper()->SetScalarVisibility(false);
-    actor->GetProperty()->SetRepresentationToSurface();
-    fc->viewer()->showLegend(false);
-    return true;
-}   // end apply
-
-
-bool PointsVisualisation::apply( const FaceControl* fc, const QPoint*)
-{
-    SurfaceVisualisation::apply(fc);
-    fc->view()->surfaceActor()->GetProperty()->SetRepresentationToPoints();
-    return true;
-}   // end apply
-
-
-bool WireframeVisualisation::apply( const FaceControl* fc, const QPoint*)
-{
-    SurfaceVisualisation::apply(fc);
-    fc->view()->surfaceActor()->GetProperty()->SetRepresentationToWireframe();
-    return true;
-}   // end apply
-
-
-void SurfaceVisualisation::addActors( const FaceControl* fc) { fc->viewer()->add(fc->view()->surfaceActor());}
-void SurfaceVisualisation::removeActors( const FaceControl* fc) { fc->viewer()->remove(fc->view()->surfaceActor());}
-bool SurfaceVisualisation::belongs( const vtkProp *p, const FaceControl* fc) const { return fc->view()->surfaceActor() == p;}
-
-bool TextureVisualisation::apply( const FaceControl* fc, const QPoint*)
-{
-    fc->viewer()->showLegend(false);
-    return true;
-}   // end apply
-
-void TextureVisualisation::addActors( const FaceControl* fc) { fc->viewer()->add(fc->view()->textureActor());}
-void TextureVisualisation::removeActors( const FaceControl* fc) { fc->viewer()->remove(fc->view()->textureActor());}
-bool TextureVisualisation::belongs( const vtkProp *p, const FaceControl* fc) const { return fc->view()->textureActor() == p;}
-
-bool TextureVisualisation::isAvailable( const FaceModel* fm) const
-{
-    return fm->info()->cmodel()->getNumMaterials() == 1;
-}   // end isAvailable
+void WireframeVisualisation::apply( FV* fv, const QPoint*) { fv->setWireframe(true);}
+void WireframeVisualisation::remove( FV* fv) { fv->setWireframe(false);}
+bool WireframeVisualisation::belongs( const vtkProp *p, const FV* fv) const { return fv->actor() == p;}

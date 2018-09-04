@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,15 +17,14 @@
 
 #include <ActionAlignICP.h>
 #include <FaceModelViewer.h>
-#include <FaceControl.h>
 #include <FaceModel.h>
 #include <algorithm>
 #include <ObjModelAligner.h>
 using FaceTools::Action::ActionAlignICP;
-using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
+using FaceTools::FVS;
+using FaceTools::Vis::FV;
 using FaceTools::FaceModel;
 
 
@@ -40,17 +39,17 @@ ActionAlignICP::ActionAlignICP( const QString& dn, const QIcon& ico, QProgressBa
 bool ActionAlignICP::testEnabled( const QPoint*) const
 {
     // Enabled only if a single model is selected and its viewer has other models.
-    FaceControl* fc = ready1();
-    return fc && fc->viewer()->attached().size() >= 2;
+    const FV* fv = ready1();
+    return fv && fv->viewer()->attached().size() >= 2;
 }   // end testEnabled
 
 
-bool ActionAlignICP::doAction( FaceControlSet& rset, const QPoint&)
+bool ActionAlignICP::doAction( FVS& rset, const QPoint&)
 {
     assert(rset.size() == 1);
-    FaceControl* fc = rset.first();
-    FaceModel* sfm = fc->data();    
-    rset.erase(fc); // Won't actually do work on the source FaceControl!
+    FV* fv = rset.first();
+    FaceModel* sfm = fv->data();    
+    rset.erase(fv); // Won't actually do work on the source FaceView!
 
     // Get the source model to align against
     sfm->lockForRead();
@@ -58,14 +57,14 @@ bool ActionAlignICP::doAction( FaceControlSet& rset, const QPoint&)
     sfm->unlock();
 
     // In the same viewer, look at every other model and align to the source.
-    const FaceControlSet& aset = fc->viewer()->attached();
-    for ( FaceControl* fc : aset)
+    const FVS& aset = fv->viewer()->attached();
+    for ( FV* fv : aset)
     {
-        FaceModel* fm = fc->data();
+        FaceModel* fm = fv->data();
         fm->lockForWrite();
         cv::Matx44d T = aligner.calcTransform( fm->info()->cmodel());
         fm->transform(T);
-        rset.insert(fc);    // Worked on this view!
+        rset.insert(fv);    // Worked on this view!
         fm->unlock();
     }   // end for
 

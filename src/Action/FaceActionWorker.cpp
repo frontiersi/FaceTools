@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,9 +19,9 @@
 #include <FaceAction.h>
 using FaceTools::Action::FaceActionWorker;
 using FaceTools::Action::FaceAction;
-using FaceTools::FaceControlSet;
+using FaceTools::FVS;
 
-FaceActionWorker::FaceActionWorker( FaceAction* worker, FaceControlSet* rset, const QPoint& tp)
+FaceActionWorker::FaceActionWorker( FaceAction* worker, FVS* rset, const QPoint& tp)
     : QThread(worker), _worker(worker), _rset(rset), _tp(tp)
 {
 }   // end ctor

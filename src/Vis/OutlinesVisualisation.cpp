@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,18 +18,16 @@
 #include <OutlinesVisualisation.h>
 #include <ActionVisualise.h>
 #include <FaceModelViewer.h>
-#include <FaceControl.h>
 #include <FaceModel.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Vis::OutlinesVisualisation;
 using FaceTools::Vis::LoopsView;
+using FaceTools::Vis::FV;
 using FaceTools::Action::ActionVisualise;
 using FaceTools::Action::FaceAction;
 using FaceTools::ModelViewer;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
-using FaceTools::FaceModel;
+using FaceTools::FVS;
 
 
 OutlinesVisualisation::OutlinesVisualisation( const QString& dname, const QIcon& icon, const QKeySequence& keys)
@@ -41,16 +39,16 @@ OutlinesVisualisation::OutlinesVisualisation( const QString& dname, const QIcon&
 OutlinesVisualisation::~OutlinesVisualisation()
 {
     while (!_views.empty())
-        purge(_views.begin()->first);
+        purge( const_cast<FV*>(_views.begin()->first));
 }   // end dtor
 
 
-bool OutlinesVisualisation::apply( const FaceControl* fc, const QPoint*)
+void OutlinesVisualisation::apply( FV* fv, const QPoint*)
 {
-    if ( _views.count(fc) == 0)
+    if ( _views.count(fv) == 0)
     {
-        LoopsView* ov = _views[fc] = new LoopsView( 5, 1.0/*red*/, 0.0/*green*/, 0.1/*blue*/);
-        const RFeatures::ObjModelBoundaryFinder& boundaries = fc->data()->info()->boundaries();
+        LoopsView* ov = _views[fv] = new LoopsView( 5, 1.0/*red*/, 0.0/*green*/, 0.1/*blue*/);
+        const RFeatures::ObjModelBoundaryFinder& boundaries = fv->data()->info()->boundaries();
         const int nbs = (int)boundaries.size();
         assert(nbs > 0);
         const RFeatures::ObjModel* model = boundaries.model();
@@ -63,47 +61,40 @@ bool OutlinesVisualisation::apply( const FaceControl* fc, const QPoint*)
             ov->addLoop(line);  // Add actor
         }   // end for
     }   // end if
-    return true;
+    _views.at(fv)->setVisible( true, fv->viewer());
 }   // end apply
 
 
-void OutlinesVisualisation::addActors( const FaceControl* fc)
+void OutlinesVisualisation::remove( FV* fv)
 {
-    if (_views.count(fc) > 0)
-        _views.at(fc)->setVisible( true, fc->viewer());
-}   // end addActors
-
-
-void OutlinesVisualisation::removeActors( const FaceControl* fc)
-{
-    if (_views.count(fc) > 0)
-        _views.at(fc)->setVisible( false, fc->viewer());
-}   // end removeActors
+    if (_views.count(fv) > 0)
+        _views.at(fv)->setVisible( false, fv->viewer());
+}   // end remove
 
 
 // protected
-void OutlinesVisualisation::pokeTransform( const FaceControl* fc, const vtkMatrix4x4* m)
+void OutlinesVisualisation::pokeTransform( const FV* fv, const vtkMatrix4x4* m)
 {
-    if ( _views.count(fc) > 0)
-        _views.at(fc)->pokeTransform(m);
+    if ( _views.count(fv) > 0)
+        _views.at(fv)->pokeTransform(m);
 }   // end pokeTransform
 
 
 // protected
-void OutlinesVisualisation::fixTransform( const FaceControl* fc)
+void OutlinesVisualisation::fixTransform( const FV* fv)
 {
-    if ( _views.count(fc) > 0)
-        _views.at(fc)->fixTransform();
+    if ( _views.count(fv) > 0)
+        _views.at(fv)->fixTransform();
 }   // end fixTransform
 
 
 // protected
-void OutlinesVisualisation::purge( const FaceControl* fc)
+void OutlinesVisualisation::purge( FV* fv)
 {
-    if (_views.count(fc) > 0)
+    if (_views.count(fv) > 0)
     {
-        removeActors(fc);
-        delete _views.at(fc);
-        _views.erase(fc);
+        _views.at(fv)->setVisible( false, fv->viewer());
+        delete _views.at(fv);
+        _views.erase(fv);
     }   // end if
 }   // end purge

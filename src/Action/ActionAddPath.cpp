@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,19 +16,19 @@
  ************************************************************************/
 
 #include <ActionAddPath.h>
-#include <FaceControl.h>
+#include <FaceModelViewer.h>
 #include <FaceModel.h>
+#include <FaceView.h>
 #include <FaceTools.h>
-#include <ChangeEvents.h>
 #include <cassert>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionAddPath;
 using FaceTools::Action::ActionEditPaths;
-using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::EventSet;
 using FaceTools::Interactor::PathSetInteractor;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
-using FaceTools::FaceModel;
+using FaceTools::FVS;
+using FaceTools::Vis::FV;
+using FaceTools::FM;
 
 
 ActionAddPath::ActionAddPath( const QString& dn, const QIcon& ico, ActionEditPaths* e)
@@ -39,30 +39,38 @@ ActionAddPath::ActionAddPath( const QString& dn, const QIcon& ico, ActionEditPat
 
 bool ActionAddPath::testEnabled( const QPoint*) const
 {
-    // Allow path adding only if the model being hovered over is the same as
-    // the selected model AND there's no handle currently being hovered over
-    // and path editing is currently enabled.
-    PathSetInteractor* interactor = _editor->interactor();
-    const FaceControl* fc = interactor->hoverModel();
-    return isReady( fc) && interactor->hoverID() < 0;
+    const bool g = _editor->interactor()->hoverPathId() < 0;
+    const FV* fv = _editor->interactor()->hoverModel();
+    return isReady(fv) && g;
 }   // end testEnabled
 
 
-bool ActionAddPath::doBeforeAction( FaceControlSet&, const QPoint&)
-{
-    if ( !_editor->isChecked())
-        _editor->process( ready(), true);   // Flip the visualisation on if not already
-    return true;
-}   // end doBeforeAction
-
-
-bool ActionAddPath::doAction( FaceControlSet& fcs, const QPoint& p)
+bool ActionAddPath::doAction( FVS& fvs, const QPoint& p)
 {
     assert(_editor);
-    PathSetInteractor* interactor = _editor->interactor();
-    fcs.clear();
-    int pid = interactor->addPath(p);
-    if ( pid >= 0)
-        fcs.insert( interactor->hoverModel()->data());
+    FV* fv = fvs.first();
+    assert(fv);
+    assert( _editor->interactor()->hoverModel() == fv);
+    fvs.clear();
+
+    FM* fm = fv->data();
+    cv::Vec3f hpos;
+    int pid = -1;
+    if ( fv->projectToSurface(p, hpos))
+    {
+        //fm->lockForWrite();
+        pid = fm->paths()->addPath(hpos);
+        assert(pid >= 0);
+        fm->setSaved(false);
+        //fm->unlock();
+        fvs.insert( fm);
+        _editor->interactor()->setPathDrag( pid);
+
+        // The point used to set the initial handle is not
+        // necessarily where the mouse cursor is now.
+        if ( fv->projectToSurface( fv->viewer()->mouseCoords(), hpos))
+            _editor->interactor()->moveDragHandle( hpos);
+    }   // end if
+
     return pid >= 0;
 }   // end doAction

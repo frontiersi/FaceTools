@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,8 +31,8 @@ public:
 
 private slots:
     bool testEnabled( const QPoint* mc=nullptr) const override { return _fmm->numOpen() > 0;}
-    bool doBeforeAction( FaceControlSet&, const QPoint&) override;
-    void doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool) override { cs.insert(CLOSE_MODEL);}
+    bool doBeforeAction( FVS&, const QPoint&) override;
+    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(CLOSE_MODEL);}
 
 private:
     FileIO::FaceModelManager* _fmm;

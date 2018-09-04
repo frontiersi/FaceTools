@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,31 +20,26 @@
 
 /*
  * FaceModelViewer that allows for model(s) to be selected with duplicate
- * views (FaceView/FaceControl) of the same model (FaceModel) disallowed.
+ * FaceViews of the same FaceModel disallowed.
  */
 
 #include "ModelViewer.h"
-#include "FaceControlSet.h"
+#include "FaceViewSet.h"
 
 namespace FaceTools {
-
-class FaceModel;
 
 class FaceTools_EXPORT FaceModelViewer : public ModelViewer
 { Q_OBJECT
 public:
     explicit FaceModelViewer( QWidget *parent=NULL);
 
-    bool attach( FaceControl*);
-    bool detach( FaceControl*);
+    bool attach( Vis::FV*);
+    bool detach( Vis::FV*);
 
-    const FaceControlSet& attached() const { return _attached;}
-    bool isAttached( FaceControl *fc) const { return _attached.has(fc);}
-    bool isAttached( const FaceControl *fc) const { return isAttached(const_cast<FaceControl*>(fc));}
-    bool isAttached( FaceModel *fm) const { return _models.count(fm) > 0;}
-    bool isAttached( const FaceModel *fm) const { return isAttached(const_cast<FaceModel*>(fm));}
-
-    FaceControl* get( FaceModel* fm) const; // Pointer to view/control of given model or NULL if model not attached.
+    const FaceViewSet& attached() const { return _attached;}
+    bool isAttached( const Vis::FV* fv) const { return _attached.has(const_cast<Vis::FV*>(fv));}
+    bool isAttached( const FM* fm) const { return _models.count(fm) > 0;}
+    Vis::FV* get( const FM* fm) const; // Pointer to view/control of given model or null if model not attached.
 
 public slots:
     void resetCamera();
@@ -52,15 +47,15 @@ public slots:
 
 signals:
     void toggleZeroArea( bool);             // When going from positve to zero viewing area (true) and back (false).
-    void onAttached( FaceControl*);
-    void onDetached( FaceControl*);
+    void onAttached( Vis::FV*);
+    void onDetached( Vis::FV*);
 
 protected:
     void resizeEvent( QResizeEvent*) override;
 
 private:
-    FaceControlSet _attached; // All attached FaceControl instances
-    std::unordered_map<FaceModel*, FaceControl*> _models;
+    FaceViewSet _attached; // All attached FaceControl instances
+    std::unordered_map<const FM*, Vis::FV*> _models;
 };  // end class
 
 }   // end namespace

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 using FaceTools::Action::ActionToggleAxes;
 using FaceTools::Action::FaceAction;
 using FaceTools::FaceModelViewer;
-using FaceTools::FaceControlSet;
+using FaceTools::FVS;
 
 
 ActionToggleAxes::ActionToggleAxes( const QString& dn, const QIcon& ico)
@@ -62,7 +62,7 @@ void ActionToggleAxes::addViewer( FaceModelViewer* v)
 }   // end addViewer
 
 
-bool ActionToggleAxes::doAction( FaceControlSet&, const QPoint&)
+bool ActionToggleAxes::doAction( FVS&, const QPoint&)
 {
     for ( auto p : _viewers)
     {

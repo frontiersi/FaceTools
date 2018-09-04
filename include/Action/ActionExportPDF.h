@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,13 +27,13 @@ namespace Action {
 class FaceTools_EXPORT ActionExportPDF : public FaceAction
 { Q_OBJECT
 public:
-    // Initialise PDF export with the locations of pdflatex and IDTFConverter.
+    // Initialise PDF export with the locations of pdflatex and IDTVis::FVonverter.
     static bool init( const std::string& pdflatex, const std::string& idtfConverter);
 
     // Returns whether this action is available to use.
     static bool isAvailable();
 
-    ActionExportPDF( Report::BaseReportTemplate*, const QIcon& icon=QIcon(),
+    ActionExportPDF( Report::BaseReportTemplate*, const QIcon& icon=QIcon(), const QString& email="",
                      QWidget* parent=nullptr, QProgressBar* pb=nullptr);  // Is async if pb not null
     ~ActionExportPDF() override { delete _template;}
 
@@ -46,11 +46,11 @@ public:
     QWidget* getWidget() const override { return _template->getWidget();}
 
 protected slots:
-    bool testReady( const FaceControl*) override;
+    bool testReady( const Vis::FV*) override;
     bool testEnabled( const QPoint* mc=nullptr) const override;
-    bool doBeforeAction( FaceControlSet&, const QPoint&) override;
-    bool doAction( FaceControlSet&, const QPoint&) override;
-    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
+    bool doBeforeAction( FVS&, const QPoint&) override;
+    bool doAction( FVS&, const QPoint&) override;
+    void doAfterAction( EventSet&, const FVS&, bool) override;
     void purge( const FaceModel*) override;
 
 private:

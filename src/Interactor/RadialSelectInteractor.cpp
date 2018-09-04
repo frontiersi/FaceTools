@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,41 +16,60 @@
  ************************************************************************/
 
 #include <RadialSelectInteractor.h>
-#include <RadialSelectVisualisation.h>
+#include <LoopSelectVisualisation.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <FaceView.h>
 #include <cassert>
 using FaceTools::Interactor::RadialSelectInteractor;
 using FaceTools::Interactor::ModelViewerInteractor;
-using FaceTools::Vis::RadialSelectVisualisation;
-using FaceTools::FaceControl;
-using FaceTools::FaceModel;
+using FaceTools::Interactor::MEEI;
+using FaceTools::Vis::LoopSelectVisualisation;
+using FaceTools::Vis::FV;
+using FaceTools::FM;
 
 
 const QString RadialSelectInteractor::s_msg( tr("Reposition radial area by left-click and dragging the centre; change radius using the mouse wheel."));
 
 
 // public
-RadialSelectInteractor::RadialSelectInteractor( MEEI* meei, RadialSelectVisualisation* vis, QStatusBar* sbar)
-    : ModelViewerInteractor( nullptr, sbar), _meei(meei), _vis(vis), _move(false)
+RadialSelectInteractor::RadialSelectInteractor( MEEI* meei, LoopSelectVisualisation* vis, QStatusBar* sbar)
+    : ModelViewerInteractor( nullptr, sbar), _meei(meei), _vis(vis), _move(false), _onReticule(false)
 {
+    connect( meei, &MEEI::onEnterProp, [this](FV* fv, const vtkProp* p){ if ( _vis->belongs( p, fv)) this->doOnEnterReticule();});
+    connect( meei, &MEEI::onLeaveProp, [this](FV* fv, const vtkProp* p){ if ( _vis->belongs( p, fv)) this->doOnLeaveReticule();});
     setEnabled(false);
 }   // end ctor
 
 
+void RadialSelectInteractor::doOnEnterReticule()
+{
+    _onReticule = true;
+}   // end doOnEnterReticule
+
+
+void RadialSelectInteractor::doOnLeaveReticule()
+{
+    _onReticule = false;
+}   // end doOnLeaveReticule
+
+
 bool RadialSelectInteractor::leftButtonDown( const QPoint& p)
 {
-    _move = testOnReticule( p); // _move set okay if the point is on the centre reticule
-    _vis->setPickable( _meei->model(), false); // So projecting points onto the face works
-    return _move;
+    _move = _onReticule;
+    /*
+    if ( _move)
+        _vis->setPickable( _meei->model(), false); // So projecting points onto the face works
+    */
+    return _onReticule;
 }   // end leftButtonDown
 
 
-bool RadialSelectInteractor::leftButtonUp( const QPoint&)
+bool RadialSelectInteractor::leftButtonUp( const QPoint& p)
 {
-    _vis->setPickable( _meei->model(), true);
-    return _move = false;
+    //_vis->setPickable( _meei->model(), true);
+    _move = false;
+    return mouseMove(p);
 }   // end leftButtonUp
 
 
@@ -58,15 +77,12 @@ bool RadialSelectInteractor::leftButtonUp( const QPoint&)
 // to reposition the centre of the boundary.
 bool RadialSelectInteractor::leftDrag( const QPoint& p)
 {
-    FaceControl* fc = _meei->model();
-    if ( fc && _move)
+    FV* fv = _meei->model();
+    if ( fv && _move)
     {
         cv::Vec3f v;
-        if ( fc->view()->pointToFace( p, v))
-        {
-            _vis->setCentre( fc->data(), v);
-            fc->data()->updateRenderers();
-        }   // end if
+        if ( fv->projectToSurface( p, v))
+            emit onSetCentre( fv, v);
     }   // end if
     return _move;
 }   // end leftDrag
@@ -75,43 +91,29 @@ bool RadialSelectInteractor::leftDrag( const QPoint& p)
 // Increase the radius
 bool RadialSelectInteractor::mouseWheelForward( const QPoint& p)
 {
-    const bool changeRadius = testOnReticule(p);
-    if ( changeRadius)
-    {
-        const FaceModel* fm = _meei->model()->data();
-        _vis->setRadius( fm, _vis->radius(fm)+1);
-        fm->updateRenderers();
-    }   // end if
-    return changeRadius;
+    if ( _onReticule)
+        emit onIncreaseRadius( _meei->model());
+    return _onReticule;
 }   // end mouseWheelForward
 
 
 // Decrease the radius
 bool RadialSelectInteractor::mouseWheelBackward( const QPoint& p)
 {
-    const bool changeRadius = testOnReticule(p);
-    if ( changeRadius)
-    {
-        const FaceModel* fm = _meei->model()->data();
-        _vis->setRadius( fm, _vis->radius(fm)-1);
-        fm->updateRenderers();
-    }   // end if
-    return changeRadius;
+    if ( _onReticule)
+        emit onDecreaseRadius( _meei->model());
+    return _onReticule;
 }   // end mouseWheeBackward
 
 
 bool RadialSelectInteractor::mouseMove( const QPoint& p)
 {
-    const bool onReticule = testOnReticule(p);
-    if ( onReticule)
-        showStatus( s_msg, 10000);
-
-    FaceControl* fc = _meei->model();
-    if ( fc)
+    FV* fv = _meei->model();
+    if ( fv)
     {
-        const FaceModel* fm = fc->data();
-        for ( FaceControl* f : fm->faceControls())
-            _vis->setHighlighted( f, onReticule);
+        const FM* fm = fv->data();
+        for ( FV* f : fm->fvs())
+            _vis->setHighlighted( f, _onReticule);
         fm->updateRenderers();
     }   // end if
     return false;
@@ -126,12 +128,3 @@ void RadialSelectInteractor::onEnabledStateChanged( bool v)
     else
         clearStatus();
 }   // end onEnabledStateChanged
-
-
-// private
-bool RadialSelectInteractor::testOnReticule( const QPoint& p) const
-{
-    FaceControl* fc = _meei->model();
-    return fc && _vis->belongs( fc->viewer()->getPointedAt(p), fc);
-}   // end testOnReticule
-

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,66 +18,60 @@
 #include <FaceAction.h>
 #include <FaceActionWorker.h>
 #include <FaceModelViewer.h>
-#include <FaceControl.h>
 #include <FaceModel.h>
-#include <FaceView.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::FaceActionWorker;
-using FaceTools::FaceModelViewer;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
-using FaceTools::FaceModel;
-using FaceTools::Action::ChangeEvent;
-using FaceTools::Action::ChangeEventSet;
+using FaceTools::Vis::FV;
+using FaceTools::FVS;
+using FaceTools::Action::EventId;
+using FaceTools::Action::EventSet;
+using FaceTools::Action::EPR;
+using FaceTools::Action::ResponsePredicate;
+using FaceTools::Action::ProcessFlagPredicate;
 using QTools::QProgressUpdater;
 
 
 // public
 FaceAction::FaceAction()
     : _dname(""), _icon(),
-      _init(false), _visible(true), _action(this), _doasync(false), _cset(nullptr), _pupdater(nullptr) { }
+      _init(false), _visible(true), _defaultCheckState(false), _action(this), _doasync(false), _pupdater(nullptr) { }
 
 // public
-FaceAction::FaceAction( const QString& dname)
-    : _dname(dname), _icon(), _keys(),
-      _init(false), _visible(true), _action(this), _doasync(false), _cset(nullptr), _pupdater(nullptr) { }
+FaceAction::FaceAction( const QString& dn)
+    : _dname(dn), _icon(), _keys(),
+      _init(false), _visible(true), _defaultCheckState(false), _action(this), _doasync(false), _pupdater(nullptr) { }
 
 // public
-FaceAction::FaceAction( const QString& dname, const QIcon& ico)
-    : _dname(dname), _icon(ico), _keys(),
-      _init(false), _visible(true), _action(this), _doasync(false), _cset(nullptr), _pupdater(nullptr) { }
+FaceAction::FaceAction( const QString& dn, const QIcon& ico)
+    : _dname(dn), _icon(ico), _keys(),
+      _init(false), _visible(true), _defaultCheckState(false), _action(this), _doasync(false), _pupdater(nullptr) { }
 
 // public
-FaceAction::FaceAction( const QString& dname, const QIcon* ico)
-    : _dname(dname), _icon(ico ? *ico : QIcon()), _keys(),
-      _init(false), _visible(true), _action(this), _doasync(false), _cset(nullptr), _pupdater(nullptr) { }
+FaceAction::FaceAction( const QString& dn, const QIcon* ico)
+    : _dname(dn), _icon(ico ? *ico : QIcon()), _keys(),
+      _init(false), _visible(true), _defaultCheckState(false), _action(this), _doasync(false), _pupdater(nullptr) { }
 
 // public
-FaceAction::FaceAction( const QString& dname, const QIcon& ico, const QKeySequence& ks)
-    : _dname(dname), _icon(ico), _keys(ks),
-      _init(false), _visible(true), _action(this), _doasync(false), _cset(nullptr), _pupdater(nullptr) { }
+FaceAction::FaceAction( const QString& dn, const QIcon& ico, const QKeySequence& ks)
+    : _dname(dn), _icon(ico), _keys(ks),
+      _init(false), _visible(true), _defaultCheckState(false), _action(this), _doasync(false), _pupdater(nullptr) { }
 
 // public
-FaceAction::FaceAction( const QString& dname, const QIcon* ico, const QKeySequence& ks)
-    : _dname(dname), _icon(ico ? *ico : QIcon()), _keys(ks),
-      _init(false), _visible(true), _action(this), _doasync(false), _cset(nullptr), _pupdater(nullptr) { }
+FaceAction::FaceAction( const QString& dn, const QIcon* ico, const QKeySequence& ks)
+    : _dname(dn), _icon(ico ? *ico : QIcon()), _keys(ks),
+      _init(false), _visible(true), _defaultCheckState(false), _action(this), _doasync(false), _pupdater(nullptr) { }
 
 // public
-FaceAction::FaceAction( const QString& dname, const QIcon& ico, const QKeySequence* ks)
-    : _dname(dname), _icon(ico), _keys(ks ? *ks : QKeySequence()),
-      _init(false), _visible(true), _action(this), _doasync(false), _cset(nullptr), _pupdater(nullptr) { }
+FaceAction::FaceAction( const QString& dn, const QIcon& ico, const QKeySequence* ks)
+    : _dname(dn), _icon(ico), _keys(ks ? *ks : QKeySequence()),
+      _init(false), _visible(true), _defaultCheckState(false), _action(this), _doasync(false), _pupdater(nullptr) { }
 
 // public
-FaceAction::FaceAction( const QString& dname, const QIcon* ico, const QKeySequence* ks)
-    : _dname(dname), _icon(ico ? *ico : QIcon()), _keys(ks ? *ks : QKeySequence()),
-      _init(false), _visible(true), _action(this), _doasync(false), _cset(nullptr), _pupdater(nullptr) { }
-
-
-FaceAction::~FaceAction()
-{
-}   // end dtor
+FaceAction::FaceAction( const QString& dn, const QIcon* ico, const QKeySequence* ks)
+    : _dname(dn), _icon(ico ? *ico : QIcon()), _keys(ks ? *ks : QKeySequence()),
+      _init(false), _visible(true), _defaultCheckState(false), _action(this), _doasync(false), _pupdater(nullptr) { }
 
 
 // public
@@ -87,9 +81,17 @@ const QKeySequence* FaceAction::getShortcut() const { return _keys.isEmpty() ? n
 
 
 // public
+void FaceAction::setCheckable( bool b, bool ival)
+{
+    _action.setCheckable(b);
+    _action.setChecked(ival);
+    _defaultCheckState = ival;
+}   // end setCheckable
+
+
+// public
 bool FaceAction::testSetEnabled( const QPoint* p)
 {
-//    std::cerr << "FaceTools::FaceAction::testSetEnabled: " << debugActionName() << std::endl;
     const bool enabled = testEnabled(p);
     if ( enabled && p)
         _testPoint = *p;
@@ -109,7 +111,7 @@ void FaceAction::setEnabled( bool v)
     if ( _action.isEnabled() != v)
     {
         std::cerr << "[ERROR] FaceTools::FaceAction::setEnabled: Inconsistent enabling of action for "
-                  << debugActionName() << " setting to " << std::boolalpha << v << std::endl;
+                  << dname() << " setting to " << std::boolalpha << v << std::endl;
     }   // end if
     assert( _action.isEnabled() == v);
     if ( getWidget())
@@ -120,6 +122,12 @@ void FaceAction::setEnabled( bool v)
 // protected
 void FaceAction::init() // Called by FaceActionManager after constructor finished
 {
+    if ( _init)
+    {
+        std::cerr << "[ERROR] FaceTools::Action::FaceAction::init: Cannot initialise more than once!" << std::endl;
+        return;
+    }   // end if
+
     connect( &_action, &QAction::triggered, this, static_cast<bool (FaceAction::*)(bool)>(&FaceAction::process));
     _action.setText( getDisplayName());
 
@@ -159,95 +167,118 @@ void FaceAction::progress( float propComplete) { if (_pupdater) _pupdater->proce
 float FaceAction::progress() const { return _pupdater ? _pupdater->progress() : 1.0f;}
 
 
-// protected
-void FaceAction::setReady( FaceControl* fc, bool v)
+void FaceAction::setReady( FV* fv, bool v)
 {
-    /*
-    if ( debugActionName() == "\"Crop Face\"")
-        std::cerr << "Crop face action " << this << std::endl;
-    */
-
-    const bool wasReady = isReady(fc);
-    _ready.erase(fc);
-    if ( v && fc && testReady(fc))
-        _ready.insert( fc);
+    const bool wasReady = isReady(fv);
+    _ready.erase(fv);
+    if ( v && fv && testReady(fv))
+        _ready.insert( fv);
 
     testSetEnabled();
-    setChecked( testChecked(fc));
+    setChecked( testIfCheck(fv));
 
-    if ( wasReady != isReady(fc))
+    if ( wasReady != isReady(fv))
     {
-        assert(fc);
-        tellReady( fc, v);
+        assert(fv);
+        tellReady( fv, v);
     }   // end if
 }   // end setReady
 
 
-// protected
-void FaceAction::setReady( const FaceControlSet& fcs, bool v)
+void FaceAction::setReady( const FVS& fvs, bool v)
 {
-    std::for_each( std::begin(fcs), std::end(fcs), [=](auto fc){ this->setReady(fc, v);});
+    std::for_each( std::begin(fvs), std::end(fvs), [v,this](auto fv){ this->setReady(fv, v);});
 }   // end setReady
 
 
-// public
-void FaceAction::addProcessOn( const ChangeEvent& r) { _revents.insert(r);}
-void FaceAction::addPurgeOn( const ChangeEvent& p) { _pevents.insert(p);}
-bool FaceAction::operator()( bool cs){ return process( cs);}
-
-
-// public
-bool FaceAction::execAfter( FaceAction* fa)
+void FaceAction::clearReady()
 {
-    assert(fa);
-    // Check that the action being added is not already present (or this action).
-    std::unordered_set<FaceAction*> allacts = _aacts;
-    allacts.insert( _sacts.begin(), _sacts.end());
-    allacts.insert( this);
-    if ( !checkAfterActions( allacts, fa))
-        return false;
+    FVS rset = ready();
+    for ( FV* fv : rset)
+        setReady( fv, false);
+}   // end clearReady
 
-    if ( fa->isAsync())
-        _aacts.insert(fa);
-    else
-        _sacts.push_back(fa);
-    return true;
-}   // end execAfter
+
+void FaceAction::resetReady( FV* fv)
+{
+    clearReady();
+    setReady(fv, true);
+}   // end resetReady
+
+
+void FaceAction::setPurgeOnEvent( EventId e) { _pevents.insert(e);}
 
 
 // private
-bool FaceAction::checkAfterActions( std::unordered_set<FaceAction*>& acts, FaceAction* fa) const
+void FaceAction::checkOverwritingResponseEvent( EventId e) const
 {
-    // If action already in given set, sequence of actions to be executed
-    // has cycles which is not allowed.
-    if ( acts.count(fa) > 0)
+    if ( _eprs.count(e) > 0)
     {
-        std::cerr << "[ERROR] FaceTools::Action::FaceAction::checkAfterActions: Adding duplicate action instance to "
-                  << debugActionName() << std::endl;
-        return false;
+        std::cerr << "[WARNING] FaceTools::FaceAction::setRespondToEvent(If): Overwritting event on action "
+                  << dname() << " <" << this << ">" << std::endl;
     }   // end if
+}   // end checkOverwritingResponseEvent
 
-    bool rv = true;
-    for ( FaceAction* a : _sacts) // Consolidate sequence actions from this action.
-    {
-        acts.insert(a);
-        rv = a->checkAfterActions( acts, fa);
-        if ( !rv)
-            break;
-    }   // end for
-    return rv;
-}   // end checkAfterActions
+
+// public
+void FaceAction::setRespondToEvent( EventId e, bool cval)
+{
+    checkOverwritingResponseEvent( e);
+    _eprs[e] = EPR( e, cval);
+}   // end setRespondToEvent
+
+
+// public
+void FaceAction::setRespondToEvent( EventId e, const ProcessFlagPredicate& fp)
+{
+    checkOverwritingResponseEvent( e);
+    _eprs[e] = EPR( e, fp);
+}   // end setRespondToEvent
+
+
+// public
+void FaceAction::setRespondToEventIf( EventId e, const ResponsePredicate& rp, bool cval)
+{
+    checkOverwritingResponseEvent( e);
+    _eprs[e] = EPR( e, rp, cval);
+}   // end setRespondToEventIf
+
+
+// public
+void FaceAction::setRespondToEventIf( EventId e, const ResponsePredicate& rp, const ProcessFlagPredicate& fp)
+{
+    checkOverwritingResponseEvent( e);
+    _eprs[e] = EPR( e, rp, fp);
+}   // end setRespondToEventIf
+
+
+// public
+void FaceAction::setRespondToEventIfAllReady( EventId e, bool cval)
+{
+    checkOverwritingResponseEvent( e);
+    _eprs[e] = EPR( e, [this](FVS& fvs)
+            { return std::all_of(std::begin(fvs), std::end(fvs), [this](FV* fv){ return this->testReady(fv);});}, cval);
+}   // end setRespondToEventIfAllReady
+
+
+
+bool FaceAction::operator()( bool cs){ return process( cs);}
 
 
 // public slot
 bool FaceAction::process( bool checked)
 {
-    if ( !isEnabled())
+    if ( !isEnabled() && checked)
+    {
+        std::cerr << "[ERROR] FaceTools::Action::FaceAction::process(true): on "
+                  << dname() << "; action is not enabled!" << std::endl;
+        assert(false);
         return false;
+    }   // end if
 
     _pmutex.lock();
-    emit reportStarting();
     setChecked(checked);    // For external calls to ensure the action is checked
+    emit reportStarting();
 
     _wset = _ready; // Copy in the ready set (may be empty)
     bool enteredDoAction = false;
@@ -256,16 +287,13 @@ bool FaceAction::process( bool checked)
     if ( !doBeforeAction( _wset, mpoint))  // Always in the GUI thread
     {
         _pmutex.unlock();
-        ChangeEventSet cset;
+        EventSet cset;
         _wset.clear();
         emit reportFinished( cset, _wset, false);
     }   // end if
     else
     {
         const bool async = isAsync();
-        if ( displayDebugStatusProgression())
-            std::cerr << "--- STARTING " << debugActionName() << " ---" << (async ? " (ASYNC)" : "") << std::endl;
-
         enteredDoAction = true;
 
         if ( async)
@@ -288,76 +316,31 @@ bool FaceAction::process( bool checked)
 
 
 // public
-bool FaceAction::process( FaceControl* fc, bool cflag)
+bool FaceAction::process( FV* fv, bool cflag)
 {
     _ready.clear();
-    if ( fc)
-        setReady( fc, true);
+    if ( fv)
+        setReady( fv, true);
     return process( cflag);
 }   // end process
 
 
 // public
-bool FaceAction::process( const FaceControlSet& fcs, bool cflag)
+bool FaceAction::process( const FVS& fvs, bool cflag)
 {
     _ready.clear();
-    setReady( fcs, true);
+    setReady( fvs, true);
     return process( cflag);
 }   // end process
-
-
-// private
-// Recursively set the change event set on the action sequence rooted on this action.
-void FaceAction::setChangeEventSet( ChangeEventSet* cset)
-{
-    _cset = cset;
-    for ( FaceAction* a : _sacts)
-    {
-        assert( a != this);
-        a->setChangeEventSet( cset);
-    }   // end for
-}   // end setChangeEventSet
 
 
 // private slot
 void FaceAction::doOnActionFinished( bool rval)
 {
-    const std::string dname = debugActionName();
-
-    ChangeEventSet* childChangeEvents = _cset;
-    ChangeEventSet* parentChangeEvents = nullptr;
-    if ( !childChangeEvents)
-        childChangeEvents = parentChangeEvents = new ChangeEventSet;
-
-    doAfterAction( *childChangeEvents, _wset, rval);
-
+    EventSet cset;
+    doAfterAction( cset, _wset, rval);
     progress(1.0f);
-    if ( displayDebugStatusProgression())
-        std::cerr << "--- FINISHED " << dname << " ---" << (isAsync() ? " (ASYNC)" : "") << std::endl;
-
-    // Start asynchronous actions. Since these will end at undefined times (notifying others of their
-    // completion via FaceActionManager), their change events are not consolidated into this action's.
-    for ( FaceAction* a : _aacts)
-        a->process(_wset);
-
-    // Queued actions need their change events consolidating so multiple of the same event aren't reported.
-    // Only the "parent" action reports finished with the change event set.
-    if ( parentChangeEvents)
-        setChangeEventSet( parentChangeEvents); // Sets the change event set over
-
-    for ( FaceAction* a : _sacts)
-        a->process(_wset);
-
     _pmutex.unlock();
-
-    if ( parentChangeEvents)
-    {
-        emit reportFinished( *parentChangeEvents, _wset, rval);
-        delete parentChangeEvents;
-    }   // end if
-
-    setChangeEventSet(nullptr);
-    assert(_cset == nullptr);
+    emit reportFinished( cset, _wset, rval);
     _wset.clear();  // Clear the working set
 }   // end doOnActionFinished
-

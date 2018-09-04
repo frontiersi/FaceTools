@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
 
 #include "BaseVisualisation.h"
 #include "BoundingView.h"
-#include <unordered_map>
 
 namespace FaceTools {
 namespace Vis {
@@ -31,29 +30,27 @@ public:
     explicit BoundingVisualisation( const QString& dname="BoundingVisualisation");
     ~BoundingVisualisation() override;
 
-    bool isExclusive() const override { return false;}
-
-    bool isVisible() const override { return false;}
+    bool isUIVisible() const override { return false;}
 
     // Used to bound the selected view - so should only be applied to a single FaceView.
     bool singleView() const override { return true;}
 
-    bool apply( const FaceControl*, const QPoint* mc=nullptr) override;
-    void addActors( const FaceControl*) override;
-    void removeActors( const FaceControl*) override;
+    void apply( FV*, const QPoint* mc=nullptr) override;
+    void remove( FV*) override;
 
     // Set the given component to be highlighted or not.
     // If c == -1, then all components are referenced.
-    void setHighlighted( const FaceControl*, int c=-1, bool v=false);
+    void setHighlighted( const FV*, int c=-1, bool v=false);
+
+    void pokeTransform( const FV*, const vtkMatrix4x4*) override;
+    void fixTransform( const FV*) override;
 
 protected:
-    void pokeTransform( const FaceControl*, const vtkMatrix4x4*) override;
-    void fixTransform( const FaceControl*) override;
-    void purge( const FaceControl*) override;
+    void purge( FV*) override;
     bool applyOnReady() const override { return true;}
 
 private:
-    std::unordered_map<const FaceControl*, BoundingView*> _views;
+    std::unordered_map<const FV*, BoundingView*> _views;
 };  // end class
 
 }   // end namespace

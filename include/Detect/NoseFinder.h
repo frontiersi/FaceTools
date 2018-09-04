@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,6 +46,9 @@ private:
 
     int searchForNoseTip( int startVtx, cv::Vec3d& dvec, double degsAllowed);
     bool calcMetrics( int, const cv::Vec3f&, bool, double&, double&) const;
+
+    NoseFinder( const NoseFinder&) = delete;
+    void operator=( const NoseFinder&) = delete;
 };  // end class
 
 }   // end namespace

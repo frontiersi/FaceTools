@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 #include <VtkActorViewer.h> // QTools
 #include <ScalarLegend.h>   // RVTK
 #include <Axes.h>           // RVTK
-#include <ObjModel.h>       // RFeatures
+//#include <ObjModel.h>       // RFeatures
 #include <CameraParams.h>   // RFeatures
 #include <QColor>
 #include <unordered_map>
@@ -103,43 +103,12 @@ public:
 
     void updateRender();    // Call after making changes to the view content
 
-    // Add an individual point (spherical).
-    int addPoint( const cv::Vec3f&, const VisOptions&);
+    // Add or remove a prop.
+    void add( vtkProp*);
+    void remove( vtkProp*);
 
-    // Add points actor in various formats. Using software rendering, the vtkProperty->SetRenderPointsAsSpheres(true)
-    // option is not working correctly (may cause app to crash). For portable spheres, use addPoint for each individual point.
-    int addPoints( const std::vector<cv::Vec3f>& points, const VisOptions&, bool renderAsSpheres=false);
-    int addPoints( const RFeatures::ObjModel*, const VisOptions&, bool renderAsSpheres=false);
-    int addPoints( const RFeatures::ObjModel*, const std::unordered_set<int>& vset, const VisOptions&, bool renderAsSpheres=false);
-
-    // Add a line actor (make a loop if joinEnds=true).
-    int addLine( const std::vector<cv::Vec3f>&, bool joinEnds, const VisOptions&);
-    
-    // Add line segments specified as endpoint pairs (lp.size() must be even).
-    int addLinePairs( const std::vector<cv::Vec3f>& lp, const VisOptions&);
-
-    int add( const RFeatures::ObjModel*, const VisOptions& vo=VisOptions());
-
-    // Add custom surface actor. Set metric value colour mapping with setLegendColours.
-    int add( vtkSmartPointer<vtkActor>, const std::string& legendTitle, float minv, float maxv);    // Calls setLegendLookup
-
-    // Number of discrete colours to use
-    void setLegendLookup( vtkMapper* mapper, const std::string& legendTitle, float minv, float maxv);
-    void setLegendColours( const cv::Vec3b& c0, const cv::Vec3b& c1, size_t ncolours=100);
-    void setLegendColours( const QColor& c0, const QColor& c1, size_t ncolours=100);
-    void setLegendColours( const cv::Vec3b& c0, const cv::Vec3b& c1, const cv::Vec3b& c2, size_t nc0, size_t nc1);
-    void setLegendColours( const QColor& c0, const QColor& c1, const QColor& c3, size_t nc0, size_t nc1);
-    size_t getNumLegendColours() const;
-
-    vtkProp* getProp(int);
-
-    bool remove( int id);   // Remove a prop using an ID returned from a successful add.
-    void removeAll();       // Remove all props that were added using one of the add functions that returns an ID.
-
-    // Add or remove an arbitrary prop - these props are NOT removed upon removeAll() and
-    // must be removed manually (external references to these props must be retained).
-    void add( const vtkProp*);
-    void remove( const vtkProp*);
+    // Set the legend title and colours lookup table for the scalar legend.
+    void setLegend( const std::string& title, vtkLookupTable*);
 
     cv::Point2f projectProp( const cv::Vec3f&) const;   // Project to viewport proportion.
     cv::Point project( const cv::Vec3f&) const;         // Project to pixel coords.
@@ -193,10 +162,7 @@ private:
     RVTK::ScalarLegend *_scalarLegend;
     RVTK::Axes *_axes;
     bool _floodLightsEnabled;
-    int _addedModelID;
-    std::unordered_map<int, vtkProp*> _props;
     std::unordered_set<Interactor::MVI*> _interactors;
-    int addPointsActor( vtkSmartPointer<vtkActor>, const VisOptions&, bool asSpheres);
     ModelViewer( const ModelViewer&) = delete;
     void operator=( const ModelViewer&) = delete;
 };  // end class

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,34 +22,27 @@
 
 namespace FaceTools {
 namespace Interactor {
-class ModelMoveResponder;
 
 class FaceTools_EXPORT ModelMoveInteractor : public ModelViewerInteractor
 { Q_OBJECT
 public:
     ModelMoveInteractor();
-    ~ModelMoveInteractor() override;
 
     // Call with true to make left and right button drags interact with the models rather than the camera.
     void setMoveModels( bool v) { _moveModels = v;}
     bool movingModels() const { return _moveModels;}
 
 signals:
-    // Notify of rotate, pan, and dolly events for the actor providing affected FaceControl.
-    void onActorRotate( FaceControl*);
-    void onActorPan( FaceControl*);
-    void onActorDolly( FaceControl*);
-    void onActorStop( FaceControl*);
-
     // Notify of rotate, pan, and dolly events for the camera.
     void onCameraRotate();
     void onCameraPan();
     void onCameraDolly();
+    void onCameraMove();    // Generic event
+    void onActorMove();     // Generic event
 
 private:
     bool _moveModels;
-    ModelMoveResponder *_moveResponder;
-    FaceControl *_affected;
+    Vis::FaceView *_afv;
 
     bool leftButtonDown( const QPoint&) override;
     bool middleButtonDown( const QPoint&) override;
@@ -57,16 +50,17 @@ private:
     bool mouseWheelForward( const QPoint&) override;
     bool mouseWheelBackward( const QPoint&) override;
 
-    void cameraRotate() override { emit onCameraRotate();}
-    void cameraDolly() override { emit onCameraDolly();}
-    void cameraPan() override { emit onCameraPan();}
+    void cameraRotate() override { emit onCameraRotate(); emit onCameraMove();}
+    void cameraDolly() override { emit onCameraDolly(); emit onCameraMove();}
+    void cameraPan() override { emit onCameraPan(); emit onCameraMove();}
 
-    void actorRotate() override { emit onActorRotate(_affected);}
-    void actorDolly() override { emit onActorDolly(_affected);}
-    void actorPan() override { emit onActorPan(_affected);}
+    void actorRotate() override { pokeTransform(); emit onActorMove();}
+    void actorDolly() override { pokeTransform(); emit onActorMove();}
+    void actorPan() override { pokeTransform(); emit onActorMove();}
+
     void actorStop() override;
-
-    FaceControl* testPoint( const QPoint&) const;
+    void pokeTransform();
+    void setAffected( const QPoint&);
     bool setInteractionMode( const QPoint&);
 };  // end class
 

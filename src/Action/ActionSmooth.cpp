@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,16 +17,15 @@
 
 #include <ActionSmooth.h>
 #include <FaceModelViewer.h>
-#include <FaceControl.h>
 #include <FaceModel.h>
 #include <ObjModelSmoother.h>   // RFeatures
 #include <FaceModelSurfaceData.h>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionSmooth;
-using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::EventSet;
 using FaceTools::FaceModelSurfaceData;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
+using FaceTools::FVS;
+using FaceTools::Vis::FV;
 using FaceTools::FaceModel;
 
 
@@ -38,17 +37,17 @@ ActionSmooth::ActionSmooth( const QString& dn, const QIcon& ico, QProgressBar* p
 }   // end ctor
 
 
-bool ActionSmooth::testReady( const FaceControl* fc)
+bool ActionSmooth::testReady( const FV* fv)
 {
-    return FaceModelSurfaceData::get()->isAvailable(fc->data());
+    return FaceModelSurfaceData::get()->isAvailable(fv->data());
 }   // end testReady
 
 
-bool ActionSmooth::doAction( FaceControlSet& rset, const QPoint&)
+bool ActionSmooth::doAction( FVS& rset, const QPoint&)
 {
     assert(rset.size() == 1);
-    FaceControl* fc = rset.first();
-    FaceModel* fm = fc->data();
+    FV* fv = rset.first();
+    FaceModel* fm = fv->data();
     SurfaceData::WPtr msd = FaceModelSurfaceData::wdata(fm);    // Note here that a write lock on the model is provided
     RFeatures::ObjModelInfo::Ptr info = fm->info();
     RFeatures::ObjModelSmoother smoother( info->model(), msd->curvature, &msd->normals, &msd->pareas);
@@ -66,7 +65,7 @@ bool ActionSmooth::doAction( FaceControlSet& rset, const QPoint&)
 
 
 // protected
-void ActionSmooth::doAfterAction( ChangeEventSet& cs, const FaceControlSet&, bool)
+void ActionSmooth::doAfterAction( EventSet& cs, const FVS&, bool)
 { 
     cs.insert( GEOMETRY_CHANGE);
     cs.insert( SURFACE_DATA_CHANGE);

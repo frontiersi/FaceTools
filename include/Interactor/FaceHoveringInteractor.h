@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@ public:
     // Return the model being hovered over (null if nothing being hovered over).
     // It is guaranteed that this will return a non-null pointer if called from
     // within overridden implementations of enteringModel and leavingModel.
-    inline FaceControl* hoverModel() const { return _meei->model();}
+    inline Vis::FV* hoverModel() const { return _meei->model();}
 
 protected:
     // Calling hoverModel() from within overridden implementations of these functions
@@ -50,7 +50,7 @@ protected:
     virtual void leavingModel(){}   // Called immediately after disabling this interactor.
 
 private slots:
-    void doOnEnterModel( FaceControl*);
+    void doOnEnterModel( Vis::FV*);
     void doOnLeaveModel();
 
 private:

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,16 +25,11 @@
  * export filters for use in Qt FileDialogs.
  */
 
-#include <Hashing.h>
-#include <iostream>
-#include <unordered_map>
+#include <FaceTypes.h>
 #include "FaceModelFileHandler.h"
 
 namespace FaceTools {
 namespace FileIO {
-
-class FaceModelManager;
-class FaceModelFileHandlerMap;
 
 // Prints the IO formats to given stream.
 FaceTools_EXPORT std::ostream& operator<<( std::ostream&, const FaceModelFileHandlerMap&);
@@ -70,8 +65,8 @@ private:
     friend std::ostream& FaceTools::FileIO::operator<<( std::ostream&, const FaceModelFileHandlerMap&);
     friend class FaceModelManager;
     FaceModelFileHandlerMap(){}
-    FaceModelFileHandlerMap( const FaceModelFileHandlerMap&);   // No copy
-    void operator=( const FaceModelFileHandlerMap&);            // No copy
+    FaceModelFileHandlerMap( const FaceModelFileHandlerMap&) = delete;
+    void operator=( const FaceModelFileHandlerMap&) = delete;
 };  // end class
 
 }   // end namespace

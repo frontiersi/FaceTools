@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,12 +20,11 @@
 
 #include "PathSet.h"
 #include "LandmarkSet.h"
-#include "FaceControlSet.h"
+#include "FaceViewSet.h"
 #include <ObjModelTools.h>   // RFeatures
 #include <QReadWriteLock>
 
 namespace FaceTools {
-class FaceControl;
 
 class FaceTools_EXPORT FaceModel
 {
@@ -49,50 +48,61 @@ public:
     // Use this function to access the model for making direct changes. After making
     // changes, call update to ensure that updates propagate through. If making changes
     // to the wrapped ObjModel, ensure that ObjModelInfo::reset is called before update.
-    RFeatures::ObjModelInfo::Ptr info() const { return _minfo;}
+    inline RFeatures::ObjModelInfo::Ptr info() const { return _minfo;}
 
     // Get the KD-tree - DO NOT MAKE CHANGES TO IT DIRECTLY!
-    RFeatures::ObjModelKDTree::Ptr kdtree() const { return _kdtree;}
+    inline RFeatures::ObjModelKDTree::Ptr kdtree() const { return _kdtree;}
 
     // Returns boundary values for each model component as [xmin,xmax,ymin,ymax,zmin,zmax].
-    const std::vector<cv::Vec6d>& bounds() const { return _cbounds;}
+    inline const std::vector<cv::Vec6d>& bounds() const { return _cbounds;}
 
-    // Set/get orientation of the data.
-    void setOrientation( const RFeatures::Orientation &o) { _orientation = o; setSaved(false);}
-    const RFeatures::Orientation& orientation() const { return _orientation;}
+    // Set/get orientation of the face.
+    inline void setOrientation( const RFeatures::Orientation &o) { _orientation = o; setSaved(false);}
+    inline const RFeatures::Orientation& orientation() const { return _orientation;}
 
-    // Landmarks.
-    LandmarkSet::Ptr landmarks() const { return _landmarks;}    // CALL setSaved(false) AFTER UPDATING!
-    // Paths.
-    PathSet::Ptr paths() const { return _paths;}    // CALL setSaved(false) AFTER UPDATING!
+    // Set/get "centre" of the face.
+    inline void setCentre( const cv::Vec3f& c) { _centre = c; _centreSet = true; setSaved(false);}
+    inline const cv::Vec3f& centre() const { return _centre;}
+    inline bool centreSet() const { return _centreSet;}    // True iff setCentre has been called.
+
+    inline LandmarkSet::Ptr landmarks() const { return _landmarks;}    // CALL setSaved(false) AFTER UPDATING!
+    inline PathSet::Ptr paths() const { return _paths;}    // CALL setSaved(false) AFTER UPDATING!
 
     // Set/get description of data.
-    void setDescription( const std::string& d) { _description = d; setSaved(false);}
-    const std::string& description() const { return _description;}
+    inline void setDescription( const std::string& d) { _description = d; setSaved(false);}
+    inline const std::string& description() const { return _description;}
 
     // Set/get source of data.
-    void setSource( const std::string& s) { _source = s; setSaved(false);}
-    const std::string& source() const { return _source;}
+    inline void setSource( const std::string& s) { _source = s; setSaved(false);}
+    inline const std::string& source() const { return _source;}
 
-    const FaceControlSet& faceControls() const { return _fcs;}
+    // The views associated with this model.
+    inline const FVS& fvs() const { return _fvs;}
 
     // Set/get if this model needs saving.
-    bool isSaved() const { return _saved;}
-    void setSaved( bool s=true) { _saved = s;}
+    inline bool isSaved() const { return _saved;}
+    inline void setSaved( bool s=true) { _saved = s;}
 
     bool hasMetaData() const;
 
-    // Convenience function to update renderers on all associated FaceControls.
+    // Convenience function to update renderers on all associated FaceViews.
     void updateRenderers() const;
+
+    // Find and return the point on the surface closest to the given point (which may not be on the surface).
+    cv::Vec3f findClosestSurfacePoint( const cv::Vec3f&) const;
 
     // Translate the given point to the surface of this model. First finds the
     // closest point on the surface using the internal kd-tree.
     double translateToSurface( cv::Vec3f&) const;
 
+    void pokeTransform( vtkMatrix4x4*);
+
 private:
     bool _saved;
     std::string _description;   // Long form description
     std::string _source;        // Data source info
+    bool _centreSet;            // If face centre has been set.
+    cv::Vec3f _centre;          // Face "centre"
     RFeatures::Orientation _orientation;
     FaceTools::LandmarkSet::Ptr _landmarks;
     FaceTools::PathSet::Ptr _paths;
@@ -101,9 +111,10 @@ private:
     std::vector<cv::Vec6d> _cbounds;    // Per component bounds
 
     mutable QReadWriteLock _mutex;
-    FaceControlSet _fcs;  // Associated FaceControls
-    friend class FaceControl;
+    FVS _fvs;  // Associated FaceViews
+    friend class Vis::FaceView;
 
+    void fixTransform( vtkMatrix4x4*);
     void calculateBounds();
     FaceModel( const FaceModel&) = delete;
     void operator=( const FaceModel&) = delete;

@@ -67,6 +67,7 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionSynchroniseCameraMovement.h"
     "${INCLUDE_ACTION_DIR}/ActionToggleAxes.h"
     "${INCLUDE_ACTION_DIR}/ActionToggleCameraActorInteraction.h"
+    "${INCLUDE_ACTION_DIR}/ActionToggleScalarLegend.h"
     "${INCLUDE_ACTION_DIR}/ActionTransformToStandardPosition.h"
     "${INCLUDE_ACTION_DIR}/ActionVisualise.h"
     "${INCLUDE_ACTION_DIR}/CameraWorker.h"
@@ -90,10 +91,11 @@ set( QOBJECTS
 
     "${INCLUDE_VIS_DIR}/BaseVisualisation.h"
     "${INCLUDE_VIS_DIR}/BoundingVisualisation.h"
+    "${INCLUDE_VIS_DIR}/FaceView.h"
     "${INCLUDE_VIS_DIR}/LandmarksVisualisation.h"
+    "${INCLUDE_VIS_DIR}/LoopSelectVisualisation.h"
     "${INCLUDE_VIS_DIR}/OutlinesVisualisation.h"
     "${INCLUDE_VIS_DIR}/PathSetVisualisation.h"
-    "${INCLUDE_VIS_DIR}/RadialSelectVisualisation.h"
     "${INCLUDE_VIS_DIR}/ScalarVisualisation.h"
     "${INCLUDE_VIS_DIR}/VisualisationInterface.h"
 
@@ -103,7 +105,6 @@ set( QOBJECTS
     "${INCLUDE_INT_DIR}/ModelEntryExitInteractor.h"
     "${INCLUDE_INT_DIR}/ModelViewerEntryExitInteractor.h"
     "${INCLUDE_INT_DIR}/ModelMoveInteractor.h"
-    "${INCLUDE_INT_DIR}/ModelMoveResponder.h"
     "${INCLUDE_INT_DIR}/ModelSelectInteractor.h"
     "${INCLUDE_INT_DIR}/ModelViewerInteractor.h"
     "${INCLUDE_INT_DIR}/RadialSelectInteractor.h"
@@ -123,7 +124,7 @@ set( INCLUDE_FILES
     "${INCLUDE_DIR}/${PROJECT_NAME}.h"
 
     "${INCLUDE_ACTION_DIR}/ActionExecutionQueue.h"
-    "${INCLUDE_ACTION_DIR}/ChangeEvents.h"
+    "${INCLUDE_ACTION_DIR}/EventProcessResponse.h"
 
     "${INCLUDE_DETECT_DIR}/FaceDetector.h"
     "${INCLUDE_DETECT_DIR}/FaceFinder2D.h"
@@ -139,9 +140,7 @@ set( INCLUDE_FILES
     "${INCLUDE_FILEIO_DIR}/LoadFaceModelsHelper.h"
 
     "${INCLUDE_VIS_DIR}/BoundingView.h"
-    "${INCLUDE_VIS_DIR}/FaceView.h"
     "${INCLUDE_VIS_DIR}/LandmarkSetView.h"
-    "${INCLUDE_VIS_DIR}/LegendScalarColourRangeMapper.h"
     "${INCLUDE_VIS_DIR}/LoopsView.h"
     "${INCLUDE_VIS_DIR}/PathView.h"
     "${INCLUDE_VIS_DIR}/PathSetView.h"
@@ -151,13 +150,13 @@ set( INCLUDE_FILES
     "${INCLUDE_DIR}/CurvatureSpeedFunctor.h"
     "${INCLUDE_DIR}/CurvatureVariableSpeedFunctor.h"
     #"${INCLUDE_DIR}/FaceAverager.h"
-    "${INCLUDE_DIR}/FaceControl.h"
-    "${INCLUDE_DIR}/FaceControlSet.h"
+    "${INCLUDE_DIR}/FaceViewSet.h"
 
     "${INCLUDE_DIR}/FaceModel.h"
     #"${INCLUDE_DIR}/FacePointSampler.h"
-    "${INCLUDE_DIR}/Hashing.h"
+    "${INCLUDE_DIR}/FaceTypes.h"
     "${INCLUDE_DIR}/Landmark.h"
+    "${INCLUDE_DIR}/Landmarks.h"
     "${INCLUDE_DIR}/LandmarkSet.h"
     "${INCLUDE_DIR}/MiscFunctions.h"
     "${INCLUDE_DIR}/SurfaceMesher.h"
@@ -207,6 +206,7 @@ set( SRC_FILES
     ${SRC_DIR}/Action/ActionSynchroniseCameraMovement
     ${SRC_DIR}/Action/ActionToggleAxes
     ${SRC_DIR}/Action/ActionToggleCameraActorInteraction
+    ${SRC_DIR}/Action/ActionToggleScalarLegend
     ${SRC_DIR}/Action/ActionTransformToStandardPosition
     ${SRC_DIR}/Action/ActionVisualise
     ${SRC_DIR}/Action/CameraWorker
@@ -243,13 +243,12 @@ set( SRC_FILES
     ${SRC_DIR}/Vis/FaceView
     ${SRC_DIR}/Vis/LandmarkSetView
     ${SRC_DIR}/Vis/LandmarksVisualisation
-    ${SRC_DIR}/Vis/LegendScalarColourRangeMapper
+    ${SRC_DIR}/Vis/LoopSelectVisualisation
     ${SRC_DIR}/Vis/LoopsView
     ${SRC_DIR}/Vis/OutlinesVisualisation
     ${SRC_DIR}/Vis/PathView
     ${SRC_DIR}/Vis/PathSetView
     ${SRC_DIR}/Vis/PathSetVisualisation
-    ${SRC_DIR}/Vis/RadialSelectVisualisation
     ${SRC_DIR}/Vis/ScalarVisualisation
     ${SRC_DIR}/Vis/SphereView
 
@@ -259,7 +258,6 @@ set( SRC_FILES
     ${SRC_DIR}/Interactor/ModelEntryExitInteractor
     ${SRC_DIR}/Interactor/ModelViewerInteractor
     ${SRC_DIR}/Interactor/ModelMoveInteractor
-    ${SRC_DIR}/Interactor/ModelMoveResponder
     ${SRC_DIR}/Interactor/ModelSelectInteractor
     ${SRC_DIR}/Interactor/RadialSelectInteractor
     ${SRC_DIR}/Interactor/PathSetInteractor
@@ -269,12 +267,12 @@ set( SRC_FILES
     ${SRC_DIR}/CurvatureSpeedFunctor
     ${SRC_DIR}/CurvatureVariableSpeedFunctor
     #${SRC_DIR}/FaceAverager
-    ${SRC_DIR}/FaceControl
-    ${SRC_DIR}/FaceControlSet
+    ${SRC_DIR}/FaceViewSet
 
     ${SRC_DIR}/FaceModel
     ${SRC_DIR}/FaceModelSurfaceData
     ${SRC_DIR}/FaceModelViewer
+    ${SRC_DIR}/FaceTypes
     #${SRC_DIR}/FacePointSampler
     ${SRC_DIR}/Landmark
     ${SRC_DIR}/LandmarkSet

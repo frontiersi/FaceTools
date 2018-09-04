@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,9 +34,9 @@ public:
 
 protected slots:
     bool testEnabled( const QPoint* mc=nullptr) const override { return !_loadHelper->reachedLoadLimit();}
-    bool doBeforeAction( FaceControlSet&, const QPoint&) override;
-    bool doAction( FaceControlSet&, const QPoint&) override;
-    void doAfterAction( ChangeEventSet&, const FaceControlSet&, bool) override;
+    bool doBeforeAction( FVS&, const QPoint&) override;
+    bool doAction( FVS&, const QPoint&) override;
+    void doAfterAction( EventSet&, const FVS&, bool) override;
 
 private:
     FileIO::LoadFaceModelsHelper *_loadHelper;

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,16 +16,15 @@
  ************************************************************************/
 
 #include <ActionSaveFaceModels.h>
-#include <FaceControl.h>
 #include <QMessageBox>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionSaveFaceModels;
-using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
 using FaceTools::FileIO::FaceModelManager;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
+using FaceTools::FVS;
+using FaceTools::Vis::FV;
 using FaceTools::FaceModel;
 
 
@@ -37,14 +36,14 @@ ActionSaveFaceModels::ActionSaveFaceModels( const QString& dn, const QIcon& ico,
 }   // end ctor
 
 
-bool ActionSaveFaceModels::testReady( const FaceControl* fc)
+bool ActionSaveFaceModels::testReady( const FV* fv)
 {
-    FaceModel *fm = fc->data();
+    FaceModel *fm = fv->data();
     return !fm->isSaved() && (_fmm->hasPreferredFileFormat(fm) || !fm->hasMetaData());
 }   // end testReady
 
 
-bool ActionSaveFaceModels::doAction( FaceControlSet& fset, const QPoint&)
+bool ActionSaveFaceModels::doAction( FVS& fset, const QPoint&)
 {
     const FaceModelSet& fms = fset.models();
     for ( FaceModel* fm : fms)
@@ -57,7 +56,7 @@ bool ActionSaveFaceModels::doAction( FaceControlSet& fset, const QPoint&)
 }   // end doAction
 
 
-void ActionSaveFaceModels::doAfterAction( ChangeEventSet&, const FaceControlSet&, bool)
+void ActionSaveFaceModels::doAfterAction( EventSet&, const FVS&, bool)
 {
     for ( auto f : _fails)  // Display a critical error for each type of error message received
     {

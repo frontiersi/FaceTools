@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,32 +25,26 @@
  * includes a bunch of necessary functions with default implementations.
  */
 
-#include <FaceTools_Export.h>
+#include <FaceTypes.h>
 #include <PluginInterface.h>    // QTools
 
 namespace FaceTools {
-class FaceControl;
-class FaceModel;
-
 namespace Vis {
 
 // VisualisationInterface is pure virtual to allow it to be a plugin type.
 class FaceTools_EXPORT VisualisationInterface : public QTools::PluginInterface
 { Q_OBJECT
 public:
-    virtual bool isExclusive() const = 0;                   // Exclusive visualisations cannot be layered.
+    virtual bool isToggled() const = 0;                     // Toggled visualisations layer.
     virtual bool isAvailable( const FaceModel*) const = 0;  // Does the FaceModel allow this visualisation to be applied?
-    virtual bool isAvailable( const FaceControl*, const QPoint* mc=nullptr) const = 0; // Can visualise for given view and mouse coords?
+    virtual bool isAvailable( const FaceView*, const QPoint* mc=nullptr) const = 0; // Can visualise for view and mouse coords?
 
-    virtual bool apply( const FaceControl*, const QPoint* mc=nullptr) = 0; // Apply visualisation returning true if applied okay.
-    virtual void addActors( const FaceControl*) = 0;        // Add the visualisation specific actors.
-    virtual void removeActors( const FaceControl*) = 0;     // Remove the view actors from viewer.
+    virtual void copy( FaceView* dst, const FaceView* src) = 0;    // Copy visualisations directly across from src to dst.
+    virtual void apply( FaceView*, const QPoint* mc=nullptr) = 0;  // Add the visualisation.
+    virtual void remove( FaceView*) = 0;                           // Remove the visualisation.
 };  // end class
 
 }   // end namespace
 }   // end namespace
-
-#define FaceToolsPluginVisVisualisationInterface_iid "com.github.richeytastic.FaceTools.v030.Vis.VisualisationInterface"
-Q_DECLARE_INTERFACE( FaceTools::Vis::VisualisationInterface, FaceToolsPluginVisVisualisationInterface_iid)
 
 #endif

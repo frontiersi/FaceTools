@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,7 +47,7 @@ public:
     PathView::Handle* handle( const vtkProp*) const;    // Return the handle mapped to the given prop (if any).
     PathView* pathView( int pathId) const;              // Return the requested path view.
     void updatePath( int pathId);                       // Update the given path from the PathSet (remove if necessary).
-    void updatePaths();                                 // Update all paths.
+    void refresh();                                     // Refresh all path visualisations to match _paths.
 
     void pokeTransform( const vtkMatrix4x4*);
     void fixTransform();
@@ -55,7 +55,7 @@ public:
 private:
     const PathSet::Ptr _paths;
     ModelViewer *_viewer;
-    std::unordered_map<int, PathView*> _pviews;
+    std::unordered_map<int, PathView*> _views;
     std::unordered_map<const vtkProp*, PathView::Handle*> _handles;
     std::unordered_set<int> _visible;   // Which paths are visible
 

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,10 +29,10 @@ using FaceTools::LandmarkSet;
 using FaceTools::Landmark;
 
 // public
-LandmarkSetView::LandmarkSetView( const LandmarkSet& lset, double r)
+LandmarkSetView::LandmarkSetView( LandmarkSet::Ptr lset, double r)
     : _lset(lset), _lmrad(r), _viewer(nullptr)
 {
-    std::for_each( std::begin(lset.ids()), std::end(lset.ids()), [this](int lm){ this->updateLandmark(lm);});
+    std::for_each( std::begin(lset->ids()), std::end(lset->ids()), [this](int lm){ this->updateLandmark(lm);});
 }   // end ctor
 
 
@@ -99,7 +99,7 @@ int LandmarkSetView::landmark( const vtkProp* prop) const { return _props.count(
 void LandmarkSetView::updateLandmark( int lm)
 {
     assert(lm >= 0);
-    if ( !_lset.has(lm))  // Delete landmark from view
+    if ( !_lset->has(lm))  // Delete landmark from view
     {
         if ( _views.count(lm) > 0)
         {
@@ -112,7 +112,7 @@ void LandmarkSetView::updateLandmark( int lm)
     }   // end if
     else    // Landmark added, or an existing landmark's info (position,name) needs updating
     {
-        const Landmark* lmk = _lset.get(lm);
+        const Landmark* lmk = _lset->get(lm);
 
         SphereView *sv = nullptr;
         if ( _views.count(lm) > 0) // Get the landmark sphere view to update
@@ -129,3 +129,15 @@ void LandmarkSetView::updateLandmark( int lm)
         sv->setCentre( lmk->pos);
     }   // end if
 }   // end updateLandmark 
+
+
+// public
+void LandmarkSetView::refresh()
+{
+    std::unordered_set<int> keys; // Copy out the current set of visualised keys
+    std::for_each( std::begin(_views), std::end(_views), [&](auto p){ keys.insert(p.first);});
+    // Add in the current keys from the landmarks
+    std::for_each( std::begin(_lset->ids()), std::end(_lset->ids()), [&](int lm){ keys.insert(lm);});
+    // Run update over all
+    std::for_each( std::begin(keys), std::end(keys), [this](int lm){ this->updateLandmark(lm);});
+}   // end refresh

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,8 @@
 #include <FacialOrientation.h>
 #include <MiscFunctions.h>
 #include <FeatureUtils.h>           // RFeatures
+#include <Viewer.h>                 // RVTK
+#include <VtkActorCreator.h>        // RVTK
 
 using FaceTools::Detect::FaceDetector;
 using FaceTools::Detect::FaceFinder2D;
@@ -44,7 +46,6 @@ using FaceTools::LandmarkSet;
 using RFeatures::ObjModel;
 using RFeatures::Orientation;
 using RFeatures::ObjModelKDTree;
-using RVTK::ImageGrabber;
 
 #ifndef NDEBUG
 #define SHOW_DEBUG
@@ -52,7 +53,11 @@ using RVTK::ImageGrabber;
 
 namespace {
 
-cv::Mat_<cv::Vec3b> snapshot( RVTK::Viewer::Ptr v) { return ImageGrabber(v).colour();}
+cv::Mat_<cv::Vec3b> snapshot( RVTK::Viewer::Ptr v)
+{
+    RVTK::ImageGrabber ig(*v);
+    return ig.colour();
+}   // end snapshot
 
 
 cv::Mat_<cv::Vec3b> snapshot( RVTK::Viewer::Ptr viewer, const std::vector<cv::Point2f>& fpts)
@@ -67,7 +72,7 @@ cv::Mat_<cv::Vec3b> snapshot( RVTK::Viewer::Ptr viewer, const std::vector<cv::Po
 
 std::string getEyePoints( vtkRenderer* ren, cv::Point2f& f0, cv::Vec3f& v0,
                                             cv::Point2f& f1, cv::Vec3f& v1,
-                                                             cv::Vec3f& mp)
+                                            cv::Vec3f& mp)
 {
     RVTK::RendererPicker rpicker( ren, RVTK::RendererPicker::TOP_LEFT);
     cv::Point2f fmid = (f1 + f0) * 0.5f;
@@ -134,14 +139,15 @@ std::string findOrientationPoints( RVTK::Viewer::Ptr viewer, const ObjModelKDTre
                                    cv::Vec3f& v0, cv::Vec3f& v1, cv::Vec3f& ntip)
 {
     FaceFinder2D faceFinder;
-    if ( !faceFinder.find( ImageGrabber(viewer).light()))
+    RVTK::ImageGrabber ig(*viewer);
+    if ( !faceFinder.find( ig.light()))
         return "Failed to find a candidate face from 2D image!";
 
     cv::Point2f f0 = faceFinder.getLEyeCentre();    // [0,1]
     cv::Point2f f1 = faceFinder.getREyeCentre();    // [0,1]
     // Get the points in space for the eyes. If model is too full of holes, fail.
     cv::Vec3f mp;   // mp will be the midpoint between the eyes
-    std::string errMsg = getEyePoints( viewer->getRenderer(), f0, v0, f1, v1, mp);
+    std::string errMsg = getEyePoints( viewer->renderer(), f0, v0, f1, v1, mp);
 
 #ifdef SHOW_DEBUG
     cv::Mat_<cv::Vec3b> dmat = faceFinder.drawDebug( snapshot(viewer, std::vector<cv::Point2f>({f0,f1})));
@@ -166,7 +172,7 @@ std::string findOrientationPoints( RVTK::Viewer::Ptr viewer, const ObjModelKDTre
         ntip = m1NoseFinder.getNoseTip();
 #ifdef SHOW_DEBUG
         std::vector<cv::Point> pts;
-        RVTK::RendererPicker rpicker( viewer->getRenderer(), RVTK::RendererPicker::TOP_LEFT);
+        RVTK::RendererPicker rpicker( viewer->renderer(), RVTK::RendererPicker::TOP_LEFT);
         pts.push_back( rpicker.projectToImagePlane( model->vtx(lvidx)));
         pts.push_back( rpicker.projectToImagePlane( model->vtx(rvidx)));
         pts.push_back( rpicker.projectToImagePlane( ntip));
@@ -218,18 +224,26 @@ bool FaceDetector::detect( const ObjModelKDTree::Ptr kdt, Orientation& on, Landm
     _err = "";
 
     // Initialise the viewer
-    _viewer = RVTK::Viewer::create(true/*offscreen*/);
-    _viewer->setSize(600,600);
-    _viewer->setCamera( RFeatures::CameraParams( cv::Vec3f( 0, 0, _orng)));    // Default camera for detecting orientation
+    RVTK::Viewer::Ptr viewer = RVTK::Viewer::create(true/*offscreen*/);
+    viewer->setSize(600,600);
+    viewer->setCamera( RFeatures::CameraParams( cv::Vec3f( 0, 0, _orng)));    // Default camera for detecting orientation
 
-    RVTK::VtkActorCreator actorCreator;
-    actorCreator.generateTexturedActors( kdt->model(), _actors);
-    std::for_each( std::begin(_actors), std::end(_actors), [this](auto a){ _viewer->addActor(a);});
-    _viewer->resetClippingRange();
-    _viewer->updateRender();
+    // Create the actor
+    vtkSmartPointer<vtkTexture> texture;
+    RVTK::VtkActorCreator ac;
+    vtkSmartPointer<vtkActor> actor = ac.generateActor( kdt->model(), texture);
+
+    // Add the actor to the viewer
+    viewer->addActor( actor);
+    viewer->resetClippingRange();
+    viewer->updateRender();
+
+#ifdef SHOW_DEBUG
+    RFeatures::showImage( snapshot(viewer), "FaceDetector::detect initial pose", false);
+#endif
 
     cv::Vec3f v0, v1, ntip; // Nose tip, left and right eye centres set
-    _err = findOrientationPoints( _viewer, kdt, v0, v1, ntip);
+    _err = findOrientationPoints( viewer, kdt, v0, v1, ntip);
     if ( !_err.empty())
         return cleanUp();
 
@@ -239,16 +253,16 @@ bool FaceDetector::detect( const ObjModelKDTree::Ptr kdt, Orientation& on, Landm
 
     // Update the view to focus on the identified face centre using the landmark detection range.
     const cv::Vec3f fc = FaceTools::calcFaceCentre( on.up(), v0, v1, ntip);
-    _viewer->setCamera( RFeatures::CameraParams( _drng * on.norm() + fc, fc, on.up()));
-    _viewer->updateRender();
-    //RFeatures::showImage( snapshot(_viewer), "Updated detection image post orientation", false);
+    viewer->setCamera( RFeatures::CameraParams( _drng * on.norm() + fc, fc, on.up()));
+    viewer->updateRender();
+    //RFeatures::showImage( snapshot(viewer), "Updated detection image post orientation", false);
 
     using namespace FaceTools::Landmarks;
     lset->set( NASAL_TIP, ntip);
     lset->set( L_EYE_CENTRE, v0);
     lset->set( R_EYE_CENTRE, v1);
 
-    if ( !FaceShapeLandmarks2DDetector::detect( _viewer, lset))
+    if ( !FaceShapeLandmarks2DDetector::detect( viewer, lset))
         return cleanUp( "Complete set of landmarks not found.");
 
     ntip = lset->pos(NASAL_TIP);
@@ -257,9 +271,9 @@ bool FaceDetector::detect( const ObjModelKDTree::Ptr kdt, Orientation& on, Landm
     //findNewOrientation( ntip, v0, v1, on.norm(), on.up());
     FaceTools::Detect::findOrientation( kdt, v0, v1, on.norm(), on.up());
 
-    //_viewer->setCamera( RFeatures::CameraParams( _drng * on.norm() + fc, fc, on.up()));
-    //_viewer->updateRender();
-    //RFeatures::showImage( snapshot(_viewer), "Image post final orientation", false);
+    //viewer->setCamera( RFeatures::CameraParams( _drng * on.norm() + fc, fc, on.up()));
+    //viewer->updateRender();
+    //RFeatures::showImage( snapshot(viewer), "Image post final orientation", false);
 
     return cleanUp();
 }   // end detect
@@ -269,10 +283,6 @@ bool FaceDetector::cleanUp( std::string err)
 {
     _err = err;
     std::cerr << _err << std::endl;
-    std::for_each( std::begin(_actors), std::end(_actors), [this](auto a){ _viewer->removeActor(a);});
-    std::for_each( std::begin(_actors), std::end(_actors), [](auto a){ a->Delete();});
-    _actors.clear();
-    _viewer.reset();
     return err.empty();
 }   // end cleanUp
 

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,26 +16,28 @@
  ************************************************************************/
 
 #include <ActionEditLandmarks.h>
-#include <FaceControl.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <VtkTools.h>
+#include <algorithm>
 using FaceTools::Action::ActionEditLandmarks;
-using FaceTools::Action::ChangeEventSet;
+using FaceTools::Action::EventSet;
 using FaceTools::Action::ActionVisualise;
 using FaceTools::Interactor::LandmarksInteractor;
 using FaceTools::Interactor::ModelViewerInteractor;
+using FaceTools::Interactor::MEEI;
 using FaceTools::Vis::LandmarksVisualisation;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceControl;
-using FaceTools::FaceModel;
+using FaceTools::FVS;
+using FaceTools::Vis::FV;
 
 
-ActionEditLandmarks::ActionEditLandmarks( const QString& dn, const QIcon& ico, MEEI* meei, QStatusBar* sbar)
-    : ActionVisualise( _vis = new LandmarksVisualisation( dn, ico)),
+ActionEditLandmarks::ActionEditLandmarks( const QString& dn, const QIcon& ico, MEEI* meei, QStatusBar* sbar, bool visOnLoad)
+    : ActionVisualise( _vis = new LandmarksVisualisation( dn, ico), visOnLoad),
      _interactor( new LandmarksInteractor( meei, _vis, sbar))
 {
+    // Leverage this action's reportFinished signal to propagate landmark edits.
     connect( _interactor, &ModelViewerInteractor::onChangedData, this, &ActionEditLandmarks::doOnEditedLandmark);
+    setRespondToEventIfAllReady( LANDMARKS_CHANGE, true);
 }   // end ctor
 
 
@@ -46,18 +48,26 @@ ActionEditLandmarks::~ActionEditLandmarks()
 }   // end dtor
 
 
-void ActionEditLandmarks::doAfterAction( ChangeEventSet& cs, const FaceControlSet& fcs, bool v)
+bool ActionEditLandmarks::doAction( FVS& fvs, const QPoint& mc)
 {
-    ActionVisualise::doAfterAction( cs, fcs, v);
+    const FMS& fms = fvs.models();
+    std::for_each( std::begin(fms), std::end(fms), [=](auto fm){ _vis->refresh( fm);});
+    return ActionVisualise::doAction(fvs, mc);
+}   // end doAction
+
+
+void ActionEditLandmarks::doAfterAction( EventSet& cs, const FVS& fvs, bool v)
+{
+    ActionVisualise::doAfterAction( cs, fvs, v);
     _interactor->setEnabled(isChecked());
 }   // end doAfterAction
 
 
-void ActionEditLandmarks::doOnEditedLandmark( const FaceControl* fc)
+void ActionEditLandmarks::doOnEditedLandmark( const FV* fv)
 {
-    ChangeEventSet cset;
+    EventSet cset;
     cset.insert(LANDMARKS_CHANGE);
-    FaceControlSet fcs;
-    fcs.insert(const_cast<FaceControl*>(fc));
-    emit reportFinished( cset, fcs, true);
+    FVS fvs;
+    fvs.insert(const_cast<FV*>(fv));
+    emit reportFinished( cset, fvs, true);
 }   // end doOnEditedLandmark

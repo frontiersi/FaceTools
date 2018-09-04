@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2017 Richard Palmer
+ * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,132 +17,66 @@
 
 #include <VisualisationsManager.h>
 #include <FaceActionManager.h>
-#include <ActionVisualise.h>
-#include <FaceModelViewer.h>
-#include <FaceModel.h>
-#include <FaceView.h>
-#include <algorithm>
-#include <cassert>
 using FaceTools::Action::VisualisationsManager;
 using FaceTools::Action::FaceActionManager;
 using FaceTools::Action::ActionVisualise;
 using FaceTools::Action::FaceAction;
-using FaceTools::Vis::BaseVisualisation;
-using FaceTools::Vis::FaceView;
-using FaceTools::FaceModelViewer;
-using FaceTools::FaceControlSet;
-using FaceTools::FaceViewerSet;
-using FaceTools::FaceModelSet;
+
+
+namespace FaceTools {
+namespace Action {
+
+class ActionShowTexture : public ActionVisualise
+{
+public:
+    ActionShowTexture() : ActionVisualise( _vis = new Vis::TextureVisualisation, true/*show on load*/) {}
+    ~ActionShowTexture() override { delete _vis;}
+private:
+    Vis::BaseVisualisation* _vis;
+};  // end class
+
+}   // end namespace
+}   // end namespace
 
 
 VisualisationsManager::VisualisationsManager()
-    : QObject(), _evis(this), _nvis(this)
+    : QObject(), _evis(this), _nvis(this), _vact( new ActionShowTexture)
 {
     _nvis.setExclusive(false);
 }   // end ctor
 
 
-void VisualisationsManager::makeDefault( FaceActionManager* fman)
+void VisualisationsManager::init( FaceActionManager* fam)
 {
-    fman->addAction( new ActionVisualise( &_tvis));
-    fman->addAction( new ActionVisualise( &_svis));
-    fman->addAction( new ActionVisualise( &_wvis));
-    fman->addAction( new ActionVisualise( &_pvis));
-}   // end makeDefault
+    fam->addAction( _vact);
+}   // end init
 
 
 void VisualisationsManager::add( FaceAction* a)
 {
     ActionVisualise* av = qobject_cast<ActionVisualise*>(a);
-    if ( av && av->isVisible() && av->manageVisualisation())
-    {
-        if ( av->isExclusive())
-            _evis.addAction(av->qaction());
-        else
-            _nvis.addAction(av->qaction());
-    }   // end if
+    if ( !av || !av->isVisible())
+        return;
+
+    if ( !av->visualisation()->isToggled())
+        _evis.addAction(av->qaction());
+    else
+        _nvis.addAction(av->qaction());
 }   // end add
 
 
 QList<QAction*> VisualisationsManager::actions() const
 {
-    QList<QAction*> alist = _evis.actions();
+    QList<QAction*> lst = _evis.actions();
     if ( !_nvis.actions().empty())
     {
-        QAction* separator = new QAction;
-        separator->setSeparator(true);
-        alist.append( separator);
-        alist.append( _nvis.actions());
+        if ( !lst.isEmpty())
+        {
+            QAction* separator = new QAction;
+            separator->setSeparator(true);
+            lst.append( separator);
+        }   // end if
+        lst.append( _nvis.actions());
     }   // end if
-    return alist;
+    return lst;
 }   // end actions
-
-
-bool VisualisationsManager::setDefaultVisualisation( FaceView* fv)
-{
-    //std::cerr << "VisMan::setDefaultVisualisation" << std::endl;
-    bool setv = false;
-    if ( fv->textureActor() != nullptr) // Try to apply the texture visualisation first
-    {
-        setv = fv->apply( &_tvis);
-        assert(setv);
-    }   // end if
-    else if ( fv->surfaceActor() != nullptr)
-    {
-        setv = fv->apply( &_svis);
-        assert(setv);
-    }   // end else if
-    return setv;
-}   // end setDefaultVisualisation
-
-
-
-void VisualisationsManager::enforceVisualisationConformance( const FaceControlSet* fcs)
-{
-    if ( !fcs)
-        return;
-
-    // Check for default visualisations first.
-    const FaceModelSet& fms = fcs->models();
-    for ( FaceModel* fm : fms)
-    {
-        for ( FaceControl* fc : fm->faceControls())
-        {
-            if ( fc->view()->exclusiveVisualisation() == nullptr)
-                setDefaultVisualisation(fc->view());
-        }   // end for
-    }   // end for
-
-    // Across all viewers possibly affected, enforce the same visualisation.
-    FaceViewerSet viewers = fcs->viewers();
-    for ( FaceModelViewer* viewer : viewers)
-    {
-        const FaceControlSet& vfcs = viewer->attached();
-        assert( !vfcs.empty());
-        BaseVisualisation *vis = nullptr;
-        for ( FaceControl* fc : vfcs)
-        {
-            vis = fc->view()->exclusiveVisualisation();    // All must have this visualisation.
-            if ( vis)   // Ensure no null visualisations selected as default
-                break;
-        }   // end for
-
-        assert(vis);
-
-        for ( FaceControl* fc : vfcs)
-        {
-            // If any of the views can't have this visualisation, all views in the viewer are set to the default.
-            if ( fc->view()->exclusiveVisualisation() != vis)
-            {
-                if ( vis->isAvailable(fc))
-                    fc->view()->apply( vis);
-                else
-                {
-                    for ( FaceControl* fc : vfcs)
-                        setDefaultVisualisation( fc->view());
-                    break;
-                }   // end else
-            }   // end if
-        }   // end for
-    }   // end for
-}   // end enforceVisualisationConformance
