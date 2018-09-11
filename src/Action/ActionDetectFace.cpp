@@ -100,13 +100,11 @@ bool ActionDetectFace::doAction( FVS& fvs, const QPoint&)
 }   // end doAction
 
 
-void ActionDetectFace::doAfterAction( EventSet& cset, const FVS& rset, bool v)
+void ActionDetectFace::doAfterAction( EventSet& cset, const FVS& fvs, bool v)
 {
     if ( !v) // Warn failure
     {
-        QString msg = tr("Face detection failed on the selected face! Move the face into a different position and try again.");
-        if ( !rset.empty())
-            msg = tr("Face detection failed on one of the selected faces! Move the faces into a different position and try again.");
+        QString msg = tr( _detector->err().c_str());
         QMessageBox::warning(_parent, tr("Face Detection Failed!"), msg);
     }   // end if
     cset.insert(ORIENTATION_CHANGE);

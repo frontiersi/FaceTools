@@ -50,8 +50,10 @@ ActionEditLandmarks::~ActionEditLandmarks()
 
 bool ActionEditLandmarks::doAction( FVS& fvs, const QPoint& mc)
 {
+    // TODO: Should probably consider making this a separate action instead of making this use ActionVisualise.
     const FMS& fms = fvs.models();
     std::for_each( std::begin(fms), std::end(fms), [=](auto fm){ _vis->refresh( fm);});
+    std::for_each( std::begin(fvs), std::end(fvs), [=](auto fv){ _vis->apply(fv);});
     return ActionVisualise::doAction(fvs, mc);
 }   // end doAction
 

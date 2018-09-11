@@ -53,7 +53,7 @@ struct MeshConstructor
 
     MeshConstructor& operator=( const Facet f)
     {
-        model->setFace( _points2ModelVidxs.at(f[0]),
+        model->addFace( _points2ModelVidxs.at(f[0]),
                         _points2ModelVidxs.at(f[1]),
                         _points2ModelVidxs.at(f[2]));
         return *this;

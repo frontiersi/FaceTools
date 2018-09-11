@@ -28,9 +28,11 @@ using FaceTools::FVS;
 using FaceTools::FM;
 
 
-ActionReflect::ActionReflect( const QString& dn, const QIcon& ico)
+ActionReflect::ActionReflect( const QString& dn, const QIcon& ico, QProgressBar* pb)
     : FaceAction(dn, ico)
 {
+    if ( pb)
+        setAsync(true, QTools::QProgressUpdater::create(pb));
 }   // end ctor
 
 
@@ -45,22 +47,15 @@ bool ActionReflect::doAction( FVS& fvs, const QPoint&)
 
     fm->lockForWrite();
 
-    bool success = true;
-
     const RFeatures::Orientation& on = fm->orientation();
     RFeatures::ObjModelInfo::Ptr info = fm->info();
     RFeatures::ObjModel::Ptr model = info->model();
 
     RFeatures::ObjModelReflector reflector( model);
     reflector.reflect( fm->centre(), on.up().cross( on.norm()));
-    if ( info->reset( model))
-        fm->update(info);
-    else
-    {
-        std::cerr << "[ERROR] FaceTools::Action::ActionReflect::doAction: Unable to clean model post reflect!" << std::endl;
-        success = false;
-    }   // end else
+    info->reset( model);
+    fm->update(info);
 
     fm->unlock();
-    return success;
+    return true;
 }   // end doAction

@@ -15,50 +15,48 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionRemesh.h>
-#include <FaceModelViewer.h>
+#include <ActionInvertNormals.h>
 #include <FaceModel.h>
-#include <ObjModelVertexAdder.h>   // RFeatures
+#include <algorithm>
 #include <cassert>
 using FaceTools::Action::FaceAction;
-using FaceTools::Action::ActionRemesh;
+using FaceTools::Action::ActionInvertNormals;
 using FaceTools::Action::EventSet;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
+using FaceTools::FMS;
 using FaceTools::FM;
 
 
-ActionRemesh::ActionRemesh( const QString& dn, const QIcon& ico, QProgressBar* pb)
-    : FaceAction(dn, ico), _maxtarea(2.0)
+ActionInvertNormals::ActionInvertNormals( const QString& dn, const QIcon& ico, QProgressBar* pb)
+    : FaceAction(dn, ico)
 {
     if ( pb)
         setAsync(true, QTools::QProgressUpdater::create(pb));
 }   // end ctor
 
 
-bool ActionRemesh::doAction( FVS& fvs, const QPoint&)
+bool ActionInvertNormals::doAction( FVS& fvs, const QPoint&)
 {
-    assert(fvs.size() == 1);
-    FV* fv = fvs.first();
-    FM* fm = fv->data();
+    FMS fms = fvs.models(); // Copy out
+    fvs.clear();
 
-    fm->lockForWrite();
-
-    bool success = true;
-    RFeatures::ObjModelInfo::Ptr info = fm->info();
-    RFeatures::ObjModel::Ptr model = info->model();
-
-    RFeatures::ObjModelVertexAdder vadder( model);
-    vadder.subdivideAndMerge( maxTriangleArea());
-    //vadder.addVerticesToMaxTriangleArea( maxTriangleArea());
-    if ( info->reset( model))
-        fm->update(info);
-    else
+    for ( FM* fm : fms)
     {
-        std::cerr << "[ERROR] FaceTools::Action::ActionRemesh::doAction: Unable to clean model post remesh!" << std::endl;
-        success = false;
-    }   // end else
+        fm->lockForWrite();
 
-    fm->unlock();
-    return success;
+        RFeatures::ObjModelInfo::Ptr info = fm->info();
+        RFeatures::ObjModel::Ptr model = info->model();
+
+        const IntSet& fids = model->getFaceIds();
+        std::for_each( std::begin(fids), std::end(fids), [&](int fid){ model->reverseFaceVertices(fid);});
+
+        info->reset( model);
+        fm->update(info);
+
+        fm->unlock();
+
+        fvs.insert(fm);
+    }   // end for
+    return true;
 }   // end doAction

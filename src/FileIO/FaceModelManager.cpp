@@ -19,6 +19,7 @@
 #include <MiscFunctions.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
+#include <FileIO.h> // rlib
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <cassert>
@@ -60,7 +61,7 @@ bool FaceModelManager::hasPreferredFileFormat( FM* fm) const
 bool FaceModelManager::isPreferredFileFormat( const std::string& fname) const
 {
     const QString& pext = _fhmap.preferredExt();
-    const std::string cext = FaceTools::getExtension( fname);
+    const std::string cext = rlib::getExtension( fname);
     return cext == pext.toLower().toStdString();
 }   // end isPreferredFileFormat
 

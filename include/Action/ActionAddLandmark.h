@@ -30,12 +30,14 @@ public:
 
 protected slots:
     bool testEnabled( const QPoint* mc=nullptr) const override;
+    bool doBeforeAction( FVS&, const QPoint&) override;
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(LANDMARKS_CHANGE);}
 
 private:
     ActionEditLandmarks *_editor;
     QWidget *_parent;
+    std::string _nname;
 };  // end class
 
 }   // end namespace

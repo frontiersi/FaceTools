@@ -21,8 +21,6 @@
 #include <QTextStream>
 #include <QString>
 #include <QFile>
-#include <boost/algorithm/string.hpp>
-#include <boost/filesystem.hpp>
 #include <algorithm>
 using RFeatures::ObjModel;
 
@@ -55,41 +53,6 @@ void FaceTools::drawPath( const std::vector<cv::Vec3f>& path, cv::Mat& m, cv::Sc
     cv::polylines( m, &pts, &numPts, numCurves, closedLoop, col, thickness);
 }   // end drawPath
 */
-
-
-void FaceTools::removeParentheticalContent( std::string& s)
-{
-    bool removed = true;
-    while ( removed)
-    {
-        const std::string::size_type p0 = s.find_first_of('(');
-        const std::string::size_type p1 = s.find_first_of(')');
-        if ( p0 == std::string::npos || p1 == std::string::npos || p1 < p0)
-            removed = false;
-        else
-            s.replace( p0, p1-p0+1, "");
-    }   // end while
-    boost::algorithm::trim(s);
-}   // end removeParentheticalContent
-
-
-std::string FaceTools::getExtension( const std::string& fname)
-{
-    std::string fname2 = fname;
-    boost::algorithm::trim(fname2);
-    boost::filesystem::path p( fname2);
-    if ( !p.has_extension())    // No extension
-        return "";
-
-    std::string ext = p.extension().string();
-    assert( ext[0] == '.');
-    if ( ext == ".")    // Empty extension
-        return "";
-
-    ext = ext.substr(1);
-    boost::algorithm::to_lower(ext);  // Don't want preceeding period & set to lower case
-    return ext;
-}   // end getExtension
 
 
 std::string FaceTools::getDateTimeDigits( const std::string& fname)

@@ -15,27 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_REMESH_H
-#define FACE_TOOLS_ACTION_REMESH_H
+#ifndef FACE_TOOLS_ACTION_INVERT_NORMALS_H
+#define FACE_TOOLS_ACTION_INVERT_NORMALS_H
 
 #include "FaceAction.h"
 
 namespace FaceTools {
 namespace Action {
 
-class FaceTools_EXPORT ActionRemesh : public FaceAction
+class FaceTools_EXPORT ActionInvertNormals : public FaceAction
 { Q_OBJECT
 public:
-    ActionRemesh( const QString& dname="Remesh", const QIcon& icon=QIcon(), QProgressBar* pb=nullptr);   // Async if pb not null
-
-    double maxTriangleArea() const { return _maxtarea;}
+    ActionInvertNormals( const QString& dname, const QIcon& icon=QIcon(), QProgressBar* pb=nullptr);  // Async if pb not null
 
 private slots:
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(GEOMETRY_CHANGE);}
-
-private:
-    double _maxtarea;
 };  // end class
 
 }   // end namespace

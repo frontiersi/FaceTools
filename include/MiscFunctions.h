@@ -32,13 +32,6 @@ namespace FaceTools {
 // Returns the string context of the given file or an empty string on failure.
 FaceTools_EXPORT std::string loadTextFromFile( const std::string& fname);
 
-// Removes all occurances of "(*)" in s (where * is any character).
-FaceTools_EXPORT void removeParentheticalContent( std::string& s);
-
-// Returns the extension (without dot and in lower case) from fname.
-// Returns an empty string if fname has no extension or an empty extension (ends with a dot).
-FaceTools_EXPORT std::string getExtension( const std::string& fname);
-
 FaceTools_EXPORT std::string getDateTimeDigits( const std::string&); // Get the first 10 digits as a string from given string.
 
 FaceTools_EXPORT long getDateTimeSecs( const std::string&);

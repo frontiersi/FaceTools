@@ -18,6 +18,7 @@
 #include <FaceModelFileHandlerMap.h>
 #include <MiscFunctions.h>
 #include <FaceTools.h>
+#include <FileIO.h> // rlib
 #include <algorithm>
 #include <QStringList>
 using FaceTools::FileIO::FaceModelFileHandlerMap;
@@ -122,7 +123,7 @@ QString FaceModelFileHandlerMap::getFilter( const QString& ext) const
 FaceModelFileHandler* FaceModelFileHandlerMap::getLoadInterface( const std::string& fname) const
 {
     FaceModelFileHandler* fileio = NULL;
-    QString fext = FaceTools::getExtension(fname).c_str();
+    QString fext = rlib::getExtension(fname).c_str();
     if ( _importExtDescMap.count(fext) == 1 && _fileInterfaces.count(fext) == 1)
         fileio = _fileInterfaces.at(fext);
     return fileio;
@@ -133,7 +134,7 @@ FaceModelFileHandler* FaceModelFileHandlerMap::getLoadInterface( const std::stri
 FaceModelFileHandler* FaceModelFileHandlerMap::getSaveInterface( const std::string& fname) const
 {
     FaceModelFileHandler* fileio = NULL;
-    QString fext = FaceTools::getExtension(fname).c_str();
+    QString fext = rlib::getExtension(fname).c_str();
     if ( _exportExtDescMap.count(fext) == 1 && _fileInterfaces.count(fext) == 1)
         fileio = _fileInterfaces.at(fext);
     return fileio;

@@ -26,7 +26,7 @@ namespace Action {
 class FaceTools_EXPORT ActionReflect : public FaceAction
 { Q_OBJECT
 public:
-    ActionReflect( const QString& dname, const QIcon& icon);
+    ActionReflect( const QString& dname, const QIcon& icon=QIcon(), QProgressBar* pb=nullptr);  // Async if pb not null
 
 private slots:
     bool testReady( const Vis::FV*) override;

@@ -48,6 +48,7 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionExportPDF.h"
     "${INCLUDE_ACTION_DIR}/ActionFillHoles.h"
     "${INCLUDE_ACTION_DIR}/ActionGetComponent.h"
+    "${INCLUDE_ACTION_DIR}/ActionInvertNormals.h"
     "${INCLUDE_ACTION_DIR}/ActionLoadDirFaceModels.h"
     "${INCLUDE_ACTION_DIR}/ActionLoadFaceModels.h"
     "${INCLUDE_ACTION_DIR}/ActionMapSurfaceData.h"
@@ -193,6 +194,7 @@ set( SRC_FILES
     ${SRC_DIR}/Action/ActionExecutionQueue
     ${SRC_DIR}/Action/ActionFillHoles
     ${SRC_DIR}/Action/ActionGetComponent
+    ${SRC_DIR}/Action/ActionInvertNormals
     ${SRC_DIR}/Action/ActionLoadDirFaceModels
     ${SRC_DIR}/Action/ActionLoadFaceModels
     ${SRC_DIR}/Action/ActionMapSurfaceData

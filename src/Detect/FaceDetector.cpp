@@ -255,7 +255,10 @@ bool FaceDetector::detect( const ObjModelKDTree::Ptr kdt, Orientation& on, Landm
     const cv::Vec3f fc = FaceTools::calcFaceCentre( on.up(), v0, v1, ntip);
     viewer->setCamera( RFeatures::CameraParams( _drng * on.norm() + fc, fc, on.up()));
     viewer->updateRender();
-    //RFeatures::showImage( snapshot(viewer), "Updated detection image post orientation", false);
+
+#ifdef SHOW_DEBUG
+    RFeatures::showImage( snapshot(viewer), "Updated detection image post orientation", false);
+#endif
 
     using namespace FaceTools::Landmarks;
     lset->set( NASAL_TIP, ntip);

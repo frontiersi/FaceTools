@@ -295,16 +295,9 @@ void FaceView::setTextured( bool v)
     assert(_actor);
     _actor->SetTexture( v && _texture ? _texture : nullptr);
     // Set the correct lighting
-    double aval = 0.0;
-    double dval = 1.0;
-    if ( textured())
-    {
-        aval = 1.0;
-        dval = 0.0;
-    }   // end if
     vtkProperty* property = _actor->GetProperty();
-    property->SetAmbient(aval);
-    property->SetDiffuse(dval);
+    property->SetAmbient( textured() ? 1.0 : 0.0);
+    property->SetDiffuse( 1.0);
     property->SetSpecular(0.0);
 }   // end setTextured
 

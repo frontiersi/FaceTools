@@ -46,15 +46,12 @@ bool ActionAddLandmark::testEnabled( const QPoint*) const
 }   // end testEnabled
 
 
-bool ActionAddLandmark::doAction( FVS& fvs, const QPoint& p)
+bool ActionAddLandmark::doBeforeAction( FVS& fvs, const QPoint&)
 {
-    assert(_editor);
+    assert( _editor);
     FV* fv = fvs.first();
     assert(fv);
-    fvs.clear();
-
     FM* fm = fv->data();
-    //fm->lockForWrite();
 
     // Get the name for the new landmark
     QString lname;
@@ -79,16 +76,26 @@ bool ActionAddLandmark::doAction( FVS& fvs, const QPoint& p)
             break;
     }   // end while
 
+    _nname = lname.toStdString();
+    return !_nname.empty();
+}   // end doBeforeAction
+
+
+bool ActionAddLandmark::doAction( FVS& fvs, const QPoint& p)
+{
+    assert( fvs.size() == 1);
+    FV* fv = fvs.first();
+    FM* fm = fv->data();
+    fvs.clear();
+    //fm->lockForWrite();
+
     int id = -1;
-    if ( !lname.isEmpty())
+    cv::Vec3f hpos; // Get landmark position by projecting to model surface
+    if ( fv->projectToSurface(p, hpos))
     {
-        cv::Vec3f hpos; // Get landmark position by projecting to model surface
-        if ( fv->projectToSurface(p, hpos))
-        {
-            id = fm->landmarks()->set( lname.toStdString(), hpos);
-            fm->setSaved(false);
-            fvs.insert( fm);
-        }   // end if
+        id = fm->landmarks()->set( _nname, hpos);
+        fm->setSaved(false);
+        fvs.insert( fm);
     }   // end if
 
     //fm->unlock();

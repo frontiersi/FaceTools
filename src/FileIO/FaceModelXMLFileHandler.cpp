@@ -23,6 +23,7 @@
 #include <AssetImporter.h>
 #include <OBJExporter.h>
 #include <Orientation.h>    // RFeatures
+#include <FileIO.h>         // rlib
 #include <QTemporaryDir>
 #include <quazip5/JlCompress.h>
 #include <boost/property_tree/xml_parser.hpp>
@@ -181,7 +182,7 @@ FaceModel* FaceModelXMLFileHandler::read( const QString& sfname)
             return nullptr;
         }   // end if
 
-        const std::string fext = FaceTools::getExtension( objfilename);
+        const std::string fext = rlib::getExtension( objfilename);
         if ( fext != "obj")
         {
             _err = "FaceModel has its model saved in an unsupported format!";
