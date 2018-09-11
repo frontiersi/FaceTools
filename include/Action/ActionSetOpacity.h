@@ -40,7 +40,6 @@ private slots:
     bool testEnabled( const QPoint* mc=nullptr) const override;
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(VIEW_CHANGE);}
-    bool displayDebugStatusProgression() const override { return false;}
     void doOnValueChanged( double);
 
 private:

@@ -153,7 +153,7 @@ void ActionRadialSelect::makeRegionSelector( const FM* fm, const cv::Vec3f& cpos
 void ActionRadialSelect::doOnIncreaseRadius( const FV* fv)
 {
     const FM* fm = fv->data();
-    setRadius( fm, _rsels.at(fm)->radius() + 1);
+    setRadius( fm, _rsels.at(fm)->radius() + 1.5);
 }   // end doOnIncreaseRadius
 
 
@@ -161,7 +161,7 @@ void ActionRadialSelect::doOnIncreaseRadius( const FV* fv)
 void ActionRadialSelect::doOnDecreaseRadius( const FV* fv)
 {
     const FM* fm = fv->data();
-    setRadius( fm, std::max( _rsels.at(fm)->radius() - 1, MIN_RADIUS));
+    setRadius( fm, std::max( _rsels.at(fm)->radius() - 1.5, MIN_RADIUS));
 }   // end doOnDecreaseRadius
 
 

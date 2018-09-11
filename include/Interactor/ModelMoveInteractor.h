@@ -37,12 +37,13 @@ signals:
     void onCameraRotate();
     void onCameraPan();
     void onCameraDolly();
-    void onCameraMove();    // Generic event
-    void onActorMove();     // Generic event
+
+    void onCameraMove( Vis::FV*);    // Generic event
+    void onActorMove( Vis::FV*);     // Generic event
 
 private:
     bool _moveModels;
-    Vis::FaceView *_afv;
+    Vis::FV *_afv;
 
     bool leftButtonDown( const QPoint&) override;
     bool middleButtonDown( const QPoint&) override;
@@ -50,13 +51,13 @@ private:
     bool mouseWheelForward( const QPoint&) override;
     bool mouseWheelBackward( const QPoint&) override;
 
-    void cameraRotate() override { emit onCameraRotate(); emit onCameraMove();}
-    void cameraDolly() override { emit onCameraDolly(); emit onCameraMove();}
-    void cameraPan() override { emit onCameraPan(); emit onCameraMove();}
+    void cameraRotate() override { emit onCameraRotate(); emit onCameraMove(_afv);}
+    void cameraDolly() override { emit onCameraDolly(); emit onCameraMove(_afv);}
+    void cameraPan() override { emit onCameraPan(); emit onCameraMove(_afv);}
 
-    void actorRotate() override { pokeTransform(); emit onActorMove();}
-    void actorDolly() override { pokeTransform(); emit onActorMove();}
-    void actorPan() override { pokeTransform(); emit onActorMove();}
+    void actorRotate() override { pokeTransform(); emit onActorMove(_afv);}
+    void actorDolly() override { pokeTransform(); emit onActorMove(_afv);}
+    void actorPan() override { pokeTransform(); emit onActorMove(_afv);}
 
     void actorStop() override;
     void pokeTransform();

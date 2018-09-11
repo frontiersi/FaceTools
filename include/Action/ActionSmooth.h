@@ -26,7 +26,7 @@ namespace Action {
 class FaceTools_EXPORT ActionSmooth : public FaceAction
 { Q_OBJECT
 public:
-    ActionSmooth( const QString& dname="Smooth", const QIcon& icon=QIcon(), QProgressBar* pb=nullptr);   // Async if pb not null 
+    ActionSmooth( const QString& dname, const QIcon& icon=QIcon(), QProgressBar* pb=nullptr);   // Async if pb not null 
 
     void setMaxCurvature( double c) { _maxc = c;}
     double maxCurvature() const { return _maxc;}

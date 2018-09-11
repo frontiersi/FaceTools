@@ -22,36 +22,9 @@
 #include <algorithm>
 using FaceTools::Action::ActionSetOpacity;
 using FaceTools::Action::FaceAction;
+using FaceTools::FMV;
 using FaceTools::FVS;
 using FaceTools::Vis::FV;
-
-namespace {
-
-cv::Vec6d calcSuperBounds( const std::vector<cv::Vec6d>& bset)
-{
-    cv::Vec6d bounds(DBL_MAX,-DBL_MAX,DBL_MAX,-DBL_MAX,DBL_MAX,-DBL_MAX);
-    for ( const cv::Vec6d& b : bset)
-    {
-        bounds[0] = std::min(bounds[0], b[0]);
-        bounds[1] = std::max(bounds[1], b[1]);
-        bounds[2] = std::min(bounds[2], b[2]);
-        bounds[3] = std::max(bounds[3], b[3]);
-        bounds[4] = std::min(bounds[4], b[4]);
-        bounds[5] = std::max(bounds[5], b[5]);
-    }   // end for
-    return bounds;
-}   // end calcSuperBounds
-
-
-// Return true if the cuboids specified with given edge extents intersect.
-bool intersect( const cv::Vec6d& a, const cv::Vec6d& b)
-{
-    return ((a[0] >= b[0] && a[0] <= b[1]) || (a[1] >= b[0] && a[1] <= b[1])) &&    // Intersection in X axis
-           ((a[2] >= b[2] && a[2] <= b[3]) || (a[3] >= b[2] && a[3] <= b[3])) &&    // Intersection in Y axis
-           ((a[4] >= b[4] && a[4] <= b[5]) || (a[5] >= b[4] && a[5] <= b[5]));      // Intersection in z axis
-}   // end intersect
-
-}   // end namespace
 
 
 ActionSetOpacity::ActionSetOpacity( const QString& dname, double mooo, double minOpacity, QWidget* parent)
@@ -89,57 +62,68 @@ bool ActionSetOpacity::testEnabled( const QPoint* mc) const { return ready1() !=
 
 void ActionSetOpacity::tellReady( FV* fv, bool v)
 {
+    _opacitySpinBox->disconnect(this);
     if ( v)
     {
-        _opacitySpinBox->disconnect(this);
         _opacitySpinBox->setValue( fv->opacity());
         connect( _opacitySpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ActionSetOpacity::doOnValueChanged);
     }   // end if
 }   // end tellReady
 
 
+namespace {
+bool refreshOpacity( FMV* viewer, FV* fv, double maxOpacityOnOverlap)
+{
+    FVS fvs = viewer->attached(); // Get the FVs in the same viewer
+
+    // Discover overlaps between pairs of views
+    std::vector<FV*> vfvs( fvs.begin(), fvs.end());
+    const int n = (int)vfvs.size();
+
+    std::unordered_map<FV*, bool> olaps;
+    for ( int i = 0; i < n; ++i)
+        olaps[vfvs[i]] = false;
+
+    for ( int i = 0; i < n; ++i)
+    {
+        FV* ifv = vfvs[i];
+        for ( int j = i+1; j < n; ++j)
+        {
+            FV* jfv = vfvs[j];
+            if ( ifv->data()->supersIntersect( *jfv->data()))
+                olaps[ifv] = olaps[jfv] = true;
+        }   // end for
+    }   // end for
+
+    for ( FV* f : fvs)
+    {
+        const double olapVal = std::min( f->opacity(), maxOpacityOnOverlap);
+        f->setOpacity( olaps.at(f) ? olapVal : 1.0);
+    }   // end for
+
+    return fv != nullptr ? olaps.at(fv) : false;
+}   // end refreshOpacity
+}   // end namespace
+
+
 // Check overlap bounds to set opacity.
 bool ActionSetOpacity::doAction( FVS& fvsin, const QPoint&)
 {
     assert(fvsin.size() == 1);
-    // Check for overlaps and set the maximum opacity if overlap is found.
     FV* fv = fvsin.first();
-    // For efficiency, calculate the superbounds (single cuboid containing all bounds)
-    const cv::Vec6d b0 = calcSuperBounds( fv->data()->bounds());
 
-    // Get the other FVs in the same viewer
-    FVS fvs = fv->viewer()->attached();
-    fvs.erase(fv); // Remove the source
-
-    // If any of the bounds of these others overlap with the source bounds, set
-    // the maximum opacity setting for ALL of the other FVs in the viewer.
-    bool overlap = false;
-    for ( FV* f : fvs)
+    const bool olap = refreshOpacity( fv->viewer(), fv, _maxOpacityOnOverlap);
+    fvsin.insert( fv->viewer()->attached());
+    if ( fv->pviewer() != nullptr)  // Also refresh the viewer FV came from if this was actioned as a result of VIEWER_CHANGE
     {
-        const cv::Vec6d b1 = calcSuperBounds( f->data()->bounds());
-        if ( intersect( b0, b1) || intersect( b1, b0))
-        {
-            overlap = true;
-            break;  // no need to check others
-        }   // end if
-    }   // end for
-
-    double newVal = std::min( fv->opacity(), _maxOpacityOnOverlap);
-    fvs.insert(fv); // Reinsert the source
-    if ( overlap)
-    {
-        for ( FV* fv : fvs)
-            fv->setOpacity(newVal);
+        refreshOpacity( fv->pviewer(), nullptr, _maxOpacityOnOverlap);
+        fvsin.insert( fv->pviewer()->attached());
     }   // end if
-    else if ( fv->opacity() <= _maxOpacityOnOverlap)
-    {
-        newVal = 1.0;
-        fv->setOpacity(newVal);
-    }   // end else if
 
-    _opacitySpinBox->setValue(newVal);
+    // Set the value in the spinbox to be for fv (the selected view)
+    const double olapVal = std::min( fv->opacity(), _maxOpacityOnOverlap);
+    _opacitySpinBox->setValue( olap ? olapVal : 1.0);
 
-    fvsin = fvs;
     return true;
 }   // end doAction
 
@@ -157,3 +141,4 @@ void ActionSetOpacity::doOnValueChanged( double newValue)
     doAfterAction( cset, fvs, true);
     emit reportFinished( cset, fvs, true);
 }   // end doOnValueChanged
+

@@ -38,18 +38,21 @@ class FaceTools_EXPORT FaceView : public QObject
 { Q_OBJECT
 public:
     FaceView() : _data(nullptr), _viewer(nullptr) {} // For QMetaType
-    FaceView( FaceModel*, FaceModelViewer*);
+    FaceView( FM*, FMV*);
     FaceView( const FaceView&);
     FaceView& operator=( const FaceView&);
     virtual ~FaceView();
 
-    inline FaceModel* data() const { return _data;}
+    inline FM* data() const { return _data;}
 
     // Upon changing the viewer, all visualisation actors are first removed from the old
     // viewer, and then added to the new viewer. No rebuilding or re-application of
     // visualisations to the vtkActors is undertaken.
-    void setViewer( FaceModelViewer*);
-    inline FaceModelViewer* viewer() const { return _viewer;}
+    void setViewer( FMV*);
+    inline FMV* viewer() const { return _viewer;}
+
+    // Return any previous viewer this view was on (useful when needing to reference FVs on viewer just left).
+    inline FMV* pviewer() const { return _pviewer;}
 
     // Remove and purge all visualisations and rebuild the view models from data. For textured actors
     // only ObjModels with a single material are accepted (for models having multiple materials, use
@@ -119,10 +122,11 @@ public:
     bool backfaceCulling() const;
 
 private:
-    FaceModel *_data;
+    FM *_data;
     vtkActor *_actor;                       // The face actor.
     vtkSmartPointer<vtkTexture> _texture;   // The texture map (if available).
-    FaceModelViewer *_viewer;               // The viewer associated with.
+    FMV *_viewer;                           // The viewer this view is attached to.
+    FMV *_pviewer;                          // The previous viewer this view was attached to.
     ScalarMapping *_scmap;                  // The active scalar mapping (if not null).
     BaseVisualisation *_xvis;
     VisualisationLayers _vlayers;           // Visualisation layers.

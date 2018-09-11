@@ -29,11 +29,11 @@ public:
     ActionDetectFace( const QString& dname, const QIcon& icon,
                       const QString& haarCascadesModelDir,
                       const QString& faceShapeLandmarksDat,
-                      QWidget *parent=NULL, QProgressBar* pb=NULL);
+                      QWidget *parent=nullptr, QProgressBar* pb=nullptr);
     ~ActionDetectFace() override;
 
 protected slots:
-    bool testReady( const Vis::FV* fv) override;
+    bool testReady( const Vis::FV*) override;
     bool testEnabled( const QPoint* mc=nullptr) const override { return _detector && ready1();}
     bool doBeforeAction( FVS&, const QPoint&) override;   // Warn if overwriting
     bool doAction( FVS&, const QPoint&) override;

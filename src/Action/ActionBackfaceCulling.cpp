@@ -47,7 +47,7 @@ bool ActionBackfaceCulling::doAction( FVS& fvs, const QPoint&)
 {
     // Apply to all FaceViews in all directly selected viewers.
     const bool ischecked = isChecked();
-    FMVS fmvs = fvs.directViewers();
+    FMVS fmvs = fvs.dviewers();
     fvs.clear();
     for ( const FMV* v : fmvs)
     {

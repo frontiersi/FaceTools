@@ -48,7 +48,6 @@ protected slots:
     bool testReady( const Vis::FV*);
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet& cs, const FVS&, bool) override{ cs.insert(CAMERA_CHANGE);}
-    bool displayDebugStatusProgression() const override { return false;}
 
 private:
     float _distance;

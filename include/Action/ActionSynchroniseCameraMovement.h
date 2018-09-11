@@ -32,18 +32,14 @@ public:
     void addViewer( ModelViewer* v) { _viewers.insert(v);}
     const std::unordered_set<ModelViewer*>& viewers() const { return _viewers;}
 
-    static void sync();    // Only synchronises if the associated singleton object is checked
-
 private slots:
     bool testEnabled( const QPoint* mc=nullptr) const override { return true;}
     bool doAction( FVS&, const QPoint&) override;
-    bool displayDebugStatusProgression() const override { return false;}
-    void doSyncActiveCamera();
+    void syncActiveCamera( const Vis::FV* fv);
 
 private:
     Interactor::ModelMoveInteractor *_interactor;
     std::unordered_set<ModelViewer*> _viewers;
-    static ActionSynchroniseCameraMovement* s_obj;
 };  // end class
 
 }   // end namespace

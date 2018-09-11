@@ -31,7 +31,9 @@ public:
     PathSetVisualisation( const QString &dname, const QIcon &icon);
     ~PathSetVisualisation() override;
 
-    bool singleModel() const override { return true;}
+    bool applyToAllInViewer() const override { return true;}
+    bool applyToSelectedModel() const override { return true;}
+
     bool belongs( const vtkProp*, const FV*) const override;
     bool isAvailable( const FM*) const override;
 

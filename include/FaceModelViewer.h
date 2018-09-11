@@ -36,7 +36,7 @@ public:
     bool attach( Vis::FV*);
     bool detach( Vis::FV*);
 
-    const FaceViewSet& attached() const { return _attached;}
+    const FVS& attached() const { return _attached;}
     bool isAttached( const Vis::FV* fv) const { return _attached.has(const_cast<Vis::FV*>(fv));}
     bool isAttached( const FM* fm) const { return _models.count(fm) > 0;}
     Vis::FV* get( const FM* fm) const; // Pointer to view/control of given model or null if model not attached.
@@ -54,7 +54,7 @@ protected:
     void resizeEvent( QResizeEvent*) override;
 
 private:
-    FaceViewSet _attached; // All attached FaceControl instances
+    FVS _attached; // All attached FaceControl instances
     std::unordered_map<const FM*, Vis::FV*> _models;
 };  // end class
 

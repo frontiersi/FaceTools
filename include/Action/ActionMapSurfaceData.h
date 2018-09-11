@@ -32,7 +32,6 @@ protected slots:
     bool doAction( FVS&, const QPoint&) override;
     void purge( const FaceModel*) override;
     void doOnCalculated( const FaceModel*);
-    bool displayDebugStatusProgression() const override { return false;}
 };  // end class
 
 }   // end namespace

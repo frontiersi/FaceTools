@@ -15,26 +15,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_SET_FOCUS_H
-#define FACE_TOOLS_ACTION_SET_FOCUS_H
+#ifndef FACE_TOOLS_ACTION_ROTATE_MODEL_H
+#define FACE_TOOLS_ACTION_ROTATE_MODEL_H
 
 #include "FaceAction.h"
 
 namespace FaceTools {
 namespace Action {
 
-class FaceTools_EXPORT ActionSetFocus : public FaceAction
+class FaceTools_EXPORT ActionRotateModel : public FaceAction
 { Q_OBJECT
 public:
-    explicit ActionSetFocus( const QString& dname);
+    ActionRotateModel( const QString& dname, const QIcon&, const cv::Vec3f& raxis, float degs);
 
-protected slots:
-    bool testEnabled( const QPoint*) const override;
+private slots:
     bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(CAMERA_CHANGE);}
+    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(AFFINE_CHANGE);}
+
+private:
+    cv::Matx44d _rmat;
 };  // end class
 
 }   // end namespace
 }   // end namespace
 
 #endif
+

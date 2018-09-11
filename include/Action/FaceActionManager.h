@@ -29,7 +29,6 @@
 #include "ModelSelector.h"
 #include "FaceActionGroup.h"
 #include "ActionExecutionQueue.h"
-#include "VisualisationsManager.h"
 #include <ViewerInteractionManager.h>
 #include <FaceModelManager.h>
 #include <PluginsDialog.h>      // QTools
@@ -55,11 +54,8 @@ public:
 
     FileIO::FaceModelManager* modelManager() { return _fmm;}
 
-    QList<QAction*> visualisations() const { return _vman->actions();}
-
 signals:
-    void addedActionGroup( FaceActionGroup*);
-    void addedAction( FaceAction*);
+    void addedAction( FaceAction*); // Emitted whenever an action added
     void onUpdateSelected( Vis::FV*);
 
 private slots:
@@ -72,7 +68,6 @@ private:
     QTools::PluginsDialog *_pdialog;
     FileIO::FaceModelManager *_fmm;
     Interactor::ViewerInteractionManager *_interactions;
-    VisualisationsManager *_vman;
     ModelSelector _selector;
     std::unordered_set<FaceAction*> _actions;
     ActionExecutionQueue _aqueue;

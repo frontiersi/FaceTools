@@ -15,27 +15,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionRemesh.h>
+#include <ActionReflect.h>
+#include <ObjModelReflector.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <ObjModelVertexAdder.h>   // RFeatures
+#include <cassert>
 using FaceTools::Action::FaceAction;
-using FaceTools::Action::ActionRemesh;
+using FaceTools::Action::ActionReflect;
 using FaceTools::Action::EventSet;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
 using FaceTools::FM;
 
 
-ActionRemesh::ActionRemesh( const QString& dn, const QIcon& ico, QProgressBar* pb)
-    : FaceAction(dn, ico), _maxtarea(2.0)
+ActionReflect::ActionReflect( const QString& dn, const QIcon& ico)
+    : FaceAction(dn, ico)
 {
-    if ( pb)
-        setAsync(true, QTools::QProgressUpdater::create(pb));
 }   // end ctor
 
 
-bool ActionRemesh::doAction( FVS& fvs, const QPoint&)
+bool ActionReflect::testReady( const FV* fv) { return fv->data()->centreSet();}
+
+
+bool ActionReflect::doAction( FVS& fvs, const QPoint&)
 {
     assert(fvs.size() == 1);
     FV* fv = fvs.first();
@@ -44,17 +46,18 @@ bool ActionRemesh::doAction( FVS& fvs, const QPoint&)
     fm->lockForWrite();
 
     bool success = true;
+
+    const RFeatures::Orientation& on = fm->orientation();
     RFeatures::ObjModelInfo::Ptr info = fm->info();
     RFeatures::ObjModel::Ptr model = info->model();
 
-    RFeatures::ObjModelVertexAdder vadder( model);
-    vadder.subdivideAndMerge( maxTriangleArea());
-    //vadder.addVerticesToMaxTriangleArea( maxTriangleArea());
+    RFeatures::ObjModelReflector reflector( model);
+    reflector.reflect( fm->centre(), on.up().cross( on.norm()));
     if ( info->reset( model))
         fm->update(info);
     else
     {
-        std::cerr << "[ERROR] FaceTools::Action::ActionRemesh::doAction: Unable to clean model post remesh!" << std::endl;
+        std::cerr << "[ERROR] FaceTools::Action::ActionReflect::doAction: Unable to clean model post reflect!" << std::endl;
         success = false;
     }   // end else
 

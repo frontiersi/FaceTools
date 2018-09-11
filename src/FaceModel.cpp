@@ -97,6 +97,39 @@ int findLargest( const std::vector<cv::Vec6d>& bounds)
     return j;
 }   // end findLargest
 
+
+cv::Vec6d calcSuperBounds( const std::vector<cv::Vec6d>& bset)
+{
+    cv::Vec6d bounds(DBL_MAX,-DBL_MAX,DBL_MAX,-DBL_MAX,DBL_MAX,-DBL_MAX);
+    for ( const cv::Vec6d& b : bset)
+    {
+        bounds[0] = std::min(bounds[0], b[0]);  // xmin
+        bounds[1] = std::max(bounds[1], b[1]);  // xmax
+        bounds[2] = std::min(bounds[2], b[2]);  // ymin
+        bounds[3] = std::max(bounds[3], b[3]);  // ymax
+        bounds[4] = std::min(bounds[4], b[4]);  // zmin
+        bounds[5] = std::max(bounds[5], b[5]);  // zmax
+    }   // end for
+    return bounds;
+}   // end calcSuperBounds
+
+
+// Return true if the cuboids specified with given edge extents intersect.
+bool intersect( const cv::Vec6d& a, const cv::Vec6d& b)
+{
+    bool xAinB = ((a[0] >= b[0] && a[0] <= b[1]) || (a[1] >= b[0] && a[1] <= b[1]));    // x edges of A in B
+    bool xBinA = ((b[0] >= a[0] && b[0] <= a[1]) || (b[1] >= a[0] && b[1] <= a[1]));    // x edges of B in A
+    bool yAinB = ((a[2] >= b[2] && a[2] <= b[3]) || (a[3] >= b[2] && a[3] <= b[3]));    // y edges of A in B
+    bool yBinA = ((b[2] >= a[2] && b[2] <= a[3]) || (b[3] >= a[2] && b[3] <= a[3]));    // y edges of B in A
+    bool zAinB = ((a[4] >= b[4] && a[4] <= b[5]) || (a[5] >= b[4] && a[5] <= b[5]));    // y edges of A in B
+    bool zBinA = ((b[4] >= a[4] && b[4] <= a[5]) || (b[5] >= a[4] && b[5] <= a[5]));    // y edges of B in A
+
+    bool xint = xAinB || xBinA;
+    bool yint = yAinB || yBinA;
+    bool zint = zAinB || zBinA;
+    return xint && yint && zint;
+}   // end intersect
+
 }   // end namespace
 
 
@@ -235,6 +268,8 @@ void FaceModel::calculateBounds()
         const cv::Vec6d& bd = _cbounds[ findLargest( _cbounds)];
         _centre = cv::Vec3f( (bd[0] + bd[1])/2, (bd[2] + bd[3])/2, (bd[4] + bd[5])/2);
     }   // end if
+
+    _sbounds = calcSuperBounds( _cbounds);
 }   // end calculateBounds
 
 
@@ -255,7 +290,7 @@ bool FaceModel::hasMetaData() const
 // public
 void FaceModel::updateRenderers() const
 {
-    FMVS fvs = _fvs.viewers();
+    FMVS fvs = _fvs.dviewers();
     std::for_each( std::begin(fvs), std::end(fvs), [](auto v){ v->updateRender();});
 }   // end updateRenderers
 
@@ -272,4 +307,10 @@ double FaceModel::translateToSurface( cv::Vec3f& pos) const
     return sdiff;
 }   // end translateToSurface
 
+
+// public
+bool FaceModel::supersIntersect( const FaceModel& fm) const
+{
+    return intersect( superBounds(), fm.superBounds());
+}   // end supersIntersect
 

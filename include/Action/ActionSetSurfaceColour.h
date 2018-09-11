@@ -15,37 +15,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_VISUALISATIONS_MANAGER_H
-#define FACE_TOOLS_VISUALISATIONS_MANAGER_H
+#ifndef FACE_TOOLS_ACTION_SET_SURFACE_COLOUR_H
+#define FACE_TOOLS_ACTION_SET_SURFACE_COLOUR_H
 
-#include "ActionVisualise.h"
-#include <QActionGroup>
+#include "FaceAction.h"
 
 namespace FaceTools {
 namespace Action {
-class FaceActionManager;
 
-class FaceTools_EXPORT VisualisationsManager : public QObject
+class FaceTools_EXPORT ActionSetSurfaceColour : public FaceAction
 { Q_OBJECT
 public:
-    VisualisationsManager();
+    // Display name will be used for spin box widget's tool tip.
+    ActionSetSurfaceColour( const QString& dname, QWidget* parent=nullptr);
 
-    void init( FaceActionManager*);
-    void add( FaceAction*); // Does nothing if parameter cannot be cast to ActionVisualise.
-
-    // Return a concatenation of the exclusive and non-exclusive actions with a dividing separator.
-    // If there are no non-exclusive actions, no separator is added and only a list of the
-    // exclusive actions is returned (which may be empty).
-    QList<QAction*> actions() const;
+private slots:
+    void tellReady( Vis::FV*, bool) override;
+    bool doBeforeAction( FVS&, const QPoint&) override;
+    bool doAction( FVS&, const QPoint&) override;
+    void doAfterAction( EventSet& evs, const FVS&, bool) override { evs.insert(VIEW_CHANGE);}
 
 private:
-    QActionGroup _evis;     // Exclusive visualisation actions
-    QActionGroup _nvis;     // Non-exclusive visualisation actions
-    ActionVisualise* _vact;
-    std::unordered_set<FaceAction*> _actions;
-
-    VisualisationsManager( const VisualisationsManager&) = delete;
-    void operator=( const VisualisationsManager&) = delete;
+    QWidget *_parent;
+    QColor _curColour;
+    void setIconColour( const QColor&);
 };  // end class
 
 }   // end namespace

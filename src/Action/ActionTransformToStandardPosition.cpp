@@ -24,7 +24,8 @@
 using FaceTools::Action::ActionTransformToStandardPosition;
 using FaceTools::Action::FaceAction;
 using FaceTools::FVS;
-using FaceTools::FaceModel;
+using FaceTools::FMS;
+using FaceTools::FM;
 
 
 ActionTransformToStandardPosition::ActionTransformToStandardPosition( const QString &dn, const QIcon& ico)
@@ -34,27 +35,32 @@ ActionTransformToStandardPosition::ActionTransformToStandardPosition( const QStr
 }   // end ctor
 
 
-bool ActionTransformToStandardPosition::doAction( FVS& rset, const QPoint&)
+bool ActionTransformToStandardPosition::doAction( FVS& fvs, const QPoint&)
 {
-    const FaceModelSet& fms = rset.models();
-    for ( FaceModel* fm : fms)
+    FMS fms = fvs.models(); // Copy out
+    for ( FM* fm : fms)
     {
         fm->lockForWrite();
         const cv::Vec3f& c = fm->centre();
         const RFeatures::Orientation& on = fm->orientation();
         cv::Matx44d m = RFeatures::toStandardPosition( on.norm(), on.up(), c);
 
+        /*
         std::cerr << "PRE-TRANSFORM:" << std::endl;
         std::cerr << "  Centre : " << c << std::endl;
         std::cerr << "  Orientation (norm,up)  : " << on << std::endl;
+        */
 
         fm->transform(m);
 
+        /*
         std::cerr << "POST-TRANSFORM:" << std::endl;
         std::cerr << "  Centre : " << c << std::endl;
         std::cerr << "  Orientation (norm,up)  : " << on << std::endl;
+        */
 
         fm->unlock();
+        fvs.insert(fm);
     }   // end for
     return true;
 }   // end doAction

@@ -31,8 +31,8 @@ public:
     void addViewer( FMV* v) { _viewers.insert(v);}
 
 protected slots:
+    bool testEnabled( const QPoint *mc=nullptr) const { return true;}
     bool doAction( FVS&, const QPoint&) override;
-    bool displayDebugStatusProgression() const override { return false;}
 
 private:
     FMVS _viewers;

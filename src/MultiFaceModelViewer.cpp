@@ -27,7 +27,7 @@ QToolButton* makeButton()
     b->setMinimumSize( QSize(27,27));
     b->setMaximumSize( QSize(27,27));
     b->setIconSize( QSize(27,27));
-    b->setStyleSheet( "QToolButton::menu-indicator { image: none; }");
+    //b->setStyleSheet( "QToolButton::menu-indicator { image: none; }");
     return b;
 }   // makeButton
 

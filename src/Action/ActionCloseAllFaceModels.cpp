@@ -34,21 +34,24 @@ ActionCloseAllFaceModels::ActionCloseAllFaceModels( const QString& dname, FaceMo
 
 bool ActionCloseAllFaceModels::doBeforeAction( FVS& fvs, const QPoint&)
 {
-    bool doclose = true; // If any of the open models aren't saved, ask user to confirm.
+    bool doshowmsg = false;
     const FMS& models = _fmm->opened();
     for ( FM* fm : models)
     {
         fm->lockForRead();
         if ( !fm->isSaved() || (!_fmm->hasPreferredFileFormat(fm) && fm->hasMetaData()))
-        {
-            static const QString msg = tr("Model(s) have unsaved changes! Close all anyway?");
-            if ( QMessageBox::No == QMessageBox::question( _parent, tr("Unsaved changes!"), msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No))
-                doclose = false;
-        }   // end if
+            doshowmsg = true;
         fm->unlock();
-        if ( !doclose)
+        if ( doshowmsg)
             break;
     }   // end for
+
+    bool doclose = true;
+    if ( doshowmsg)
+    {
+        static const QString msg = tr("Model(s) have unsaved changes! Close all anyway?");
+        doclose = QMessageBox::Yes == QMessageBox::question( _parent, tr("Unsaved changes!"), msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    }   // end if
 
     if ( doclose)
     {

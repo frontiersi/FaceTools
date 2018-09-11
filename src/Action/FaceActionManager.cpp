@@ -27,7 +27,6 @@
 #include <iomanip>
 using FaceTools::Action::FaceActionManager;
 using FaceTools::Action::FaceActionGroup;
-using FaceTools::Action::ActionVisualise;
 using FaceTools::Action::ModelSelector;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::EventSet;
@@ -47,13 +46,10 @@ FaceActionManager::FaceActionManager( FMV* viewer, size_t llimit, QWidget* paren
     : QObject(), _pdialog( new QTools::PluginsDialog( parent)),
         _fmm( new FaceModelManager( parent, llimit)),
         _interactions( new ViewerInteractionManager( viewer)),
-        _vman(nullptr),
         _selector(viewer)
 {
     //connect( _interactions, &ViewerInteractionManager::onActivatedViewer, &_selector, &ModelSelector::doSwitchSelectedToViewer);
     connect( &_selector, &ModelSelector::onSelected, [this]( FV* fv, bool v){ setReady(fv,v);});
-    _vman = new VisualisationsManager;
-    _vman->init(this);
 }   // end ctor
 
 
@@ -69,7 +65,6 @@ FaceActionManager::~FaceActionManager()
         _actions.erase(fa);
         delete fa;
     }   // end while
-    delete _vman;
     delete _interactions;
     delete _fmm;
     delete _pdialog;
@@ -91,21 +86,14 @@ void FaceActionManager::loadPlugins()
 // private slot
 void FaceActionManager::addPlugin( QTools::PluginInterface* plugin)
 {
-    FaceAction* faction = nullptr;
+    FaceAction* faction = qobject_cast<FaceAction*>(plugin);
     FaceActionGroup* grp = qobject_cast<FaceActionGroup*>(plugin);
-    if ( grp)
+    if ( faction)
+        addAction( faction);
+    else if ( grp)
     {
         for ( const QString& iid : grp->getInterfaceIds())
-        {
-            faction = qobject_cast<FaceAction*>( grp->getInterface(iid));
-            addAction(faction);
-        }   // end for
-        emit addedActionGroup( grp);
-    }   // end if
-    else if ( faction = qobject_cast<FaceAction*>(plugin))
-    {
-        addAction( faction);
-        emit addedAction( faction);
+            addAction( qobject_cast<FaceAction*>( grp->getInterface(iid)));
     }   // end if
 }   // end addPlugin
 
@@ -115,12 +103,10 @@ QAction* FaceActionManager::addAction( FaceAction* fa)
 {
     if ( _actions.count(fa) == 0)
     {
-        //std::cerr << "[INFO] FaceTools::FaceActionManager::addAction: " << fa->dname() << " @ " << fa << std::endl;
         _actions.insert(fa);
         connect( fa, &FaceAction::reportStarting, this, &FaceActionManager::doOnActionStarting);
         connect( fa, &FaceAction::reportFinished, this, &FaceActionManager::doOnActionFinished);
 
-        _vman->add(fa);  // Does nothing if not a visualisation action
         fa->init();
 
         MVI* interactor = fa->interactor();
@@ -129,6 +115,8 @@ QAction* FaceActionManager::addAction( FaceAction* fa)
             interactor->setViewer( _selector.interactor()->viewer());
             connect( interactor, &MVI::onChangedData, this, &FaceActionManager::doOnChangedData);
         }   // end if
+
+        emit addedAction( fa);
     }   // end if
     return fa->qaction();
 }   // end addAction
@@ -178,14 +166,12 @@ void FaceActionManager::doOnActionFinished( EventSet evs, FVS workSet, bool)
     FaceAction* sact = qobject_cast<FaceAction*>(sender());
     printActionInfo( sact, &evs);
 
-    FMVS vwrs = workSet.viewers();    // The viewers before processing (e.g. before load or close)
+    FMVS vwrs = workSet.dviewers();    // The viewers before processing (e.g. before load or close)
     if ( !evs.empty())
     {
         processFinishedAction( sact, evs, workSet);  // Process after action bits
-        FMVS vwrs1 = workSet.viewers();     // The viewers after processing (e.g. after load or close)
+        FMVS vwrs1 = workSet.dviewers();     // The viewers after processing (e.g. after load or close)
         vwrs.insert(vwrs1.begin(), vwrs1.end());
-        // If responding to LOADED_MODEL, each just loaded model now has a single FaceView inside workSet,
-        // and evs now contains both LOADED_MODEL and GEOMETRY_CHANGE.
     }   // end if
 
     bool pflag = false;
@@ -214,10 +200,22 @@ void FaceActionManager::processFinishedAction( FaceAction* sact, EventSet &evs, 
 {
     if ( evs.count(CLOSE_MODEL) > 0)
     {
+        FMVS avwrs;
         const FMS& fms = workSet.models(); // Copy out the models
-        std::for_each( std::begin(fms), std::end(fms), [this](auto fm){ this->close(fm);});
+        for ( FM* fm : fms)
+        {
+            // Consolidate set of viewers within which this model's views are shown for after close.
+            FMVS vwrs = fm->fvs().dviewers();
+            avwrs.insert( std::begin(vwrs), std::end(vwrs));
+            close(fm);  // Close the FaceModel and remove its views.
+        }   // end for
         evs.erase(CLOSE_MODEL);   // Close model done
+
+        // Need to notify other FaceViews in the affected viewers of VIEWER_CHANGE event
+        evs.insert(VIEWER_CHANGE);
         workSet.clear();
+        for ( FMV* fmv : avwrs)
+            workSet.insert(fmv->attached());
     }   // end if
     else if ( evs.count(LOADED_MODEL) > 0)
     {
@@ -232,6 +230,7 @@ void FaceActionManager::processFinishedAction( FaceAction* sact, EventSet &evs, 
             workSet.insert( nfv);
         }   // end for
         evs.insert(GEOMETRY_CHANGE);
+        evs.insert(VIEWER_CHANGE);
     }   // end if
     else if ( !evs.empty())   // Cause actions to respond to change events
     {

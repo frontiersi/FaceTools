@@ -33,7 +33,6 @@ public:
 
 protected slots:
     bool doAction( FVS&, const QPoint&) override;
-    bool displayDebugStatusProgression() const override { return false;}
     void doOnAffineChange( const Vis::FV*);
 
 private:

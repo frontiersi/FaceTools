@@ -37,18 +37,18 @@
 namespace FaceTools {
 
 class FaceModel;
-typedef FaceModel FM;
-typedef std::unordered_set<FaceModel*> FaceModelSet;
-typedef FaceModelSet FMS;
+using FM = FaceModel;
+using FaceModelSet = std::unordered_set<FaceModel*>;
+using FMS = FaceModelSet;
 
 class FaceViewSet;
-typedef FaceViewSet FVS;
+using FVS = FaceViewSet;
 
 class ModelViewer;
 class FaceModelViewer;
-typedef FaceModelViewer FMV;
-typedef std::unordered_set<FaceModelViewer*> FaceModelViewerSet;
-typedef FaceModelViewerSet FMVS;
+using FMV = FaceModelViewer;
+using FaceModelViewerSet = std::unordered_set<FaceModelViewer*>;
+using FMVS = FaceModelViewerSet;
 
 namespace FileIO {
 
@@ -64,21 +64,22 @@ class FaceModelManager;
 namespace Vis {
 
 class FaceView;
-typedef FaceView FV;
+using FV = FaceView;
 class VisualisationInterface;
 class BaseVisualisation;
-typedef std::unordered_set<BaseVisualisation*> VisualisationLayers;
-typedef QTools::ScalarColourRangeMapper ScalarMapping;
-typedef std::function<float(const RFeatures::ObjModelCurvatureMetrics*,int)> ScalarMappingFn;
+class ScalarVisualisation;
+using VisualisationLayers = std::unordered_set<BaseVisualisation*>;
+using ScalarMapping = QTools::ScalarColourRangeMapper;
+using ScalarMappingFn = std::function<float(const RFeatures::ObjModelCurvatureMetrics*,int)>;
 
 }   // end namespace (Vis)
 
 namespace Interactor {
 
 class ModelViewerInteractor;
-typedef ModelViewerInteractor MVI;
+using MVI = ModelViewerInteractor;
 class ModelEntryExitInteractor;
-typedef ModelEntryExitInteractor MEEI;
+using MEEI = ModelEntryExitInteractor;
 
 }   // end namespace (Interactor)
 
@@ -91,7 +92,7 @@ class FaceDetector;
 namespace Action {
 
 class EventProcessResponse;
-typedef EventProcessResponse EPR;
+using EPR = EventProcessResponse;
 class FaceActionInterface;
 class FaceAction;
 class FaceActionWorker;
@@ -108,15 +109,15 @@ enum EventId
     ORIENTATION_CHANGE, // Change to model's orientation.
     METRICS_CHANGE,     // Change to model metrics (path data etc)
     VIEW_CHANGE,        // Changes to views of the data (visualisations etc) - NOT CAMERA.
-    VIEWER_CHANGE,      // Changed viewer in which view is shown.
+    VIEWER_CHANGE,      // Changed viewer (or the vieweer's state) in which view is shown.
     CAMERA_CHANGE,      // Changes to camera parameters within a viewer.
     AFFINE_CHANGE,      // Change to an actor's position (affine transform).
     REPORT_CREATED      // A report was just created.
 };  // end enum
 
-typedef std::unordered_set<EventId> EventSet;
-typedef std::function<bool(FVS&)> ResponsePredicate;
-typedef std::function<bool(const FVS&)> ProcessFlagPredicate;
+using EventSet = std::unordered_set<EventId>;
+using ResponsePredicate = std::function<bool(FVS&)>;
+using ProcessFlagPredicate = std::function<bool(const FVS&)>;
 
 }   // end namespace (Action)
 
@@ -187,7 +188,7 @@ struct hash<FaceTools::Action::EventId>
 
 /************** Other miscellaneous typedefs *****************/
 
-typedef std::unordered_set<QString> QStringSet;
+using QStringSet = std::unordered_set<QString>;
 
 /*************************************************************/
 

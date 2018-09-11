@@ -15,36 +15,39 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionResetCamera.h>
-#include <algorithm>
-using FaceTools::Action::ActionResetCamera;
+#include <ActionRotateModel.h>
+#include <Eigen/Geometry>
+#include <FaceModel.h>
+using FaceTools::Action::ActionRotateModel;
 using FaceTools::Action::FaceAction;
-using FaceTools::FMVS;
-using FaceTools::FMV;
 using FaceTools::FVS;
+using FaceTools::FM;
 
 
-ActionResetCamera::ActionResetCamera( const QString& dn, const QIcon& ico, FMV *mv)
+ActionRotateModel::ActionRotateModel( const QString &dn, const QIcon& ico, const cv::Vec3f& raxis, float degs)
     : FaceAction( dn, ico)
 {
-    if ( mv)
-        addViewer(mv);
-    setRespondToEvent( VIEWER_CHANGE, [this](const FVS& fvs){ return fvs.empty();});
+    // Ensure the rotation axis is normalized first
+    Eigen::Vector3f axis( raxis[0], raxis[1], raxis[2]);
+    axis.normalize();
+    Eigen::Matrix3f m;
+    m = Eigen::AngleAxisf( degs * static_cast<float>(CV_PI/180), axis);
+    _rmat = cv::Matx44d( m(0,0), m(0,1), m(0,2), 0,
+                         m(1,0), m(1,1), m(1,2), 0,
+                         m(2,0), m(2,1), m(2,2), 0,
+                              0,      0,      0, 0);
 }   // end ctor
 
 
-bool ActionResetCamera::doAction( FVS &fvs, const QPoint&)
+bool ActionRotateModel::doAction( FVS& fvs, const QPoint&)
 {
-    if ( _viewers.empty())
+    FMS fms = fvs.models(); // Copy out
+    for ( FM* fm : fms)
     {
-        FMVS vwrs = fvs.dviewers();
-        for ( FMV* v : vwrs)
-            v->resetCamera();
-    }   // end if
-    else
-    {
-        std::for_each( std::begin(_viewers), std::end(_viewers), [](auto v){ v->resetCamera();});
-        std::for_each( std::begin(_viewers), std::end(_viewers), [](auto v){ v->updateRender();});
-    }   // end else
+        fm->lockForWrite();
+        fm->transform(_rmat);
+        fm->unlock();
+        fvs.insert(fm);
+    }   // end for
     return true;
 }   // end doAction

@@ -23,7 +23,7 @@
  */
 
 #include "BaseVisualisation.h"
-#include <ColourMappingWidget.h>    // QTools
+#include <FaceViewSet.h>
 
 namespace FaceTools {
 namespace Vis {
@@ -31,26 +31,18 @@ namespace Vis {
 class FaceTools_EXPORT ScalarVisualisation : public BaseVisualisation
 { Q_OBJECT
 public:
-    // Pass in delegate functions to return a floating point value from a polygon.
-    ScalarVisualisation( const QString& dname, const QIcon&, const QKeySequence&);
-    ScalarVisualisation( const QString& dname, const QIcon&);
-    explicit ScalarVisualisation( const QString& dname);
+    // Pass in delegate function ScalarMappingFn that maps float values to
+    // the polygon IDs of a FaceModel's underlying RFeatures::ObjModel.
+    // Parameters minVal and maxVal are the visualisation's range limits.
+    ScalarVisualisation( const QString& dname, const ScalarMappingFn&, float minVal, float maxVal, const QIcon&);
 
-    // Provide the delegate that maps a scalar to a model polygon.
-    void setMappingFunction( const ScalarMappingFn& mf) { _mfunc = mf;}
+    bool isToggled() const override { return false;}    // Non-toggle so this visualisation is exclusive.
 
-    bool isToggled() const override { return false;}    // Makes this exclusive
-
-    // Returns true if the data to perform mapping are available.
+    // Returns true iff this visualisation can be used to map the given data.
     bool isAvailable( const FM*) const override;
 
     void apply( FV*, const QPoint* mc=nullptr) override;
     void remove( FV*) override;
-
-    // Update colour mappings from a colour mapping widget.
-    void updateFrom( const QTools::ColourMappingWidget*);
-    // Update the widget from this visualisation's colour mappings.
-    void updateTo( QTools::ColourMappingWidget*) const;
 
 protected:
     void purge( FV*) override;
@@ -60,10 +52,9 @@ protected:
 private:
     ScalarMapping _scmap;
     ScalarMappingFn _mfunc;
-    std::unordered_map<FV*, std::pair<float,float> > _mappings;
-
-    // (Re)map this visualisation's scalar data to the FaceView's surface actor.
-    std::pair<float,float> mapActor( FV*) const;
+    std::unordered_map<FM*, std::pair<float,float> > _mappings;   // min,max mappings to the data
+    FVS _mapped;    // Record the mapped FaceViews
+    void remapColourRangeAcrossModels();
 };  // end class
 
 }   // end namespace

@@ -67,14 +67,13 @@ public:
     // Should this visualisation be available in the UI?
     virtual bool isUIVisible() const { return true;}
 
-    // By default visualisations apply to all models within a viewer.
-    // If singleModel is overridden, the visualisation is applied to all
-    // views of the currently selected model in any viewer. If singleView
-    // is overridden, the visualisation is applied just to the currently
-    // selected view. Note that these cannot both be logically true.
-    // If both are true, singleModel takes precedence.
-    virtual bool singleModel() const { return false;}
-    virtual bool singleView() const { return false;}
+    // By default, visualisations are applied to all FaceViews in the selected FaceView(s) viewer(s).
+    // This behaviour can be changed by overriding applyToAllInViewer to return false, in which case
+    // the visualisation is applied only to the selected FaceView(s). If applyToSelectedModel is
+    // overridden to return true, the selected set of FaceViews is first expanded to be the superset
+    // of all FaceViews owned by every selected FaceModel.
+    virtual bool applyToAllInViewer() const { return true;}     // Default
+    virtual bool applyToSelectedModel() const { return false;}
 
     // Return true iff the given prop relating to the given FV belongs to
     // this visualisation. Typically, visualisations do not define extra actors

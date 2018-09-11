@@ -117,9 +117,9 @@ bool LoopSelectVisualisation::setHighlighted( const FV* fv, bool hval)
     if ( _lviews.count(fv) == 0)
         return false;
 
-    cv::Vec3f colour(0.1f, 0.9f, 0.0f); // non-highlight colour
+    cv::Vec3f colour(0.0f, 0.6f, 0.0f); // non-highlight colour
     if ( hval)
-        colour = cv::Vec3f( 0.9f, 0.1f, 0.0f);
+        colour = cv::Vec3f( 0.9f, 0.2f, 0.4f);
 
     bool setcolour = false;
     if ( colour != _lviews[fv]->colour())

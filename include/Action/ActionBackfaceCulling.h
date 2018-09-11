@@ -32,9 +32,6 @@ private slots:
     bool testReady( const Vis::FV*) override;
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(VIEW_CHANGE);}
-
-private:
-    bool displayDebugStatusProgression() const override { return false;}
 };  // end class
 
 }   // end namespace

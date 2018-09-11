@@ -36,27 +36,28 @@ public:
     FaceViewSet& operator+( const FaceViewSet&);      // Add the given set to this set (union)
     FaceViewSet& operator-( const FaceViewSet&);      // Remove the given set from this set (difference)
     FaceViewSet& operator/( const FaceViewSet&);      // Remove from this set those NOT in given set (intersection)
-    FaceViewSet operator()( const FM*) const;         // Return the set of FaceControls matching the given model.
+    FaceViewSet operator()( const FM*) const;         // Return the set of FaceViews matching the given model.
 
-    size_t insert( const FaceViewSet&);     // Returns the number from the given set inserted into this set.
-    bool insert( Vis::FV*);                 // Returns true on successful insert.
-    bool erase( const Vis::FV*);            // Returns true on successful erasure.
-    bool insert( const FM*);                // Insert all FaceControl instances belonging to the given FaceModel.
-    bool erase( const FM*);                 // Erase all FaceControl instances belonging to the given FaceModel.
-    void clear();                           // Clear contents.
+    size_t insert( const FaceViewSet&); // Returns the number from the given set inserted into this set.
+    bool insert( Vis::FV*);             // Returns true on successful insert.
+    bool erase( const Vis::FV*);        // Returns true on successful erasure.
+    bool insert( const FM*);            // Insert all FaceView instances belonging to the given FaceModel.
+    bool erase( const FM*);             // Erase all FaceView instances belonging to the given FaceModel.
+    void clear();                       // Clear contents.
+    size_t includeModelViews();         // Include all FaceViews of all referenced FaceModels; returns new size.
+    size_t includeViewerViews();        // Include all FaceViews of all referenced FaceModelViewers; returns new size.
 
-    bool has( const Vis::FV*) const;        // Returns true if the given FaceControl is present.
-    bool has( const FM*) const;             // Returns true iff at least one FaceControl with the given data is present.
-    size_t size() const;                    // How many FaceControl instances.
-    size_t size( const FM*) const;          // Returns the number of FaceControl instances that map to the given FaceModel.
-    bool empty() const;                     // True iff empty.
-    Vis::FV* first() const;                 // Returns *_fvs.begin() or null if empty set.
+    bool has( const Vis::FV*) const;    // Returns true if the given FaceView is present.
+    bool has( const FM*) const;         // Returns true iff at least one FaceView with the given data is present.
+    size_t size() const;                // How many FaceView instances.
+    size_t size( const FM*) const;      // Returns the number of FaceView instances that map to the given FaceModel.
+    bool empty() const;                 // True iff empty.
+    Vis::FV* first() const;             // Returns *_fvs.begin() or null if empty set.
 
-    FMVS viewers() const;          // Return the set of viewers used at this moment by ALL REFERENCED FACEMODELS
-    FMVS directViewers() const;    // Return the viewers just associated with the FaceControls in this set.
-    const FMS& models() const;     // Return the set of models (FaceControl::data) from the set.
+    const FMS& models() const;          // Return the set of models from this set of FaceViews.
+    FMVS dviewers() const;              // Return the viewers that this set's FaceViews are currently attached to.
 
-    // Returns the FaceControl that the prop belongs to or null if prop not associated with any FV in this set.
+    // Returns the FaceView that the prop belongs to or null if prop not associated with any FV in this set.
     // Currently does a linear lookup. TODO make hashable.
     Vis::FV* find( const vtkProp*) const;
 

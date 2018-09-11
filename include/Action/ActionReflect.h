@@ -15,23 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_SET_FOCUS_H
-#define FACE_TOOLS_ACTION_SET_FOCUS_H
+#ifndef FACE_TOOLS_ACTION_REFLECT_H
+#define FACE_TOOLS_ACTION_REFLECT_H
 
 #include "FaceAction.h"
 
 namespace FaceTools {
 namespace Action {
 
-class FaceTools_EXPORT ActionSetFocus : public FaceAction
+class FaceTools_EXPORT ActionReflect : public FaceAction
 { Q_OBJECT
 public:
-    explicit ActionSetFocus( const QString& dname);
+    ActionReflect( const QString& dname, const QIcon& icon);
 
-protected slots:
-    bool testEnabled( const QPoint*) const override;
+private slots:
+    bool testReady( const Vis::FV*) override;
+    bool testEnabled( const QPoint* mc=nullptr) const override { return ready1() != nullptr;}
     bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(CAMERA_CHANGE);}
+    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(GEOMETRY_CHANGE);}
 };  // end class
 
 }   // end namespace

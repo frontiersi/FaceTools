@@ -56,6 +56,10 @@ public:
     // Returns boundary values for each model component as [xmin,xmax,ymin,ymax,zmin,zmax].
     inline const std::vector<cv::Vec6d>& bounds() const { return _cbounds;}
 
+    // Returns the super boundary of this model i.e. the smallest boundary
+    // in 3D that contains all of this model's components.
+    inline const cv::Vec6d& superBounds() const { return _sbounds;}
+
     // Set/get orientation of the face.
     inline void setOrientation( const RFeatures::Orientation &o) { _orientation = o; setSaved(false);}
     inline const RFeatures::Orientation& orientation() const { return _orientation;}
@@ -91,6 +95,9 @@ public:
     // Find and return the point on the surface closest to the given point (which may not be on the surface).
     cv::Vec3f findClosestSurfacePoint( const cv::Vec3f&) const;
 
+    // Does this model's super bounds intersect with the other model's super bounds?
+    bool supersIntersect( const FaceModel&) const;
+
     // Translate the given point to the surface of this model. First finds the
     // closest point on the surface using the internal kd-tree.
     double translateToSurface( cv::Vec3f&) const;
@@ -108,7 +115,8 @@ private:
     FaceTools::PathSet::Ptr _paths;
     RFeatures::ObjModelInfo::Ptr _minfo;
     RFeatures::ObjModelKDTree::Ptr _kdtree;
-    std::vector<cv::Vec6d> _cbounds;    // Per component bounds
+    std::vector<cv::Vec6d> _cbounds;
+    cv::Vec6d _sbounds;
 
     mutable QReadWriteLock _mutex;
     FVS _fvs;  // Associated FaceViews

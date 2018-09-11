@@ -35,7 +35,9 @@ public:
     LoopSelectVisualisation( const QString& dname="Loop Select", const QIcon& icon=QIcon(), double sphereRad=7.0);
     ~LoopSelectVisualisation() override;
 
-    bool singleModel() const override { return true;}
+    bool applyToAllInViewer() const override { return false;}
+    bool applyToSelectedModel() const override { return true;}
+
     bool belongs( const vtkProp*, const FV*) const override;
 
     void copy( FV* dst, const FV* src) override;

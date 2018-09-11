@@ -52,7 +52,7 @@ bool ActionExecutionQueue::push( FaceAction* act, const FVS& fvs, const EventSet
     {
         FVS nfvs = fvs; // Copy out since in granting the response, the contents may change
         const bool granted = response->grantResponse( nfvs);
-        if ( granted && nfvs.size() > mfvs.size())
+        if ( granted && nfvs.size() >= mfvs.size())
         {
             bestResponse = response;
             mfvs = nfvs;

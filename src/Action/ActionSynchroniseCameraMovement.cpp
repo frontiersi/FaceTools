@@ -16,60 +16,46 @@
  ************************************************************************/
 
 #include <ActionSynchroniseCameraMovement.h>
-#include <ModelViewer.h>
+#include <FaceModelViewer.h>
+#include <FaceView.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionSynchroniseCameraMovement;
 using FaceTools::Action::FaceAction;
 using FaceTools::FVS;
+using FaceTools::Vis::FV;
 using FaceTools::ModelViewer;
 using FaceTools::Interactor::ModelMoveInteractor;
-
-
-ActionSynchroniseCameraMovement* ActionSynchroniseCameraMovement::s_obj(nullptr);
 
 
 // public
 ActionSynchroniseCameraMovement::ActionSynchroniseCameraMovement( const QString& dn, const QIcon& ico, ModelMoveInteractor* mmi)
     : FaceAction( dn, ico), _interactor(mmi)
 {
-    assert( !s_obj);
-    if ( s_obj)
-    {
-        std::cerr << "[ERROR] FaceTools::Action::ActionSynchroniseCameraMovement::ctor: More than one object of this type is bad!" << std::endl;
-        delete s_obj;
-    }   // end if
     setCheckable(true, false);
-    s_obj = this;
+    setRespondToEvent( CAMERA_CHANGE, [this](const FVS&){ return this->isChecked();});
 }   // end ctor
 
 
-bool ActionSynchroniseCameraMovement::doAction( FVS&, const QPoint&)
+bool ActionSynchroniseCameraMovement::doAction( FVS& fvs, const QPoint&)
 {
+    _interactor->disconnect(this);
     if ( isChecked())
     {
-        connect( _interactor, &ModelMoveInteractor::onCameraRotate, this, &ActionSynchroniseCameraMovement::doSyncActiveCamera);
-        connect( _interactor, &ModelMoveInteractor::onCameraDolly, this, &ActionSynchroniseCameraMovement::doSyncActiveCamera);
-        connect( _interactor, &ModelMoveInteractor::onCameraPan, this, &ActionSynchroniseCameraMovement::doSyncActiveCamera);
+        syncActiveCamera( fvs.empty() ? nullptr : fvs.first());
+        connect( _interactor, &ModelMoveInteractor::onCameraMove, this, &ActionSynchroniseCameraMovement::syncActiveCamera);
     }   // end if
-    else
-        _interactor->disconnect(this);
     return true;
 }   // end doAction
 
 
-// public static
-void ActionSynchroniseCameraMovement::sync()
-{
-    if ( s_obj && s_obj->isChecked())
-        s_obj->doSyncActiveCamera();
-}   // end sync
-
-
-// public
-void ActionSynchroniseCameraMovement::doSyncActiveCamera()
+// private slot
+void ActionSynchroniseCameraMovement::syncActiveCamera( const FV* fv)
 {
     ModelViewer* viewer = _interactor->viewer();
+    if ( fv)
+        viewer = fv->viewer();
+
     RFeatures::CameraParams cp = viewer->getCamera();
     for ( ModelViewer* v : _viewers)
     {
@@ -79,4 +65,4 @@ void ActionSynchroniseCameraMovement::doSyncActiveCamera()
             v->updateRender();
         }   // end if
     }   // end for
-}   // end doSyncActiveCamera
+}   // end syncActiveCamera

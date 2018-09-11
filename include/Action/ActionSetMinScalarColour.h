@@ -15,23 +15,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_SET_FOCUS_H
-#define FACE_TOOLS_ACTION_SET_FOCUS_H
+#ifndef FACE_TOOLS_ACTION_SET_MIN_SCALAR_COLOUR_H
+#define FACE_TOOLS_ACTION_SET_MIN_SCALAR_COLOUR_H
 
 #include "FaceAction.h"
 
 namespace FaceTools {
 namespace Action {
 
-class FaceTools_EXPORT ActionSetFocus : public FaceAction
+class FaceTools_EXPORT ActionSetMinScalarColour : public FaceAction
 { Q_OBJECT
 public:
-    explicit ActionSetFocus( const QString& dname);
+    ActionSetMinScalarColour( const QString& dname, QWidget* parent=nullptr);
 
-protected slots:
-    bool testEnabled( const QPoint*) const override;
+private slots:
+    void tellReady( Vis::FV*, bool) override;
+    bool testReady( const Vis::FV*) override;
+    bool doBeforeAction( FVS&, const QPoint&) override;
     bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(CAMERA_CHANGE);}
+    void doAfterAction( EventSet& evs, const FVS&, bool) override { evs.insert(VIEW_CHANGE);}
+
+private:
+    QWidget *_parent;
+    QColor _curColour;
+    void setIconColour( const QColor&);
 };  // end class
 
 }   // end namespace

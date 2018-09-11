@@ -33,6 +33,8 @@ public:
 
     Vis::BaseVisualisation* visualisation() { return _vis;}
 
+    bool isExclusive() const { return !_vis->isToggled() || _vis->isExclusive();}
+
 protected slots:
     bool testReady( const Vis::FV*) override;
     void tellReady( Vis::FV*, bool) override;   // Called whenever ready status changes
@@ -40,7 +42,6 @@ protected slots:
     bool testIfCheck( const Vis::FV *fc=nullptr) const override;
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(VIEW_CHANGE);}
-    bool displayDebugStatusProgression() const override { return false;}
     void purge( const FM*) override;
     void clean( const FM*) override;
 

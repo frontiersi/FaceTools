@@ -34,7 +34,7 @@ using FaceTools::FM;
 
 // public
 FaceView::FaceView( FM* fm, FMV* viewer)
-    : _data(fm), _actor(nullptr), _texture(nullptr), _viewer(nullptr), _scmap(nullptr), _xvis(nullptr)
+    : _data(fm), _actor(nullptr), _texture(nullptr), _viewer(nullptr), _pviewer(nullptr), _scmap(nullptr), _xvis(nullptr)
 {
     assert(viewer);
     assert(fm);
@@ -82,7 +82,10 @@ void FaceView::setViewer( FMV* viewer)
         std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](auto v){v->remove(this);});
         _viewer->remove(_actor);
     }   // end if
+
+    _pviewer = _viewer;
     _viewer = viewer;
+
     if ( _viewer)
     {
         _viewer->add(_actor);
@@ -103,6 +106,8 @@ void FaceView::reset()
     double op = 1.0;
     QColor cl(255,255,255);
 
+    setActiveScalars(nullptr);
+
     if ( _actor)
     {
         bface = backfaceCulling();
@@ -112,12 +117,12 @@ void FaceView::reset()
 
         _viewer->remove(_actor);    // Remove the actor
         _actor->Delete();
+        _actor = nullptr;
     }   // end if
 
     // Create the new actor from the data
     RVTK::VtkActorCreator ac;
     _fmap.clear();
-    setActiveScalars(nullptr);
     ac.setObjToVTKUniqueFaceMap( &_fmap);
     const RFeatures::ObjModel* model = _data->info()->cmodel();
     _actor = ac.generateActor( model, _texture);
@@ -162,7 +167,9 @@ bool FaceView::apply( BaseVisualisation* vis, const QPoint* mc)
     assert( vis);
     assert(_actor);
     assert(_viewer);
-    assert( _vlayers.count(vis) == 0);
+
+    if ( _vlayers.count(vis) > 0)   // Already applied
+        return true;
 
     if ( !vis->isAvailable(_data))
         return false;
@@ -170,7 +177,7 @@ bool FaceView::apply( BaseVisualisation* vis, const QPoint* mc)
     _data->lockForRead();
     vis->apply( this, mc);
     _vlayers.insert(vis);
-    if ( !vis->isToggled())
+    if ( !vis->isToggled() || vis->isExclusive())
     {
         assert(_xvis == nullptr);
         _xvis = vis;
@@ -328,7 +335,7 @@ void FaceView::setActiveScalars( ScalarMapping* s)
         return;
 
     vtkCellData* celldata = RVTK::getPolyData(_actor)->GetCellData();
-    std::string vname = "";
+    std::string vname;
     if ( s)
     {
         _scmap = s;
@@ -337,7 +344,8 @@ void FaceView::setActiveScalars( ScalarMapping* s)
         assert( celldata->GetAbstractArray( vname.c_str()) != nullptr);   // Mapping must have taken place already!
 
         auto updatefn = [this](){ _actor->GetMapper()->SetLookupTable( _scmap->lookupTable().vtk());
-                                  _actor->GetMapper()->SetScalarRange( _scmap->minVisible(), _scmap->maxVisible());};
+                                  _actor->GetMapper()->SetScalarRange( _scmap->minVisible(), _scmap->maxVisible());
+                                  _viewer->updateRender();};
         connect( s, &ScalarMapping::rebuilt, this, updatefn);
         updatefn();
     }   // end if

@@ -30,7 +30,9 @@ public:
     LandmarksVisualisation( const QString &dname, const QIcon &icon);
     ~LandmarksVisualisation() override;
 
-    bool singleModel() const override { return true;}    // Apply to all FaceControls of a FaceModel
+    bool applyToAllInViewer() const override { return true;}
+    bool applyToSelectedModel() const override { return true;}
+
     bool belongs( const vtkProp*, const FV*) const override;
     bool isAvailable( const FM*) const override;
 

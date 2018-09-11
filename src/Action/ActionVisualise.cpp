@@ -36,7 +36,7 @@ ActionVisualise::ActionVisualise( BaseVisualisation* vis, bool visOnLoad)
     : FaceAction( vis->getDisplayName(), vis->getIcon()), _vis(vis)
 {
     assert(vis);
-    setCheckable( vis->isToggled(), false);
+    setCheckable( true, false);
     setVisible( vis->isUIVisible());
 
     // Purge events
@@ -124,17 +124,11 @@ bool ActionVisualise::isVisAvailable( const FVS& fvs, const QPoint* mc) const
         return false;
 
     bool allowed = false;
-    if ( _vis->singleModel())
+    if ( _vis->applyToSelectedModel())
     {
         const FMS& fms = fvs.models();
-        assert(fms.size() == 1);
-        allowed = isVisAvailable(*fms.begin());
+        allowed = std::all_of( std::begin(fms), std::end(fms), [this](const FM* fm){ return this->isVisAvailable(fm);});
     }   // end if
-    else if ( _vis->singleView())
-    {
-        assert(fvs.size() == 1);
-        allowed = isVisAvailable(*fvs.begin());
-    }   // end else if
     else
         allowed = std::all_of( std::begin(fvs), std::end(fvs), [=](const FV* fv){ return this->isVisAvailable(fv, mc);});
     return allowed;
@@ -165,7 +159,7 @@ bool ActionVisualise::toggleVis( FV* fv, const QPoint* mc)
     const FM* fm = fv->data();
 
     // If this visualisation isn't toggled, or it's exclusive, then the current exclusive visualisation must first be removed.
-    if ( !_vis->isToggled() || _vis->isExclusive())
+    if ( isExclusive())
     {
         if ( fv->exvis() != nullptr)
             fv->remove(fv->exvis());
@@ -184,13 +178,6 @@ bool ActionVisualise::toggleVis( FV* fv, const QPoint* mc)
 
 bool ActionVisualise::doAction( FVS& fvs, const QPoint& mc)
 {
-    if ( _vis->singleView() && _vis->singleModel())
-    {
-        std::cerr << "[WARNING] FaceTools::ActionVisualise::doAction: Visualisation " << dname()
-                  << " has both singleModel() and singleView() returning true which is not allowed!" << std::endl;
-        assert(false);
-    }   // end if
-
     setViewsToProcess( fvs);
     std::for_each( std::begin(fvs), std::end(fvs), [&](FV* f){ toggleVis(f, &mc);});
     return !fvs.empty();
@@ -218,19 +205,11 @@ void ActionVisualise::clean( const FM* fm)
 // private
 size_t ActionVisualise::setViewsToProcess( FVS& fvs) const
 {
-    if ( _vis->singleModel())
-    {
-        FMS fms = fvs.models();   // Copy out
-        fvs.clear();
-        std::for_each( std::begin(fms), std::end(fms), [&](const FM* fm){ fvs.insert(fm);}); // Account for all model views.
-    }   // end if
-    else if ( !_vis->singleView())
-    {
-        // Ensure fvs contains all FVs from every referenced viewer.
-        FMVS fmvs = fvs.directViewers();
-        fvs.clear();
-        std::for_each( std::begin(fmvs), std::end(fmvs), [&](auto v){ fvs.insert( v->attached());});
-    }   // end else if
-
+    if ( _vis->applyToSelectedModel())
+        fvs.includeModelViews();
+    if ( _vis->applyToAllInViewer())
+        fvs.includeViewerViews();
+    if ( _vis->applyToSelectedModel())
+        fvs.includeModelViews();
     return fvs.size();
 }   // end setViewsToProcess

@@ -26,7 +26,7 @@ namespace Action {
 class FaceTools_EXPORT ActionFillHoles : public FaceAction
 { Q_OBJECT
 public:
-    ActionFillHoles( const QString& dname="Fill Holes", const QIcon& icon=QIcon(), QProgressBar* pb=nullptr);   // Async if pb not null
+    ActionFillHoles( const QString& dname, const QIcon& icon=QIcon(), QProgressBar* pb=nullptr);   // Async if pb not null
 
 private slots:
     bool testReady( const Vis::FV*) override;

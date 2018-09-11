@@ -16,12 +16,14 @@
  ************************************************************************/
 
 #include <FaceViewSet.h>
+#include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <FaceView.h>
 #include <algorithm>
 using FaceTools::FaceViewSet;
 using FaceTools::Vis::FV;
 using FaceTools::FMVS;
+using FaceTools::FMV;
 using FaceTools::FMS;
 using FaceTools::FM;
 
@@ -115,8 +117,9 @@ bool FaceViewSet::insert( FV* fv)
         _fvs.insert(fv);
         if ( fv)
         {
-            _fmm[fv->data()].insert(fv);
-            _fms.insert(fv->data());
+            FM* fm = fv->data();
+            _fmm[fm].insert(fv);
+            _fms.insert(fm);
         }   // end if
     }   // end if
     return success;
@@ -181,6 +184,31 @@ void FaceViewSet::clear()
 
 
 // public
+size_t FaceViewSet::includeModelViews()
+{
+    for ( const FM* fm : _fms)
+    {
+        for ( FV* fv : fm->fvs())
+        {
+            _fvs.insert(fv);
+            _fmm[fm].insert(fv);
+        }   // end for
+    }   // end for
+    return _fvs.size();
+}   // end includeModelViews
+
+
+// public
+size_t FaceViewSet::includeViewerViews()
+{
+    FMVS vwrs = dviewers();
+    for ( FMV* viewer : vwrs)
+        this->insert( viewer->attached());
+    return size();
+}   // end includeViewerViews
+
+
+// public
 FV* FaceViewSet::first() const
 {
     FV* fv = nullptr;
@@ -195,26 +223,13 @@ const FMS& FaceViewSet::models() const { return _fms;}
 
 
 // public
-FMVS FaceViewSet::viewers() const
-{
-    FMVS viewers;
-    std::for_each( std::begin(_fms), std::end(_fms), [&](auto fm){
-                for ( FV* fv : fm->fvs()) // For all FaceViews that map to the model
-                    viewers.insert(fv->viewer());
-            });
-    viewers.erase(nullptr);    // Ensure no null entries (though there shouldn't be any).
-    return viewers;
-}   // end viewers
-
-
-// public
-FMVS FaceViewSet::directViewers() const
+FMVS FaceViewSet::dviewers() const
 {
     FMVS viewers;
     std::for_each( std::begin(_fvs), std::end(_fvs), [&](auto fv){ viewers.insert(fv->viewer());});
     viewers.erase(nullptr);    // Ensure no null entries (though there shouldn't be any).
     return viewers;
-}   // end directViewers
+}   // end dviewers
 
 
 // public
@@ -229,4 +244,3 @@ FV* FaceViewSet::find( const vtkProp* prop) const
     }   // end for
     return nullptr;
 }   // end find
-

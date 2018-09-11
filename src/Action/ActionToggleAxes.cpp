@@ -27,7 +27,7 @@ using FaceTools::FVS;
 ActionToggleAxes::ActionToggleAxes( const QString& dn, const QIcon& ico)
     : FaceAction( dn, ico)
 {
-    setCheckable( true, false);
+    setCheckable( true, true);
 }   // end ctor
 
 
@@ -59,6 +59,11 @@ void ActionToggleAxes::addViewer( FaceModelViewer* v)
     actor->GetZAxesGridlinesProperty()->SetLineWidth(1.0);
 
     _viewers[v] = actor;
+    if ( isChecked())
+    {
+        v->add(actor);
+        v->updateRender();
+    }   // end if
 }   // end addViewer
 
 

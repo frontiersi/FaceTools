@@ -42,7 +42,6 @@ protected slots:
     bool testReady( const Vis::FV* fc) override;
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(VIEWER_CHANGE);}
-    bool displayDebugStatusProgression() const override { return false;}
 
 private:
     FaceModelViewer *_tviewer;

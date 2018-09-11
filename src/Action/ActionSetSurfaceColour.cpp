@@ -15,40 +15,50 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionSetFocus.h>
-#include <FaceModelViewer.h>
+#include <ActionSetSurfaceColour.h>
 #include <FaceView.h>
-#include <algorithm>
-#include <cassert>
-using FaceTools::Action::ActionSetFocus;
-using FaceTools::Action::EventSet;
+#include <QColorDialog>
+using FaceTools::Action::ActionSetSurfaceColour;
 using FaceTools::Action::FaceAction;
-using FaceTools::FVS;
 using FaceTools::Vis::FV;
+using FaceTools::FVS;
 
 
-// public
-ActionSetFocus::ActionSetFocus( const QString& dn) : FaceAction( dn)
+ActionSetSurfaceColour::ActionSetSurfaceColour( const QString& dname, QWidget* parent)
+    : FaceAction( dname), _parent(parent)
 {
+    setIconColour( QColor(255,255,255));
 }   // end ctor
 
 
-bool ActionSetFocus::testEnabled( const QPoint* p) const
+void ActionSetSurfaceColour::tellReady( FV* fv, bool v)
 {
-    bool enabled = false;
-    if ( p && ready1())
-        enabled = ready1()->isPointOnFace(*p);
-    return enabled;
-}   // end testEnabled
+    if ( v)
+        setIconColour( fv->colour());
+}   // end tellReady
 
 
-bool ActionSetFocus::doAction( FVS& fvs, const QPoint& p)
+bool ActionSetSurfaceColour::doBeforeAction( FVS&, const QPoint&)
 {
-    assert(fvs.size() == 1);
-    FV* fv = fvs.first();
-    assert(fv);
-    cv::Vec3f nf;
-    fv->projectToSurface( p, nf);
-    fv->viewer()->setFocus(nf);
+    QColor c = QColorDialog::getColor( _curColour, _parent, "Choose new surface colour");
+    if ( c.isValid())
+        setIconColour( c);
+    return c.isValid();
+}   // end doBeforeAction
+
+
+bool ActionSetSurfaceColour::doAction( FVS& fvs, const QPoint&)
+{
+    for ( FV* fv : fvs)
+        fv->setColour( _curColour);
     return true;
 }   // end doAction
+
+
+void ActionSetSurfaceColour::setIconColour( const QColor& colour)
+{
+    _curColour = colour;
+    QPixmap pmap(40,40);
+    pmap.fill( colour);
+    qaction()->setIcon( pmap);
+}   // end setIconColour

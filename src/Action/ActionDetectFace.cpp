@@ -53,7 +53,7 @@ ActionDetectFace::~ActionDetectFace()
 }   // end dtor
 
 
-bool ActionDetectFace::testReady( const Vis::FV* fv) { return fv->canTexture();}
+bool ActionDetectFace::testReady( const FV* fv) { return fv->canTexture();}
 
 
 bool ActionDetectFace::doBeforeAction( FVS& fvs, const QPoint&)

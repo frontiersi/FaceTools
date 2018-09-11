@@ -36,42 +36,50 @@ using QTools::QProgressUpdater;
 // public
 FaceAction::FaceAction()
     : _dname(""), _icon(),
-      _init(false), _visible(true), _defaultCheckState(false), _action(this), _doasync(false), _pupdater(nullptr) { }
+      _init(false), _visible(true), _defaultCheckState(false), _allowOnToolbar(true),
+      _action(this), _doasync(false), _pupdater(nullptr) { }
 
 // public
 FaceAction::FaceAction( const QString& dn)
     : _dname(dn), _icon(), _keys(),
-      _init(false), _visible(true), _defaultCheckState(false), _action(this), _doasync(false), _pupdater(nullptr) { }
+      _init(false), _visible(true), _defaultCheckState(false), _allowOnToolbar(true),
+      _action(this), _doasync(false), _pupdater(nullptr) { }
 
 // public
 FaceAction::FaceAction( const QString& dn, const QIcon& ico)
     : _dname(dn), _icon(ico), _keys(),
-      _init(false), _visible(true), _defaultCheckState(false), _action(this), _doasync(false), _pupdater(nullptr) { }
+      _init(false), _visible(true), _defaultCheckState(false), _allowOnToolbar(true),
+      _action(this), _doasync(false), _pupdater(nullptr) { }
 
 // public
 FaceAction::FaceAction( const QString& dn, const QIcon* ico)
     : _dname(dn), _icon(ico ? *ico : QIcon()), _keys(),
-      _init(false), _visible(true), _defaultCheckState(false), _action(this), _doasync(false), _pupdater(nullptr) { }
+      _init(false), _visible(true), _defaultCheckState(false), _allowOnToolbar(true),
+      _action(this), _doasync(false), _pupdater(nullptr) { }
 
 // public
 FaceAction::FaceAction( const QString& dn, const QIcon& ico, const QKeySequence& ks)
     : _dname(dn), _icon(ico), _keys(ks),
-      _init(false), _visible(true), _defaultCheckState(false), _action(this), _doasync(false), _pupdater(nullptr) { }
+      _init(false), _visible(true), _defaultCheckState(false), _allowOnToolbar(true),
+      _action(this), _doasync(false), _pupdater(nullptr) { }
 
 // public
 FaceAction::FaceAction( const QString& dn, const QIcon* ico, const QKeySequence& ks)
     : _dname(dn), _icon(ico ? *ico : QIcon()), _keys(ks),
-      _init(false), _visible(true), _defaultCheckState(false), _action(this), _doasync(false), _pupdater(nullptr) { }
+      _init(false), _visible(true), _defaultCheckState(false), _allowOnToolbar(true),
+      _action(this), _doasync(false), _pupdater(nullptr) { }
 
 // public
 FaceAction::FaceAction( const QString& dn, const QIcon& ico, const QKeySequence* ks)
     : _dname(dn), _icon(ico), _keys(ks ? *ks : QKeySequence()),
-      _init(false), _visible(true), _defaultCheckState(false), _action(this), _doasync(false), _pupdater(nullptr) { }
+      _init(false), _visible(true), _defaultCheckState(false), _allowOnToolbar(true),
+      _action(this), _doasync(false), _pupdater(nullptr) { }
 
 // public
 FaceAction::FaceAction( const QString& dn, const QIcon* ico, const QKeySequence* ks)
     : _dname(dn), _icon(ico ? *ico : QIcon()), _keys(ks ? *ks : QKeySequence()),
-      _init(false), _visible(true), _defaultCheckState(false), _action(this), _doasync(false), _pupdater(nullptr) { }
+      _init(false), _visible(true), _defaultCheckState(false), _allowOnToolbar(true),
+      _action(this), _doasync(false), _pupdater(nullptr) { }
 
 
 // public
@@ -146,6 +154,7 @@ void FaceAction::init() // Called by FaceActionManager after constructor finishe
         _action.setShortcut(*keys);
 
     _init = true;
+    postInit();
     testSetEnabled();
 }   // end init
 

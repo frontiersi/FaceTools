@@ -34,23 +34,6 @@ using FaceTools::FaceModelSurfaceData;
 using FaceTools::SurfaceData;
 using FaceTools::FVS;
 using FaceTools::FM;
-using QTools::ColourMappingWidget;
-
-
-ScalarVisualisation::ScalarVisualisation( const QString& d, const QIcon& i, const QKeySequence& k)
-    : BaseVisualisation(d,i,k), _scmap( d.toStdString()), _mfunc(nullptr)
-{
-}   // end ctor
-
-ScalarVisualisation::ScalarVisualisation( const QString& d, const QIcon& i)
-    : BaseVisualisation(d,i), _scmap( d.toStdString()), _mfunc(nullptr)
-{
-}   // end ctor
-
-ScalarVisualisation::ScalarVisualisation( const QString& d)
-    : BaseVisualisation(d), _scmap( d.toStdString()), _mfunc(nullptr)
-{
-}   // end ctor
 
 
 namespace {
@@ -67,43 +50,48 @@ private:
 }   // end namespace
 
 
-// private
-std::pair<float,float> ScalarVisualisation::mapActor( FV* fv) const
+ScalarVisualisation::ScalarVisualisation( const QString& d, const ScalarMappingFn& mf, float minv, float maxv, const QIcon& icon)
+    : BaseVisualisation(d, icon),
+      _scmap( d.toStdString()), _mfunc(mf)
 {
-    SurfaceData::RPtr msd = FaceModelSurfaceData::rdata(fv->data()); // Scoped read lock
-    assert( _mfunc != nullptr);
-    CurvMapper mapper( _mfunc, msd->metrics, fv->actor(), &fv->polyLookups(), getDisplayName().toStdString());
-    mapper.mapActor();
-    float minval, maxval;
-    mapper.getMappedRange( &minval, &maxval);
-    return std::pair<float,float>( minval, maxval);
-}   // end mapActor
+    _scmap.setRangeLimits( minv, maxv);
+    _scmap.setVisibleLimits( minv, maxv);
+    _scmap.rebuild();
+}   // end ctor
 
 
 // public
 bool ScalarVisualisation::isAvailable( const FM* fm) const
 {
-    return FaceModelSurfaceData::get()->isAvailable(fm) && _mfunc != nullptr;
+    return FaceModelSurfaceData::get()->isAvailable(fm);
 }   // end isAvailable
 
 
 // public
 void ScalarVisualisation::apply( FV* fv, const QPoint*)
 {
-    if ( _mappings.count(fv) == 0)
-        _mappings[fv] = mapActor(fv);
+    FM* fm = fv->data();
+    // If no views have yet been mapped to FV's underlying data, may need to
+    // adjust the visible range across all views with this scalar mapping applied.
+    //const bool doremap = _mappings.count(fm) == 0;
 
-    // If the mapped min,max for this visualisation widens the scalar range,
-    // remap the surfaces of the currently mapped views by rebuilding the lookup table.
-    const std::pair<float,float>& mm = _mappings.at(fv);
-    const std::pair<float,float>& rl = _scmap.rangeLimits();
-    if ( mm.first < rl.first || mm.second > rl.second)
+    std::pair<float,float> minmax;
+    if ( !_mapped.has(fv))
     {
-        const float nmin = std::min( mm.first, rl.first);
-        const float nmax = std::max( mm.second, rl.second);
-        _scmap.setRangeLimits( nmin, nmax);
-        _scmap.rebuild();
+        SurfaceData::RPtr msd = FaceModelSurfaceData::rdata(fm); // Scoped read lock
+        CurvMapper mapper( _mfunc, msd->metrics, fv->actor(), &fv->polyLookups(), getDisplayName().toStdString());
+        mapper.mapActor();
+        _mapped.insert(fv);
+
+        // Okay to overwrite the mapping min,max for the same model.
+        mapper.getMappedRange( &minmax.first, &minmax.second);
+        _mappings[fm] = minmax;
     }   // end if
+
+    /*
+    if ( doremap)
+        remapColourRangeAcrossModels();
+    */
 
     fv->setActiveScalars( &_scmap);
 }   // end apply
@@ -112,65 +100,46 @@ void ScalarVisualisation::apply( FV* fv, const QPoint*)
 // public
 void ScalarVisualisation::remove( FV* fv)
 {
-    if ( _mappings.count(fv) == 0)
-        return;
-
-    std::pair<float,float> mm = _mappings.at(fv);
-    const std::pair<float,float>& rl = _scmap.rangeLimits();
-    _mappings.erase(fv);
-    fv->setActiveScalars(nullptr);
-    
-    // If removing the mapping for this FaceView narrows the scalar range, find the new
-    // range by iterating over the already mapped views, and allow the views to remap themselves.
-    if ( mm.first <= rl.first || mm.second >= rl.second)
-    {
-        for ( const auto& p : _mappings)
-        {
-            mm.first = std::min( mm.first, p.second.first);
-            mm.second = std::max( mm.second, p.second.second);
-        }   // end for
-        _scmap.setRangeLimits( mm);
-        _scmap.rebuild();
-    }   // end if
+    if ( fv->activeScalars() == &_scmap)
+        fv->setActiveScalars(nullptr);
+    _mapped.erase(fv);
 }   // end remove
 
 
 // protected
 void ScalarVisualisation::purge( FV* fv)
 {
+    const size_t psize = _mapped.size();
     remove(fv);
+    if ( _mapped.size() < psize)
+    {
+        // If none of the underlying data's views are mapped, the mapping range may need
+        // to be readjusted to possible narrowing of the range across the remaining views.
+        FM* fm = fv->data();
+        const FVS& fvs = fm->fvs();
+        if ( !std::any_of( std::begin(fvs), std::end(fvs), [this](FV* fv){ return _mapped.has(fv);}))
+        {
+            _mappings.erase(fm);
+            //remapColourRangeAcrossModels();
+        }   // end if
+    }   // end if
 }   // end purge
 
 
-// public
-void ScalarVisualisation::updateFrom( const ColourMappingWidget* w)
+// private
+void ScalarVisualisation::remapColourRangeAcrossModels()
 {
-    assert(w);
-    QColor mcol0 = w->minColour();
-    QColor mcol1 = w->midColour();
-    QColor mcol2 = w->maxColour();
-    _scmap.setColours( mcol0, mcol1, mcol2);
-    _scmap.setNumColours( w->numColours());
-    _scmap.setVisibleLimits( w->minScalar(), w->maxScalar());
-    _scmap.rebuild();
-}   // end updateFrom
+    float nmin = FLT_MAX;
+    float nmax = -FLT_MAX;
+    for ( const auto& p : _mappings)
+    {
+        nmin = std::min( nmin, p.second.first);
+        nmax = std::max( nmax, p.second.second);
+    }   // end for
 
-
-// public
-void ScalarVisualisation::updateTo( ColourMappingWidget* w) const
-{
-    assert(w);
-    QColor c0, c1, c2;
-    _scmap.colours(c0,c1,c2);
-    const auto& rlims = _scmap.rangeLimits();
-    const bool threeband = rlims.first < 0.0f && rlims.second > 0.0f;  // Will tell widget whether or not to hide "mid" colour
-
-    w->setThreeBand( threeband);
-    w->setMinColour(c0);
-    w->setMidColour(c1);
-    w->setMaxColour(c2);
-    w->setScalarRangeLimits( rlims.first, rlims.second);
-    w->setMinScalar( _scmap.minVisible());
-    w->setMaxScalar( _scmap.maxVisible());
-    w->setNumColours( _scmap.numColours());
-}   // end updateTo
+    if ( !_mappings.empty() && (nmin != _scmap.minRange() || nmax != _scmap.maxRange()))
+    {
+        _scmap.setRangeLimits( nmin, nmax);
+        _scmap.rebuild();
+    }   // end if
+}   // end remapColourRangeAcrossModels

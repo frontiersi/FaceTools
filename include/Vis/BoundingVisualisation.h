@@ -32,8 +32,8 @@ public:
 
     bool isUIVisible() const override { return false;}
 
-    // Used to bound the selected view - so should only be applied to a single FaceView.
-    bool singleView() const override { return true;}
+    // Used to bound just the selected views.
+    bool applyToAllInViewer() const override { return false;}
 
     void apply( FV*, const QPoint* mc=nullptr) override;
     void remove( FV*) override;

@@ -15,8 +15,9 @@ set( INCLUDE_ACTION_DIR "${INCLUDE_DIR}/Action")
 set( INCLUDE_DETECT_DIR "${INCLUDE_DIR}/Detect")
 set( INCLUDE_FILEIO_DIR "${INCLUDE_DIR}/FileIO")
 set( INCLUDE_REPORT_DIR "${INCLUDE_DIR}/Report")
-set( INCLUDE_VIS_DIR "${INCLUDE_DIR}/Vis")
+set( INCLUDE_WIDGET_DIR "${INCLUDE_DIR}/Widget")
 set( INCLUDE_INT_DIR "${INCLUDE_DIR}/Interactor")
+set( INCLUDE_VIS_DIR "${INCLUDE_DIR}/Vis")
 include_directories( ${INCLUDE_DIR})
 include_directories( ${INCLUDE_ACTION_DIR})
 include_directories( ${INCLUDE_DETECT_DIR})
@@ -33,6 +34,7 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionAlignICP.h"
     "${INCLUDE_ACTION_DIR}/ActionAlignLandmarks.h"
     "${INCLUDE_ACTION_DIR}/ActionBackfaceCulling.h"
+    "${INCLUDE_ACTION_DIR}/ActionChangeScalarMappingColours.h"
     "${INCLUDE_ACTION_DIR}/ActionCloseAllFaceModels.h"
     "${INCLUDE_ACTION_DIR}/ActionCloseFaceModels.h"
     "${INCLUDE_ACTION_DIR}/ActionComponentSelect.h"
@@ -53,16 +55,22 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionMoveViewer.h"
     "${INCLUDE_ACTION_DIR}/ActionOrientCameraToFace.h"
     "${INCLUDE_ACTION_DIR}/ActionRadialSelect.h"
+    "${INCLUDE_ACTION_DIR}/ActionReflect.h"
     "${INCLUDE_ACTION_DIR}/ActionRemesh.h"
     "${INCLUDE_ACTION_DIR}/ActionRenameLandmark.h"
     "${INCLUDE_ACTION_DIR}/ActionRenamePath.h"
     "${INCLUDE_ACTION_DIR}/ActionResetCamera.h"
+    "${INCLUDE_ACTION_DIR}/ActionRotateModel.h"
     "${INCLUDE_ACTION_DIR}/ActionSaveScreenshot.h"
     "${INCLUDE_ACTION_DIR}/ActionSaveFaceModels.h"
     "${INCLUDE_ACTION_DIR}/ActionSaveAsFaceModel.h"
     "${INCLUDE_ACTION_DIR}/ActionSetFocus.h"
+    "${INCLUDE_ACTION_DIR}/ActionSetMaxScalarColour.h"
+    "${INCLUDE_ACTION_DIR}/ActionSetMinScalarColour.h"
+    "${INCLUDE_ACTION_DIR}/ActionSetNumScalarColours.h"
     "${INCLUDE_ACTION_DIR}/ActionSetOpacity.h"
     "${INCLUDE_ACTION_DIR}/ActionSetParallelProjection.h"
+    "${INCLUDE_ACTION_DIR}/ActionSetSurfaceColour.h"
     "${INCLUDE_ACTION_DIR}/ActionSmooth.h"
     "${INCLUDE_ACTION_DIR}/ActionSynchroniseCameraMovement.h"
     "${INCLUDE_ACTION_DIR}/ActionToggleAxes.h"
@@ -76,7 +84,6 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/FaceActionManager.h"
     "${INCLUDE_ACTION_DIR}/FaceActionWorker.h"
     "${INCLUDE_ACTION_DIR}/ModelSelector.h"
-    "${INCLUDE_ACTION_DIR}/VisualisationsManager.h"
 
     "${INCLUDE_FILEIO_DIR}/FaceModelAssImpFileHandler.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelFileHandler.h"
@@ -171,6 +178,7 @@ set( SRC_FILES
     ${SRC_DIR}/Action/ActionAlignICP
     ${SRC_DIR}/Action/ActionAlignLandmarks
     ${SRC_DIR}/Action/ActionBackfaceCulling
+    ${SRC_DIR}/Action/ActionChangeScalarMappingColours
     ${SRC_DIR}/Action/ActionCloseAllFaceModels
     ${SRC_DIR}/Action/ActionCloseFaceModels
     ${SRC_DIR}/Action/ActionComponentSelect
@@ -194,14 +202,20 @@ set( SRC_FILES
     ${SRC_DIR}/Action/ActionSaveAsFaceModel
     ${SRC_DIR}/Action/ActionOrientCameraToFace
     ${SRC_DIR}/Action/ActionRadialSelect
+    ${SRC_DIR}/Action/ActionReflect
     ${SRC_DIR}/Action/ActionRemesh
     ${SRC_DIR}/Action/ActionRenameLandmark
     ${SRC_DIR}/Action/ActionRenamePath
     ${SRC_DIR}/Action/ActionResetCamera
+    ${SRC_DIR}/Action/ActionRotateModel
     ${SRC_DIR}/Action/ActionSaveScreenshot
     ${SRC_DIR}/Action/ActionSetFocus
+    ${SRC_DIR}/Action/ActionSetMaxScalarColour
+    ${SRC_DIR}/Action/ActionSetMinScalarColour
+    ${SRC_DIR}/Action/ActionSetNumScalarColours
     ${SRC_DIR}/Action/ActionSetOpacity
     ${SRC_DIR}/Action/ActionSetParallelProjection
+    ${SRC_DIR}/Action/ActionSetSurfaceColour
     ${SRC_DIR}/Action/ActionSmooth
     ${SRC_DIR}/Action/ActionSynchroniseCameraMovement
     ${SRC_DIR}/Action/ActionToggleAxes
@@ -215,7 +229,6 @@ set( SRC_FILES
     ${SRC_DIR}/Action/FaceActionManager
     ${SRC_DIR}/Action/FaceActionWorker
     ${SRC_DIR}/Action/ModelSelector
-    ${SRC_DIR}/Action/VisualisationsManager
 
     ${SRC_DIR}/Detect/FaceDetector
     ${SRC_DIR}/Detect/FaceFinder2D

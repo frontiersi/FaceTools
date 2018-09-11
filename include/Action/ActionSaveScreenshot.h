@@ -39,7 +39,6 @@ public:
    
 public slots:
     bool doAction( FVS&, const QPoint&) override;
-    bool displayDebugStatusProgression() const override { return false;}
 
 private:
     FMVS _viewers;

@@ -121,7 +121,7 @@ void LandmarkSetView::updateLandmark( int lm)
         {
             sv = _views[lm] = new SphereView( lmk->pos, _lmrad, true/*pickable*/, true/*fixed scale*/);
             sv->setResolution(20);
-            sv->setColour(0.9,1.0,0.3);
+            sv->setColour(0.0,0.7,0.0);
             _props[sv->prop()] = lm;
         }   // end if
 

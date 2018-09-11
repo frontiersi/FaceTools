@@ -15,23 +15,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_SET_FOCUS_H
-#define FACE_TOOLS_ACTION_SET_FOCUS_H
+#ifndef FACE_TOOLS_ACTION_CHANGE_SCALAR_MAPPING_COLOURS_H
+#define FACE_TOOLS_ACTION_CHANGE_SCALAR_MAPPING_COLOURS_H
 
 #include "FaceAction.h"
+#include <RangeMinMax.h>    // QTools
 
 namespace FaceTools {
 namespace Action {
 
-class FaceTools_EXPORT ActionSetFocus : public FaceAction
+class FaceTools_EXPORT ActionChangeScalarMappingColours : public FaceAction
 { Q_OBJECT
 public:
-    explicit ActionSetFocus( const QString& dname);
+    ActionChangeScalarMappingColours( const QString& dname, QWidget* parent=nullptr);
 
-protected slots:
-    bool testEnabled( const QPoint*) const override;
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(CAMERA_CHANGE);}
+    QWidget* getWidget() const override { return _widget;}
+
+private slots:
+    bool testReady( const Vis::FV*) override;
+    void tellReady( Vis::FV*, bool) override;
+    void doOnWidgetRangeChanged( float, float);
+
+private:
+    QTools::RangeMinMax *_widget;
 };  // end class
 
 }   // end namespace

@@ -16,7 +16,6 @@
  ************************************************************************/
 
 #include <ActionOrientCameraToFace.h>
-#include <ActionSynchroniseCameraMovement.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
@@ -63,10 +62,6 @@ bool ActionOrientCameraToFace::doAction( FVS& fset, const QPoint&)
 
     // Set the camera as needed.
     fv->viewer()->setCamera( focus, on.norm(), on.up(), _distance);
-
-    // If camera synchroniser is null, work on just the selected FaceView's viewer,
-    // otherwise work over all viewers registered with the camera synchroniser.
-    FaceTools::Action::ActionSynchroniseCameraMovement::sync();
 
     return true;
 }   // end doAction

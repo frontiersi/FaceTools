@@ -35,35 +35,31 @@ ActionToggleScalarLegend::ActionToggleScalarLegend( const QString& dn, FMV* v)
         addViewer(v);
     setCheckable(true,true);
     setRespondToEvent( VIEW_CHANGE, [this](const FVS&){ return this->isChecked();});
+    setRespondToEvent( VIEWER_CHANGE, [this](const FVS&){ return this->isChecked();});
 }   // end ctor
 
 
-bool ActionToggleScalarLegend::doAction( FVS& fvs, const QPoint&)
+bool ActionToggleScalarLegend::doAction( FVS&, const QPoint&)
 {
-    // Legends default to not being shown across all viewers.
-    std::for_each( std::begin(_viewers), std::end(_viewers), [](auto v){ v->showLegend(false);});
     if ( !isChecked())
+    {
+        std::for_each( std::begin(_viewers), std::end(_viewers), [](auto v){ v->showLegend(false); v->updateRender();});
         return true;
+    }   // end if
 
-    std::unordered_map<FMV*, ScalarMapping*> vmaps;
-    for ( FV* fv : fvs)
+    for ( FMV *vwr : _viewers)
     {
-        ScalarMapping* scmap = fv->activeScalars();
-        if ( scmap)
+        ScalarMapping *scmap = nullptr;
+        for ( FV *fv : vwr->attached())
         {
-            FMV* vwr = fv->viewer();
-            if ( vmaps.count(vwr) > 0)
-                assert( vmaps.at(vwr) == scmap);    // All FaceViews in the same viewer MUST have the same scalar mapping!
-            vmaps[vwr] = scmap;
-        }   // end if
-    }   // end for
+            if ( scmap = fv->activeScalars())
+                break;
+        }   // end for
 
-    for ( auto p : vmaps)
-    {
-        FMV* vwr = p.first;
-        ScalarMapping* scmap = p.second;
-        vwr->setLegend( scmap->rangeName(), scmap->lookupTable().vtk());
-        vwr->showLegend(true);
+        if ( scmap)
+            vwr->setLegend( scmap->rangeName(), scmap->lookupTable().vtk());
+        vwr->showLegend( scmap != nullptr);
+        vwr->updateRender();
     }   // end for
     return true;
 }   // end doAction

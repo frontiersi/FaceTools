@@ -37,7 +37,10 @@ ActionMoveViewer::ActionMoveViewer( FMV *tv, ModelSelector* s, FMV *sv, const QS
 }   // end ctor
 
 
-bool ActionMoveViewer::testReady( const FV* fv) { return _sviewer && _sviewer->isAttached(fv);}
+bool ActionMoveViewer::testReady( const FV* fv)
+{
+    return _sviewer && _sviewer->isAttached(fv);
+}   // end testReady
 
 
 // protected

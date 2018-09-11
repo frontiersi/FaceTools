@@ -73,6 +73,10 @@ public:
     void setVisible( bool b) { _visible = b;}
     bool isVisible() const { return _visible;}
 
+    // If set false, this action won't be placed onto any toolbars. True by default.
+    void setAllowOnToolbar( bool b) { _allowOnToolbar = b;}
+    bool allowOnToolbar() const { return _allowOnToolbar;}
+
     // WARNING: Manually setting this action to be enabled when not allowed to set
     // its own enabled state (through calls to setReady and testSetEnabled) may cause
     // this action to fail on operation!
@@ -174,7 +178,12 @@ protected slots:
 
     // FaceActionManager calls init() on a FaceAction when being added to it. This sets up the internal QAction
     // instance and ensures that triggering the QAction causes the process() function to run on this FaceAction.
+    // It also adds the text to the action as getDisplayName(). If unhappy with any of this, make adjustments in
+    // postInit() which is called at the end of init().
     void init();
+
+    // Called on self at the end of init(). Override to manually adjust details of action/icon assignment here.
+    virtual void postInit() {}
 
     // Set asynchronous execution or not on the next call to process. Default is synchronous (blocking calls).
     // Optionally set a progress updater which must be updated by derived type's implementation of doAction();
@@ -253,14 +262,6 @@ protected slots:
     virtual void doAfterAction( EventSet&, const FVS&, bool){}
 
 
-    /**************************************************************/
-    /****************** UTILITY / MISCELLANEOUS *******************/
-    /**************************************************************/
-
-    // For simple actions, may want to override this to false.
-    virtual bool displayDebugStatusProgression() const { return true;}
-    friend class FaceActionWorker;
-
 private slots:
     void doOnActionFinished( bool);
 
@@ -271,6 +272,7 @@ private:
     bool _init;
     bool _visible;
     bool _defaultCheckState;
+    bool _allowOnToolbar;
     QAction _action;
     bool _doasync;
     QMutex _pmutex;
@@ -282,6 +284,7 @@ private:
 
     void checkOverwritingResponseEvent( EventId) const;
     friend class FaceActionManager;
+    friend class FaceActionWorker;
     FaceAction( const FaceAction&) = delete;
     void operator=( const FaceAction&) = delete;
 };  // end class
