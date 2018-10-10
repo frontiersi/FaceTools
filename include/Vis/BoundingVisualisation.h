@@ -36,7 +36,7 @@ public:
     bool applyToAllInViewer() const override { return false;}
 
     void apply( FV*, const QPoint* mc=nullptr) override;
-    void remove( FV*) override;
+    void clear( FV*) override;
 
     // Set the given component to be highlighted or not.
     // If c == -1, then all components are referenced.
@@ -45,7 +45,6 @@ public:
     void pokeTransform( const FV*, const vtkMatrix4x4*) override;
     void fixTransform( const FV*) override;
 
-protected:
     void purge( FV*) override;
     bool applyOnReady() const override { return true;}
 

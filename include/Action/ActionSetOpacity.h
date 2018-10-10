@@ -32,11 +32,12 @@ public:
 
     QWidget* getWidget() const override { return _opacitySpinBox;}
 
+public slots:
     // Sets a new value for opacity on overlap. Fixes the value between minOpacity and 1.0 and returns it.
     double setOpacityOnOverlap( double);
 
 private slots:
-    void tellReady( Vis::FV*, bool) override;
+    void tellReady( const Vis::FV*, bool) override;
     bool testEnabled( const QPoint* mc=nullptr) const override;
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(VIEW_CHANGE);}

@@ -43,7 +43,7 @@ bool ActionTransformToStandardPosition::doAction( FVS& fvs, const QPoint&)
         fm->lockForWrite();
         const cv::Vec3f& c = fm->centre();
         const RFeatures::Orientation& on = fm->orientation();
-        cv::Matx44d m = RFeatures::toStandardPosition( on.norm(), on.up(), c);
+        cv::Matx44d m = RFeatures::toStandardPosition( on.nvec(), on.uvec(), c);
 
         /*
         std::cerr << "PRE-TRANSFORM:" << std::endl;

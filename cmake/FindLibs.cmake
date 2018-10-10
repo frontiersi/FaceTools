@@ -2,9 +2,9 @@ set( CMAKE_COLOR_MAKEFILE TRUE)
 set( CMAKE_VERBOSE_MAKEFILE FALSE)
 
 if(UNIX)
-    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wno-deprecated-declarations -Wno-error=unknown-pragmas")
+    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-deprecated -Wno-deprecated-declarations -Wno-error=unknown-pragmas")
 endif()
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 11)
 
 set( LIB_PRE_REQS "$ENV{INSTALL_PARENT_DIR}" CACHE PATH
     "Where library prerequisites are installed (if not in the standard system library locations).")
@@ -78,7 +78,7 @@ if(WITH_FACETOOLS)
     link_directories( ${FaceTools_LIBRARY_DIR})
     set(WITH_QUAZIP TRUE)
     set(WITH_CPD TRUE)
-    set(WITH_CGAL TRUE)
+    #set(WITH_CGAL TRUE)
     set(WITH_DLIB TRUE)
     set(WITH_QTOOLS TRUE)
     set(WITH_RMODELIO TRUE)
@@ -232,7 +232,7 @@ endif()
 
 
 if(WITH_BOOST)  # Boost
-    set( BOOST_ROOT "${LIB_PRE_REQS}/boost_1_64_0" CACHE PATH "Location of boost")
+    set( BOOST_ROOT "${LIB_PRE_REQS}/boost_1_68_0" CACHE PATH "Location of boost")
     set( BOOST_LIBRARYDIR "${BOOST_ROOT}/lib")
 
     if(WIN32)
@@ -248,7 +248,7 @@ if(WITH_BOOST)  # Boost
     add_definitions( -DBOOST_ALL_NO_LIB)    # Disable autolinking
     add_definitions( -DBOOST_ALL_DYN_LINK)  # Force dynamic linking (probably don't need this)
 
-    find_package( Boost 1.64 REQUIRED COMPONENTS system filesystem thread random regex)
+    find_package( Boost 1.65 REQUIRED COMPONENTS system filesystem regex random thread)
     include_directories( ${Boost_INCLUDE_DIRS})
 
     #message( STATUS "Boost_VERSION: ${Boost_VERSION}")
@@ -306,13 +306,16 @@ if(WITH_QT)     # Qt5
     set( QT_INSTALLER_FRAMEWORK "${Qt5_DIR}/../../../../../Tools/QtInstallerFramework/3.0/bin")
     set( QT_INF_BINARY_CREATOR "${QT_INSTALLER_FRAMEWORK}/binarycreator${CMAKE_EXECUTABLE_SUFFIX}")
     set( QT_INF_REPO_GEN "${QT_INSTALLER_FRAMEWORK}/repogen${CMAKE_EXECUTABLE_SUFFIX}")
-    find_package( Qt5 REQUIRED Core Widgets Sql)
+
+    find_package( Qt5 REQUIRED Core Widgets Sql Charts)
     include_directories( ${Qt5Core_INCLUDE_DIRS})
     include_directories( ${Qt5Widgets_INCLUDE_DIRS})
+    include_directories( ${Qt5Charts_INCLUDE_DIRS})
     add_definitions( ${Qt5Core_DEFINITIONS})
     add_definitions( ${Qt5Widgets_DEFINITIONS})
     add_definitions( ${Qt5Sql_DEFINITIONS})
-    set( QT_LIBRARIES Qt5::Core Qt5::Widgets Qt5::Sql)
+    add_definitions( ${Qt5Charts_DEFINITIONS})
+    set( QT_LIBRARIES Qt5::Core Qt5::Widgets Qt5::Sql Qt5::Charts)
     message( STATUS "Qt5:        ${Qt5_DIR}")
 endif()
 

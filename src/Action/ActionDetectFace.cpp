@@ -16,8 +16,8 @@
  ************************************************************************/
 
 #include <ActionDetectFace.h>
-#include <FaceDetector.h>   // FaceTools
-#include <FaceShapeLandmarks2DDetector.h>   // FaceTools::Landmarks
+#include <FaceOrientationDetector.h>
+#include <FaceShapeLandmarks2DDetector.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <QMessageBox>
@@ -25,35 +25,26 @@
 using FaceTools::Action::ActionDetectFace;
 using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
-using FaceTools::Detect::FaceDetector;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
 using FaceTools::FMS;
 using FaceTools::FM;
+using FaceTools::Detect::FaceOrientationDetector;
+using FLD = FaceTools::Detect::FaceShapeLandmarks2DDetector;
+using FD = FaceTools::Detect::FeaturesDetector;
 
 
-ActionDetectFace::ActionDetectFace( const QString& dn, const QIcon& icon,
-        const QString& haar, const QString& lmks, QWidget *parent, QProgressBar* pb)
-    : FaceAction(dn, icon), _parent(parent), _detector(nullptr)
+ActionDetectFace::ActionDetectFace( const QString& dn, const QIcon& icon, QWidget *parent, QProgressBar* pb)
+    : FaceAction(dn, icon), _parent(parent)
 {
-    if ( FaceDetector::initialise( haar.toStdString(), lmks.toStdString()))
-        _detector = new FaceDetector;
-    else
-        std::cerr << "[WARNING] FaceTools::Action::ActionDetectFace: FaceDetector failed to initialise!" << std::endl;
-
     if ( pb)
         setAsync( true, QTools::QProgressUpdater::create(pb));
 }   // end ctor
 
 
-ActionDetectFace::~ActionDetectFace()
-{
-    if ( _detector)
-        delete _detector;
-}   // end dtor
-
-
 bool ActionDetectFace::testReady( const FV* fv) { return fv->canTexture();}
+
+bool ActionDetectFace::testEnabled( const QPoint*) const { return FD::isinit() && FLD::isinit() && ready1();}
 
 
 bool ActionDetectFace::doBeforeAction( FVS& fvs, const QPoint&)
@@ -63,9 +54,9 @@ bool ActionDetectFace::doBeforeAction( FVS& fvs, const QPoint&)
 
     bool go = true;
     fm->lockForRead(); // Warn if about to overwrite!
-    if ( FaceTools::Detect::FaceShapeLandmarks2DDetector::numDetectionLandmarks( fm->landmarks()) > 0)
+    if ( !fm->landmarks()->empty())
     {
-        static const QString msg = tr("Selected model's face detection will be overwritten! Continue?");
+        static const QString msg = tr("Really overwrite existing landmark detection and orientation?");
         go = QMessageBox::Yes == QMessageBox::question( _parent, tr("Overwrite face detection(s)?"), msg,
                                  QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     }   // end if
@@ -80,33 +71,41 @@ bool ActionDetectFace::doAction( FVS& fvs, const QPoint&)
     FM* fm = fvs.first()->data();
     fvs.clear();
 
-    fm->lockForWrite();
-    FV* fv = fm->fvs().first(); // Doesn't matter which view's actor we use since it'll be separately rendered
-
-    RFeatures::Orientation on;
-    LandmarkSet::Ptr lmks = fm->landmarks();
-    if ( _detector->detect( fm->kdtree(), on, lmks))
-    {
-        //std::cerr << "Detected orientation (norm,up) : " << on << std::endl;
-        fm->setOrientation(on);
-        using namespace FaceTools::Landmarks;
-        cv::Vec3f c = calcFaceCentre( lmks->pos(L_EYE_CENTRE), lmks->pos(R_EYE_CENTRE), lmks->pos(NASAL_TIP));
-        fm->setCentre(c);
-        fvs.insert(fm);
-    }   // end if
+    // Get a new orientation for the face
+    fm->lockForRead();
+    const RFeatures::ObjModelKDTree::Ptr kdt = fm->kdtree();
+    FaceOrientationDetector faceDetector( kdt);
+    const bool oriented = faceDetector.orient();
     fm->unlock();
 
-    return !fvs.empty();
+    if ( !oriented)
+    {
+        _err = faceDetector.error();
+        return false;
+    }   // end if
+
+    std::cerr << "[INFO] FaceTools::Action::ActionDetectFace: Detected orientation (norm, up) " << faceDetector.orientation() << std::endl;
+    std::cerr << "[INFO] FaceTools::Action::ActionDetectFace: Landmarks detection range set to " << faceDetector.detectRange() << std::endl;
+
+    if ( !faceDetector.detect( *fm->landmarks()))
+    {
+        _err = faceDetector.error();
+        return false;
+    }   // end if
+
+    fvs.insert(fm);
+    fm->lockForWrite();
+    fm->setCentre( FaceTools::calcFaceCentre( *fm->landmarks()));
+    fm->setOrientation( faceDetector.orientation());
+    fm->unlock();
+    return true;
 }   // end doAction
 
 
-void ActionDetectFace::doAfterAction( EventSet& cset, const FVS& fvs, bool v)
+void ActionDetectFace::doAfterAction( EventSet& cset, const FVS&, bool v)
 {
     if ( !v) // Warn failure
-    {
-        QString msg = tr( _detector->err().c_str());
-        QMessageBox::warning(_parent, tr("Face Detection Failed!"), msg);
-    }   // end if
+        QMessageBox::warning(_parent, tr("Face Detection Failed!"), tr( _err.c_str()));
     cset.insert(ORIENTATION_CHANGE);
-    cset.insert(LANDMARKS_CHANGE);
+    cset.insert(LANDMARKS_ADD);
 }   // end doAfterAction

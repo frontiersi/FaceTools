@@ -56,10 +56,7 @@ bool ActionMoveViewer::doAction( FVS &fvs, const QPoint&)
         const FM* fm = fv->data();
         // Does FV on target viewer have same model? Remove to replace if so.
         if ( _tviewer->get(fm))
-        {
-            assert(_tviewer->get(fm) != fv);
             _selector->removeFaceView( _tviewer->get(fm));
-        }   // end if
 
         // If the target viewer has other FaceViews, they are applied to the FaceView being moved in.
         if ( !_tviewer->attached().empty())
@@ -74,6 +71,6 @@ bool ActionMoveViewer::doAction( FVS &fvs, const QPoint&)
     }   // end foreach
 
     // target viewer rendering will be updated, but source needs updating too so do that here.
-    std::for_each( std::begin(vwrs), std::end(vwrs), [](auto v){ v->updateRender();});
+    std::for_each( std::begin(vwrs), std::end(vwrs), [](FMV* v){ v->updateRender();});
     return true;
 }   // end doAction

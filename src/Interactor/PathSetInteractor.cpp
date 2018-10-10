@@ -91,7 +91,7 @@ void PathSetInteractor::setCaptionInfo( const FM* fm, int pid)
     const Path* path = fm->paths()->path(pid);
     assert(path);
     // Set display caption at bottom right
-    _vis->setCaptions( path->name, path->elen, path->psum, (int)(viewer()->getWidth()) - 10, 10);
+    _vis->setCaptions( path->name, path->elen, path->psum, int(viewer()->getWidth()) - 10, 10);
 }   // end setCaptionInfo
 
 
@@ -149,7 +149,8 @@ bool PathSetInteractor::leftButtonDown( const QPoint& p)
 
 bool PathSetInteractor::leftButtonUp( const QPoint& p)
 {
-    viewer()->setCursor(Qt::ArrowCursor);
+    if ( _drag >= 0)
+        viewer()->setCursor(Qt::ArrowCursor);
     _drag = -1;
     FV *fv = hoverModel();
     if ( !fv)

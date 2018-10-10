@@ -14,7 +14,9 @@
     <file alias="COPY_LEFT">res/icons/icons8-new-copy-80.png</file>
     <file alias="COPY_RIGHT">res/icons/icons8-new-copy-80.png</file>
 
-    <file alias="TEXTURE">res/icons/if_stock_3d-material_29242.png</file>
+    <file alias="TEXTURE">res/icons/if_stock_3d-texture-only_29244.png</file>
+
+    <file alias="ARROW_RIGHT">res/icons/icons8-arrow-40.png</file>
 </qresource>
 </RCC>
 

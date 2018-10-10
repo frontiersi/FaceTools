@@ -22,10 +22,11 @@
 #include <ModelViewerInteractor.h>
 #include <PluginInterface.h>    // QTools
 #include <QProgressUpdater.h>
-#include <QToolBar>
 #include <QToolButton>
 #include <QPushButton>
+#include <QToolBar>
 #include <QAction>
+#include <QDialog>
 #include <QMutex>
 
 namespace FaceTools {
@@ -81,14 +82,17 @@ public:
     // its own enabled state (through calls to setReady and testSetEnabled) may cause
     // this action to fail on operation!
     void setEnabled( bool b);   // Also enabled/disables associated widget (if any).
-    inline bool isEnabled() const { return _action.isEnabled();}
+    bool isEnabled() const { return _action.isEnabled();}
 
     void setCheckable( bool b, bool defaultCheckState);
     bool isCheckable() const { return _action.isCheckable();}
-    inline bool defaultCheckState() const { return _defaultCheckState;}
+    bool defaultCheckState() const { return _defaultCheckState;}
 
-    inline void setChecked( bool b) { _action.setChecked(b);}
-    inline bool isChecked() const { return _action.isChecked();}
+    void setChecked( bool b) { _action.setChecked(b);}
+    bool isChecked() const { return _action.isChecked();}
+
+    void setAsDialogShower( QDialog*);      // Set this action to show/raise the given dialog when triggered.
+    QDialog* dialog() { return _dialog;}    // Returns null if setAsDialogShower not previously called.
 
     // Sets the Vis::FV's this action will work over in the next call to process().
     // Each Vis::FV is first passed through this child class's implementation of testReady and
@@ -99,11 +103,11 @@ public:
     void clearReady();  // Clear all entries from the ready set
     void resetReady( Vis::FV*); // Replace the ready set with the single view.
 
-    inline bool isReady( const Vis::FV* fv) const { return _ready.has(fv);}
-    inline bool gotReady() const { return !_ready.empty();}
-    inline const FVS& ready() const { return _ready;}
+    bool isReady( const Vis::FV* fv) const { return _ready.has(fv);}
+    bool gotReady() const { return !_ready.empty();}
+    const FVS& ready() const { return _ready;}
     // Returns non-null only if the ready set has exactly 1 member (which is returned).
-    inline const Vis::FV* ready1() const { return _ready.size() == 1 ? _ready.first() : nullptr;}
+    const Vis::FV* ready1() const { return _ready.size() == 1 ? _ready.first() : nullptr;}
 
     // Test if this action should be enabled and set accordingly.
     // Clients can call with a non null point (representing the current mouse position)
@@ -117,7 +121,7 @@ public:
     // for that event. Moreover, purging of ALL actions is completed before processing of any responding actions starts.
     void setPurgeOnEvent( EventId);
     // Returns true iff the given event will cause this action to be purged on its receipt.
-    inline bool isPurgeEvent( EventId e) const { return _pevents.count(e) > 0;}
+    bool isPurgeEvent( EventId e) const { return _pevents.count(e) > 0;}
 
     // This action's process function will be called in response to events set using the setRespondToEvent
     // and setRespondToEventIf functions. By default, an action is not set to respond to any event unless
@@ -131,14 +135,15 @@ public:
     // the event being received and the given predicate returning true. If this action is set to respond
     // to more than one event, this action's process function be called if any of the corresponding
     // response predicates return true for a given set of events.
-    void setRespondToEventIf( EventId, const ResponsePredicate&, bool processFlag);
+    void setRespondToEventIf( EventId, const ResponsePredicate&, bool processFlag=true);
     void setRespondToEventIf( EventId, const ResponsePredicate&, const ProcessFlagPredicate&);
 
-    // setRespondToEventIfAllReady uses predicate function std::all_of over the ready set to determine response criteria.
-    void setRespondToEventIfAllReady( EventId, bool processFlag);
+    // Respond to the given event with process flag if this action is enabled for the ready set.
+    void setRespondToEventIfAllReady( EventId, bool processFlag=true);
+    void setRespondToEventIfAllReady( EventId, const ProcessFlagPredicate&);
 
     // Returns non-null iff the given event is in this action's response set.
-    inline const EPR* eventResponse( EventId e) const { return _eprs.count(e) > 0 ? &_eprs.at(e) : nullptr;}
+    const EPR* eventResponse( EventId e) const { return _eprs.count(e) > 0 ? &_eprs.at(e) : nullptr;}
 
     bool operator()( bool checkAction=true);  // Synonymous with process (see below).
 
@@ -210,11 +215,11 @@ protected slots:
 
     // Function tellReady is called when the given Vis::FV changes its ready state.
     // It is always called after setEnabled(testEnabled()).
-    virtual void tellReady( Vis::FV*, bool isReady) {}
+    virtual void tellReady( const Vis::FV*, bool isReady) {}
 
     // If this action is currently applied to the passed in Vis::FV, it should return true.
     // By default, this function just returns the current checked state meaning no changes are made.
-    virtual bool testIfCheck( const Vis::FV *fv=nullptr) const { return isChecked();}
+    virtual bool testIfCheck( const Vis::FV*) const { return isChecked();}
 
     // For most actions, whether to enable or disable the action depends upon whether there are
     // entries in the ready set and this is the default implementation. However, some actions may
@@ -277,6 +282,7 @@ private:
     bool _doasync;
     QMutex _pmutex;
     QTools::QProgressUpdater::Ptr _pupdater;
+    QDialog *_dialog;
     FVS _ready, _wset;
     QPoint _testPoint;
     EventSet _pevents;  // Purge events

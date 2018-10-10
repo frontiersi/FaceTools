@@ -1,46 +1,70 @@
-cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.12.2 FATAL_ERROR)
 
 project( FaceTools)
 
 set(WITH_QUAZIP TRUE)
 set(WITH_CPD TRUE)
-set(WITH_CGAL TRUE)
+#set(WITH_CGAL TRUE)
 set(WITH_DLIB TRUE)
 set(WITH_RMODELIO TRUE)
 set(WITH_QTOOLS TRUE)
 include( "cmake/FindLibs.cmake")
 
 set( INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
+set( FORMS_DIR "${PROJECT_SOURCE_DIR}/forms")
+set( SRC_DIR "${PROJECT_SOURCE_DIR}/src")
+
 set( INCLUDE_ACTION_DIR "${INCLUDE_DIR}/Action")
 set( INCLUDE_DETECT_DIR "${INCLUDE_DIR}/Detect")
 set( INCLUDE_FILEIO_DIR "${INCLUDE_DIR}/FileIO")
+set( INCLUDE_LNDMRK_DIR "${INCLUDE_DIR}/LndMrk")
+set( INCLUDE_METRIC_DIR "${INCLUDE_DIR}/Metric")
 set( INCLUDE_REPORT_DIR "${INCLUDE_DIR}/Report")
 set( INCLUDE_WIDGET_DIR "${INCLUDE_DIR}/Widget")
 set( INCLUDE_INT_DIR "${INCLUDE_DIR}/Interactor")
 set( INCLUDE_VIS_DIR "${INCLUDE_DIR}/Vis")
+
+set( SRC_ACTION_DIR "${SRC_DIR}/Action")
+set( SRC_DETECT_DIR "${SRC_DIR}/Detect")
+set( SRC_FILEIO_DIR "${SRC_DIR}/FileIO")
+set( SRC_LNDMRK_DIR "${SRC_DIR}/LndMrk")
+set( SRC_METRIC_DIR "${SRC_DIR}/Metric")
+set( SRC_REPORT_DIR "${SRC_DIR}/Report")
+set( SRC_WIDGET_DIR "${SRC_DIR}/Widget")
+set( SRC_INT_DIR "${SRC_DIR}/Interactor")
+set( SRC_VIS_DIR "${SRC_DIR}/Vis")
+
 include_directories( ${INCLUDE_DIR})
 include_directories( ${INCLUDE_ACTION_DIR})
 include_directories( ${INCLUDE_DETECT_DIR})
 include_directories( ${INCLUDE_FILEIO_DIR})
+include_directories( ${INCLUDE_LNDMRK_DIR})
+include_directories( ${INCLUDE_METRIC_DIR})
 include_directories( ${INCLUDE_REPORT_DIR})
+include_directories( ${INCLUDE_WIDGET_DIR})
 include_directories( ${INCLUDE_VIS_DIR})
 include_directories( ${INCLUDE_INT_DIR})
-include_directories( ${PROJECT_BINARY_DIR})
-set( SRC_DIR "${PROJECT_SOURCE_DIR}/src")
+
+include_directories( ${PROJECT_BINARY_DIR}) # Req. for generated Qt form headers
+
+set( FORMS
+    "${FORMS_DIR}/MetricsDisplayDialog.ui"
+    "${FORMS_DIR}/ScanInfoDialog.ui"
+    )
 
 set( QOBJECTS
-    "${INCLUDE_ACTION_DIR}/ActionAddLandmark.h"
+    #"${INCLUDE_ACTION_DIR}/ActionAddLandmark.h"
     "${INCLUDE_ACTION_DIR}/ActionAddPath.h"
     "${INCLUDE_ACTION_DIR}/ActionAlignICP.h"
     "${INCLUDE_ACTION_DIR}/ActionAlignLandmarks.h"
     "${INCLUDE_ACTION_DIR}/ActionBackfaceCulling.h"
-    "${INCLUDE_ACTION_DIR}/ActionChangeScalarMappingColours.h"
+    "${INCLUDE_ACTION_DIR}/ActionChangeSurfaceMappingRange.h"
     "${INCLUDE_ACTION_DIR}/ActionCloseAllFaceModels.h"
     "${INCLUDE_ACTION_DIR}/ActionCloseFaceModels.h"
     "${INCLUDE_ACTION_DIR}/ActionComponentSelect.h"
     "${INCLUDE_ACTION_DIR}/ActionCopyViewer.h"
     "${INCLUDE_ACTION_DIR}/ActionCrop.h"
-    "${INCLUDE_ACTION_DIR}/ActionDeleteLandmark.h"
+    #"${INCLUDE_ACTION_DIR}/ActionDeleteLandmark.h"
     "${INCLUDE_ACTION_DIR}/ActionDeletePath.h"
     "${INCLUDE_ACTION_DIR}/ActionDetectFace.h"
     "${INCLUDE_ACTION_DIR}/ActionEditLandmarks.h"
@@ -58,7 +82,7 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionRadialSelect.h"
     "${INCLUDE_ACTION_DIR}/ActionReflect.h"
     "${INCLUDE_ACTION_DIR}/ActionRemesh.h"
-    "${INCLUDE_ACTION_DIR}/ActionRenameLandmark.h"
+    #"${INCLUDE_ACTION_DIR}/ActionRenameLandmark.h"
     "${INCLUDE_ACTION_DIR}/ActionRenamePath.h"
     "${INCLUDE_ACTION_DIR}/ActionResetCamera.h"
     "${INCLUDE_ACTION_DIR}/ActionRotateModel.h"
@@ -72,12 +96,18 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionSetOpacity.h"
     "${INCLUDE_ACTION_DIR}/ActionSetParallelProjection.h"
     "${INCLUDE_ACTION_DIR}/ActionSetSurfaceColour.h"
+    "${INCLUDE_ACTION_DIR}/ActionShowChart.h"
+    "${INCLUDE_ACTION_DIR}/ActionShowMetrics.h"
+    "${INCLUDE_ACTION_DIR}/ActionShowScanInfo.h"
     "${INCLUDE_ACTION_DIR}/ActionSmooth.h"
     "${INCLUDE_ACTION_DIR}/ActionSynchroniseCameraMovement.h"
     "${INCLUDE_ACTION_DIR}/ActionToggleAxes.h"
     "${INCLUDE_ACTION_DIR}/ActionToggleCameraActorInteraction.h"
+    "${INCLUDE_ACTION_DIR}/ActionToggleFXAA.h"
     "${INCLUDE_ACTION_DIR}/ActionToggleScalarLegend.h"
+    "${INCLUDE_ACTION_DIR}/ActionToggleStereoRendering.h"
     "${INCLUDE_ACTION_DIR}/ActionTransformToStandardPosition.h"
+    "${INCLUDE_ACTION_DIR}/ActionUpdateMetrics.h"
     "${INCLUDE_ACTION_DIR}/ActionVisualise.h"
     "${INCLUDE_ACTION_DIR}/CameraWorker.h"
     "${INCLUDE_ACTION_DIR}/FaceAction.h"
@@ -93,23 +123,30 @@ set( QOBJECTS
     "${INCLUDE_FILEIO_DIR}/FaceModelU3DFileHandler.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelXMLFileHandler.h"
 
+    "${INCLUDE_METRIC_DIR}/InterlandmarkMetricCalculatorType.h"
+    "${INCLUDE_METRIC_DIR}/MetricCalculatorTypeInterface.h"
+    "${INCLUDE_METRIC_DIR}/MetricCalculator.h"
+
     "${INCLUDE_REPORT_DIR}/BaseReportTemplate.h"
     "${INCLUDE_REPORT_DIR}/ReportInterface.h"
     "${INCLUDE_REPORT_DIR}/SampleReport.h"
 
     "${INCLUDE_VIS_DIR}/BaseVisualisation.h"
     "${INCLUDE_VIS_DIR}/BoundingVisualisation.h"
+    "${INCLUDE_VIS_DIR}/EuclideanDistanceVisualiser.h"
     "${INCLUDE_VIS_DIR}/FaceView.h"
     "${INCLUDE_VIS_DIR}/LandmarksVisualisation.h"
     "${INCLUDE_VIS_DIR}/LoopSelectVisualisation.h"
+    "${INCLUDE_VIS_DIR}/MetricVisualiser.h"
     "${INCLUDE_VIS_DIR}/OutlinesVisualisation.h"
     "${INCLUDE_VIS_DIR}/PathSetVisualisation.h"
-    "${INCLUDE_VIS_DIR}/ScalarVisualisation.h"
     "${INCLUDE_VIS_DIR}/VisualisationInterface.h"
+    "${INCLUDE_VIS_DIR}/SurfaceVisualisation.h"
 
     "${INCLUDE_INT_DIR}/ContextMenuInteractor.h"
     "${INCLUDE_INT_DIR}/FaceHoveringInteractor.h"
     "${INCLUDE_INT_DIR}/LandmarksInteractor.h"
+    "${INCLUDE_INT_DIR}/MetricsInteractor.h"
     "${INCLUDE_INT_DIR}/ModelEntryExitInteractor.h"
     "${INCLUDE_INT_DIR}/ModelViewerEntryExitInteractor.h"
     "${INCLUDE_INT_DIR}/ModelMoveInteractor.h"
@@ -118,6 +155,9 @@ set( QOBJECTS
     "${INCLUDE_INT_DIR}/RadialSelectInteractor.h"
     "${INCLUDE_INT_DIR}/PathSetInteractor.h"
     "${INCLUDE_INT_DIR}/ViewerInteractionManager.h"
+
+    "${INCLUDE_WIDGET_DIR}/MetricsDisplayDialog.h"
+    "${INCLUDE_WIDGET_DIR}/ScanInfoDialog.h"
 
     "${INCLUDE_DIR}/FaceModelSurfaceData.h"
     "${INCLUDE_DIR}/FaceModelViewer.h"
@@ -134,12 +174,10 @@ set( INCLUDE_FILES
     "${INCLUDE_ACTION_DIR}/ActionExecutionQueue.h"
     "${INCLUDE_ACTION_DIR}/EventProcessResponse.h"
 
-    "${INCLUDE_DETECT_DIR}/FaceDetector.h"
     "${INCLUDE_DETECT_DIR}/FaceFinder2D.h"
-    "${INCLUDE_DETECT_DIR}/FacialOrientation.h"
+    "${INCLUDE_DETECT_DIR}/FaceOrientationDetector.h"
     "${INCLUDE_DETECT_DIR}/FaceShapeLandmarks2DDetector.h"
     "${INCLUDE_DETECT_DIR}/FeaturesDetector.h"
-    "${INCLUDE_DETECT_DIR}/NoseFinder.h"
 
     "${INCLUDE_FILEIO_DIR}/FaceModelAssImpFileHandlerFactory.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelFileHandlerException.h"
@@ -147,170 +185,200 @@ set( INCLUDE_FILES
     "${INCLUDE_FILEIO_DIR}/FaceModelManager.h"
     "${INCLUDE_FILEIO_DIR}/LoadFaceModelsHelper.h"
 
+    "${INCLUDE_LNDMRK_DIR}/Landmark.h"
+    "${INCLUDE_LNDMRK_DIR}/LandmarkSet.h"
+    "${INCLUDE_LNDMRK_DIR}/LandmarksManager.h"
+
+    "${INCLUDE_METRIC_DIR}/Gene.h"
+    "${INCLUDE_METRIC_DIR}/GeneManager.h"
+    "${INCLUDE_METRIC_DIR}/MetricCalculatorTypeRegistry.h"
+    "${INCLUDE_METRIC_DIR}/MetricCalculatorManager.h"
+    "${INCLUDE_METRIC_DIR}/MetricSet.h"
+    "${INCLUDE_METRIC_DIR}/MetricValue.h"
+    "${INCLUDE_METRIC_DIR}/HPOTerm.h"
+    "${INCLUDE_METRIC_DIR}/HPOTermManager.h"
+    "${INCLUDE_METRIC_DIR}/Syndrome.h"
+    "${INCLUDE_METRIC_DIR}/SyndromeManager.h"
+
     "${INCLUDE_VIS_DIR}/BoundingView.h"
     "${INCLUDE_VIS_DIR}/LandmarkSetView.h"
     "${INCLUDE_VIS_DIR}/LoopsView.h"
     "${INCLUDE_VIS_DIR}/PathView.h"
     "${INCLUDE_VIS_DIR}/PathSetView.h"
     "${INCLUDE_VIS_DIR}/SphereView.h"
+    "${INCLUDE_VIS_DIR}/SurfaceDataMapper.h"
 
-    #"${INCLUDE_DIR}/CorrespondenceFinder.h"
     "${INCLUDE_DIR}/CurvatureSpeedFunctor.h"
     "${INCLUDE_DIR}/CurvatureVariableSpeedFunctor.h"
-    #"${INCLUDE_DIR}/FaceAverager.h"
-    "${INCLUDE_DIR}/FaceViewSet.h"
-
     "${INCLUDE_DIR}/FaceModel.h"
-    #"${INCLUDE_DIR}/FacePointSampler.h"
     "${INCLUDE_DIR}/FaceTypes.h"
-    "${INCLUDE_DIR}/Landmark.h"
-    "${INCLUDE_DIR}/Landmarks.h"
-    "${INCLUDE_DIR}/LandmarkSet.h"
+    "${INCLUDE_DIR}/FaceViewSet.h"
     "${INCLUDE_DIR}/MiscFunctions.h"
-    "${INCLUDE_DIR}/SurfaceMesher.h"
-    "${INCLUDE_DIR}/PathSet.h"
+    #"${INCLUDE_DIR}/SurfaceMesher.h"
     "${INCLUDE_DIR}/Path.h"
+    "${INCLUDE_DIR}/PathSet.h"
     )
 
 set( SRC_FILES
     ${SRC_DIR}/${PROJECT_NAME}
-    ${SRC_DIR}/Action/ActionAddLandmark
-    ${SRC_DIR}/Action/ActionAddPath
-    ${SRC_DIR}/Action/ActionAlignICP
-    ${SRC_DIR}/Action/ActionAlignLandmarks
-    ${SRC_DIR}/Action/ActionBackfaceCulling
-    ${SRC_DIR}/Action/ActionChangeScalarMappingColours
-    ${SRC_DIR}/Action/ActionCloseAllFaceModels
-    ${SRC_DIR}/Action/ActionCloseFaceModels
-    ${SRC_DIR}/Action/ActionComponentSelect
-    ${SRC_DIR}/Action/ActionCopyViewer
-    ${SRC_DIR}/Action/ActionCrop
-    ${SRC_DIR}/Action/ActionDeleteLandmark
-    ${SRC_DIR}/Action/ActionDeletePath
-    ${SRC_DIR}/Action/ActionDetectFace
-    ${SRC_DIR}/Action/ActionEditLandmarks
-    ${SRC_DIR}/Action/ActionEditPaths
-    ${SRC_DIR}/Action/ActionExportPDF
-    ${SRC_DIR}/Action/ActionExecutionQueue
-    ${SRC_DIR}/Action/ActionFillHoles
-    ${SRC_DIR}/Action/ActionGetComponent
-    ${SRC_DIR}/Action/ActionInvertNormals
-    ${SRC_DIR}/Action/ActionLoadDirFaceModels
-    ${SRC_DIR}/Action/ActionLoadFaceModels
-    ${SRC_DIR}/Action/ActionMapSurfaceData
-    ${SRC_DIR}/Action/ActionMarquee
-    ${SRC_DIR}/Action/ActionMoveViewer
-    ${SRC_DIR}/Action/ActionSaveFaceModels
-    ${SRC_DIR}/Action/ActionSaveAsFaceModel
-    ${SRC_DIR}/Action/ActionOrientCameraToFace
-    ${SRC_DIR}/Action/ActionRadialSelect
-    ${SRC_DIR}/Action/ActionReflect
-    ${SRC_DIR}/Action/ActionRemesh
-    ${SRC_DIR}/Action/ActionRenameLandmark
-    ${SRC_DIR}/Action/ActionRenamePath
-    ${SRC_DIR}/Action/ActionResetCamera
-    ${SRC_DIR}/Action/ActionRotateModel
-    ${SRC_DIR}/Action/ActionSaveScreenshot
-    ${SRC_DIR}/Action/ActionSetFocus
-    ${SRC_DIR}/Action/ActionSetMaxScalarColour
-    ${SRC_DIR}/Action/ActionSetMinScalarColour
-    ${SRC_DIR}/Action/ActionSetNumScalarColours
-    ${SRC_DIR}/Action/ActionSetOpacity
-    ${SRC_DIR}/Action/ActionSetParallelProjection
-    ${SRC_DIR}/Action/ActionSetSurfaceColour
-    ${SRC_DIR}/Action/ActionSmooth
-    ${SRC_DIR}/Action/ActionSynchroniseCameraMovement
-    ${SRC_DIR}/Action/ActionToggleAxes
-    ${SRC_DIR}/Action/ActionToggleCameraActorInteraction
-    ${SRC_DIR}/Action/ActionToggleScalarLegend
-    ${SRC_DIR}/Action/ActionTransformToStandardPosition
-    ${SRC_DIR}/Action/ActionVisualise
-    ${SRC_DIR}/Action/CameraWorker
-    ${SRC_DIR}/Action/FaceAction
-    ${SRC_DIR}/Action/FaceActionGroup
-    ${SRC_DIR}/Action/FaceActionManager
-    ${SRC_DIR}/Action/FaceActionWorker
-    ${SRC_DIR}/Action/ModelSelector
 
-    ${SRC_DIR}/Detect/FaceDetector
-    ${SRC_DIR}/Detect/FaceFinder2D
-    ${SRC_DIR}/Detect/FacialOrientation
-    ${SRC_DIR}/Detect/FaceShapeLandmarks2DDetector
-    ${SRC_DIR}/Detect/FeaturesDetector
-    ${SRC_DIR}/Detect/NoseFinder 
+    #${SRC_ACTION_DIR}/ActionAddLandmark
+    ${SRC_ACTION_DIR}/ActionAddPath
+    ${SRC_ACTION_DIR}/ActionAlignICP
+    ${SRC_ACTION_DIR}/ActionAlignLandmarks
+    ${SRC_ACTION_DIR}/ActionBackfaceCulling
+    ${SRC_ACTION_DIR}/ActionChangeSurfaceMappingRange
+    ${SRC_ACTION_DIR}/ActionCloseAllFaceModels
+    ${SRC_ACTION_DIR}/ActionCloseFaceModels
+    ${SRC_ACTION_DIR}/ActionComponentSelect
+    ${SRC_ACTION_DIR}/ActionCopyViewer
+    ${SRC_ACTION_DIR}/ActionCrop
+    #${SRC_ACTION_DIR}/ActionDeleteLandmark
+    ${SRC_ACTION_DIR}/ActionDeletePath
+    ${SRC_ACTION_DIR}/ActionDetectFace
+    ${SRC_ACTION_DIR}/ActionEditLandmarks
+    ${SRC_ACTION_DIR}/ActionEditPaths
+    ${SRC_ACTION_DIR}/ActionExportPDF
+    ${SRC_ACTION_DIR}/ActionExecutionQueue
+    ${SRC_ACTION_DIR}/ActionFillHoles
+    ${SRC_ACTION_DIR}/ActionGetComponent
+    ${SRC_ACTION_DIR}/ActionInvertNormals
+    ${SRC_ACTION_DIR}/ActionLoadDirFaceModels
+    ${SRC_ACTION_DIR}/ActionLoadFaceModels
+    ${SRC_ACTION_DIR}/ActionMapSurfaceData
+    ${SRC_ACTION_DIR}/ActionMarquee
+    ${SRC_ACTION_DIR}/ActionMoveViewer
+    ${SRC_ACTION_DIR}/ActionSaveFaceModels
+    ${SRC_ACTION_DIR}/ActionSaveAsFaceModel
+    ${SRC_ACTION_DIR}/ActionOrientCameraToFace
+    ${SRC_ACTION_DIR}/ActionRadialSelect
+    ${SRC_ACTION_DIR}/ActionReflect
+    ${SRC_ACTION_DIR}/ActionRemesh
+    #${SRC_ACTION_DIR}/ActionRenameLandmark
+    ${SRC_ACTION_DIR}/ActionRenamePath
+    ${SRC_ACTION_DIR}/ActionResetCamera
+    ${SRC_ACTION_DIR}/ActionRotateModel
+    ${SRC_ACTION_DIR}/ActionSaveScreenshot
+    ${SRC_ACTION_DIR}/ActionSetFocus
+    ${SRC_ACTION_DIR}/ActionSetMaxScalarColour
+    ${SRC_ACTION_DIR}/ActionSetMinScalarColour
+    ${SRC_ACTION_DIR}/ActionSetNumScalarColours
+    ${SRC_ACTION_DIR}/ActionSetOpacity
+    ${SRC_ACTION_DIR}/ActionSetParallelProjection
+    ${SRC_ACTION_DIR}/ActionSetSurfaceColour
+    ${SRC_ACTION_DIR}/ActionShowChart
+    ${SRC_ACTION_DIR}/ActionShowMetrics
+    ${SRC_ACTION_DIR}/ActionShowScanInfo
+    ${SRC_ACTION_DIR}/ActionSmooth
+    ${SRC_ACTION_DIR}/ActionSynchroniseCameraMovement
+    ${SRC_ACTION_DIR}/ActionToggleAxes
+    ${SRC_ACTION_DIR}/ActionToggleCameraActorInteraction
+    ${SRC_ACTION_DIR}/ActionToggleFXAA
+    ${SRC_ACTION_DIR}/ActionToggleScalarLegend
+    ${SRC_ACTION_DIR}/ActionToggleStereoRendering
+    ${SRC_ACTION_DIR}/ActionTransformToStandardPosition
+    ${SRC_ACTION_DIR}/ActionUpdateMetrics
+    ${SRC_ACTION_DIR}/ActionVisualise
+    ${SRC_ACTION_DIR}/CameraWorker
+    ${SRC_ACTION_DIR}/FaceAction
+    ${SRC_ACTION_DIR}/FaceActionGroup
+    ${SRC_ACTION_DIR}/FaceActionManager
+    ${SRC_ACTION_DIR}/FaceActionWorker
+    ${SRC_ACTION_DIR}/ModelSelector
 
-    ${SRC_DIR}/FileIO/FaceModelAssImpFileHandler
-    ${SRC_DIR}/FileIO/FaceModelAssImpFileHandlerFactory
-    ${SRC_DIR}/FileIO/FaceModelFileHandler
-    ${SRC_DIR}/FileIO/FaceModelFileHandlerException
-    ${SRC_DIR}/FileIO/FaceModelFileHandlerMap
-    ${SRC_DIR}/FileIO/FaceModelManager
-    ${SRC_DIR}/FileIO/FaceModelOBJFileHandler
-    ${SRC_DIR}/FileIO/FaceModelXMLFileHandler
-    ${SRC_DIR}/FileIO/FaceModelU3DFileHandler
-    ${SRC_DIR}/FileIO/LoadFaceModelsHelper
+    ${SRC_DETECT_DIR}/FaceFinder2D
+    ${SRC_DETECT_DIR}/FaceOrientationDetector
+    ${SRC_DETECT_DIR}/FaceShapeLandmarks2DDetector
+    ${SRC_DETECT_DIR}/FeaturesDetector
 
-    ${SRC_DIR}/Report/SampleReport
+    ${SRC_FILEIO_DIR}/FaceModelAssImpFileHandler
+    ${SRC_FILEIO_DIR}/FaceModelAssImpFileHandlerFactory
+    ${SRC_FILEIO_DIR}/FaceModelFileHandler
+    ${SRC_FILEIO_DIR}/FaceModelFileHandlerException
+    ${SRC_FILEIO_DIR}/FaceModelFileHandlerMap
+    ${SRC_FILEIO_DIR}/FaceModelManager
+    ${SRC_FILEIO_DIR}/FaceModelOBJFileHandler
+    ${SRC_FILEIO_DIR}/FaceModelXMLFileHandler
+    ${SRC_FILEIO_DIR}/FaceModelU3DFileHandler
+    ${SRC_FILEIO_DIR}/LoadFaceModelsHelper
 
-    ${SRC_DIR}/Vis/BaseVisualisation
-    ${SRC_DIR}/Vis/BoundingView
-    ${SRC_DIR}/Vis/BoundingVisualisation
-    ${SRC_DIR}/Vis/FaceView
-    ${SRC_DIR}/Vis/LandmarkSetView
-    ${SRC_DIR}/Vis/LandmarksVisualisation
-    ${SRC_DIR}/Vis/LoopSelectVisualisation
-    ${SRC_DIR}/Vis/LoopsView
-    ${SRC_DIR}/Vis/OutlinesVisualisation
-    ${SRC_DIR}/Vis/PathView
-    ${SRC_DIR}/Vis/PathSetView
-    ${SRC_DIR}/Vis/PathSetVisualisation
-    ${SRC_DIR}/Vis/ScalarVisualisation
-    ${SRC_DIR}/Vis/SphereView
+    ${SRC_INT_DIR}/ContextMenuInteractor
+    ${SRC_INT_DIR}/FaceHoveringInteractor
+    ${SRC_INT_DIR}/LandmarksInteractor
+    ${SRC_INT_DIR}/MetricsInteractor
+    ${SRC_INT_DIR}/ModelEntryExitInteractor
+    ${SRC_INT_DIR}/ModelViewerInteractor
+    ${SRC_INT_DIR}/ModelMoveInteractor
+    ${SRC_INT_DIR}/ModelSelectInteractor
+    ${SRC_INT_DIR}/RadialSelectInteractor
+    ${SRC_INT_DIR}/PathSetInteractor
+    ${SRC_INT_DIR}/ViewerInteractionManager
 
-    ${SRC_DIR}/Interactor/ContextMenuInteractor
-    ${SRC_DIR}/Interactor/FaceHoveringInteractor
-    ${SRC_DIR}/Interactor/LandmarksInteractor
-    ${SRC_DIR}/Interactor/ModelEntryExitInteractor
-    ${SRC_DIR}/Interactor/ModelViewerInteractor
-    ${SRC_DIR}/Interactor/ModelMoveInteractor
-    ${SRC_DIR}/Interactor/ModelSelectInteractor
-    ${SRC_DIR}/Interactor/RadialSelectInteractor
-    ${SRC_DIR}/Interactor/PathSetInteractor
-    ${SRC_DIR}/Interactor/ViewerInteractionManager
+    ${SRC_LNDMRK_DIR}/Landmark
+    ${SRC_LNDMRK_DIR}/LandmarkSet
+    ${SRC_LNDMRK_DIR}/LandmarksManager
 
-    #${SRC_DIR}/CorrespondenceFinder
+    ${SRC_METRIC_DIR}/InterlandmarkMetricCalculatorType
+    ${SRC_METRIC_DIR}/Gene
+    ${SRC_METRIC_DIR}/GeneManager
+    ${SRC_METRIC_DIR}/MetricCalculatorTypeRegistry
+    ${SRC_METRIC_DIR}/MetricCalculatorManager
+    ${SRC_METRIC_DIR}/MetricCalculator
+    ${SRC_METRIC_DIR}/MetricSet
+    ${SRC_METRIC_DIR}/MetricValue
+    ${SRC_METRIC_DIR}/HPOTerm
+    ${SRC_METRIC_DIR}/HPOTermManager
+    ${SRC_METRIC_DIR}/Syndrome
+    ${SRC_METRIC_DIR}/SyndromeManager
+
+    ${SRC_REPORT_DIR}/SampleReport
+
+    ${SRC_VIS_DIR}/BaseVisualisation
+    ${SRC_VIS_DIR}/BoundingView
+    ${SRC_VIS_DIR}/BoundingVisualisation
+    ${SRC_VIS_DIR}/EuclideanDistanceVisualiser
+    ${SRC_VIS_DIR}/FaceView
+    ${SRC_VIS_DIR}/LandmarkSetView
+    ${SRC_VIS_DIR}/LandmarksVisualisation
+    ${SRC_VIS_DIR}/LoopSelectVisualisation
+    ${SRC_VIS_DIR}/LoopsView
+    ${SRC_VIS_DIR}/MetricVisualiser
+    ${SRC_VIS_DIR}/OutlinesVisualisation
+    ${SRC_VIS_DIR}/PathView
+    ${SRC_VIS_DIR}/PathSetView
+    ${SRC_VIS_DIR}/PathSetVisualisation
+    ${SRC_VIS_DIR}/SphereView
+    ${SRC_VIS_DIR}/SurfaceDataMapper
+    ${SRC_VIS_DIR}/SurfaceVisualisation
+
+    ${SRC_WIDGET_DIR}/MetricsDisplayDialog
+    ${SRC_WIDGET_DIR}/ScanInfoDialog
+
     ${SRC_DIR}/CurvatureSpeedFunctor
     ${SRC_DIR}/CurvatureVariableSpeedFunctor
-    #${SRC_DIR}/FaceAverager
-    ${SRC_DIR}/FaceViewSet
-
     ${SRC_DIR}/FaceModel
     ${SRC_DIR}/FaceModelSurfaceData
     ${SRC_DIR}/FaceModelViewer
     ${SRC_DIR}/FaceTypes
-    #${SRC_DIR}/FacePointSampler
-    ${SRC_DIR}/Landmark
-    ${SRC_DIR}/LandmarkSet
+    ${SRC_DIR}/FaceViewSet
     ${SRC_DIR}/MiscFunctions
     ${SRC_DIR}/ModelViewer
     ${SRC_DIR}/ModelViewerAnnotator
     ${SRC_DIR}/MultiFaceModelViewer
     ${SRC_DIR}/SurfaceData
-    ${SRC_DIR}/SurfaceMesher
+    #${SRC_DIR}/SurfaceMesher
     ${SRC_DIR}/Path
     ${SRC_DIR}/PathSet
     )
 
 set( RESOURCE_FILE "FaceTools_res.qrc")
 
-#qt5_wrap_ui( FORM_HEADERS ${FORMS})
+qt5_wrap_ui( FORM_HEADERS ${FORMS})
 qt5_wrap_cpp( QOBJECT_MOCS ${QOBJECTS})
 qt5_add_resources( RESOURCE_FILE "${RESOURCE_FILE}")
-#qt5_add_resources( RESOURCE_FILE "${RESOURCE_FILE}" OPTIONS "-no-compress")
 
-add_library( ${PROJECT_NAME} ${SRC_FILES} ${QOBJECT_MOCS} ${INCLUDE_FILES} ${RESOURCE_FILE})
+add_library( ${PROJECT_NAME} ${SRC_FILES} ${QOBJECT_MOCS} ${INCLUDE_FILES} ${FORMS} ${RESOURCE_FILE})
 include( "cmake/LinkLibs.cmake")
 
 install( DIRECTORY "${PROJECT_SOURCE_DIR}/haarcascades" DESTINATION "${LIB_PRE_REQS}/${PROJECT_NAME}")
 install( FILES "${PROJECT_SOURCE_DIR}/shape_predictor_68_face_landmarks.dat" DESTINATION "${LIB_PRE_REQS}/${PROJECT_NAME}")
-

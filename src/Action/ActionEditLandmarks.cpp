@@ -28,6 +28,7 @@ using FaceTools::Interactor::ModelViewerInteractor;
 using FaceTools::Interactor::MEEI;
 using FaceTools::Vis::LandmarksVisualisation;
 using FaceTools::FVS;
+using FaceTools::FM;
 using FaceTools::Vis::FV;
 
 
@@ -37,7 +38,7 @@ ActionEditLandmarks::ActionEditLandmarks( const QString& dn, const QIcon& ico, M
 {
     // Leverage this action's reportFinished signal to propagate landmark edits.
     connect( _interactor, &ModelViewerInteractor::onChangedData, this, &ActionEditLandmarks::doOnEditedLandmark);
-    setRespondToEventIfAllReady( LANDMARKS_CHANGE, true);
+    setRespondToEventIfAllReady( LANDMARKS_ADD);
 }   // end ctor
 
 
@@ -51,11 +52,19 @@ ActionEditLandmarks::~ActionEditLandmarks()
 bool ActionEditLandmarks::doAction( FVS& fvs, const QPoint& mc)
 {
     // TODO: Should probably consider making this a separate action instead of making this use ActionVisualise.
-    const FMS& fms = fvs.models();
-    std::for_each( std::begin(fms), std::end(fms), [=](auto fm){ _vis->refresh( fm);});
-    std::for_each( std::begin(fvs), std::end(fvs), [=](auto fv){ _vis->apply(fv);});
+    //const FMS& fms = fvs.models();
+    //std::for_each( std::begin(fms), std::end(fms), [=](FM* fm){ this->refreshVisualisation(fm);});
     return ActionVisualise::doAction(fvs, mc);
 }   // end doAction
+
+/*
+void ActionEditLandmarks::refreshVisualisation( const FM* fm)
+{
+    _vis->refresh(fm);
+    const FVS& fvs = fm->fvs();
+    std::for_each( std::begin(fvs), std::end(fvs), [=](FV* fv){ _vis->apply(fv);});
+}   // end refreshVisualisation
+*/
 
 
 void ActionEditLandmarks::doAfterAction( EventSet& cs, const FVS& fvs, bool v)

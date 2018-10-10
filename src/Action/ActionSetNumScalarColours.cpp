@@ -16,37 +16,41 @@
  ************************************************************************/
 
 #include <ActionSetNumScalarColours.h>
+#include <SurfaceDataMapper.h>
 #include <FaceView.h>
 #include <cassert>
 using FaceTools::Action::ActionSetNumScalarColours;
 using FaceTools::Action::FaceAction;
 using FaceTools::FVS;
 using FaceTools::Vis::FV;
-using FaceTools::Vis::ScalarMapping;
+using FaceTools::Vis::SurfaceDataMapper;
 
 
 ActionSetNumScalarColours::ActionSetNumScalarColours( const QString& dname, QWidget* parent)
     : FaceAction( dname), _spinBox(new QSpinBox(parent))
 {
     _spinBox->setAlignment( Qt::AlignRight);
-    _spinBox->setRange( 2, 100);
-    _spinBox->setValue( 100);
-    _spinBox->setSingleStep( 2);
+    _spinBox->setRange( 2, 80);
+    _spinBox->setSingleStep( 1);
     _spinBox->setButtonSymbols(QAbstractSpinBox::PlusMinus);
 }   // end ctor
 
 
-bool ActionSetNumScalarColours::testReady( const FV* fv) { return fv->activeScalars() != nullptr;}
+bool ActionSetNumScalarColours::testReady( const FV* fv)
+{
+    SurfaceDataMapper* sdm = fv->activeSurface();
+    return sdm && sdm->isScalarMapping();
+}   // end testReady
 
 
-void ActionSetNumScalarColours::tellReady( FV* fv, bool v)
+void ActionSetNumScalarColours::tellReady( const FV* fv, bool v)
 {
     _spinBox->disconnect(this);
+    _spinBox->setValue( 0);
     if ( v)
     {
-        _spinBox->setValue( (int)fv->activeScalars()->numColours());
-        connect( _spinBox, QOverload<int>::of(&QSpinBox::valueChanged),
-                               this, &ActionSetNumScalarColours::updateFaceViewFromWidget);
+        _spinBox->setValue( (int)fv->activeSurface()->numColours());
+        connect( _spinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &ActionSetNumScalarColours::updateFaceViewFromWidget);
     }   // end if
 }   // end tellReady
 
@@ -56,9 +60,9 @@ void ActionSetNumScalarColours::updateFaceViewFromWidget( int v)
     assert( isEnabled());
     FV* fv = ready().first();
     assert(fv);
-    ScalarMapping* scmap = fv->activeScalars();
-    assert(scmap);
-    scmap->setNumColours( v);
-    scmap->rebuild();
+    SurfaceDataMapper* sdm = fv->activeSurface();
+    assert(sdm);
+    sdm->setNumColours( v);
+    sdm->rebuild();
 }   // end updateFaceViewFromWidget
 

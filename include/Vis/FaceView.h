@@ -77,6 +77,9 @@ public:
     // Returns the set of currently applied visualisations.
     const VisualisationLayers& visualisations() const { return _vlayers;}
 
+    // Returns true if at least one of the visualisations currently applied are MetricVisualiser.
+    bool hasMetricVisualiser() const { return _nMetricLayers > 0;}
+
     // Returns the current exclusive visualisation or null if none set.
     // Only one exclusive visualisation can be set at a time (handled by ActionVisualise).
     BaseVisualisation* exvis() const { return _xvis;}
@@ -84,7 +87,7 @@ public:
     // The ObjModel to vtkActor polygon lookups for the face actor created upon bulding.
     // Can be used by visualisations to map information calculated about polygons on the
     // source ObjModel to polygons created for the vtkActor face model.
-    const IntIntMap& polyLookups() const { return _fmap;}
+    const IntIntMap& polyLookups() const { return _polymap;}
 
     // Returns the visualisation layer that vtkProp belongs to or null.
     BaseVisualisation* layer( const vtkProp*) const;
@@ -113,9 +116,9 @@ public:
     bool textured() const;
     bool canTexture() const;    // Returns true iff texturing is available for the actor.
 
-    // Set the active scalars colour mapping of the actor's surface. Scalar visibility turned off if left null.
-    void setActiveScalars( ScalarMapping *s=nullptr);
-    ScalarMapping* activeScalars() const;
+    // Set the active surface mapping of the actor's surface. Surface visibility turned off if left null.
+    void setActiveSurface( SurfaceDataMapper *s=nullptr);
+    SurfaceDataMapper* activeSurface() const;
 
     // Set/get whether backface culling is applied.
     void setBackfaceCulling( bool);
@@ -127,10 +130,11 @@ private:
     vtkSmartPointer<vtkTexture> _texture;   // The texture map (if available).
     FMV *_viewer;                           // The viewer this view is attached to.
     FMV *_pviewer;                          // The previous viewer this view was attached to.
-    ScalarMapping *_scmap;                  // The active scalar mapping (if not null).
+    SurfaceDataMapper *_sdmap;              // The active surface mapping (if not null).
     BaseVisualisation *_xvis;
+    size_t _nMetricLayers;                  // Count of metric visualiser layers.
     VisualisationLayers _vlayers;           // Visualisation layers.
-    IntIntMap _fmap;                        // Polygon ID lookups for the actor.
+    IntIntMap _polymap;                     // Polygon ID lookups for the actor.
 
     void applyLayer( BaseVisualisation*, const QPoint*);
 };  // end class

@@ -18,15 +18,16 @@
 #ifndef FACE_TOOLS_FACE_TYPES_H
 #define FACE_TOOLS_FACE_TYPES_H
 
-#include <FaceTools_Export.h>
-#include <ScalarColourRangeMapper.h>    // QTools
+#include "FaceTools_Export.h"
 #include <ObjModelCurvatureMetrics.h>   // RFeatures
 #include <vtkSmartPointer.h>
 #include <QMetaType>
 #include <QWidget>
 #include <QString>
 #include <QStringList>
+#include <memory>
 #include <string>
+#include <vector>
 #include <iostream>
 #include <functional>
 #include <unordered_set>
@@ -50,6 +51,29 @@ using FMV = FaceModelViewer;
 using FaceModelViewerSet = std::unordered_set<FaceModelViewer*>;
 using FMVS = FaceModelViewerSet;
 
+enum Sex : int8_t
+{
+    UNKNOWN_SEX = 0,
+    FEMALE_SEX = 1,
+    MALE_SEX = 2,
+    INTERSEX = 4
+};  // end enum
+
+std::string toSexString( Sex);  // any of "F M", "F", "M"
+QString toLongSexString( Sex);  // any of "Female / Male", "Female", "Male"
+Sex fromSexString( const std::string&);
+
+static const char IBAR = '|';
+static const char SC = ';';
+
+enum FaceLateral : int8_t
+{
+    FACE_LATERAL_MEDIAL = 1,
+    FACE_LATERAL_LEFT = 2,
+    FACE_LATERAL_RIGHT = 4
+};  // end enum
+
+
 namespace FileIO {
 
 class FaceModelAssImpFileHandlerInterface;
@@ -67,10 +91,11 @@ class FaceView;
 using FV = FaceView;
 class VisualisationInterface;
 class BaseVisualisation;
-class ScalarVisualisation;
+class MetricVisualiser;
+class SurfaceVisualisation;
+class SurfaceDataMapper;
 using VisualisationLayers = std::unordered_set<BaseVisualisation*>;
-using ScalarMapping = QTools::ScalarColourRangeMapper;
-using ScalarMappingFn = std::function<float(const RFeatures::ObjModelCurvatureMetrics*,int)>;
+using MetricVisSet = std::unordered_set<MetricVisualiser*>;
 
 }   // end namespace (Vis)
 
@@ -98,21 +123,25 @@ class FaceAction;
 class FaceActionWorker;
 class FaceActionManager;
 
-enum EventId
+enum EventId : int16_t
 {
     NULL_EVENT,
     LOADED_MODEL,       // Can be used to specify that an action should process on load (via FaceAction::addProcessOn).
     CLOSE_MODEL,        // INFORM that one or more models should be closed (actions should not close models themselves).
     GEOMETRY_CHANGE,    // Change to underlying geometry of the model.
     SURFACE_DATA_CHANGE,// Change to results of cached calculations on the data (often after response to data change).
-    LANDMARKS_CHANGE,   // Change to landmark data.
+    LANDMARKS_CHANGE,   // Change to existing landmark(s).
+    LANDMARKS_ADD,      // Added landmark(s).
+    LANDMARKS_DELETE,   // Deleted landmarks(s).
     ORIENTATION_CHANGE, // Change to model's orientation.
-    METRICS_CHANGE,     // Change to model metrics (path data etc)
+    METRICS_CHANGE,     // Change to model metrics.
+    PATHS_CHANGE,       // Change to drawn paths.
     VIEW_CHANGE,        // Changes to views of the data (visualisations etc) - NOT CAMERA.
     VIEWER_CHANGE,      // Changed viewer (or the vieweer's state) in which view is shown.
     CAMERA_CHANGE,      // Changes to camera parameters within a viewer.
     AFFINE_CHANGE,      // Change to an actor's position (affine transform).
-    REPORT_CREATED      // A report was just created.
+    REPORT_CREATED,     // A report was just created.
+    METADATA_CHANGE     // Any of a model's metadata changed (including age/ethnicity).
 };  // end enum
 
 using EventSet = std::unordered_set<EventId>;
@@ -126,6 +155,14 @@ namespace Report {
 class ReportInterface;
 
 }   // end namespace (Report)
+
+namespace Metric {
+
+class MetricCalculatorTypeInterface;
+class MetricCalculator;
+using MC = MetricCalculator;
+
+}   // end namespace (Metric)
 
 }   // end namespace (FaceTools)
 
@@ -143,6 +180,9 @@ Q_DECLARE_INTERFACE( FaceTools::Vis::VisualisationInterface, FaceToolsPluginVisV
 
 #define FaceToolsPluginReportReportInterface_iid "com.github.frontiersi.FaceTools.v3.Report.ReportInterface"
 Q_DECLARE_INTERFACE( FaceTools::Report::ReportInterface, FaceToolsPluginReportReportInterface_iid)
+
+#define FaceToolsPluginMetricMetricCalculatorTypeInterface_iid "com.github.frontiersi.FaceTools.v3.Metric.MetricCalculatorTypeInterface"
+Q_DECLARE_INTERFACE( FaceTools::Metric::MetricCalculatorTypeInterface, FaceToolsPluginMetricMetricCalculatorTypeInterface_iid)
 
 #define FaceToolsFileIOPluginFaceModelFileHandlerInterface_iid "com.github.frontiersi.FaceTools.v3.FileIO.FaceModelFileHandlerInterface"
 Q_DECLARE_INTERFACE( FaceTools::FileIO::FaceModelFileHandlerInterface, FaceToolsFileIOPluginFaceModelFileHandlerInterface_iid)

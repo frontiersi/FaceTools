@@ -19,19 +19,25 @@
 #include <FaceModelViewer.h>
 #include <BaseVisualisation.h>
 #include <ObjModelSurfacePointFinder.h>
+#include <CameraParams.h>
 #include <FaceTools.h>
 #include <VtkTools.h>       // RVTK
 #include <algorithm>
 #include <cassert>
 using FaceTools::PathSet;
 using FaceTools::FaceModel;
-using FaceTools::LandmarkSet;
+using FaceTools::Landmark::LandmarkSet;
 using FaceTools::FMVS;
 using FaceTools::Vis::VisualisationLayers;
 using FaceTools::Vis::BaseVisualisation;
 using RFeatures::ObjModelKDTree;
 using RFeatures::ObjModelInfo;
 using RFeatures::ObjModel;
+
+
+// public static
+std::string FaceModel::LENGTH_UNITS("mm");
+
 
 namespace {
 
@@ -47,6 +53,7 @@ cv::Vec6d getComponentBounds( const ObjModel* model, const cv::Vec6i& bounds)
 }   // end getComponentBounds
 
 
+/*
 // Create and return a bounds vector from a set of points in the order set by toPoints.
 cv::Vec6d toBounds( const std::vector<cv::Vec3d>& pts)
 {
@@ -76,15 +83,16 @@ std::vector<cv::Vec3d> toPoints( const cv::Vec6d& bds)
     pts[7] = cv::Vec3d( bds[0], bds[2], bds[5]); // Left, bottom, front
     return pts;
 }   // end toPoints
+*/
 
 
 // Find and return index to largest rectangular volume from the given vector of bounds.
 int findLargest( const std::vector<cv::Vec6d>& bounds)
 {
-    int j = 0;
+    size_t j = 0;
     double maxA = 0;    // Max area
-    int n = (int)bounds.size();
-    for ( int i = 0; i < n; ++i)
+    size_t n = bounds.size();
+    for ( size_t i = 0; i < n; ++i)
     {
         const cv::Vec6d& b = bounds[i];
         double a = (b[1] - b[0]) * (b[3] - b[2]) * (b[5] - b[4]);
@@ -94,7 +102,7 @@ int findLargest( const std::vector<cv::Vec6d>& bounds)
             j = i;
         }   // end if
     }   // end for
-    return j;
+    return int(j);
 }   // end findLargest
 
 
@@ -134,7 +142,9 @@ bool intersect( const cv::Vec6d& a, const cv::Vec6d& b)
 
 
 FaceModel::FaceModel( RFeatures::ObjModelInfo::Ptr minfo)
-    : _saved(false), _description(""), _source(""), _centreSet(false), _centre(0,0,0)
+    : _saved(false), _description(""), _source(""),
+      _age(0), _sex(FaceTools::UNKNOWN_SEX), _ethnicity(""), _cdate( QDate::currentDate()),
+      _centreSet(false), _centre(0,0,0)
 {
     assert(minfo);
     _landmarks = LandmarkSet::create();
@@ -144,14 +154,15 @@ FaceModel::FaceModel( RFeatures::ObjModelInfo::Ptr minfo)
 
 
 FaceModel::FaceModel()
-    : _saved(false), _description(""), _source(""), _centreSet(false), _centre(0,0,0)
+    : _saved(false), _description(""), _source(""),
+      _age(0), _sex(FaceTools::UNKNOWN_SEX), _ethnicity(""), _cdate( QDate::currentDate()),
+      _centreSet(false), _centre(0,0,0)
 {
     _landmarks = LandmarkSet::create();
     _paths = PathSet::create();
 }   // end ctor
 
 
-// public
 bool FaceModel::update( ObjModelInfo::Ptr nfo)
 {
     if (!nfo)
@@ -166,7 +177,7 @@ bool FaceModel::update( ObjModelInfo::Ptr nfo)
     }   // end if
 
     _kdtree = ObjModelKDTree::create( _minfo->cmodel());
-    FaceTools::translateLandmarksToSurface( _kdtree, _landmarks);   // Ensure landmarks remapped to surface
+    _landmarks->translateToSurface( _kdtree);   // Ensure landmarks remapped to surface
     _paths->recalculate( _kdtree);                                  // Ensure stored paths remap to the new surface.
     calculateBounds();
 
@@ -175,7 +186,6 @@ bool FaceModel::update( ObjModelInfo::Ptr nfo)
 }   // end update
 
 
-// public
 void FaceModel::transform( const cv::Matx44d& m)
 {
     assert(_minfo);
@@ -189,7 +199,7 @@ void FaceModel::transform( const cv::Matx44d& m)
     _minfo->rebuildInfo();
     _kdtree = ObjModelKDTree::create( _minfo->cmodel());
 
-    FaceTools::translateLandmarksToSurface( _kdtree, _landmarks);   // Ensure landmarks remapped to surface
+    _landmarks->translateToSurface( _kdtree);   // Ensure landmarks remapped to surface
     _paths->recalculate( _kdtree);                             // Ensure stored paths remap to the new surface.
     calculateBounds();
 
@@ -200,7 +210,6 @@ void FaceModel::transform( const cv::Matx44d& m)
 }   // end transform
 
 
-// public
 void FaceModel::pokeTransform( vtkMatrix4x4* m)
 {
     // Get all of the layers. We do this instead of allowing each FaceView to poke its own
@@ -238,17 +247,12 @@ void FaceModel::fixTransform( vtkMatrix4x4* m)
 }   // end fixTransform
 
 
-// public
 cv::Vec3f FaceModel::findClosestSurfacePoint( const cv::Vec3f& v) const
 {
-    int notused;
-    cv::Vec3f fv;
     lockForRead();
-    const RFeatures::ObjModelSurfacePointFinder spfinder( _kdtree->model());
-    int vidx = _kdtree->find(v);
-    spfinder.find( v, vidx, notused, fv);
+    const cv::Vec3f cv = FaceTools::toSurface(&*_kdtree, v);
     unlock();
-    return fv;
+    return cv;
 }   // end findClosestSurfacePoint
 
 
@@ -258,44 +262,51 @@ void FaceModel::calculateBounds()
     assert(_minfo);
     // Get the bounds for each of the model's components
     const RFeatures::ObjModelComponentFinder& components = _minfo->components();
-    const int nc = (int)components.size();
+    const size_t nc = components.size();
     _cbounds.resize(nc);
-    for ( int c = 0; c < nc; ++c)
-        _cbounds[c] = getComponentBounds( _minfo->cmodel(), *components.componentBounds(c));
+    for ( size_t c = 0; c < nc; ++c)
+        _cbounds[c] = getComponentBounds( _minfo->cmodel(), *components.componentBounds(int(c)));
 
     if ( !centreSet())
     {   // calculate centre of largest component.
-        const cv::Vec6d& bd = _cbounds[ findLargest( _cbounds)];
-        _centre = cv::Vec3f( (bd[0] + bd[1])/2, (bd[2] + bd[3])/2, (bd[4] + bd[5])/2);
+        const cv::Vec6d& bd = _cbounds[ size_t(findLargest( _cbounds))];
+        _centre = cv::Vec3f( float(bd[0] + bd[1])/2, float(bd[2] + bd[3])/2, float(bd[4] + bd[5])/2);
     }   // end if
 
     _sbounds = calcSuperBounds( _cbounds);
 }   // end calculateBounds
 
 
-// public
 void FaceModel::lockForWrite() { _mutex.lockForWrite();}
 void FaceModel::lockForRead() const { _mutex.lockForRead();}
 void FaceModel::unlock() const { _mutex.unlock();}
 
 
-// public
 bool FaceModel::hasMetaData() const
 {
-    bool hmd = !landmarks()->empty();
-    return hmd;
+    return !_description.empty()
+        || !_source.empty()
+        || _age != 0.0
+        || _sex != FaceTools::UNKNOWN_SEX
+        || !_ethnicity.empty()
+        || _cdate != QDate::currentDate()
+        || _centreSet
+        || _orientation != RFeatures::Orientation()
+        || !_landmarks->empty()
+        || !_paths->empty()
+        || !_metrics.empty()
+        || !_metricsL.empty()
+        || !_metricsR.empty();
 }   // end hasMetaData
 
 
-// public
 void FaceModel::updateRenderers() const
 {
     FMVS fvs = _fvs.dviewers();
-    std::for_each( std::begin(fvs), std::end(fvs), [](auto v){ v->updateRender();});
+    std::for_each( std::begin(fvs), std::end(fvs), [](FMV* v){ v->updateRender();});
 }   // end updateRenderers
 
 
-// public
 double FaceModel::translateToSurface( cv::Vec3f& pos) const
 {
     int notused;
@@ -308,9 +319,19 @@ double FaceModel::translateToSurface( cv::Vec3f& pos) const
 }   // end translateToSurface
 
 
-// public
 bool FaceModel::supersIntersect( const FaceModel& fm) const
 {
     return intersect( superBounds(), fm.superBounds());
 }   // end supersIntersect
+
+
+cv::Mat_<cv::Vec3b> FaceModel::thumbnail( size_t I) const
+{
+    RVTK::Viewer::Ptr viewer = FaceTools::makeOffscreenViewer( I, 1, info()->cmodel());
+    cv::Vec3f cpos = (550 * orientation().nvec()) + centre();
+    RFeatures::CameraParams cam( cpos, centre(), orientation().uvec(), 30);
+    viewer->setCamera( cam);
+    viewer->updateRender();
+    return FaceTools::snapshot( viewer);
+}   // end thumbnail
 

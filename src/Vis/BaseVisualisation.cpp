@@ -59,10 +59,10 @@ BaseVisualisation::~BaseVisualisation()
 
 
 void TextureVisualisation::apply( FV* fv, const QPoint*) { fv->setTextured(true);}
-void TextureVisualisation::remove( FV* fv) { fv->setTextured(false); }
+void TextureVisualisation::clear( FV* fv) { fv->setTextured(false); }
 bool TextureVisualisation::belongs( const vtkProp *p, const FV* fv) const { return fv->actor() == p;}
 bool TextureVisualisation::isAvailable( const FM* fm) const { return fm->fvs().first()->canTexture();}
 
 void WireframeVisualisation::apply( FV* fv, const QPoint*) { fv->setWireframe(true);}
-void WireframeVisualisation::remove( FV* fv) { fv->setWireframe(false);}
+void WireframeVisualisation::clear( FV* fv) { fv->setWireframe(false);}
 bool WireframeVisualisation::belongs( const vtkProp *p, const FV* fv) const { return fv->actor() == p;}

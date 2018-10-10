@@ -18,25 +18,12 @@
 #ifndef FACE_TOOLS_VIS_BASE_VISUALISATION_H
 #define FACE_TOOLS_VIS_BASE_VISUALISATION_H
 
-/**
- * The types defined in this header are the basic exclusive visualisation classes.
- * Non-exclusive visualisations should derive from BaseVisualisation and override
- * isExclusive to return false.
- * PointsVisualisation and WireframeVisualisation are both kinds of SurfaceVisualisation
- * which is by default the surface actor returned from FaceView. TextureVisualisation
- * uses the textured actor returned from FaceView.
- * Visualisations that map information to the surface will usually want to derive
- * from SurfaceVisualisation rather than BaseVisualisation.
- */
-
 #include "VisualisationInterface.h"
 #include <vtkMatrix4x4.h>
 #include <vtkProp.h>
 #include <cassert>
 
 namespace FaceTools {
-namespace Action { class ActionVisualise;}
-
 namespace Vis {
 
 // Derived classes should inherit BaseVisualisation instead of VisualisationInterface.
@@ -46,37 +33,48 @@ public:
     BaseVisualisation( const QString& displayName, const QIcon&, const QKeySequence&);
     BaseVisualisation( const QString& displayName, const QIcon&);
     explicit BaseVisualisation( const QString& displayName);
-    virtual ~BaseVisualisation();
+    ~BaseVisualisation() override;
 
     QString getDisplayName() const override { return _dname;}
+
     const QIcon* getIcon() const override { return _icon;}
     const QKeySequence* getShortcut() const override { return _keys;}
 
+    bool isAvailable( const FM*) const override { return true;}
+    bool isAvailable( const FV*, const QPoint*) const override { return true;}
+
     // Visualisations that are toggled (default) can be turned on and off as layers over the base view.
     // A non-toggled visualisation is mutually exclusive wrt any other non-toggled visualisation.
-    bool isToggled() const override { return true;}
+    bool isToggled() const override { return true;} // DEPRECATE
 
     // If a visualisation is non-toggled, then it is exclusive by default. Visualisations
     // that toggle on/off can also enforce exclusivity when toggling on. This is the case
     // with the TextureVisualisation (declared in this file).
-    virtual bool isExclusive() const { return false;}
-
-    bool isAvailable( const FM*) const override { return true;}
-    bool isAvailable( const FV*, const QPoint* p=nullptr) const override { return true;}
+    virtual bool isExclusive() const { return false;}// DEPRECATE
 
     // Should this visualisation be available in the UI?
-    virtual bool isUIVisible() const { return true;}
+    virtual bool isUIVisible() const { return true;}    // DEPRECATE
 
     // By default, visualisations are applied to all FaceViews in the selected FaceView(s) viewer(s).
     // This behaviour can be changed by overriding applyToAllInViewer to return false, in which case
     // the visualisation is applied only to the selected FaceView(s). If applyToSelectedModel is
     // overridden to return true, the selected set of FaceViews is first expanded to be the superset
     // of all FaceViews owned by every selected FaceModel.
-    virtual bool applyToAllInViewer() const { return true;}     // Default
-    virtual bool applyToSelectedModel() const { return false;}
+    virtual bool applyToAllInViewer() const { return true;}     // DEPRECATE
+    virtual bool applyToSelectedModel() const { return false;}  // DEPRECATE
+
+    // Return true if the given FaceModel satisfies this visualisation's conditions for
+    // switching this visualisation on immediately after loading the given FaceModel.
+    // (Some visualisations will have certain unmet data dependencies upon load).
+    virtual bool allowShowOnLoad( const FM*) const { return true;}  // DEPRECATE
+
+    // Specifies if application of this visualisation should be automatically
+    // synchronised with a FV's ready (selected) status.
+    virtual bool applyOnReady() const { return false;}  // DEPRECATE
+
 
     // Return true iff the given prop relating to the given FV belongs to
-    // this visualisation. Typically, visualisations do not define extra actors
+    // this visualisation. Typically, visualisations do not apply extra actors
     // so the default implementation defaults to returning false.
     virtual bool belongs( const vtkProp*, const FV*) const { return false;}
 
@@ -92,38 +90,22 @@ public:
     // obtain its complete state from calling apply on the destination view, so this
     // function should only be reimplemented if the default forwarding of this call
     // to apply(dst) leaves the visualisation in an incomplete state.
-    void copy( FV* dst, const FV* src) override { this->apply(dst);}
+    void copy( FV* dst, const FV*) override { this->apply(dst);}
 
     // Apply the visualisation for the given FaceView (add associated actors to viewer).
     // void apply( FV*, const QPoint* p=nullptr) override;
     // Remove the visualisation for the given FaceView. Do not delete associated actors
     // until purge is called.
-    // void remove( FV*) override;
+    // void clear( FV*) override;
 
-signals:
-    void onAvailable( const FM*, bool);  // Inform of change in data availability for visualisation.
-
-protected:
-    // Destroy any cached data associated with the given FV.
+    // Destroy any cached data associated with the given view.
     virtual void purge( FV*){}
 
-    // Descendent classes should add events to the given set that this visualisation will be purged for.
-    // NB visualisations will always be purged for GEOMETRY_CHANGE so there's no need to add that one.
-    virtual void addPurgeEvents( Action::EventSet&) const {}
-
-    // Return true if the given FaceModel satisfies this visualisation's conditions for
-    // switching this visualisation on immediately after loading the given FaceModel.
-    // (Some visualisations will have certain unmet data dependencies upon load).
-    virtual bool allowShowOnLoad( const FM*) const { return true;}
-
-    // Specifies if application of this visualisation should be automatically
-    // synchronised with a FV's ready (selected) status.
-    virtual bool applyOnReady() const { return false;}
-
-    friend class Action::ActionVisualise;
+    // Destroy any cached data associated with the given model.
+    virtual void purge( const FM*){}
 
 private:
-    const QString _dname;           // Display name
+    QString _dname;                 // Display name
     const QIcon *_icon;             // Display icon
     const QKeySequence *_keys;      // Key shortcut
 
@@ -143,13 +125,12 @@ public:
     bool isExclusive() const override { return true;}
 
     void apply( FV*, const QPoint* p=nullptr) override;   // Apply texture map.
-    void remove( FV*) override;  // Remove texture map.
+    void clear( FV*) override;  // Remove texture map.
 
     // Only available to check on if the model has a single material (must merge materials).
     bool isAvailable( const FM*) const override;
 
-protected:
-    bool belongs( const vtkProp*, const FV*) const; // Returns true iff fc->view()->isFace(prop)
+    bool belongs( const vtkProp*, const FV*) const override; // Returns true iff fc->view()->isFace(prop)
 };  // end class
 
 
@@ -162,10 +143,9 @@ public:
         : BaseVisualisation( displayName, icon, keys) {}
 
     void apply( FV*, const QPoint* p=nullptr) override;   // Add wireframe.
-    void remove( FV*) override;  // Remove wireframe.
+    void clear( FV*) override;  // Remove wireframe.
 
-protected:
-    bool belongs( const vtkProp*, const FV*) const; // Returns true iff fc->view()->isFace(prop)
+    bool belongs( const vtkProp*, const FV*) const override; // Returns true iff fc->view()->isFace(prop)
 };  // end class
 
 }   // end namespace

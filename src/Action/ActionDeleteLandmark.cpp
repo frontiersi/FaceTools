@@ -59,8 +59,7 @@ bool ActionDeleteLandmark::doAction( FVS& fvs, const QPoint&)
     //fm->lockForWrite();
 
     const int id = _editor->interactor()->hoverId();
-    const bool remok = fm->landmarks()->erase(id);
-    assert(remok);
+    fm->landmarks()->erase(id);
     fm->setSaved(false);
     //fm->unlock();
     

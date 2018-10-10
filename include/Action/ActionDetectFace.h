@@ -20,31 +20,25 @@
 
 #include "FaceAction.h"
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionDetectFace : public FaceAction
 { Q_OBJECT
 public:
-    ActionDetectFace( const QString& dname, const QIcon& icon,
-                      const QString& haarCascadesModelDir,
-                      const QString& faceShapeLandmarksDat,
-                      QWidget *parent=nullptr, QProgressBar* pb=nullptr);
-    ~ActionDetectFace() override;
+    ActionDetectFace( const QString& dname, const QIcon& icon, QWidget *parent=nullptr, QProgressBar* pb=nullptr);
 
 protected slots:
     bool testReady( const Vis::FV*) override;
-    bool testEnabled( const QPoint* mc=nullptr) const override { return _detector && ready1();}
+    bool testEnabled( const QPoint*) const override;
     bool doBeforeAction( FVS&, const QPoint&) override;   // Warn if overwriting
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet&, const FVS&, bool) override;
 
 private:
     QWidget *_parent;
-    Detect::FaceDetector *_detector;
+    std::string _err;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

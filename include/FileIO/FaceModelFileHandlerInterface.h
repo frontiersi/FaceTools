@@ -40,6 +40,8 @@ public:
     // Returns error string on failed read/write.
     virtual QString error() const = 0;
 
+    virtual double version() const = 0; // File version read in
+
     // Read and/or write according to whether canImport() and canExport() are
     // overridden. If read() returns a NULL model, error() should be used to
     // find out why no model could be created. Similarly, if write() returns

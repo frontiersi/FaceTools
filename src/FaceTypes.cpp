@@ -17,6 +17,7 @@
 
 #include <FaceTypes.h>
 #include <FaceViewSet.h>
+#include <boost/algorithm/string.hpp>
 
 void FaceTools::registerTypes()
 {
@@ -25,3 +26,44 @@ void FaceTools::registerTypes()
 //    qRegisterMetaType<FaceTools::Vis::FaceView>("FaceTools::Vis::FaceView");
     qRegisterMetaType<FaceTools::FaceViewSet>("FaceTools::FaceViewSet");
 }   // end registerTypes
+
+
+std::string FaceTools::toSexString( FaceTools::Sex s)
+{
+    std::ostringstream oss;
+    if ( s & FaceTools::FEMALE_SEX)
+        oss << "F ";
+    if ( s & FaceTools::MALE_SEX)
+        oss << "M";
+    return oss.str();
+}   // end toSexString
+
+
+QString FaceTools::toLongSexString( FaceTools::Sex s)
+{
+    QString fstr, mstr, estr;
+    if ( s | FaceTools::FEMALE_SEX)
+        fstr = "Female";
+    if ( s | FaceTools::MALE_SEX)
+        mstr = "Male";
+    if ( !mstr.isEmpty() && !fstr.isEmpty())
+        estr = " / ";
+    return fstr + estr + mstr;
+}   // end namespace
+
+
+FaceTools::Sex FaceTools::fromSexString( const std::string& s)
+{
+    std::vector<std::string> toks;
+    boost::split( toks, s, boost::is_space());
+    int8_t sex = 0x0;
+    for ( std::string t : toks)
+    {
+        boost::algorithm::to_lower(t);
+        if ( t == "f")
+            sex |= FaceTools::FEMALE_SEX;
+        else if ( t == "m")
+            sex |= FaceTools::MALE_SEX;
+    }   // end for
+    return static_cast<Sex>(sex);
+}   // end fromSexString

@@ -21,8 +21,7 @@
 #include "ModelEntryExitInteractor.h"
 #include <LandmarksVisualisation.h>
 
-namespace FaceTools {
-namespace Interactor {
+namespace FaceTools { namespace Interactor {
 
 class FaceTools_EXPORT LandmarksInteractor : public ModelViewerInteractor
 { Q_OBJECT
@@ -35,24 +34,24 @@ public:
     inline Vis::FV* hoverModel() const { return _meei->model();}
 
 private slots:
-    void doOnEnterLandmark( const Vis::FV*, int);
-    void doOnLeaveLandmark( const Vis::FV*, int);
+    void doOnEnterLandmark( const Vis::FV*, const vtkProp*);
+    void doOnLeaveLandmark( const Vis::FV*, const vtkProp*);
 
 private:
     bool leftButtonDown( const QPoint&) override;
     bool leftButtonUp( const QPoint&) override;
     bool leftDrag( const QPoint&) override;
-    void onEnabledStateChanged( bool v);
+    void onEnabledStateChanged( bool v) override;
 
     MEEI *_meei;
     Vis::LandmarksVisualisation *_vis;
     int _drag, _hover;  // IDs of the landmarks being dragged and hovered over.
+    FaceLateral _lat;
     Vis::FV* _view;
     static const QString s_defaultMsg;
     static const QString s_moveMsg;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

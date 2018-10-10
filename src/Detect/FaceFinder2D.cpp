@@ -89,10 +89,6 @@ bool FaceFinder2D::findEyes( const cv::Mat_<byte> lightMap)
     _leye = FaceTools::toProportion( cv::RotatedRect( lc, leye.size(), degAngle), msz);
     _reye = FaceTools::toProportion( cv::RotatedRect( rc, reye.size(), degAngle), msz);
 
-    /*
-    const cv::RotatedRect interPupilSpace( fc, cv::Size2f(ipdelta, ipdelta), degAngle);
-    _interPupilSpace = FaceTools::toProportion( interPupilSpace, msz);
-    */
     return true;
 }   // end findEyes
 

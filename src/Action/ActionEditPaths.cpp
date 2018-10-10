@@ -37,7 +37,7 @@ ActionEditPaths::ActionEditPaths( const QString& dn, const QIcon& ico, MEEI* mee
 {
     // Leverage this action's reportFinished signal to propagate path edits.
     connect( _interactor, &ModelViewerInteractor::onChangedData, this, &ActionEditPaths::doOnEditedPath);
-    setRespondToEventIfAllReady( METRICS_CHANGE, true);
+    setRespondToEventIfAllReady( PATHS_CHANGE, true);
 }   // end ctor
 
 
@@ -51,7 +51,7 @@ ActionEditPaths::~ActionEditPaths()
 bool ActionEditPaths::doAction( FVS& fvs, const QPoint& mc)
 {
     const FMS& fms = fvs.models();
-    std::for_each( std::begin(fms), std::end(fms), [=](auto fm){ _vis->refresh( fm);});
+    std::for_each( std::begin(fms), std::end(fms), [=](FM* fm){ _vis->refresh( fm);});
     return ActionVisualise::doAction(fvs, mc);
 }   // end doAction
 
@@ -66,7 +66,7 @@ void ActionEditPaths::doAfterAction( EventSet& cs, const FVS& fvs, bool v)
 void ActionEditPaths::doOnEditedPath( const FV* fv)
 {
     EventSet cset;
-    cset.insert(METRICS_CHANGE);
+    cset.insert(PATHS_CHANGE);
     FVS fvs;
     fvs.insert(const_cast<FV*>(fv));
     emit reportFinished( cset, fvs, true);

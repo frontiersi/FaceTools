@@ -58,7 +58,7 @@ void Path::recalculate( RFeatures::ObjModelKDTree::Ptr kdt)
     // Recalculate the surface path.
     vtxs.clear();
     RFeatures::ObjModelGeodesicPathFinder pfinder(kdt.get());
-    int npoints = pfinder.findGeodesic( v0, v1, vtxs);    // vtxs now contains path
+    pfinder.findGeodesic( v0, v1, vtxs);    // vtxs now contains path
     vtxs.push_back(v0);
     std::reverse( std::begin(vtxs), std::end(vtxs));
     vtxs.push_back(v1);

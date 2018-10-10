@@ -37,49 +37,49 @@ using QTools::QProgressUpdater;
 FaceAction::FaceAction()
     : _dname(""), _icon(),
       _init(false), _visible(true), _defaultCheckState(false), _allowOnToolbar(true),
-      _action(this), _doasync(false), _pupdater(nullptr) { }
+      _action(this), _doasync(false), _pupdater(nullptr), _dialog(nullptr) { }
 
 // public
 FaceAction::FaceAction( const QString& dn)
     : _dname(dn), _icon(), _keys(),
       _init(false), _visible(true), _defaultCheckState(false), _allowOnToolbar(true),
-      _action(this), _doasync(false), _pupdater(nullptr) { }
+      _action(this), _doasync(false), _pupdater(nullptr), _dialog(nullptr) { }
 
 // public
 FaceAction::FaceAction( const QString& dn, const QIcon& ico)
     : _dname(dn), _icon(ico), _keys(),
       _init(false), _visible(true), _defaultCheckState(false), _allowOnToolbar(true),
-      _action(this), _doasync(false), _pupdater(nullptr) { }
+      _action(this), _doasync(false), _pupdater(nullptr), _dialog(nullptr) { }
 
 // public
 FaceAction::FaceAction( const QString& dn, const QIcon* ico)
     : _dname(dn), _icon(ico ? *ico : QIcon()), _keys(),
       _init(false), _visible(true), _defaultCheckState(false), _allowOnToolbar(true),
-      _action(this), _doasync(false), _pupdater(nullptr) { }
+      _action(this), _doasync(false), _pupdater(nullptr), _dialog(nullptr) { }
 
 // public
 FaceAction::FaceAction( const QString& dn, const QIcon& ico, const QKeySequence& ks)
     : _dname(dn), _icon(ico), _keys(ks),
       _init(false), _visible(true), _defaultCheckState(false), _allowOnToolbar(true),
-      _action(this), _doasync(false), _pupdater(nullptr) { }
+      _action(this), _doasync(false), _pupdater(nullptr), _dialog(nullptr) { }
 
 // public
 FaceAction::FaceAction( const QString& dn, const QIcon* ico, const QKeySequence& ks)
     : _dname(dn), _icon(ico ? *ico : QIcon()), _keys(ks),
       _init(false), _visible(true), _defaultCheckState(false), _allowOnToolbar(true),
-      _action(this), _doasync(false), _pupdater(nullptr) { }
+      _action(this), _doasync(false), _pupdater(nullptr), _dialog(nullptr) { }
 
 // public
 FaceAction::FaceAction( const QString& dn, const QIcon& ico, const QKeySequence* ks)
     : _dname(dn), _icon(ico), _keys(ks ? *ks : QKeySequence()),
       _init(false), _visible(true), _defaultCheckState(false), _allowOnToolbar(true),
-      _action(this), _doasync(false), _pupdater(nullptr) { }
+      _action(this), _doasync(false), _pupdater(nullptr), _dialog(nullptr) { }
 
 // public
 FaceAction::FaceAction( const QString& dn, const QIcon* ico, const QKeySequence* ks)
     : _dname(dn), _icon(ico ? *ico : QIcon()), _keys(ks ? *ks : QKeySequence()),
       _init(false), _visible(true), _defaultCheckState(false), _allowOnToolbar(true),
-      _action(this), _doasync(false), _pupdater(nullptr) { }
+      _action(this), _doasync(false), _pupdater(nullptr), _dialog(nullptr) { }
 
 
 // public
@@ -98,6 +98,14 @@ void FaceAction::setCheckable( bool b, bool ival)
 
 
 // public
+void FaceAction::setAsDialogShower( QDialog* d)
+{
+    setCheckable(false,false);
+    _dialog = d;
+}   // end setAsDialogShower
+
+
+// public
 bool FaceAction::testSetEnabled( const QPoint* p)
 {
     const bool enabled = testEnabled(p);
@@ -106,8 +114,6 @@ bool FaceAction::testSetEnabled( const QPoint* p)
     else
         _testPoint = QPoint(-1,-1);
     setEnabled( enabled);
-    //if ( !enabled && isCheckable())
-    //    setChecked(false);
     return isEnabled();
 }   // end testSetEnabled
 
@@ -184,7 +190,7 @@ void FaceAction::setReady( FV* fv, bool v)
         _ready.insert( fv);
 
     testSetEnabled();
-    setChecked( testIfCheck(fv));
+    setChecked( fv ? testIfCheck(fv) : _defaultCheckState);
 
     if ( wasReady != isReady(fv))
     {
@@ -196,7 +202,8 @@ void FaceAction::setReady( FV* fv, bool v)
 
 void FaceAction::setReady( const FVS& fvs, bool v)
 {
-    std::for_each( std::begin(fvs), std::end(fvs), [v,this](auto fv){ this->setReady(fv, v);});
+    std::for_each( std::begin(fvs), std::end(fvs), [v,this](FV* fv){ this->setReady(fv, v);});
+    testSetEnabled();
 }   // end setReady
 
 
@@ -205,6 +212,7 @@ void FaceAction::clearReady()
     FVS rset = ready();
     for ( FV* fv : rset)
         setReady( fv, false);
+    testSetEnabled();
 }   // end clearReady
 
 
@@ -270,6 +278,14 @@ void FaceAction::setRespondToEventIfAllReady( EventId e, bool cval)
 }   // end setRespondToEventIfAllReady
 
 
+// public
+void FaceAction::setRespondToEventIfAllReady( EventId e, const ProcessFlagPredicate& fp)
+{
+    checkOverwritingResponseEvent( e);
+    _eprs[e] = EPR( e, [this](FVS& fvs)
+            { return std::all_of(std::begin(fvs), std::end(fvs), [this](FV* fv){ return this->testReady(fv);});}, fp);
+}   // end setRespondToEventIfAllReady
+
 
 bool FaceAction::operator()( bool cs){ return process( cs);}
 
@@ -279,10 +295,18 @@ bool FaceAction::process( bool checked)
 {
     if ( !isEnabled() && checked)
     {
-        std::cerr << "[ERROR] FaceTools::Action::FaceAction::process(true): on "
-                  << dname() << "; action is not enabled!" << std::endl;
+        std::cerr << "[ERROR] FaceTools::Action::FaceAction::process(true): on " << dname() << "; action is not enabled!" << std::endl;
         assert(false);
         return false;
+    }   // end if
+
+    // Is this action meant to simply show a dialog?
+    if ( _dialog)
+    {
+        _dialog->show();
+        _dialog->raise();
+        _dialog->activateWindow();
+        return true;
     }   // end if
 
     _pmutex.lock();

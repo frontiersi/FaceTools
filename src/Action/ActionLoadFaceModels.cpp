@@ -36,7 +36,7 @@ ActionLoadFaceModels::ActionLoadFaceModels( const QString& dn, const QIcon& ico,
 bool ActionLoadFaceModels::loadModel( const QString& fname)
 {
     bool loaded = false;
-    if ( testEnabled())
+    if ( testEnabled(nullptr))
     {
         QStringList fnames;
         fnames << fname;

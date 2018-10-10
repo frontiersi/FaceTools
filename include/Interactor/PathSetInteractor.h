@@ -38,7 +38,6 @@ public:
     void setPathDrag( int pid);
     bool moveDragHandle( const cv::Vec3f&);
     void setCaptionInfo( const FM*, int);
-    void setCaptionAttachPoint( const FM*, int);
 
 public slots:
     void doOnEnterHandle( const Vis::FV*, const Vis::PathView::Handle*);
@@ -58,6 +57,8 @@ private:
     int _handle;// Handle hovered over or being dragged (0|1) - only valid if _hover >= 0 or _drag >= 0
     static const QString s_msg0;
     static const QString s_msg1;
+
+    void setCaptionAttachPoint( const FM*, int);
 };  // end class
 
 }   // end namespace

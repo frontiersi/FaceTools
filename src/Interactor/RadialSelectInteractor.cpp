@@ -57,17 +57,16 @@ void RadialSelectInteractor::doOnLeaveReticule()
 bool RadialSelectInteractor::leftButtonDown( const QPoint& p)
 {
     _move = _onReticule;
-    /*
     if ( _move)
-        _vis->setPickable( _meei->model(), false); // So projecting points onto the face works
-    */
+        viewer()->setCursor(Qt::CrossCursor);
     return _onReticule;
 }   // end leftButtonDown
 
 
 bool RadialSelectInteractor::leftButtonUp( const QPoint& p)
 {
-    //_vis->setPickable( _meei->model(), true);
+    if ( _move)
+        viewer()->setCursor(Qt::ArrowCursor);
     _move = false;
     return mouseMove(p);
 }   // end leftButtonUp

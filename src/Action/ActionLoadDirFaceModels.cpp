@@ -43,7 +43,7 @@ bool ActionLoadDirFaceModels::doBeforeAction( FVS&, const QPoint&)
     // Get list of filenames from directory
     QDir qdir(dname);
     QStringList fnames = qdir.entryList( _loadHelper->createSimpleImportFilters());
-    std::for_each( std::begin(fnames), std::end(fnames), [&](auto& fn){ fn = QDir::cleanPath( qdir.filePath(fn));});
+    std::for_each( std::begin(fnames), std::end(fnames), [&](QString& fn){ fn = QDir::cleanPath( qdir.filePath(fn));});
     size_t nfiles = _loadHelper->setFilteredFilenames( fnames);
     return nfiles > 0;
 }   // end doBeforeAction

@@ -33,14 +33,8 @@ using FaceTools::FM;
 using FaceTools::Path;
 
 
-// static
-std::string PathSetVisualisation::CAPTION_LENGTH_METRIC("mm");
-
-
 PathSetVisualisation::PathSetVisualisation( const QString& dname, const QIcon& icon)
-    : BaseVisualisation(dname, icon),
-      _caption( vtkSmartPointer<vtkCaptionActor2D>::New()),
-      _text( vtkSmartPointer<vtkTextActor>::New())
+    : BaseVisualisation(dname, icon), _caption( vtkCaptionActor2D::New()), _text( vtkTextActor::New())
 {
     // The caption for the current path.
     _caption->BorderOff();
@@ -68,6 +62,8 @@ PathSetVisualisation::~PathSetVisualisation()
 {
     while (!_views.empty())
         purge( const_cast<FV*>(_views.begin()->first));
+    _caption->Delete();
+    _text->Delete();
 }   // end dtor
 
 
@@ -95,7 +91,7 @@ void PathSetVisualisation::apply( FV* fv, const QPoint*)
 }   // end apply
 
 
-void PathSetVisualisation::remove( FV* fv)
+void PathSetVisualisation::clear( FV* fv)
 {
     if ( hasView(fv))
     {
@@ -104,7 +100,7 @@ void PathSetVisualisation::remove( FV* fv)
         viewer->remove( _caption);
         viewer->remove( _text);
     }   // end if
-}   // end remove
+}   // end clear
 
 
 // public
@@ -151,13 +147,13 @@ void PathSetVisualisation::setCaptions( const std::string& pname, double elen, d
     std::ostringstream oss0, oss1, oss2;
     if ( !pname.empty())
         oss0 << pname << std::endl;
-    oss1 << "Caliper: " << std::setw(5) << std::fixed << std::setprecision(1) << elen << " " << CAPTION_LENGTH_METRIC << std::endl;
-    oss2 << "Surface: " << std::setw(5) << std::fixed << std::setprecision(1) << psum << " " << CAPTION_LENGTH_METRIC << std::endl;
+    oss1 << "Caliper: " << std::setw(5) << std::fixed << std::setprecision(1) << elen << " " << FM::LENGTH_UNITS << std::endl;
+    oss2 << "Surface: " << std::setw(5) << std::fixed << std::setprecision(1) << psum << " " << FM::LENGTH_UNITS << std::endl;
     _text->SetInput( (oss0.str() + oss1.str() + oss2.str()).c_str());
     _text->SetDisplayPosition( xpos, ypos);
 
     std::ostringstream caposs;
-    caposs << std::fixed << std::setprecision(1) << elen << " " << CAPTION_LENGTH_METRIC;
+    caposs << std::fixed << std::setprecision(1) << elen << " " << FM::LENGTH_UNITS;
     _caption->SetCaption( caposs.str().c_str());
 }   // end setCaptions
 

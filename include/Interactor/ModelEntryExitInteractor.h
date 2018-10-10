@@ -37,8 +37,9 @@ class FaceTools_EXPORT ModelEntryExitInteractor : public ModelViewerInteractor
 public:
     ModelEntryExitInteractor();
 
-    inline Vis::FV* model() const { return _mnow;}  // Model cursor is currently over (null if none).
-    inline const vtkProp* prop() const { return _pnow;} // Prop cursor is over (null if none).
+    Vis::FV* model() const { return _mnow;}         // Model cursor is currently over (null if none).
+    const vtkProp* prop() const { return _pnow;}    // Prop cursor is over (null if none).
+    const QPoint& point() const { return _tpoint;}  // The point tested.
 
     bool isLeftDown() const { return _ldown;}
 
@@ -48,12 +49,12 @@ signals:
 
     // Enter and leave signals for props (not the main underlying surface/texture prop)
     // will only be emitted if the props are pickable.
-    void onEnterProp( Vis::FV*, const vtkProp*);
-    void onLeaveProp( Vis::FV*, const vtkProp*);
+    void onEnterProp( Vis::FV*, const vtkProp*) const;
+    void onLeaveProp( Vis::FV*, const vtkProp*) const;
 
-    void onLeftDown();
-    void onLeftDrag();
-    void onLeftUp();
+    void onLeftDown() const;
+    void onLeftDrag() const;
+    void onLeftUp() const;
 
 protected:
     void onAttached() override;
@@ -64,6 +65,7 @@ private:
     Vis::FV* _mnow;
     const vtkProp* _pnow;
     bool _ldown;
+    QPoint _tpoint;
 
     void testLeaveProp( Vis::FV*, const vtkProp*);
     void testLeaveModel();

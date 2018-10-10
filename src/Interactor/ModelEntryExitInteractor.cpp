@@ -90,6 +90,7 @@ bool ModelEntryExitInteractor::leftButtonUp( const QPoint&)
 // private
 bool ModelEntryExitInteractor::testPoint( const QPoint& p)
 {
+    _tpoint = p;
     const vtkProp* pnow = _viewer->getPointedAt(p);     // The prop pointed at (may not be on current model)
     FV* fv = _viewer->attached().find(pnow);            // The FaceControl that the prop belongs to (if any)
 

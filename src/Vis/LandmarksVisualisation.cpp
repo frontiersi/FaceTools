@@ -52,24 +52,27 @@ void LandmarksVisualisation::apply( FV* fv, const QPoint*)
 {
     assert(fv);
     if ( !hasView(fv))
-        _views[fv] = new LandmarkSetView( fv->data()->landmarks());
+    {
+        _views[fv] = new LandmarkSetView;
+        fv->data()->landmarks()->registerViewer( _views.at(fv));
+    }   // end if
     _views.at(fv)->setVisible( true, fv->viewer());
 }   // end apply
 
 
-void LandmarksVisualisation::remove( FV* fv)
+void LandmarksVisualisation::clear( FV* fv)
 {
     assert(fv);
     if ( hasView(fv))
         _views.at(fv)->setVisible( false, fv->viewer());
-}   // end remove
+}   // end clear 
 
 
 void LandmarksVisualisation::setLandmarkVisible( const FM* fm, int lm, bool v)
 {
     assert(fm);
     const FVS& fvs = fm->fvs();
-    std::for_each( std::begin(fvs), std::end(fvs), [=](auto fv){ if ( this->hasView(fv)) _views.at(fv)->showLandmark(v,lm);});
+    std::for_each( std::begin(fvs), std::end(fvs), [=](FV* fv){ if ( this->hasView(fv)) _views.at(fv)->showLandmark(v,lm);});
 }   // end setLandmarkVisible
 
 
@@ -77,37 +80,33 @@ void LandmarksVisualisation::setLandmarkHighlighted( const FM* fm, int lm, bool 
 {
     assert(fm);
     const FVS& fvs = fm->fvs();
-    std::for_each( std::begin(fvs), std::end(fvs), [=](auto fv){ if ( this->hasView(fv)) _views.at(fv)->highlightLandmark(v,lm);});
+    std::for_each( std::begin(fvs), std::end(fvs), [=](FV* fv){ if ( this->hasView(fv)) _views.at(fv)->highlightLandmark(v,lm);});
 }   // end setLandmarkHighlighted
 
-
-void LandmarksVisualisation::updateLandmark( const FM* fm, int lm)
-{
-    assert(fm);
-    const FVS& fvs = fm->fvs();
-    std::for_each( std::begin(fvs), std::end(fvs), [=](auto fv){ if ( this->hasView(fv)) _views.at(fv)->updateLandmark(lm);});
-}   // end updateLandmark
-
-
+/*
 void LandmarksVisualisation::refresh( const FM* fm)
 {
     assert(fm);
     const FVS& fvs = fm->fvs();
-    std::for_each( std::begin(fvs), std::end(fvs), [=](auto fv){ if ( this->hasView(fv)) _views.at(fv)->refresh();});
+    std::for_each( std::begin(fvs), std::end(fvs), [=](FV* fv){ if ( this->hasView(fv)) _views.at(fv)->refresh();});
 }   // end refresh
+*/
 
 
-int LandmarksVisualisation::landmarkProp( const FV* fv, const vtkProp* prop) const
+int LandmarksVisualisation::landmarkId( const FV* fv, const vtkProp* prop, FaceLateral &lat) const
 {
-    return  hasView(fv) ? _views.at(fv)->landmark( prop) : -1;
-}   // end landmarkProp
+    return  hasView(fv) ? _views.at(fv)->landmarkId( prop, lat) : -1;
+}   // end landmarkId
 
 
 bool LandmarksVisualisation::belongs( const vtkProp* p, const FV* fv) const
 {
     bool b = false;
     if ( hasView(fv))
-        b = _views.at(fv)->landmark(p) >= 0;
+    {
+        FaceLateral ignored;
+        b = _views.at(fv)->landmarkId(p, ignored) >= 0;
+    }   // end if
     return b;
 }   // end belongs
 

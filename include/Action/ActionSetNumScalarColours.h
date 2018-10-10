@@ -32,7 +32,7 @@ public:
     QWidget* getWidget() const override { return _spinBox;}
 
 private slots:
-    void tellReady( Vis::FV*, bool) override;
+    void tellReady( const Vis::FV*, bool) override;
     bool testReady( const Vis::FV*) override;
     void updateFaceViewFromWidget( int);
 

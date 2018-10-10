@@ -31,7 +31,7 @@ ActionSetSurfaceColour::ActionSetSurfaceColour( const QString& dname, QWidget* p
 }   // end ctor
 
 
-void ActionSetSurfaceColour::tellReady( FV* fv, bool v)
+void ActionSetSurfaceColour::tellReady( const FV* fv, bool v)
 {
     if ( v)
         setIconColour( fv->colour());

@@ -28,10 +28,13 @@
 
 namespace FaceTools {
 
+using FVFlags = std::unordered_map<const Vis::FV*, bool>;
+
+
 class FaceTools_EXPORT FaceModelViewer : public ModelViewer
 { Q_OBJECT
 public:
-    explicit FaceModelViewer( QWidget *parent=NULL);
+    explicit FaceModelViewer( QWidget *parent=nullptr);
 
     bool attach( Vis::FV*);
     bool detach( Vis::FV*);
@@ -40,6 +43,18 @@ public:
     bool isAttached( const Vis::FV* fv) const { return _attached.has(const_cast<Vis::FV*>(fv));}
     bool isAttached( const FM* fm) const { return _models.count(fm) > 0;}
     Vis::FV* get( const FM* fm) const; // Pointer to view/control of given model or null if model not attached.
+
+    // Find out if any of the views attached to this viewer overlap with others; the given map
+    // is set with true values for views that overlap. Returns the number of views that overlap
+    // with others (i.e. the number of true settings in out parameter overlaps).
+    // Out parameter is always cleared first before setting.
+    size_t findOverlaps( FVFlags& overlaps) const;
+
+    // Given the overlaps set from a call to findOverlaps, refresh the opacity values of the views
+    // attached to this viewer where a true entry in overlaps will result in the corresponding view's
+    // opacity to be set to the minimum of its current value and maxOverlapOpacity.
+    // The opacity values for non-overlapping views are set to 1.
+    void refreshOverlapOpacity( const FVFlags& overlaps, double maxOverlapOpacity=0.5) const;
 
 public slots:
     void resetCamera();

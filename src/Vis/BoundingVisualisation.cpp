@@ -51,11 +51,11 @@ void BoundingVisualisation::apply( FV* fv, const QPoint*)
 }   // end apply
 
 
-void BoundingVisualisation::remove( FV* fv)
+void BoundingVisualisation::clear( FV* fv)
 {
     if (_views.count(fv) > 0)
         _views.at(fv)->setVisible( false, fv->viewer());
-}   // end remove
+}   // end clear
 
 
 void BoundingVisualisation::setHighlighted( const FV* fv, int c, bool v)

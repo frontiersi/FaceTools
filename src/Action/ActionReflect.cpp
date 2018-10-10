@@ -26,6 +26,9 @@ using FaceTools::Action::EventSet;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
 using FaceTools::FM;
+using FaceTools::Path;
+using FaceTools::PathSet;
+using FaceTools::Landmark::LandmarkSet;
 
 
 ActionReflect::ActionReflect( const QString& dn, const QIcon& ico, QProgressBar* pb)
@@ -37,6 +40,21 @@ ActionReflect::ActionReflect( const QString& dn, const QIcon& ico, QProgressBar*
 
 
 bool ActionReflect::testReady( const FV* fv) { return fv->data()->centreSet();}
+
+
+namespace {
+
+void reflectPaths( PathSet::Ptr paths, const cv::Vec3f& ppt, const cv::Vec3f& pvec)
+{
+    for ( int pid : paths->ids())
+    {
+        Path* path = paths->path(pid);
+        RFeatures::ObjModelReflector::reflectPoint( *path->vtxs.begin(), ppt, pvec);
+        RFeatures::ObjModelReflector::reflectPoint( *path->vtxs.rbegin(), ppt, pvec);
+    }   // end for
+}   // end reflectPaths
+
+}   // end namespace
 
 
 bool ActionReflect::doAction( FVS& fvs, const QPoint&)
@@ -51,11 +69,35 @@ bool ActionReflect::doAction( FVS& fvs, const QPoint&)
     RFeatures::ObjModelInfo::Ptr info = fm->info();
     RFeatures::ObjModel::Ptr model = info->model();
 
+    cv::Vec3f pvec;
+    cv::normalize( on.uvec().cross( on.nvec()), pvec);    // Reflection plane vector (normalized)
+    const cv::Vec3f ppt = fm->centre();                 // Point in reflection plane
+
+    // Reflect the underlying model
     RFeatures::ObjModelReflector reflector( model);
-    reflector.reflect( fm->centre(), on.up().cross( on.norm()));
+    reflector.reflect( ppt, pvec);
+
+    // Also need to reflect landmarks and paths before updating FaceModel
+    fm->landmarks()->reflect();
+    reflectPaths( fm->paths(), ppt, pvec);
+
     info->reset( model);
     fm->update(info);
 
     fm->unlock();
     return true;
 }   // end doAction
+
+
+void ActionReflect::doAfterAction( EventSet& es, const FVS& fvs, bool)
+{
+    es.insert(GEOMETRY_CHANGE);
+
+    assert(fvs.size() == 1);
+    FV* fv = fvs.first();
+    FM* fm = fv->data();
+    if ( !fm->landmarks()->empty())
+        es.insert(LANDMARKS_CHANGE);
+    if ( !fm->paths()->empty())
+        es.insert(METRICS_CHANGE);
+}   // end doAfterAction

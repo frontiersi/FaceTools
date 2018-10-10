@@ -65,11 +65,11 @@ void OutlinesVisualisation::apply( FV* fv, const QPoint*)
 }   // end apply
 
 
-void OutlinesVisualisation::remove( FV* fv)
+void OutlinesVisualisation::clear( FV* fv)
 {
     if (_views.count(fv) > 0)
         _views.at(fv)->setVisible( false, fv->viewer());
-}   // end remove
+}   // end clear 
 
 
 // protected

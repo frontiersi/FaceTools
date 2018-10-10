@@ -67,9 +67,9 @@ public:
 
 private:
     EventId _eid;
-    mutable bool _granted;
     ResponsePredicate _rpred;
     ProcessFlagPredicate _fpred;
+    mutable bool _granted;
 };  // end struct
 
 }   // end namespace

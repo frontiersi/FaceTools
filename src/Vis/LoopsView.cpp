@@ -46,10 +46,10 @@ LoopsView& LoopsView::operator=( const LoopsView& lv)
     _lineWidth = lv._lineWidth;
     _colour = lv._colour;
 
-    for ( const auto& line : lv._lines)
+    for ( const std::list<cv::Vec3f>& line : lv._lines)
         addLoop( line);
 
-    for ( const auto& pts: lv._points)
+    for ( const std::vector<cv::Vec3f>& pts: lv._points)
         addPoints( pts);
 
     return *this;
@@ -64,7 +64,7 @@ LoopsView::~LoopsView()
 
 void LoopsView::deleteActors()
 {
-    std::for_each( std::begin(_actors), std::end(_actors), [](auto a){ a->Delete();});
+    std::for_each( std::begin(_actors), std::end(_actors), [](vtkActor *a){ a->Delete();});
     _lines.clear();
     _points.clear();
     _actors.clear();
@@ -113,14 +113,14 @@ void LoopsView::addPoints( const std::vector<cv::Vec3f>& pts)
 
 void LoopsView::setLineWidth( float lw)
 {
-    std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ a->GetProperty()->SetLineWidth( lw);});
+    std::for_each( std::begin(_actors), std::end(_actors), [=](vtkActor* a){ a->GetProperty()->SetLineWidth( lw);});
     _lineWidth = lw;
 }   // end setLineWidth
 
 
 void LoopsView::setColour( float r, float g, float b)
 {
-    std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ a->GetProperty()->SetColor( r, g, b);});
+    std::for_each( std::begin(_actors), std::end(_actors), [=](vtkActor* a){ a->GetProperty()->SetColor( r, g, b);});
     _colour[0] = r;
     _colour[1] = g;
     _colour[2] = b;
@@ -137,9 +137,9 @@ void LoopsView::setVisible( bool visible, ModelViewer* viewer)
     if ( viewer)
     {
         if ( visible)
-            std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ viewer->add(a);});
+            std::for_each( std::begin(_actors), std::end(_actors), [=](vtkActor* a){ viewer->add(a);});
         else
-            std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ viewer->remove(a);});
+            std::for_each( std::begin(_actors), std::end(_actors), [=](vtkActor* a){ viewer->remove(a);});
         _visible = visible;
     }   // end if
 }   // end setVisible
@@ -149,7 +149,7 @@ void LoopsView::setVisible( bool visible, ModelViewer* viewer)
 void LoopsView::pokeTransform( const vtkMatrix4x4* vm)
 {
     vtkMatrix4x4* m = const_cast<vtkMatrix4x4*>(vm);
-    std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ a->PokeMatrix(m);});
+    std::for_each( std::begin(_actors), std::end(_actors), [=](vtkActor* a){ a->PokeMatrix(m);});
 }   // end pokeTransform
 
 
@@ -160,7 +160,7 @@ void LoopsView::fixTransform()
     {
         vtkMatrix4x4* m = (*_actors.begin())->GetMatrix();
         // Fix the actor transforms in place
-        std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ RVTK::transform( a, m);});
+        std::for_each( std::begin(_actors), std::end(_actors), [=](vtkActor* a){ RVTK::transform( a, m);});
         // Also transform the lines and points data
         RFeatures::Transformer tr(RVTK::toCV(m));
         const size_t nlines = _lines.size();

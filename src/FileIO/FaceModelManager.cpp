@@ -162,10 +162,10 @@ FM* FaceModelManager::read( const std::string& fname)
 
 
 // public
-const std::string& FaceModelManager::filepath( FM* fm) const
+const std::string& FaceModelManager::filepath( const FM* fm) const
 {
-    assert(_models.count(fm) > 0);
-    return _mdata.at(fm);
+    assert(_models.count(const_cast<FM*>(fm)) > 0);
+    return _mdata.at(const_cast<FM*>(fm));
 }   // end filepath
 
 

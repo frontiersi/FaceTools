@@ -75,14 +75,14 @@ void LoopSelectVisualisation::apply( FV* fv, const QPoint*)
 }   // end apply
 
 
-void LoopSelectVisualisation::remove( FV* fv)
+void LoopSelectVisualisation::clear( FV* fv)
 {
     if ( _sviews.count(fv) > 0)
     {
         _sviews.at(fv)->setVisible( false, fv->viewer());
         _lviews.at(fv)->setVisible( false, fv->viewer());
     }   // end if
-}   // end remove
+}   // end clear
 
 
 void LoopSelectVisualisation::setReticule( const FV* fv, const cv::Vec3f& rpos)

@@ -29,7 +29,6 @@ class FaceTools_EXPORT BaseReportTemplate : public ReportInterface
 { Q_OBJECT
 public:
     BaseReportTemplate( const QString& dname) : _dname(dname) {}
-    virtual ~BaseReportTemplate(){}
 
     QString getDisplayName() const override { return _dname;}
 
@@ -43,7 +42,7 @@ public:
 
     // Create and return the figure inserter for the given figure index.
     // Provide the temporary directory in which U3D models should be exported to.
-    virtual RModelIO::LaTeXU3DInserter::Ptr createFigure( size_t idx,
+    virtual RModelIO::LaTeXU3DInserter::Ptr createFigure( size_t,
                                                 const std::string&, // Temporary directory in which to construct U3D models
                                                 const FaceModel*,   // The model itself
                                                 const RFeatures::CameraParams&) // The camera parameters to the model

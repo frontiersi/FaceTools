@@ -34,7 +34,7 @@ using RFeatures::ObjModel;
 
 namespace {
 
-
+#ifndef NDEBUG
 int checkSame( const IntSet* s0, const IntSet* s1)
 {
     if ( s0->size() != s1->size())
@@ -46,6 +46,7 @@ int checkSame( const IntSet* s0, const IntSet* s1)
 
     return 0;
 }   // end checkSame
+#endif
 
 
 int findMaxZPolygon( const ObjModel* model, const IntSet* vidxs)
@@ -69,7 +70,7 @@ void createSurfaceData( SurfaceData* sd, const FaceModel* fm)
 {
     assert(fm);
     const ObjModelInfo::Ptr info = fm->info();
-    const int nc = (int)info->components().size();   // # components
+    const int nc = int(info->components().size());   // # components
     assert(nc >= 1);
 
     // Parse all the components in the model to extract normals and polygon areas
@@ -152,7 +153,7 @@ SurfaceData::RPtr SurfaceDataWorker::readLock()
     // the metrics are being read.
     lock.lockForRead();
     fmodel->lockForRead();
-    return SurfaceData::RPtr( surfaceData, [this](auto p){ this->fmodel->unlock(); this->lock.unlock();});
+    return SurfaceData::RPtr( surfaceData, [this](SurfaceData*){ this->fmodel->unlock(); this->lock.unlock();});
 }   // end readLock
 
 
@@ -162,6 +163,6 @@ SurfaceData::WPtr SurfaceDataWorker::writeLock()
     // so a write lock is provided on it here.
     lock.lockForWrite();
     fmodel->lockForWrite();
-    return SurfaceData::WPtr( surfaceData, [this](auto p){ this->fmodel->unlock(); this->lock.unlock();});
+    return SurfaceData::WPtr( surfaceData, [this](SurfaceData*){ this->fmodel->unlock(); this->lock.unlock();});
 }   // end writeLock
 

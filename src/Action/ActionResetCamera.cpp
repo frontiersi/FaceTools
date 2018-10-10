@@ -29,7 +29,7 @@ ActionResetCamera::ActionResetCamera( const QString& dn, const QIcon& ico, FMV *
 {
     if ( mv)
         addViewer(mv);
-    setRespondToEvent( VIEWER_CHANGE, [this](const FVS& fvs){ return fvs.empty();});
+    setRespondToEvent( VIEWER_CHANGE, static_cast<ProcessFlagPredicate>([](const FVS& fvs){ return fvs.empty();}));
 }   // end ctor
 
 
@@ -43,8 +43,8 @@ bool ActionResetCamera::doAction( FVS &fvs, const QPoint&)
     }   // end if
     else
     {
-        std::for_each( std::begin(_viewers), std::end(_viewers), [](auto v){ v->resetCamera();});
-        std::for_each( std::begin(_viewers), std::end(_viewers), [](auto v){ v->updateRender();});
+        std::for_each( std::begin(_viewers), std::end(_viewers), [](FMV* v){ v->resetCamera();});
+        std::for_each( std::begin(_viewers), std::end(_viewers), [](FMV* v){ v->updateRender();});
     }   // end else
     return true;
 }   // end doAction

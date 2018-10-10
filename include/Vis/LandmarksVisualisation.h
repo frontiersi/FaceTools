@@ -37,7 +37,7 @@ public:
     bool isAvailable( const FM*) const override;
 
     void apply( FV*, const QPoint* mc=nullptr) override;
-    void remove( FV*) override;
+    void clear( FV*) override;
 
     // Show or hide the given landmark for the given FM.
     void setLandmarkVisible( const FM*, int, bool);
@@ -45,19 +45,16 @@ public:
     // Set highlighted or not the given landmark for the given FM.
     void setLandmarkHighlighted( const FM*, int, bool);
 
-    // Refresh information about the given landmark from its set for the given FM.
-    void updateLandmark( const FM*, int);
-
     // Return ID of landmark if given prop is for a landmark or -1 if not.
-    int landmarkProp( const FV*, const vtkProp*) const;
+    // On return of >= 0, lat is set to the face lateral that the landmark appears.
+    int landmarkId( const FV*, const vtkProp*, FaceLateral& lat) const;
 
     // Refresh visualisation of landmarks for the given FaceModel.
-    void refresh( const FM*);
+    //void refresh( const FM*);
 
     void pokeTransform( const FV*, const vtkMatrix4x4*) override;
     void fixTransform( const FV*) override;
 
-protected:
     void purge( FV*) override;
     bool allowShowOnLoad( const FM* fm) const override;
 

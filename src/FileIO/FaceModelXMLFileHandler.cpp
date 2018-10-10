@@ -16,8 +16,8 @@
  ************************************************************************/
 
 #include <FaceModelXMLFileHandler.h>
-#include <FaceShapeLandmarks2DDetector.h>   // FaceTools::Landmarks
-#include <FaceTools.h>  // calcFaceCentre
+#include <FaceShapeLandmarks2DDetector.h>
+#include <FaceTools.h>
 #include <FaceModel.h>
 #include <MiscFunctions.h>
 #include <AssetImporter.h>
@@ -32,63 +32,95 @@
 #include <sstream>
 #include <ctime>
 using FaceTools::FileIO::FaceModelXMLFileHandler;
-using FaceTools::FaceModel;
+using FaceTools::FM;
 
 namespace {
 
-void writeFaceModel( const FaceModel* fm, const std::string& objfname, PTree& rnode)
+void writeFaceModel( const FM* fm, const std::string& objfname, PTree& rnode)
 {
     const std::string relfname = boost::filesystem::path( objfname).filename().string(); // Relative filepath
     rnode.put( "objfilename", relfname);
     rnode.put( "description", fm->description());
     rnode.put( "source", fm->source());
-    rnode << fm->orientation();
+    rnode.put( "age", fm->age());
+    rnode.put( "sex", FaceTools::toSexString(fm->sex()));
+    rnode.put( "ethnicity", fm->ethnicity());
+    rnode.put( "capture_date", fm->captureDate().toString().toStdString());
+
+    PTree& onode = rnode.put("Orientation", "");
+    onode << fm->orientation();
+
     if ( fm->centreSet())
-        RFeatures::putNamedVertex( rnode, "centre", fm->centre());
-    rnode << *fm->landmarks();
-    rnode << *fm->paths();
+        RFeatures::putNamedVertex( rnode, "Centre", fm->centre());
+
+    fm->landmarks()->write( rnode.put("Landmarks", ""));
+    fm->paths()->write( rnode.put("Paths", ""));
+
+    PTree& mgrps = rnode.put("MetricGroups", "");
+    mgrps.add("MetricsM", "") << fm->metrics();
+    mgrps.add("MetricsL", "") << fm->metricsL();
+    mgrps.add("MetricsR", "") << fm->metricsR();
 }   // end writeFaceModel
 
 
-FaceModel* readFaceModel( const PTree& rnode, std::string& objfilename)
+FM* readFaceModel( const PTree& rnode, std::string& objfilename)
 {
-    FaceModel* fm = new FaceModel;
+    FM* fm = new FM;
     objfilename = rnode.get<std::string>( "objfilename");  // Without path info
-    fm->setDescription( rnode.get<std::string>( "description"));
-    fm->setSource( rnode.get<std::string>( "source"));
 
-    RFeatures::Orientation on;
-    rnode >> on;
-    fm->setOrientation(on);
-    //std::cerr << "Read in orientation " << on << " with DP " << on.norm().dot( on.up()) << std::endl;
+    if ( rnode.count("description") > 0)
+        fm->setDescription( rnode.get<std::string>( "description"));
+    if ( rnode.count("source") > 0)
+        fm->setSource( rnode.get<std::string>( "source"));
+    if ( rnode.count("age") > 0)
+        fm->setAge( rnode.get<double>("age"));
+    if ( rnode.count("sex") > 0)
+        fm->setSex( FaceTools::fromSexString(rnode.get<std::string>("sex")));
+    if ( rnode.count("ethnicity") > 0)
+        fm->setEthnicity( rnode.get<std::string>( "ethnicity"));
+    if ( rnode.count("capture_date") > 0)
+        fm->setCaptureDate( QDate::fromString( rnode.get<std::string>( "capture_date").c_str()));
+
+    if ( rnode.count("Orientation") > 0)
+    {
+        RFeatures::Orientation on;
+        rnode.get_child("Orientation") >> on;
+        fm->setOrientation(on);
+    }   // end if
 
     cv::Vec3f c(0,0,0); // Get the centre if in the file
-    bool gotcentre = RFeatures::getNamedVertex( rnode, "centre", c);
+    bool gotcentre = RFeatures::getNamedVertex( rnode, "Centre", c);
 
-    // Get the landmarks
-    FaceTools::LandmarkSet::Ptr lmks = fm->landmarks();
-    rnode >> *lmks;
+    // Read in the landmarks
+    FaceTools::Landmark::LandmarkSet::Ptr lmks = fm->landmarks();
+    if ( rnode.count("Landmarks") > 0)
+        lmks->read( rnode.get_child("Landmarks"));
 
     // Calculate the centre from the landmarks if unable to retrieve from the file
-    if (!gotcentre && FaceTools::hasReqLandmarks( lmks))
+    if (!gotcentre && FaceTools::hasCentreLandmarks( *lmks))
     {
-        using namespace FaceTools::Landmarks;
-        c = FaceTools::calcFaceCentre( lmks->pos(L_EYE_CENTRE), lmks->pos(R_EYE_CENTRE), lmks->pos(NASAL_TIP));
+        c = FaceTools::calcFaceCentre( *lmks);
         gotcentre = true;
     }   // end if
 
     // Set the centre if read or calculated, otherwise it'll just be the middle of the largest component.
     if ( gotcentre)
-    {
-        std::cerr << "Centre set to " << c << std::endl;
         fm->setCentre(c);
+
+    // Read in the saved paths
+    if ( rnode.count("Paths") > 0)
+        fm->paths()->read( rnode.get_child("Paths"));
+
+    // Read in the metric groups
+    if ( rnode.count("MetricGroups") > 0)
+    {
+        const PTree& mgrps = rnode.get_child("MetricGroups");
+        mgrps.get_child("MetricsM") >> fm->metrics();
+        mgrps.get_child("MetricsL") >> fm->metricsL();
+        mgrps.get_child("MetricsR") >> fm->metricsR();
     }   // end if
-    else
-        std::cerr << "Centre set as centre of largest model component" << std::endl;
 
-    FaceTools::PathSet::Ptr paths = fm->paths();
-    rnode >> *paths;
-
+    fm->setSaved(true);
     return fm;
 }   // end readFaceModel
 
@@ -96,10 +128,11 @@ FaceModel* readFaceModel( const PTree& rnode, std::string& objfilename)
 
 
 // public
-FaceModel* FaceModelXMLFileHandler::read( const QString& sfname)
+FM* FaceModelXMLFileHandler::read( const QString& sfname)
 {
     _err = "";
-    FaceModel* fm = nullptr;
+    _fversion = 0.0;
+    FM* fm = nullptr;
 
     try
     {
@@ -139,14 +172,9 @@ FaceModel* FaceModelXMLFileHandler::read( const QString& sfname)
         boost::property_tree::read_xml( ifs, tree);
 
         const PTree& faces = tree.get_child( "faces");
-        const std::string fversion = faces.get<std::string>( "<xmlattr>.version");
-        if ( fversion != XML_VERSION)
-        {
-            std::ostringstream serr;
-            serr << "Invalid XML file version (got " << fversion << " but need " << XML_VERSION << ")";
-            _err = serr.str().c_str();
-            return nullptr;
-        }   // end if
+        _fversion = faces.get<double>( "<xmlattr>.version");
+        if ( _fversion < XML_VERSION)
+            std::cerr << "[WARNING] FaceTools::FileIO::FaceModelXMLFileHandler::read: Lower version of XML file being read!" << std::endl;
 
         const std::string filedesc = faces.get<std::string>( "description");
         std::cerr << "[STATUS] FaceTools::FileIO::FaceModelXMLFileHandler::read: Reading file with description \""
@@ -214,8 +242,7 @@ FaceModel* FaceModelXMLFileHandler::read( const QString& sfname)
             return nullptr;
         }   // end if
 
-        const bool uokay = fm->update( minfo);
-        assert(uokay);
+        fm->update( minfo);
     }   // end try
     catch ( const boost::property_tree::ptree_bad_path& e)
     {
@@ -245,7 +272,7 @@ FaceModel* FaceModelXMLFileHandler::read( const QString& sfname)
 
 
 // public
-bool FaceModelXMLFileHandler::write( const FaceModel* fm, const QString& sfname)
+bool FaceModelXMLFileHandler::write( const FM* fm, const QString& sfname)
 {
     assert(fm);
     _err = "";
@@ -284,6 +311,11 @@ bool FaceModelXMLFileHandler::write( const FaceModel* fm, const QString& sfname)
         }   // end if
 
         std::cerr << "[STATUS] FaceTools::FileIO::FaceModelXMLFileHandler::write: Exported object to " << modfile << std::endl;
+
+        // Export jpeg thumbnail of model.
+        const std::string thumbfile = boost::filesystem::path(xmlfile).replace_extension( "jpg").string();
+        cv::Mat img = fm->thumbnail(128);   // Generate thumbnail
+        cv::imwrite( thumbfile, img);
 
         PTree tree;
         PTree& topNode = tree.put( "faces","");

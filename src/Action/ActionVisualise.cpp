@@ -38,12 +38,7 @@ ActionVisualise::ActionVisualise( BaseVisualisation* vis, bool visOnLoad)
     assert(vis);
     setCheckable( true, false);
     setVisible( vis->isUIVisible());
-
-    // Purge events
-    EventSet pces;
-    pces.insert(GEOMETRY_CHANGE);
-    vis->addPurgeEvents(pces);
-    std::for_each( std::begin(pces), std::end(pces), [this](auto c){ this->setPurgeOnEvent(c);});
+    setPurgeOnEvent(GEOMETRY_CHANGE);
 
     /*
     // The process flag predicate is used to set the flag for this action's process function.
@@ -138,12 +133,12 @@ bool ActionVisualise::isVisAvailable( const FVS& fvs, const QPoint* mc) const
 bool ActionVisualise::testReady( const FV* fv) { return fv && (fv->isApplied(_vis) || isVisAvailable(fv->data()));}
 
 
-void ActionVisualise::tellReady( FV* fv, bool v)
+void ActionVisualise::tellReady( const FV* fv, bool v)
 {
     if ( _vis->applyOnReady())
     {
         setChecked(v);
-        toggleVis( fv, nullptr);
+        toggleVis( const_cast<FV*>(fv), nullptr);
     }   // end if
 }   // end tellReady
 
@@ -156,7 +151,6 @@ bool ActionVisualise::testIfCheck( const FV* fv) const { return fv && fv->isAppl
 bool ActionVisualise::toggleVis( FV* fv, const QPoint* mc)
 {
     const bool appliedPre = fv->isApplied(_vis);
-    const FM* fm = fv->data();
 
     // If this visualisation isn't toggled, or it's exclusive, then the current exclusive visualisation must first be removed.
     if ( isExclusive())
@@ -191,6 +185,7 @@ void ActionVisualise::purge( const FM* fm)
     // and purging is done as part of a reset operation so visualisation layers should remain so
     // they can be reapplied in FaceView::reset after rebuilding of the actor.
     std::for_each( std::begin(fvs), std::end(fvs), [=](FV* fv){ _vis->purge(fv);});
+    _vis->purge(fm);
 }   // end purge
 
 
@@ -199,6 +194,7 @@ void ActionVisualise::clean( const FM* fm)
     const FVS& fvs = fm->fvs();
     std::for_each( std::begin(fvs), std::end(fvs), [=](FV* fv){ fv->remove(_vis);});    // Removing the visualisation layer okay here.
     std::for_each( std::begin(fvs), std::end(fvs), [=](FV* fv){ _vis->purge(fv);});
+    _vis->purge(fm);
 }   // end clean
 
 

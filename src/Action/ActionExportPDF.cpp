@@ -80,10 +80,8 @@ bool ActionExportPDF::testEnabled( const QPoint*) const { return gotReady() && i
 
 
 // Get the save filepath for the report
-bool ActionExportPDF::doBeforeAction( FVS& fvs, const QPoint&)
+bool ActionExportPDF::doBeforeAction( FVS&, const QPoint&)
 {
-    const FV* fv = fvs.first();
-
     //std::string outfile = "report.pdf";
     QFileDialog fileDialog;
     fileDialog.setWindowTitle( tr("Export as PDF"));
@@ -206,7 +204,7 @@ bool ActionExportPDF::writeLaTeX( const FaceModel* fm,
         os.open( texfile.c_str(), std::ios::out);
         os << "\\documentclass{article}" << std::endl;
         os << "\\listfiles" << std::endl;   // Do this to see in the .log file which packages are used
-        os << "\\usepackage[textwidth=16cm,textheight=24cm]{geometry}" << std::endl;
+        os << "\\usepackage[textwidth=20cm,textheight=24cm]{geometry}" << std::endl;
         os << "\\usepackage{media9}" << std::endl;
         os << "\\usepackage[parfill]{parskip}" << std::endl;
         os << "\\usepackage[colorlinks=true,urlcolor=red]{hyperref}" << std::endl;

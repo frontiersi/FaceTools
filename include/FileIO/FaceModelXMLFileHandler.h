@@ -20,12 +20,11 @@
 
 #include "FaceModelFileHandler.h"
 
-namespace FaceTools {
-namespace FileIO {
+namespace FaceTools { namespace FileIO {
 
-static const std::string XML_VERSION = "1.32";
+static const double XML_VERSION = 3.1;
 static const std::string XML_FILE_EXTENSION = "3df";
-static const std::string XML_FILE_DESCRIPTION = "Cliniface";
+static const std::string XML_FILE_DESCRIPTION = "3D Face Image and Metadata";
 
 class FaceTools_EXPORT FaceModelXMLFileHandler : public FaceModelFileHandler
 { Q_OBJECT
@@ -38,16 +37,17 @@ public:
     bool canWrite() const override { return true;}
 
     QString error() const override { return _err;}
+    double version() const override { return _fversion;}
 
-    FaceModel* read( const QString& filepath) override;
-    bool write( const FaceModel*, const QString& filepath) override;
+    FM* read( const QString& filepath) override;
+    bool write( const FM*, const QString& filepath) override;
 
 private:
     QStringSet _exts;
     QString _err;
+    double _fversion;   // File version read in
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

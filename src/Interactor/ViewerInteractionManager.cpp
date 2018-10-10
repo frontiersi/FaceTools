@@ -20,11 +20,11 @@
 #include <algorithm>
 #include <cassert>
 using FaceTools::Interactor::ViewerInteractionManager;
-using FaceTools::Interactor::ModelViewerEntryExitInteractor;
-using FaceTools::ModelViewer;
+using MVEEI = FaceTools::Interactor::ModelViewerEntryExitInteractor;
+using MV = FaceTools::ModelViewer;
 
 
-ViewerInteractionManager::ViewerInteractionManager( ModelViewer *mv) : _activeViewer(mv)
+ViewerInteractionManager::ViewerInteractionManager( MV *mv) : _activeViewer(mv)
 {
     assert(mv);
     addViewer(mv);
@@ -33,30 +33,30 @@ ViewerInteractionManager::ViewerInteractionManager( ModelViewer *mv) : _activeVi
 
 ViewerInteractionManager::~ViewerInteractionManager()
 {
-    std::for_each( std::begin(_vmap), std::end(_vmap), [](auto p){ delete p.first;});
+    std::for_each( std::begin(_vmap), std::end(_vmap), [](const std::pair<MVEEI*, MV*>& p){ delete p.first;});
 }   // end dtor
 
 
 // public
-void ViewerInteractionManager::addViewer( ModelViewer *mv)
+void ViewerInteractionManager::addViewer( MV *mv)
 {
-    auto vint = new ModelViewerEntryExitInteractor(mv);
+    auto vint = new MVEEI(mv);
     _vmap[vint] = mv;
-    connect( vint, &ModelViewerEntryExitInteractor::onEnter, this, &ViewerInteractionManager::doOnViewerEntered);
+    connect( vint, &MVEEI::onEnter, this, &ViewerInteractionManager::doOnViewerEntered);
 }   // end addViewer
 
 
 // private slot
 void ViewerInteractionManager::doOnViewerEntered()
 {
-    ModelViewerEntryExitInteractor* vi = qobject_cast<ModelViewerEntryExitInteractor*>( sender());
-    ModelViewer* tv = vi->viewer();      // Target viewer (newly active)
-    ModelViewer* sv = _activeViewer;
+    MVEEI* vi = qobject_cast<MVEEI*>( sender());
+    MV* tv = vi->viewer();      // Target viewer (newly active)
+    MV* sv = _activeViewer;
     const size_t mcount = sv->transferInteractors( tv); // Transfer interactors to target viewer
     _activeViewer = tv;
     assert(_activeViewer != nullptr);
     // Transfer will have moved the fixed interactors, so move them back.
     if ( mcount > 0)
-        std::for_each( std::begin(_vmap), std::end(_vmap), [](auto p){ p.first->setViewer(p.second);});
+        std::for_each( std::begin(_vmap), std::end(_vmap), [](const std::pair<MVEEI*, MV*>& p){ p.first->setViewer(p.second);});
     emit onActivatedViewer(_activeViewer);
 }   // end doOnViewerEntered

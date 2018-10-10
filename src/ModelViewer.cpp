@@ -257,8 +257,6 @@ void ModelViewer::setCamera( const cv::Vec3f& focus, const cv::Vec3f& nvec, cons
 void ModelViewer::setFocus( const cv::Vec3f& focus)
 {
     CameraParams cp = getCamera();
-    // Set camera position to be exactly in front of focus at current position along +Z
-    float ndist = cp.pos[2] - focus[2]; // Maintain distance as along +Z axis
     cp.focus = focus;
     setCamera( cp);
 }   // end setFocus

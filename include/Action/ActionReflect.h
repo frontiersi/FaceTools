@@ -32,7 +32,7 @@ private slots:
     bool testReady( const Vis::FV*) override;
     bool testEnabled( const QPoint* mc=nullptr) const override { return ready1() != nullptr;}
     bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(GEOMETRY_CHANGE);}
+    void doAfterAction( EventSet&, const FVS&, bool) override;
 };  // end class
 
 }   // end namespace

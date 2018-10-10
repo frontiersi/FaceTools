@@ -31,7 +31,7 @@ public:
     void addViewer( FMV* v) { _viewers.insert(v);}
 
 protected slots:
-    bool testEnabled( const QPoint *mc=nullptr) const { return true;}
+    bool testEnabled( const QPoint *mc=nullptr) const override { return true;}
     bool doAction( FVS&, const QPoint&) override;
 
 private:

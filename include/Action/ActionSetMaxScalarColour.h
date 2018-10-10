@@ -29,7 +29,7 @@ public:
     ActionSetMaxScalarColour( const QString& dname, QWidget* parent=nullptr);
 
 private slots:
-    void tellReady( Vis::FV*, bool) override;
+    void tellReady( const Vis::FV*, bool) override;
     bool testReady( const Vis::FV*) override;
     bool doBeforeAction( FVS&, const QPoint&) override;
     bool doAction( FVS&, const QPoint&) override;

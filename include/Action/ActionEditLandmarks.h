@@ -34,10 +34,12 @@ public:
 
     Interactor::LandmarksInteractor* interactor() override { return _interactor;}
 
+    //void refreshVisualisation( const FM*);
+
 protected slots:
-    void doOnEditedLandmark( const Vis::FV*);
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet&, const FVS&, bool) override;
+    void doOnEditedLandmark( const Vis::FV*);
 
 private:
     Vis::LandmarksVisualisation *_vis;

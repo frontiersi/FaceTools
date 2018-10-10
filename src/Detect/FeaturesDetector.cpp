@@ -23,9 +23,8 @@
 #include <boost/filesystem/path.hpp>
 #include <cassert>
 using FaceTools::Detect::FeaturesDetector;
-
-typedef RFeatures::HaarCascadeDetector HCD;
-typedef RFeatures::RectCluster::Ptr RC;
+using HCD = RFeatures::HaarCascadeDetector;
+using RC = RFeatures::RectCluster::Ptr;
 
 namespace {
 
@@ -48,7 +47,7 @@ bool checkFaceBox( const cv::Rect& faceBox)
     return true;
 }   // end checkFaceBox
 
-
+/*
 void showDebug( const cv::Mat_<byte>& gimg, const std::string& title,
                 const std::vector<RC>& clusters)
 {
@@ -64,6 +63,7 @@ void showDebug( const cv::Mat_<byte>& gimg, const std::string& title,
     }   // end foreach
     RFeatures::showImage( dimg, title, false);
 }   // end showDebug
+*/
 
 
 bool collectDetections( const std::vector<HCD::Ptr>& hcds, std::list<cv::Rect>& boxes)
@@ -107,14 +107,22 @@ bool FeaturesDetector::initialise( const std::string& pdir)
 
     for ( const HCD::Ptr hcd : s_faceDetectors)
     {
-        if ( hcd == NULL)
+        if ( hcd == nullptr)
+        {
+            s_faceDetectors.clear();
+            s_eyeDetectors.clear();
             return false;
+        }   // end if
     }   // end for
 
     for ( const HCD::Ptr hcd : s_eyeDetectors)
     {
-        if ( hcd == NULL)
+        if ( hcd == nullptr)
+        {
+            s_faceDetectors.clear();
+            s_eyeDetectors.clear();
             return false;
+        }   // end if
     }   // end for
 
     return true;

@@ -61,14 +61,14 @@ BoundingView::BoundingView( const std::vector<cv::Vec6d>& bounds, float lw, floa
 BoundingView::~BoundingView()
 {
     setVisible( false, _viewer);
-    std::for_each( std::begin(_actors), std::end(_actors), [](auto a){ a->Delete();});
-    std::for_each( std::begin(_sources), std::end(_sources), [](auto s){ s->Delete();});
+    std::for_each( std::begin(_actors), std::end(_actors), [](vtkActor* a){ a->Delete();});
+    std::for_each( std::begin(_sources), std::end(_sources), [](vtkCubeSource* s){ s->Delete();});
 }   // end dtor
 
 
 void BoundingView::setPickable( bool v)
 {
-    std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ a->SetPickable(v);});
+    std::for_each( std::begin(_actors), std::end(_actors), [=](vtkActor* a){ a->SetPickable(v);});
     _pickable = v;
 }   // end setPickable
 
@@ -79,7 +79,7 @@ bool BoundingView::pickable() const { return _pickable;}
 void BoundingView::pokeTransform( const vtkMatrix4x4* vm)
 {
     vtkMatrix4x4* m = const_cast<vtkMatrix4x4*>(vm);
-    std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ a->PokeMatrix(m);});
+    std::for_each( std::begin(_actors), std::end(_actors), [=](vtkActor* a){ a->PokeMatrix(m);});
 }   // end pokeTransform
 
 
@@ -98,15 +98,15 @@ void BoundingView::updateBounds( const std::vector<cv::Vec6d>& bounds)
 void BoundingView::setVisible( bool visible, ModelViewer* viewer)
 {
     if ( _viewer != viewer && _viewer)
-        std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ _viewer->remove(a);});
+        std::for_each( std::begin(_actors), std::end(_actors), [=](vtkActor* a){ _viewer->remove(a);});
     _visible = false;
     _viewer = viewer;
     if ( _viewer)
     {
         if ( visible)
-            std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ _viewer->add(a);});
+            std::for_each( std::begin(_actors), std::end(_actors), [=](vtkActor* a){ _viewer->add(a);});
         else
-            std::for_each( std::begin(_actors), std::end(_actors), [=](auto a){ _viewer->remove(a);});
+            std::for_each( std::begin(_actors), std::end(_actors), [=](vtkActor* a){ _viewer->remove(a);});
         _visible = visible;
     }   // end if
 }   // end setVisible
@@ -114,7 +114,7 @@ void BoundingView::setVisible( bool visible, ModelViewer* viewer)
 
 void BoundingView::setHighlighted( bool v)
 {
-    const int n = (int)_actors.size();
+    const int n = static_cast<int>(_actors.size());
     for ( int i = 0; i < n; ++i)
         setHighlighted( i, v);
 }   // end setHighlighted
@@ -122,7 +122,7 @@ void BoundingView::setHighlighted( bool v)
 
 void BoundingView::setHighlighted( int c, bool v)
 {
-    if ( c >= _actors.size() || c < 0)
+    if ( c >= static_cast<int>(_actors.size()) || c < 0)
     {
         std::cerr << "[ERROR] FaceTools::Vis::BoundingView::setHighlighted: Component index out of range!" << std::endl;
         return;

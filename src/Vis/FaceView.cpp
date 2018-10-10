@@ -18,7 +18,9 @@
 #include <FaceView.h>
 #include <FaceModel.h>
 #include <FaceModelViewer.h>
+#include <SurfaceDataMapper.h>
 #include <BaseVisualisation.h>
+#include <MetricVisualiser.h>
 #include <vtkProperty.h>
 #include <vtkCellData.h>
 #include <VtkTools.h>   // RVTK::transform
@@ -26,15 +28,16 @@
 #include <iostream>
 #include <cassert>
 using FaceTools::Vis::FaceView;
-using FaceTools::Vis::BaseVisualisation;
-using FaceTools::Vis::ScalarMapping;
+using BV = FaceTools::Vis::BaseVisualisation;
+using FaceTools::Vis::SurfaceDataMapper;
 using FaceTools::FMV;
 using FaceTools::FM;
 
 
 // public
 FaceView::FaceView( FM* fm, FMV* viewer)
-    : _data(fm), _actor(nullptr), _texture(nullptr), _viewer(nullptr), _pviewer(nullptr), _scmap(nullptr), _xvis(nullptr)
+    : _data(fm), _actor(nullptr), _texture(nullptr), _viewer(nullptr), _pviewer(nullptr),
+      _sdmap(nullptr), _xvis(nullptr), _nMetricLayers(0)
 {
     assert(viewer);
     assert(fm);
@@ -79,7 +82,7 @@ void FaceView::setViewer( FMV* viewer)
     if ( _viewer)
     {
         _viewer->detach(this);
-        std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](auto v){v->remove(this);});
+        std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](BV* v){v->clear(this);});
         _viewer->remove(_actor);
     }   // end if
 
@@ -89,7 +92,7 @@ void FaceView::setViewer( FMV* viewer)
     if ( _viewer)
     {
         _viewer->add(_actor);
-        std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](auto v){v->apply(this);});
+        std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](BV* v){v->apply(this);});
         _viewer->attach(this);
     }   // end if
 }   // end setViewer
@@ -106,7 +109,7 @@ void FaceView::reset()
     double op = 1.0;
     QColor cl(255,255,255);
 
-    setActiveScalars(nullptr);
+    setActiveSurface(nullptr);
 
     if ( _actor)
     {
@@ -122,8 +125,8 @@ void FaceView::reset()
 
     // Create the new actor from the data
     RVTK::VtkActorCreator ac;
-    _fmap.clear();
-    ac.setObjToVTKUniqueFaceMap( &_fmap);
+    _polymap.clear();
+    ac.setObjToVTKUniqueFaceMap( &_polymap);
     const RFeatures::ObjModel* model = _data->info()->cmodel();
     _actor = ac.generateActor( model, _texture);
     if ( !_texture)
@@ -140,12 +143,13 @@ void FaceView::reset()
     auto vlayers = _vlayers;
     _vlayers.clear();
     _xvis = nullptr;
-    std::for_each( std::begin(vlayers), std::end(vlayers), [this](auto v){this->apply(v);});
+    _nMetricLayers = 0;
+    std::for_each( std::begin(vlayers), std::end(vlayers), [this](BV* v){this->apply(v);});
 }   // end reset
 
 
 // public
-void FaceView::remove( BaseVisualisation* vis)
+void FaceView::remove( BV* vis)
 {
     assert(_viewer);
     if ( !vis)
@@ -154,15 +158,18 @@ void FaceView::remove( BaseVisualisation* vis)
             remove( *_vlayers.begin());
         return;
     }   // end if
-    vis->remove(this);
+    vis->clear(this);
     _vlayers.erase(vis);
     if ( _xvis == vis)
         _xvis = nullptr;
+
+    if ( _nMetricLayers > 0 && qobject_cast<MetricVisualiser*>(vis) != nullptr)
+        _nMetricLayers--;
 }   // end remove
 
 
 // public
-bool FaceView::apply( BaseVisualisation* vis, const QPoint* mc)
+bool FaceView::apply( BV* vis, const QPoint* mc)
 {
     assert( vis);
     assert(_actor);
@@ -184,21 +191,24 @@ bool FaceView::apply( BaseVisualisation* vis, const QPoint* mc)
     }   // end if
     _data->unlock();
 
+    if ( qobject_cast<MetricVisualiser*>(vis) != nullptr)
+        _nMetricLayers++;
+
     return isApplied(vis);
 }   // end apply
 
 
 // public
-bool FaceView::isApplied( const BaseVisualisation *vis) const { return _vlayers.count(const_cast<BaseVisualisation*>(vis)) > 0;}
+bool FaceView::isApplied( const BV *vis) const { return vis && _vlayers.count(const_cast<BV*>(vis)) > 0;}
 
 
 // public
-BaseVisualisation* FaceView::layer( const vtkProp* prop) const
+BV* FaceView::layer( const vtkProp* prop) const
 {
-    BaseVisualisation* vis = nullptr;
+    BV* vis = nullptr;
     if ( prop && _actor != prop)
     {
-        for ( BaseVisualisation* v : _vlayers)    // Test all the visualisation layers
+        for ( BV* v : _vlayers)    // Test all the visualisation layers
         {
             if ( v->belongs( prop, this))
             {
@@ -276,7 +286,7 @@ void FaceView::setWireframe( bool v)
     vtkProperty* p = _actor->GetProperty();
     if (v)
     {
-        p->SetEdgeColor(0,0,1);
+        p->SetEdgeColor(0,0.7,0);
         p->SetLineWidth(0.4f);
     }   // end if
     p->SetEdgeVisibility(v);
@@ -316,37 +326,23 @@ bool FaceView::canTexture() const
 }   // end canTexture
 
 
-void FaceView::setActiveScalars( ScalarMapping* s)
+void FaceView::setActiveSurface( SurfaceDataMapper* s)
 {
-    if ( _scmap)
+    if ( _sdmap)
     {
-        _scmap->disconnect(this);
-        _scmap = nullptr;
+        _sdmap->remove(this);
+        _sdmap = nullptr;
     }   // end if
 
     if ( !_actor)
         return;
 
-    vtkCellData* celldata = RVTK::getPolyData(_actor)->GetCellData();
-    std::string vname;
     if ( s)
     {
-        _scmap = s;
-        vname = _scmap->rangeName();
-        assert( !vname.empty());
-        assert( celldata->GetAbstractArray( vname.c_str()) != nullptr);   // Mapping must have taken place already!
-
-        auto updatefn = [this](){ _actor->GetMapper()->SetLookupTable( _scmap->lookupTable().vtk());
-                                  _actor->GetMapper()->SetScalarRange( _scmap->minVisible(), _scmap->maxVisible());
-                                  _viewer->updateRender();};
-        connect( s, &ScalarMapping::rebuilt, this, updatefn);
-        updatefn();
+        _sdmap = s;
+        _sdmap->add(this);
     }   // end if
-
-    celldata->SetActiveScalars( vname.c_str());
-    _actor->GetMapper()->SetScalarVisibility( _scmap != nullptr);
-}   // end setActiveScalars
+}   // end setActiveSurface
 
 
-ScalarMapping* FaceView::activeScalars() const { return _scmap;}
-
+SurfaceDataMapper* FaceView::activeSurface() const { return _sdmap;}

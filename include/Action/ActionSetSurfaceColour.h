@@ -30,7 +30,7 @@ public:
     ActionSetSurfaceColour( const QString& dname, QWidget* parent=nullptr);
 
 private slots:
-    void tellReady( Vis::FV*, bool) override;
+    void tellReady( const Vis::FV*, bool) override;
     bool doBeforeAction( FVS&, const QPoint&) override;
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet& evs, const FVS&, bool) override { evs.insert(VIEW_CHANGE);}

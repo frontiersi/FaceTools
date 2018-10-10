@@ -18,11 +18,14 @@
 #ifndef FACE_TOOLS_FACE_MODEL_H
 #define FACE_TOOLS_FACE_MODEL_H
 
-#include "PathSet.h"
 #include "LandmarkSet.h"
+#include "MetricSet.h"
+#include "PathSet.h"
 #include "FaceViewSet.h"
 #include <ObjModelTools.h>   // RFeatures
+#include <Orientation.h>
 #include <QReadWriteLock>
+#include <QDate>
 
 namespace FaceTools {
 
@@ -48,45 +51,73 @@ public:
     // Use this function to access the model for making direct changes. After making
     // changes, call update to ensure that updates propagate through. If making changes
     // to the wrapped ObjModel, ensure that ObjModelInfo::reset is called before update.
-    inline RFeatures::ObjModelInfo::Ptr info() const { return _minfo;}
+    RFeatures::ObjModelInfo::Ptr info() const { return _minfo;}
 
     // Get the KD-tree - DO NOT MAKE CHANGES TO IT DIRECTLY!
-    inline RFeatures::ObjModelKDTree::Ptr kdtree() const { return _kdtree;}
+    RFeatures::ObjModelKDTree::Ptr kdtree() const { return _kdtree;}
 
     // Returns boundary values for each model component as [xmin,xmax,ymin,ymax,zmin,zmax].
-    inline const std::vector<cv::Vec6d>& bounds() const { return _cbounds;}
+    const std::vector<cv::Vec6d>& bounds() const { return _cbounds;}
 
     // Returns the super boundary of this model i.e. the smallest boundary
     // in 3D that contains all of this model's components.
-    inline const cv::Vec6d& superBounds() const { return _sbounds;}
+    const cv::Vec6d& superBounds() const { return _sbounds;}
 
     // Set/get orientation of the face.
-    inline void setOrientation( const RFeatures::Orientation &o) { _orientation = o; setSaved(false);}
-    inline const RFeatures::Orientation& orientation() const { return _orientation;}
+    void setOrientation( const RFeatures::Orientation &o) { if (_orientation != o) setSaved(false); _orientation = o;}
+    const RFeatures::Orientation& orientation() const { return _orientation;}
 
     // Set/get "centre" of the face.
-    inline void setCentre( const cv::Vec3f& c) { _centre = c; _centreSet = true; setSaved(false);}
-    inline const cv::Vec3f& centre() const { return _centre;}
-    inline bool centreSet() const { return _centreSet;}    // True iff setCentre has been called.
+    void setCentre( const cv::Vec3f& c) { if ( _centre != c) setSaved(false); _centre = c; _centreSet = true;}
+    const cv::Vec3f& centre() const { return _centre;}
+    bool centreSet() const { return _centreSet;}    // True iff setCentre has been called.
 
-    inline LandmarkSet::Ptr landmarks() const { return _landmarks;}    // CALL setSaved(false) AFTER UPDATING!
-    inline PathSet::Ptr paths() const { return _paths;}    // CALL setSaved(false) AFTER UPDATING!
+    Landmark::LandmarkSet::Ptr landmarks() const { return _landmarks;}    // CALL setSaved(false) AFTER UPDATING!
+    PathSet::Ptr paths() const { return _paths;}    // CALL setSaved(false) AFTER UPDATING!
+
+    Metric::MetricSet& metrics() { return _metrics;}
+    const Metric::MetricSet& metrics() const { return _metrics;}
+
+    Metric::MetricSet& metricsL() { return _metricsL;}
+    const Metric::MetricSet& metricsL() const { return _metricsL;}
+
+    Metric::MetricSet& metricsR() { return _metricsR;}
+    const Metric::MetricSet& metricsR() const { return _metricsR;}
 
     // Set/get description of data.
-    inline void setDescription( const std::string& d) { _description = d; setSaved(false);}
-    inline const std::string& description() const { return _description;}
+    void setDescription( const std::string& d) { if (_description != d) setSaved(false); _description = d;}
+    const std::string& description() const { return _description;}
 
     // Set/get source of data.
-    inline void setSource( const std::string& s) { _source = s; setSaved(false);}
-    inline const std::string& source() const { return _source;}
+    void setSource( const std::string& s) { if (_source != s) setSaved(false); _source = s;}
+    const std::string& source() const { return _source;}
 
-    // The views associated with this model.
-    inline const FVS& fvs() const { return _fvs;}
+    // Set/get age of individual.
+    void setAge( double a) { if (_age != a) setSaved(false); _age = a;}
+    double age() const { return _age;}
+
+    // Set/get sex of individual.
+    void setSex( Sex s) { if (_sex != s) setSaved(false); _sex = s;}
+    Sex sex() const { return _sex;}
+
+    // Set/get ethnicity of individual.
+    void setEthnicity( const std::string& t) { if (_ethnicity != t) setSaved(false); _ethnicity = t;}
+    const std::string& ethnicity() const { return _ethnicity;}
+
+    // Set/get capture date of image.
+    void setCaptureDate( const QDate& d) { if (_cdate != d) setSaved(false); _cdate = d;}
+    const QDate& captureDate() const { return _cdate;}
 
     // Set/get if this model needs saving.
-    inline bool isSaved() const { return _saved;}
-    inline void setSaved( bool s=true) { _saved = s;}
+    bool isSaved() const { return _saved;}
+    void setSaved( bool s=true) { _saved = s;}
 
+    // The views associated with this model.
+    const FVS& fvs() const { return _fvs;}
+
+    void pokeTransform( vtkMatrix4x4*);
+
+    // Returns true if any of the metadata are present.
     bool hasMetaData() const;
 
     // Convenience function to update renderers on all associated FaceViews.
@@ -102,17 +133,27 @@ public:
     // closest point on the surface using the internal kd-tree.
     double translateToSurface( cv::Vec3f&) const;
 
-    void pokeTransform( vtkMatrix4x4*);
+    // Create a thumbnail image of this model with given image dimensions.
+    cv::Mat_<cv::Vec3b> thumbnail( size_t sqdims=128) const;
+
+    static std::string LENGTH_UNITS;
 
 private:
     bool _saved;
     std::string _description;   // Long form description
     std::string _source;        // Data source info
+    double _age;
+    Sex _sex;
+    std::string _ethnicity;
+    QDate _cdate;               // Date of image capture.
     bool _centreSet;            // If face centre has been set.
     cv::Vec3f _centre;          // Face "centre"
     RFeatures::Orientation _orientation;
-    FaceTools::LandmarkSet::Ptr _landmarks;
-    FaceTools::PathSet::Ptr _paths;
+    Landmark::LandmarkSet::Ptr _landmarks;
+    PathSet::Ptr _paths;
+    Metric::MetricSet _metrics;
+    Metric::MetricSet _metricsL;
+    Metric::MetricSet _metricsR;
     RFeatures::ObjModelInfo::Ptr _minfo;
     RFeatures::ObjModelKDTree::Ptr _kdtree;
     std::vector<cv::Vec6d> _cbounds;

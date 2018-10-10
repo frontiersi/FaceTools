@@ -53,9 +53,9 @@ MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent) : QWidget(parent)
     _v1 = new FMV( this); // Middle
     _v2 = new FMV( this); // Right
 
-    connect( _v0, &FMV::onAttached, [this](){ setViewerVisible( 0, !_v0->attached().empty());});
+    connect( _v0, &FMV::onAttached, [this](){ setViewerVisible( 0, true);});
     connect( _v0, &FMV::onDetached, [this](){ setViewerVisible( 0, !_v0->attached().empty());});
-    connect( _v2, &FMV::onAttached, [this](){ setViewerVisible( 2, !_v2->attached().empty());});
+    connect( _v2, &FMV::onAttached, [this](){ setViewerVisible( 2, true);});
     connect( _v2, &FMV::onDetached, [this](){ setViewerVisible( 2, !_v2->attached().empty());});
 
     QVBoxLayout* v0layout = new QVBoxLayout;
@@ -168,7 +168,6 @@ void MultiFaceModelViewer::setViewerVisible( int idx, bool visible)
     assert(idx == 0 || idx == 2);
     setUpdatesEnabled(false);   // Pause widget update to lessen appearance of flicker
     QList<int> widths = _splitter->sizes();
-    int sum = widths[0] + widths[1] + widths[2];
 
     if ( visible && widths[idx] == 0)
         widths[idx] = widths[1];

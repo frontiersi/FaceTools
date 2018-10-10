@@ -31,13 +31,14 @@ public:
     ~OutlinesVisualisation() override;
 
     void apply( FV*, const QPoint* mc=nullptr) override;
-    void remove( FV*) override;
+    void clear( FV*) override;
 
     void pokeTransform( const FV*, const vtkMatrix4x4*) override;
     void fixTransform( const FV*) override;
 
-private:
     void purge( FV*) override;
+
+private:
     std::unordered_map<const FV*, LoopsView*> _views;
 };  // end class
 

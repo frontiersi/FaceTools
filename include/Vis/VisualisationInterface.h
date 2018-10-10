@@ -35,13 +35,13 @@ namespace Vis {
 class FaceTools_EXPORT VisualisationInterface : public QTools::PluginInterface
 { Q_OBJECT
 public:
-    virtual bool isToggled() const = 0;                     // Toggled visualisations layer.
-    virtual bool isAvailable( const FaceModel*) const = 0;  // Does the FaceModel allow this visualisation to be applied?
-    virtual bool isAvailable( const FaceView*, const QPoint* mc=nullptr) const = 0; // Can visualise for view and mouse coords?
+    virtual bool isToggled() const = 0;              // Toggled visualisations layer.
+    virtual bool isAvailable( const FM*) const = 0;  // Does the FM allow this visualisation to be applied?
+    virtual bool isAvailable( const FV*, const QPoint* mc=nullptr) const = 0; // Can visualise for view and mouse coords?
 
-    virtual void copy( FaceView* dst, const FaceView* src) = 0;    // Copy visualisations directly across from src to dst.
-    virtual void apply( FaceView*, const QPoint* mc=nullptr) = 0;  // Add the visualisation.
-    virtual void remove( FaceView*) = 0;                           // Remove the visualisation.
+    virtual void copy( FV* dst, const FV* src) = 0;         // Copy visualisations directly across from src to dst.
+    virtual void apply( FV*, const QPoint* mc=nullptr) = 0; // Add the visualisation.
+    virtual void clear( FV*) = 0;                           // Clear the visualisation.
 };  // end class
 
 }   // end namespace

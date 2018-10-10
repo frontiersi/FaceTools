@@ -51,6 +51,7 @@ public slots:
 private:
     vtkSmartPointer<vtkRenderer> _renderer;
     struct Message;
+    using MessagePair = std::pair<int, Message*>;
     std::unordered_map<int, Message*> _messages;
 };  // end class
 

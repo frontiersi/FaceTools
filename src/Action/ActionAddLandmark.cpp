@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <ActionAddLandmark.h>
+#include <LandmarksManager.h>
 #include <FaceModel.h>
 #include <FaceView.h>
 #include <FaceTools.h>
@@ -30,6 +31,7 @@ using FaceTools::Interactor::LandmarksInteractor;
 using FaceTools::FVS;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
+using LDMRKS_MAN = FaceTools::Landmark::LandmarksManager;
 
 
 ActionAddLandmark::ActionAddLandmark( const QString& dn, const QIcon& ico, ActionEditLandmarks* e, QWidget *parent)
@@ -66,6 +68,7 @@ bool ActionAddLandmark::doBeforeAction( FVS& fvs, const QPoint&)
         }   // end if
 
         // If a landmark with the name already exists, show warning and try again.
+        //if ( LDMRKS_MAN::hasName( lname))
         if ( fm->landmarks()->has(lname.toStdString()))
         {
             static const QString msg = tr("A landmark with that name already exists! ") +

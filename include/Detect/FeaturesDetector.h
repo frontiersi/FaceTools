@@ -43,6 +43,9 @@ public:
     // If previously initialised, the existing models will be overwritten.
     static bool initialise( const std::string& modelDir);
 
+    // Returns true iff the detector was successfully initialised.
+    static bool isinit() { return !s_faceDetectors.empty();}
+
     // Try to detect a single face from the given 2D single channel intensity image.
     // Returns true IFF a face is detected (accessed by getFaceBox()).
     static bool find( const cv::Mat_<byte> img);

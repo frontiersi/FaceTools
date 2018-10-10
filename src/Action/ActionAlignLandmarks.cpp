@@ -24,30 +24,29 @@ using FaceTools::Action::ActionAlignLandmarks;
 using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
 using FaceTools::FVS;
-using FaceTools::FaceModelSet;
+using FaceTools::FMS;
 using FaceTools::Vis::FV;
-using FaceTools::LandmarkSet;
-using FaceTools::FaceModel;
-
+using FaceTools::Landmark::LandmarkSet;
+using FaceTools::FM;
 
 namespace {
 
 // Check the landmark sets in the given set of models and on return, set fms to
 // only contain those models that share at least three landmarks in common (by name)
 // from the given set of landmarks lmks. Returns the changed size of fms.
-size_t findSharedLandmarksModels( FaceModelSet& fms, const LandmarkSet::Ptr& lmks)
+size_t findSharedLandmarksModels( FMS& fms, const LandmarkSet::Ptr& lmks)
 {
-    FaceModelSet iset = fms;    // Copy
+    FMS iset = fms;    // Copy
     fms.clear();
-    for ( FaceModel* fm : iset)
+    for ( FM* fm : iset)
     {
         fm->lockForRead();
         LandmarkSet::Ptr lfm = fm->landmarks();
         size_t scount = 0;  // The shared count
 
-        for ( const std::string& lname : lmks->names())
+        for ( int id : lmks->ids())
         {
-            if ( lfm->has(lname))
+            if ( lfm->has(id))
             {
                 scount++;
                 if ( scount == 3)
@@ -64,17 +63,17 @@ size_t findSharedLandmarksModels( FaceModelSet& fms, const LandmarkSet::Ptr& lmk
 
 
 // For each of these models, look at the source landmarks, and remove from lmset those that don't appear.
-size_t findCommonLandmarks( std::unordered_set<std::string>& lmset, const FaceModelSet& fms)
+size_t findCommonLandmarks( IntSet& lmset, const FMS& fms)
 {
-    std::unordered_set<std::string> remset;
-    for ( const FaceModel* fm : fms)
+    IntSet remset;
+    for ( const FM* fm : fms)
     {
         fm->lockForRead();
         LandmarkSet::Ptr tlmks = fm->landmarks();
-        for ( const std::string& lmname : lmset)
+        for ( int id : lmset)
         {
-            if ( !tlmks->has(lmname))
-                remset.insert(lmname);  // Flag for removal - landmark not present in this model.
+            if ( !tlmks->has(id))
+                remset.insert(id);  // Flag for removal - landmark not present in this model.
         }   // end for
         fm->unlock();
     }   // end for
@@ -85,11 +84,19 @@ size_t findCommonLandmarks( std::unordered_set<std::string>& lmset, const FaceMo
 
 
 // Make an ObjModel from the subset of landmarks of lmks given by lmset.
-RFeatures::ObjModel::Ptr makeModelFromLandmarks( const LandmarkSet::Ptr& lmks, const std::unordered_set<std::string>& lmset)
+RFeatures::ObjModel::Ptr makeModelFromLandmarks( const LandmarkSet::Ptr& lmks, const IntSet& lmset)
 {
     RFeatures::ObjModel::Ptr lmodel = RFeatures::ObjModel::create();
-    for ( const std::string& lmname : lmset)
-        lmodel->addVertex( lmks->pos(lmname));
+    for ( int id : lmset)
+    {
+        if ( LDMKS_MAN::landmark(id)->isBilateral())
+        {
+            lmodel->addVertex( *lmks->pos(id, FaceTools::FACE_LATERAL_LEFT));
+            lmodel->addVertex( *lmks->pos(id, FaceTools::FACE_LATERAL_RIGHT));
+        }   // end if
+        else
+            lmodel->addVertex( *lmks->pos(id, FaceTools::FACE_LATERAL_MEDIAL));
+    }   // end for
     return lmodel;
 }   // end makeModelFromLandmarks
 
@@ -112,13 +119,13 @@ bool ActionAlignLandmarks::testEnabled( const QPoint*) const
     bool ready = false;
     if ( fv && fv->viewer()->attached().size() >= 2)
     {
-        FaceModel* fm = fv->data();
+        FM* fm = fv->data();
         fm->lockForRead();
         LandmarkSet::Ptr lmks = fm->landmarks();
         if ( lmks->size() >= 3) // Need at least three landmarks on the selected model
         {
             // Get the other models from the viewer.
-            FaceModelSet fms = fv->viewer()->attached().models();
+            FMS fms = fv->viewer()->attached().models();
             fms.erase(fm);  // Remember not to include the source model.
             // If at least one other model in the viewer with three or more shared landmarks, then enable this action.
             ready = findSharedLandmarksModels( fms, lmks) > 0;
@@ -134,14 +141,14 @@ bool ActionAlignLandmarks::doAction( FVS& rset, const QPoint&)
 {
     assert(rset.size() == 1);
     FV* fv = rset.first();
-    FaceModel* sfm = fv->data();    
+    FM* sfm = fv->data();
     rset.erase(fv); // Won't actually do work on the source FaceView!
 
     // Find the landmarks common across all models in the viewer.
     sfm->lockForRead();
-    std::unordered_set<std::string> lmset = sfm->landmarks()->names();  // Initially all (copy out)
+    IntSet lmset = sfm->landmarks()->ids();  // Initially all (copy out)
     sfm->unlock();
-    FaceModelSet fms = fv->viewer()->attached().models();
+    FMS fms = fv->viewer()->attached().models();
     fms.erase(sfm); // Erase the source
     const size_t ncommon = findCommonLandmarks( lmset, fms);
     assert(ncommon >= 3);   // Otherwise this shouldn't have been enabled!
@@ -153,7 +160,7 @@ bool ActionAlignLandmarks::doAction( FVS& rset, const QPoint&)
     RFeatures::ObjModelAligner::Ptr aligner = RFeatures::ObjModelAligner::create( lmodel);
 
     // Look at the other models and align to the source
-    for ( FaceModel* fm : fms)
+    for ( FM* fm : fms)
     {
         fm->lockForWrite();
         RFeatures::ObjModel::Ptr m0 = makeModelFromLandmarks( fm->landmarks(), lmset);

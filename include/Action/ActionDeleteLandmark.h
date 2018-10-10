@@ -31,7 +31,7 @@ public:
 protected slots:
     bool testEnabled( const QPoint* mc=nullptr) const override;
     bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(LANDMARKS_CHANGE);}
+    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(LANDMARKS_DELETE);}
 
 private:
     ActionEditLandmarks *_editor;

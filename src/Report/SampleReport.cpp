@@ -26,10 +26,10 @@ using FaceTools::FM;
 LaTeXU3DInserter::Ptr SampleReport::createFigure( size_t, const std::string& tdir, const FM* fm, const CameraParams& cam)
 {
     // Currently, the model itself is written out, not the VTK view (next version!)
-    float widthMM = 160;
-    float heightMM = 160;
+    float widthMM = 180;
+    float heightMM = 200;
     const RFeatures::ObjModel* model = fm->info()->cmodel();
-    LaTeXU3DInserter::Ptr fig = LaTeXU3DInserter::create( model, tdir, widthMM, heightMM, cam, "Front Profile", "", true, false);
+    LaTeXU3DInserter::Ptr fig = LaTeXU3DInserter::create( model, tdir, widthMM, heightMM, cam, "3D Model", "", true, false);
     if ( !fig)
         std::cerr << "Failed to create U3D model from data!" << std::endl;
     return fig;

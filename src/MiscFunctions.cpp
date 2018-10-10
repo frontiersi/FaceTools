@@ -60,7 +60,7 @@ std::string FaceTools::getDateTimeDigits( const std::string& fname)
     // Find the first character of filename that's a digit
     const char sepch = '/'; // Works on Windows and Unix
     int sidx = (int)fname.find_last_of(sepch) + 1;
-    for ( ; sidx < fname.size(); ++sidx)
+    for ( ; sidx < (int)fname.size(); ++sidx)
     {
         if ( isdigit(fname[sidx]))
             break;
@@ -69,7 +69,7 @@ std::string FaceTools::getDateTimeDigits( const std::string& fname)
     // Check that we have ten digits from sidx
     int numDigits = 0;
     int fidx;
-    for ( fidx = sidx; fidx < fname.size(); ++fidx)
+    for ( fidx = sidx; fidx < (int)fname.size(); ++fidx)
     {
         if ( numDigits == 12)
             break;
@@ -160,7 +160,7 @@ cv::Point2f FaceTools::calcMid( const cv::Point2f& p0, const cv::Point2f& p1)
 cv::Vec3f FaceTools::calcSum( const std::vector<cv::Vec3f>& vs)
 {
     cv::Vec3f m(0,0,0);
-    std::for_each( std::begin(vs), std::end(vs), [&](const auto& v){ m += v;});
+    std::for_each( std::begin(vs), std::end(vs), [&](const cv::Vec3f& v){ m += v;});
     return m;
 }   // end calcSum
 
@@ -170,10 +170,10 @@ double FaceTools::calcLength( const std::vector<cv::Vec3f>& vs)
     if ( vs.empty())
         return 0;
 
-    const int n = (int)vs.size();
+    const size_t n = vs.size();
     const cv::Vec3f* pv = &vs[0];
     double len = 0;
-    for ( int i = 1; i < n; ++i)
+    for ( size_t i = 1; i < n; ++i)
     {
         len += cv::norm( vs[i] - *pv, cv::NORM_L2);
         pv = &vs[i];
@@ -201,23 +201,23 @@ double FaceTools::getEquidistant( const ObjModel* model, const std::vector<int>&
     const double glen = calcLength( model, gpath);
     const double gstep = glen / H;
 
-    const int n = (int)gpath.size();
-    assert( j >= 0 && j < n);
+    const size_t n = gpath.size();
+    assert( j >= 0 && size_t(j) < n);
 
     int m = -1;
-    ev.resize(H);
-    cv::Vec3f pv = model->vtx(gpath[j]);    // Previous vertex
+    ev.resize(size_t(H));
+    cv::Vec3f pv = model->vtx(gpath[size_t(j)]);    // Previous vertex
     cv::Vec3f v = pv;
     double gsum = 0;
 
-    for ( int i = 0; i < n; ++i)
+    for ( size_t i = 0; i < n; ++i)
     {
-        v = model->vtx( gpath[j]);
+        v = model->vtx( gpath[size_t(j)]);
         gsum += cv::norm( v - pv, cv::NORM_L2);
         if ( int( gsum / gstep) > m)
         {
             m = (m+1) % H;
-            ev[m] = gpath[j];
+            ev[size_t(m)] = gpath[size_t(j)];
         }   // end if
 
         j = (j+1) % n;  // Next vertex
@@ -296,19 +296,19 @@ cv::RotatedRect FaceTools::toProportion( const cv::RotatedRect& r, const cv::Siz
 
 void FaceTools::getVertices( const ObjModel* m, const std::vector<int>& uvids, std::vector<cv::Vec3f>& path)
 {
-    const int nvs = (int)uvids.size();
+    const size_t nvs = uvids.size();
     path.resize(nvs);
-    for ( int i = 0; i < nvs; ++i)
+    for ( size_t i = 0; i < nvs; ++i)
         path[i] = m->getVertex(uvids[i]);
 }   // end getVertices
 
 
 bool FaceTools::getVertexIndices( const ObjModel* m, const std::vector<cv::Vec3f>& vs, std::vector<int>& vidxs)
 {
-    const int nvs = (int)vs.size();
+    const size_t nvs = vs.size();
     vidxs.resize(nvs);
     int vidx;
-    for ( int i = 0; i < nvs; ++i)
+    for ( size_t i = 0; i < nvs; ++i)
     {
         vidx = m->lookupVertexIndex(vs[i]);   // Returns -1 if can't find
         assert( vidx >= 0);
@@ -323,10 +323,10 @@ bool FaceTools::getVertexIndices( const ObjModel* m, const std::vector<cv::Vec3f
 void FaceTools::findNearestVertexIndices( const RFeatures::ObjModelKDTree& kdtree, const std::vector<cv::Vec3f>& vs, std::vector<int>& vidxs)
 {
     const ObjModel* m = kdtree.model();
-    const int nvs = (int)vs.size();
+    const size_t nvs = vs.size();
     vidxs.resize(nvs);
     int vidx;
-    for ( int i = 0; i < nvs; ++i)
+    for ( size_t i = 0; i < nvs; ++i)
     {
         vidx = m->lookupVertexIndex(vs[i]);   // Returns -1 if can't find
         if ( vidx < 0)
@@ -369,7 +369,7 @@ cv::Mat_<byte> FaceTools::removeBlackBackground( const cv::Mat_<byte>& m)
 cv::Rect FaceTools::getIntersection( const std::list<cv::Rect>& boxes)
 {
     cv::Rect ibox(0,0,0,0);
-    const int nidxs = (int)boxes.size();
+    const size_t nidxs = boxes.size();
     assert( nidxs > 0);
     if ( nidxs > 0)
     {
@@ -386,7 +386,7 @@ cv::Rect FaceTools::getIntersection( const std::list<cv::Rect>& boxes)
 cv::Rect FaceTools::getUnion( const std::list<cv::Rect>& boxes)
 {
     cv::Rect ubox(0,0,0,0);
-    const int nidxs = (int)boxes.size();
+    const size_t nidxs = boxes.size();
     assert( nidxs > 0);
     if ( nidxs > 0)
     {
@@ -402,7 +402,7 @@ cv::Rect FaceTools::getUnion( const std::list<cv::Rect>& boxes)
 
 cv::Rect FaceTools::getMean( const std::list<cv::Rect>& boxes)
 {
-    const int nidxs = (int)boxes.size();
+    const size_t nidxs = boxes.size();
     assert( nidxs > 0);
     cv::Rect mbox = *boxes.begin();
     std::list<cv::Rect>::const_iterator i = boxes.begin();
@@ -416,10 +416,10 @@ cv::Rect FaceTools::getMean( const std::list<cv::Rect>& boxes)
         mbox.height += box.height;
     }   // end for
 
-    mbox.x = (int)cvRound( double(mbox.x) / nidxs);
-    mbox.y = (int)cvRound( double(mbox.y) / nidxs);
-    mbox.width = (int)cvRound( double(mbox.width) / nidxs);
-    mbox.height = (int)cvRound( double(mbox.height) / nidxs);
+    mbox.x = int(cvRound( double(mbox.x) / nidxs));
+    mbox.y = int(cvRound( double(mbox.y) / nidxs));
+    mbox.width = int(cvRound( double(mbox.width) / nidxs));
+    mbox.height = int(cvRound( double(mbox.height) / nidxs));
     return mbox;
 }   // end getMean
 
@@ -428,14 +428,14 @@ cv::RotatedRect FaceTools::createRotatedRect( const cv::Point& p0, const cv::Poi
 {
     const cv::Vec2f vec( p1.x - p0.x, p1.y - p0.y);
     const cv::Point2f centre = (p0 + p1) * 0.5;
-    const float angle = atan2f(vec[1], vec[0]);
-    return cv::RotatedRect( centre, sz, 180.0 * angle/CV_PI);   // Angle in degrees!
+    const double angle = atan2( double(vec[1]), double(vec[0]));
+    return cv::RotatedRect( centre, sz, float(180.0 * angle/CV_PI));   // Angle in degrees!
 }   // end createRotatedRect
 
 
 float FaceTools::calcAngleDegs( const cv::Point2f& p0, const cv::Point2f& p1)
 {
-    return atan2f( p1.y - p0.y, p1.x - p0.x) * 180.0f/CV_PI;
+    return atan2f( p1.y - p0.y, p1.x - p0.x) * 180.0f/float(CV_PI);
 }   // end calcAngleDegs
 
 
@@ -541,10 +541,10 @@ int FaceTools::growOut( const ObjModel* model, const cv::Vec3f& growVec, int vi)
 
 int FaceTools::toVector( const vtkSmartPointer<vtkIdList>& vlist, std::vector<int>& vs)
 {
-    const int n = vlist->GetNumberOfIds();
-    int j = (int)vs.size();
-    vs.resize( j + n);
+    const int n = int(vlist->GetNumberOfIds());
+    int j = int(vs.size());
+    vs.resize( size_t(j + n));
     for ( int i = 0; i < n; ++i, ++j)
-        vs[j] = vlist->GetId(i);
+        vs[size_t(j)] = int(vlist->GetId(i));
     return n;
 }   // end toVector

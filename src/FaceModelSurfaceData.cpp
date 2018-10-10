@@ -29,7 +29,7 @@ std::shared_ptr<FaceModelSurfaceData> FaceModelSurfaceData::s_ptr(nullptr);  // 
 FaceModelSurfaceData* FaceModelSurfaceData::get()
 {
     if ( !s_ptr)
-        s_ptr = std::shared_ptr<FaceModelSurfaceData>( new FaceModelSurfaceData, [](auto d){delete d;});
+        s_ptr = std::shared_ptr<FaceModelSurfaceData>( new FaceModelSurfaceData, [](FaceModelSurfaceData* d){delete d;});
     return s_ptr.get();
 }   // end get
 

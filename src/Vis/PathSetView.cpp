@@ -23,6 +23,7 @@ using FaceTools::Vis::PathView;
 using FaceTools::ModelViewer;
 using FaceTools::PathSet;
 using FaceTools::Path;
+using ViewPair = std::pair<int, PathView*>;
 
 
 // public
@@ -36,7 +37,7 @@ PathSetView::PathSetView( const PathSet::Ptr paths) : _paths(paths), _viewer(nul
 // public
 PathSetView::~PathSetView()
 {
-    std::for_each( std::begin(_views), std::end(_views), [](auto p){ delete p.second;});
+    std::for_each( std::begin(_views), std::end(_views), [](const ViewPair& p){ delete p.second;});
 }   // end dtor
 
 
@@ -51,7 +52,7 @@ void PathSetView::setVisible( bool enable, ModelViewer *viewer)
         showPath( false, *_visible.begin());
     _viewer = viewer;
     if ( enable && _viewer)
-        std::for_each( std::begin(_views), std::end(_views), [this](auto p){ this->showPath(true, p.first);});
+        std::for_each( std::begin(_views), std::end(_views), [this](const ViewPair& p){ this->showPath(true, p.first);});
 }   // end setVisible
 
 
@@ -144,14 +145,14 @@ void PathSetView::updatePath( int id)
 // public
 void PathSetView::pokeTransform( const vtkMatrix4x4* m)
 {
-    std::for_each( std::begin(_views), std::end(_views), [=](auto p){ p.second->pokeTransform(m);});
+    std::for_each( std::begin(_views), std::end(_views), [=](const ViewPair& p){ p.second->pokeTransform(m);});
 }   // end pokeTransform
 
 
 // public
 void PathSetView::fixTransform()
 {
-    std::for_each( std::begin(_views), std::end(_views), [=](auto p){ p.second->fixTransform();});
+    std::for_each( std::begin(_views), std::end(_views), [=](const ViewPair& p){ p.second->fixTransform();});
 }   // end fixTransform
 
 
@@ -159,7 +160,7 @@ void PathSetView::fixTransform()
 void PathSetView::refresh()
 {
     std::unordered_set<int> pids;   // Will be union of path IDs both currently visualised and not.
-    std::for_each( std::begin(_views), std::end(_views), [&](auto p){ pids.insert(p.first);});
+    std::for_each( std::begin(_views), std::end(_views), [&](const ViewPair& p){ pids.insert(p.first);});
     // Add the current path IDs in from the data
     std::for_each( std::begin(_paths->ids()), std::end(_paths->ids()), [&](int p){ pids.insert(p);});
     // Run updatePath for all pids

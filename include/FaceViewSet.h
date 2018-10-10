@@ -56,6 +56,7 @@ public:
 
     const FMS& models() const;          // Return the set of models from this set of FaceViews.
     FMVS dviewers() const;              // Return the viewers that this set's FaceViews are currently attached to.
+    void updateRenderers() const;       // Shortcut to call updateRender on the set of FMVs returned by dviewers.
 
     // Returns the FaceView that the prop belongs to or null if prop not associated with any FV in this set.
     // Currently does a linear lookup. TODO make hashable.

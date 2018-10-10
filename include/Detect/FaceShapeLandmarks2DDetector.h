@@ -27,23 +27,21 @@
 #include <Viewer.h> // RVTK
 #include <LandmarkSet.h>
 
-namespace FaceTools {
+namespace FaceTools {  namespace Detect {
 
-namespace Detect {
 class FaceTools_EXPORT FaceShapeLandmarks2DDetector
 {
 public:
+    // Try to initialise the detector from given file.
     static bool initialise( const std::string& faceShapeLandmarksDat);
-    static bool detect( RVTK::Viewer::Ptr, LandmarkSet::Ptr); 
+    static bool isinit();   // Returns true iff initialised.
 
-    // Returns the number of "detection" landmarks in the given set.
-    static size_t numDetectionLandmarks( const LandmarkSet::Ptr);
+    static bool detect( RVTK::Viewer::Ptr, const RFeatures::ObjModelKDTree*, Landmark::LandmarkSet&);
 
 private:
     static dlib::shape_predictor s_shapePredictor;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

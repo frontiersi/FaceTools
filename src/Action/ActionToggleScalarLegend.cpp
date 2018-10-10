@@ -16,12 +16,13 @@
  ************************************************************************/
 
 #include <ActionToggleScalarLegend.h>
+#include <SurfaceDataMapper.h>
 #include <FaceModelViewer.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionToggleScalarLegend;
 using FaceTools::Action::FaceAction;
-using FaceTools::Vis::ScalarMapping;
+using FaceTools::Vis::SurfaceDataMapper;
 using FaceTools::Vis::FV;
 using FaceTools::FMVS;
 using FaceTools::FMV;
@@ -43,22 +44,27 @@ bool ActionToggleScalarLegend::doAction( FVS&, const QPoint&)
 {
     if ( !isChecked())
     {
-        std::for_each( std::begin(_viewers), std::end(_viewers), [](auto v){ v->showLegend(false); v->updateRender();});
+        std::for_each( std::begin(_viewers), std::end(_viewers), [](FMV* v){ v->showLegend(false); v->updateRender();});
         return true;
     }   // end if
 
     for ( FMV *vwr : _viewers)
     {
-        ScalarMapping *scmap = nullptr;
+        SurfaceDataMapper *sdm = nullptr;
         for ( FV *fv : vwr->attached())
         {
-            if ( scmap = fv->activeScalars())
+            if ( (sdm = fv->activeSurface()))
                 break;
         }   // end for
 
-        if ( scmap)
-            vwr->setLegend( scmap->rangeName(), scmap->lookupTable().vtk());
-        vwr->showLegend( scmap != nullptr);
+        bool showLegend = false;
+        if ( sdm && sdm->isScalarMapping())
+        {
+            vwr->setLegend( sdm->label(), sdm->scalarLookupTable());
+            showLegend = true;
+        }   // end if
+
+        vwr->showLegend( showLegend);
         vwr->updateRender();
     }   // end for
     return true;

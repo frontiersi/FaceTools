@@ -26,6 +26,7 @@ using FaceTools::Action::FaceAction;
 using FaceTools::FVS;
 using FaceTools::Vis::FV;
 using FaceTools::FaceModel;
+using FaceTools::Landmark::LandmarkSet;
 
 
 ActionGetComponent::ActionGetComponent( const QString& dn, const QIcon& ico, QProgressBar* pb)
@@ -40,8 +41,8 @@ bool ActionGetComponent::testReady( const FV* fv)
 {
     const FaceModel* fm = fv->data();
     fm->lockForRead();
-    const FaceTools::LandmarkSet::Ptr lmks = fm->landmarks();
-    const bool rval = lmks->has( FaceTools::Landmarks::NASAL_TIP) && fm->info()->components().size() > 1;
+    const LandmarkSet::Ptr lmks = fm->landmarks();
+    const bool rval = lmks->hasCode( Landmark::PRN) && fm->info()->components().size() > 1;
     fm->unlock();
     return rval;
 }   // end testReady
@@ -55,15 +56,15 @@ bool ActionGetComponent::doAction( FVS& rset, const QPoint&)
     for ( FaceModel* fm : fms)
     {
         fm->lockForRead();
-        const FaceTools::LandmarkSet::Ptr lmks = fm->landmarks();
-        int svidx = fm->kdtree()->find( lmks->pos( FaceTools::Landmarks::NASAL_TIP));
+        const LandmarkSet::Ptr lmks = fm->landmarks();
+        int svidx = fm->kdtree()->find( *lmks->pos( Landmark::PRN));
 
         ObjModelInfo::Ptr info = fm->info();
         int fidx = *info->cmodel()->getFaceIds(svidx).begin();    // Get a polygon attached to this vertex
 
         // Find which of the components of the model has this polygon as a member
         int foundC = -1;
-        int nc = info->components().size();
+        int nc = int(info->components().size());
         for ( int c = 0; c < nc; ++c)
         {
             const IntSet* fids = info->components().componentPolygons(c);

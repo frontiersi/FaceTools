@@ -57,11 +57,11 @@ bool ActionOrientCameraToFace::doAction( FVS& fset, const QPoint&)
     fm->unlock();
 
     // Rotate the orientation about its up vector by the set amount.
-    RFeatures::Transformer transformer( _urads, on.up());
+    RFeatures::Transformer transformer( _urads, on.uvec());
     on.rotate( transformer.matrix());
 
     // Set the camera as needed.
-    fv->viewer()->setCamera( focus, on.norm(), on.up(), _distance);
+    fv->viewer()->setCamera( focus, on.nvec(), on.uvec(), _distance);
 
     return true;
 }   // end doAction

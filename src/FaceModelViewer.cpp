@@ -16,9 +16,12 @@
  ************************************************************************/
 
 #include <FaceModelViewer.h>
+#include <FaceModel.h>
 #include <FaceView.h>
+#include <algorithm>
 #include <cassert>
 using FaceTools::FaceModelViewer;
+using FaceTools::FVFlags;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
 
@@ -60,6 +63,45 @@ FV* FaceModelViewer::get( const FM* fm) const
         return nullptr;
     return _models.at(fm);
 }   // end get
+
+
+size_t FaceModelViewer::findOverlaps( FVFlags &olaps) const
+{
+    std::vector<FV*> fvs( _attached.begin(), _attached.end()); // Make ordered for comparison
+    const size_t n = fvs.size();
+
+    // Initialise all to false.
+    olaps.clear();
+    for ( size_t i = 0; i < n; ++i)
+        olaps[fvs[i]] = false;
+
+    size_t nol = 0;
+    for ( size_t i = 0; i < n; ++i)
+    {
+        FV* ifv = fvs[i];
+        for ( size_t j = i+1; j < n; ++j)
+        {
+            FV* jfv = fvs[j];
+            if ( ifv->data()->supersIntersect( *jfv->data()))
+            {
+                olaps[ifv] = olaps[jfv] = true;
+                nol++;
+            }   // end if
+        }   // end for
+    }   // end for
+
+    return nol;
+}   // end findOverlaps
+
+
+void FaceModelViewer::refreshOverlapOpacity( const FVFlags& olaps, double maxOpacityOnOverlap) const
+{
+    for ( FV* fv : _attached)
+    {
+        const double olapVal = std::min( fv->opacity(), maxOpacityOnOverlap);
+        fv->setOpacity( olaps.at(fv) ? olapVal : 1.0);
+    }   // end for
+}   // end refreshOpacity
 
 
 // protected

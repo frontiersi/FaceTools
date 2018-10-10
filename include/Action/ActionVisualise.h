@@ -37,9 +37,9 @@ public:
 
 protected slots:
     bool testReady( const Vis::FV*) override;
-    void tellReady( Vis::FV*, bool) override;   // Called whenever ready status changes
+    void tellReady( const Vis::FV*, bool) override;   // Called whenever ready status changes
     bool testEnabled( const QPoint*) const override;
-    bool testIfCheck( const Vis::FV *fc=nullptr) const override;
+    bool testIfCheck( const Vis::FV*) const override;
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(VIEW_CHANGE);}
     void purge( const FM*) override;

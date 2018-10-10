@@ -19,21 +19,13 @@
 #define FACE_TOOLS_PATH_SET_H
 
 #include "Path.h"
-#include <unordered_map>
-#include <memory>
 
 namespace FaceTools {
-
-class PathSet;
-
-FaceTools_EXPORT PTree& operator<<( PTree&, const PathSet&);        // Write out the set of paths
-FaceTools_EXPORT const PTree& operator>>( const PTree&, PathSet&); // Read in the set of paths
-
 
 class FaceTools_EXPORT PathSet
 {
 public:
-    typedef std::shared_ptr<PathSet> Ptr;
+    using Ptr = std::shared_ptr<PathSet>;
     static Ptr create();
 
     // Translates path endpoints to be incident with surface and recalculates the paths.
@@ -49,7 +41,7 @@ public:
     Path* path( int pathId);
     const Path* path( int pathId) const;
 
-    const std::unordered_set<int>& ids() const { return _ids;}
+    const IntSet& ids() const { return _ids;}
 
     // Set membership tests
     bool empty() const { return count() == 0;}
@@ -58,20 +50,20 @@ public:
 
     void transform( const cv::Matx44d&);
 
+    void write( PTree&);
+    bool read( const PTree&);
+
 private:
     int _sid;
     std::unordered_map<int, Path> _paths;   // IDs that map to paths
-    std::unordered_set<int> _ids;           // The IDs themselves
+    IntSet _ids;           // The IDs themselves
     int setPath( const Path&);
-    friend PTree& FaceTools::operator<<( PTree&, const PathSet&);
-    friend const PTree& FaceTools::operator>>( const PTree&, PathSet&);
 
     PathSet();
     ~PathSet();
-    PathSet( const PathSet&);           // No copy
-    void operator=( const PathSet&);    // No copy
+    PathSet( const PathSet&) = delete;
+    void operator=( const PathSet&) = delete;
 };  // end class
-
 
 }   // end namespace
 

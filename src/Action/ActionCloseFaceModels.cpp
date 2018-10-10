@@ -44,7 +44,7 @@ bool ActionCloseFaceModels::doBeforeAction( FVS& fvs, const QPoint&)
 
         // If FaceModel hasn't been saved and the user doesn't want to close it (after prompting), remove from action set.
         bool doclose = false;
-        if ( fm->isSaved() && ( inPreferredFormat || !fm->hasMetaData()))
+        if ( fm->isSaved())
             doclose = true;
         else
         {

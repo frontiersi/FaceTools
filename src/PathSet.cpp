@@ -20,11 +20,11 @@
 #include <Transformer.h>    // RFeatures
 using FaceTools::PathSet;
 using FaceTools::Path;
+using PathPair = std::pair<int, Path>;
 
-// public
 PathSet::Ptr PathSet::create()
 {
-    return Ptr( new PathSet, [](auto d){delete d;});
+    return Ptr( new PathSet, [](PathSet* d){delete d;});
 }   // end create
 
 
@@ -35,10 +35,10 @@ PathSet::PathSet() : _sid(0) {}
 PathSet::~PathSet(){}
 
 
-// public
 void PathSet::recalculate( RFeatures::ObjModelKDTree::Ptr kdt)
 {
-    std::for_each( std::begin(_paths), std::end(_paths), [&](auto& p){ p.second.recalculate( kdt);});
+    for ( auto& p : _paths)
+        p.second.recalculate(kdt);
 }   // end calculate
 
 
@@ -51,11 +51,9 @@ int PathSet::setPath( const Path& path)
 }   // end setPath
 
 
-// public
 int PathSet::addPath( const cv::Vec3f& v) { return setPath( Path( _sid++, v));}
 
 
-// public
 bool PathSet::removePath( int id)
 {
     if ( _ids.count(id) == 0)
@@ -66,7 +64,6 @@ bool PathSet::removePath( int id)
 }   // end removePath
 
 
-// public
 Path* PathSet::path( int pid)
 {
     if ( !has(pid))
@@ -75,7 +72,6 @@ Path* PathSet::path( int pid)
 }   // end path
 
 
-// public
 const Path* PathSet::path( int pid) const
 {
     if ( !has(pid))
@@ -84,7 +80,6 @@ const Path* PathSet::path( int pid) const
 }   // end path
 
 
-// public
 void PathSet::transform( const cv::Matx44d& T)
 {
     const RFeatures::Transformer mover(T);
@@ -96,30 +91,21 @@ void PathSet::transform( const cv::Matx44d& T)
 }   // end transform
 
 
-PTree& FaceTools::operator<<( PTree& record, const PathSet& ps)
+void PathSet::write( PTree& pathsNode)
 {
-    PTree& pathsNode = record.put("paths","");
-    std::for_each( std::begin(ps._paths), std::end(ps._paths), [&](const auto& p){ pathsNode << p.second;});
-    return record;
+    std::for_each( std::begin(_paths), std::end(_paths), [&](const PathPair& p){ pathsNode << p.second;});
 }   // end operator<<
 
 
-const PTree& FaceTools::operator>>( const PTree& record, PathSet& ps)
+bool PathSet::read( const PTree& pathsNode)
 {
-    if ( record.count("paths") == 0)
-    {
-        std::cerr << "[WARNING] FaceTools::operator>> (PathSet) : \"paths\" child not found in record - skipping!" << std::endl;
-        return record;
-    }   // end if
-
-    const PTree& pathsNode = record.get_child("paths");
     for ( const PTree::value_type& lvt : pathsNode)
     {
         Path path;
         lvt.second >> path;
-        path.id = ps._sid++;
-        ps.setPath(path);
+        path.id = _sid++;
+        setPath(path);
     }   // end for
-    return record;
+    return true;
 }   // end operator>>
 

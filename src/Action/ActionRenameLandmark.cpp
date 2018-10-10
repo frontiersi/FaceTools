@@ -61,7 +61,7 @@ bool ActionRenameLandmark::doAction( FVS& fvs, const QPoint&)
 
     FM* fm = fv->data();
     //fm->lockForWrite();
-    QString clabel = fm->landmarks()->get(id)->name.c_str();
+    QString clabel = fm->landmarks()->get(id)->name();
 
     QString nlabel;
     while ( true)
@@ -86,7 +86,7 @@ bool ActionRenameLandmark::doAction( FVS& fvs, const QPoint&)
 
     if ( !nlabel.isEmpty())
     {
-        fm->landmarks()->get(id)->name = nlabel.toStdString();
+        fm->landmarks()->get(id)->setName( nlabel);
         fm->setSaved(false);
         fvs.insert(fm);
     }   // end if

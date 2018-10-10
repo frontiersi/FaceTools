@@ -27,8 +27,7 @@
 #include "FaceModelFileHandlerMap.h"
 #include "LoadFaceModelsHelper.h"
 
-namespace FaceTools {
-namespace FileIO {
+namespace FaceTools { namespace FileIO {
 
 class FaceTools_EXPORT FaceModelManager
 {
@@ -74,7 +73,7 @@ public:
     const std::string& error() const { return _err;}
 
     // Return the filepath for the model.
-    const std::string& filepath( FM*) const;
+    const std::string& filepath( const FM*) const;
 
     // Return the open model for the given filepath or null if not open.
     FM* model( const std::string&) const;
@@ -105,7 +104,6 @@ private:
     void operator=( const FaceModelManager&) = delete;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

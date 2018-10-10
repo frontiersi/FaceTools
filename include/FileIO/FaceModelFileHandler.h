@@ -31,6 +31,7 @@ public:
     // Must implement FaceModelFileHandlerInterface::getFileDescription
     // Must implement FaceModelFileHandlerInterface::getFileExtensions
     // Must implement FaceModelFileHandlerInterface::error
+    double version() const override { return 0;}
 
     bool canRead() const override { return false;}
     bool canWrite() const override { return false;}
@@ -40,11 +41,10 @@ public:
     bool write( const FaceModel*, const QString& filepath) override;  // Must override if canWrite overridden to true
 
 private:
-    FaceModelFileHandler( const FaceModelFileHandler&); // No copy
-    void operator=( const FaceModelFileHandler&);       // No copy
+    FaceModelFileHandler( const FaceModelFileHandler&) = delete;
+    void operator=( const FaceModelFileHandler&) = delete;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

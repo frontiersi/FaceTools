@@ -25,6 +25,7 @@ using FaceTools::Action::FaceAction;
 using FaceTools::FaceModelViewer;
 using FaceTools::Interactor::ModelMoveInteractor;
 using FaceTools::FVS;
+using CW = FaceTools::Action::CameraWorker;
 
 
 // public
@@ -41,7 +42,7 @@ ActionMarquee::ActionMarquee( const QString& dn, const QIcon& ico, ModelMoveInte
 
 ActionMarquee::~ActionMarquee()
 {
-    std::for_each( std::begin(_workers), std::end(_workers), [](auto cw){delete cw;});
+    std::for_each( std::begin(_workers), std::end(_workers), [](CW* cw){delete cw;});
 }   // end dtor
 
 
@@ -54,8 +55,8 @@ void ActionMarquee::addViewer( FaceModelViewer* v)
 bool ActionMarquee::doAction( FVS&, const QPoint&)
 {
     if ( isChecked())
-        std::for_each( std::begin(_workers), std::end(_workers), [](auto cw){cw->start();});
+        std::for_each( std::begin(_workers), std::end(_workers), [](CW* cw){cw->start();});
     else
-        std::for_each( std::begin(_workers), std::end(_workers), [](auto cw){cw->stop();});
+        std::for_each( std::begin(_workers), std::end(_workers), [](CW* cw){cw->stop();});
     return true;
 }   // end doAction

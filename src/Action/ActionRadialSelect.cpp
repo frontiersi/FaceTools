@@ -29,6 +29,7 @@ using FaceTools::Action::ActionVisualise;
 using FaceTools::Vis::LoopSelectVisualisation;
 using FaceTools::Interactor::RadialSelectInteractor;
 using FaceTools::Interactor::MEEI;
+using FaceTools::Landmark::LandmarkSet;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
 using FaceTools::FM;
@@ -45,8 +46,8 @@ ActionRadialSelect::ActionRadialSelect( const QString& dn, const QIcon& ico, MEE
     // Since this is an ActionVisualise, GEOMETRY_CHANGE events will cause everything to be purged.
     // In the case of an AFFINE_CHANGE though, we only need to adjust the centre of the region selector
     // since the boundary is defined in terms of vertex indices.
-    connect( meei, &MEEI::onEnterModel, [=](auto fv){ this->testSetEnabled( &meei->viewer()->mouseCoords());});
-    connect( meei, &MEEI::onLeaveModel, [this](auto fv){ this->testSetEnabled( nullptr);});
+    connect( meei, &MEEI::onEnterModel, [=](){ this->testSetEnabled( &meei->viewer()->mouseCoords());});
+    connect( meei, &MEEI::onLeaveModel, [this](){ this->testSetEnabled( nullptr);});
 
     connect( _interactor, &RadialSelectInteractor::onIncreaseRadius, this, &ActionRadialSelect::doOnIncreaseRadius);
     connect( _interactor, &RadialSelectInteractor::onDecreaseRadius, this, &ActionRadialSelect::doOnDecreaseRadius);
@@ -109,8 +110,8 @@ bool ActionRadialSelect::doAction( FVS& fvs, const QPoint& mc)
     {
         fm->lockForRead();
         const LandmarkSet::Ptr lmks = fm->landmarks();
-        if ( lmks->has( FaceTools::Landmarks::NASAL_TIP))
-            cpos = lmks->pos( FaceTools::Landmarks::NASAL_TIP);
+        if ( lmks->hasCode( Landmark::PRN))
+            cpos = *lmks->pos( Landmark::PRN);
         fm->unlock();
     }   // end if
 

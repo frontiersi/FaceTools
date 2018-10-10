@@ -22,6 +22,7 @@
 #include <algorithm>
 using FaceTools::ModelViewerAnnotator;
 
+
 struct ModelViewerAnnotator::Message
 {
     Message( float cp, float rp, const std::string& txt, ModelViewerAnnotator::TextJustification justification, vtkRenderer* r)
@@ -52,8 +53,8 @@ struct ModelViewerAnnotator::Message
 
     void setInDisplay()
     {
-        const int col = (int)(ren->GetSize()[0] * colProp);
-        const int row = (int)(ren->GetSize()[1] * rowProp);
+        const int col = int(ren->GetSize()[0] * colProp);
+        const int row = int(ren->GetSize()[1] * rowProp);
         msg->SetDisplayPosition( col, row);
     }   // end setInDisplay
 
@@ -73,7 +74,7 @@ ModelViewerAnnotator::ModelViewerAnnotator( vtkRenderer* ren)
 // public
 ModelViewerAnnotator::~ModelViewerAnnotator()
 {
-    std::for_each(std::begin(_messages), std::end(_messages), []( const auto& mp){ delete mp.second;});
+    std::for_each(std::begin(_messages), std::end(_messages), []( const MessagePair& mp){ delete mp.second;});
     _messages.clear();
 }   // end dtor
 
@@ -103,6 +104,5 @@ bool ModelViewerAnnotator::removeMessage( int msgID)
 // public
 void ModelViewerAnnotator::doOnUpdateMessagePositions()
 {
-    std::for_each(std::begin(_messages), std::end(_messages), []( auto& m){ m.second->setInDisplay();});
+    std::for_each(std::begin(_messages), std::end(_messages), []( const MessagePair& m){ m.second->setInDisplay();});
 }   // end doOnUpdateMessagePositions
-

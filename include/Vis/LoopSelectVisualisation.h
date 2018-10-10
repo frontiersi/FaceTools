@@ -42,7 +42,7 @@ public:
 
     void copy( FV* dst, const FV* src) override;
     void apply( FV*, const QPoint* mc=nullptr) override;
-    void remove( FV*) override;
+    void clear( FV*) override;
 
     // Set pickability for the sphereView on the associated view (if it exists).
     void setPickable( const FV*, bool);
@@ -57,11 +57,12 @@ public:
     void pokeTransform( const FV*, const vtkMatrix4x4*) override;
     void fixTransform( const FV*) override;
 
+    void purge( FV*) override;
+
 private:
     double _srad;
     std::unordered_map<const FV*, LoopsView*>  _lviews;
     std::unordered_map<const FV*, SphereView*> _sviews;
-    void purge( FV*) override;
 };  // end class
 
 }   // end namespace

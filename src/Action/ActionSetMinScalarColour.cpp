@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <ActionSetMinScalarColour.h>
+#include <SurfaceDataMapper.h>
 #include <FaceView.h>
 #include <QColorDialog>
 #include <algorithm>
@@ -23,33 +24,37 @@ using FaceTools::Action::ActionSetMinScalarColour;
 using FaceTools::Action::FaceAction;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
-using FaceTools::Vis::ScalarMapping;
+using SDM = FaceTools::Vis::SurfaceDataMapper;
 
 
 ActionSetMinScalarColour::ActionSetMinScalarColour( const QString& dname, QWidget* parent)
     : FaceAction( dname), _parent(parent)
 {
-    setIconColour( QColor(180,0,0));
+    setIconColour( QColor(0,0,255));
 }   // end ctor
 
 
-void ActionSetMinScalarColour::tellReady( FV* fv, bool v)
+void ActionSetMinScalarColour::tellReady( const FV* fv, bool v)
 {
     if ( v)
     {
-        ScalarMapping* scmap = fv->activeScalars();
-        if ( scmap)
-            setIconColour( scmap->minColour());
+        SDM* sdm = fv->activeSurface();
+        if ( sdm)
+            setIconColour( sdm->minColour());
     }   // end if
 }   // end tellReady
 
 
-bool ActionSetMinScalarColour::testReady( const FV* fv) { return fv->activeScalars() != nullptr;}
+bool ActionSetMinScalarColour::testReady( const FV* fv)
+{
+    SDM* sdm = fv->activeSurface();
+    return sdm && sdm->isScalarMapping();
+}   // end testReady
 
 
 bool ActionSetMinScalarColour::doBeforeAction( FVS&, const QPoint&)
 {
-    QColor c = QColorDialog::getColor( _curColour, _parent, "Choose new minimum scalar colour");
+    QColor c = QColorDialog::getColor( _curColour, _parent, "Choose new minimum surface mapping colour");
     if ( c.isValid())
         setIconColour( c);
     return c.isValid();
@@ -58,16 +63,15 @@ bool ActionSetMinScalarColour::doBeforeAction( FVS&, const QPoint&)
 
 bool ActionSetMinScalarColour::doAction( FVS& fvs, const QPoint&)
 {
-    std::unordered_set<ScalarMapping*> scmaps;
+    std::unordered_set<SDM*> sdms;
     for ( FV* fv : fvs)
     {
-        ScalarMapping* scmap = fv->activeScalars();
-        assert(scmap);
-        scmap->setMinColour( _curColour);
-        scmaps.insert(scmap);
+        SDM* sdm = fv->activeSurface();
+        assert(sdm);
+        sdm->setMinColour( _curColour);
+        sdms.insert(sdm);
     }   // end for
-
-    std::for_each( std::begin(scmaps), std::end(scmaps), []( auto sc){ sc->rebuild();});
+    std::for_each( std::begin(sdms), std::end(sdms), [](SDM* sdm){ sdm->rebuild();});
     return true;
 }   // end doAction
 

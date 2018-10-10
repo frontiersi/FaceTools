@@ -33,7 +33,7 @@ public:
     bool loadModel( const QString& filepath);
 
 protected slots:
-    bool testEnabled( const QPoint* mc=nullptr) const override { return !_loadHelper->reachedLoadLimit();}
+    bool testEnabled( const QPoint*) const override { return !_loadHelper->reachedLoadLimit();}
     bool doBeforeAction( FVS&, const QPoint&) override;
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet&, const FVS&, bool) override;

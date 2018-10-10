@@ -43,7 +43,7 @@ if(WITH_TINYXML)
 endif()
 
 if(WITH_BOOST)
-    target_link_libraries( ${PROJECT_NAME} Boost::regex Boost::system Boost::filesystem Boost::thread Boost::random)
+    target_link_libraries( ${PROJECT_NAME} Boost::system Boost::filesystem Boost::regex Boost::random Boost::thread)
 endif()
 
 if(WITH_OPENCV)

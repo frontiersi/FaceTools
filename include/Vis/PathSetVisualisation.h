@@ -38,7 +38,7 @@ public:
     bool isAvailable( const FM*) const override;
 
     void apply( FV*, const QPoint* mc=nullptr) override;
-    void remove( FV*) override;
+    void clear( FV*) override;
 
     // Creates and shows the given path across all FaceViews for the FaceModel.
     void addPath( const FM*, int pathId);
@@ -68,15 +68,16 @@ public:
     void pokeTransform( const FV*, const vtkMatrix4x4*) override;
     void fixTransform( const FV*) override;
 
+    void purge( FV*) override;
+
     static std::string CAPTION_LENGTH_METRIC;   // Defaults to "mm"
 
 private:
     // The paths associated with a FV.
     std::unordered_map<const FV*, PathSetView*> _views;
-    vtkSmartPointer<vtkCaptionActor2D> _caption; // Shared between all
-    vtkSmartPointer<vtkTextActor> _text;         // Shared between all
+    vtkCaptionActor2D* _caption; // Shared between all
+    vtkTextActor* _text;         // Shared between all
     bool hasView( const FV*) const;
-    void purge( FV*) override;
 };  // end class
 
 }   // end namespace

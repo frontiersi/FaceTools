@@ -22,7 +22,6 @@
 #include <VtkActorViewer.h> // QTools
 #include <ScalarLegend.h>   // RVTK
 #include <Axes.h>           // RVTK
-//#include <ObjModel.h>       // RFeatures
 #include <CameraParams.h>   // RFeatures
 #include <QColor>
 #include <unordered_map>
@@ -145,6 +144,7 @@ public:
 
     vtkRenderer* getRenderer() { return _qviewer->getRenderer();}
     const vtkRenderer* getRenderer() const { return _qviewer->getRenderer();}
+    vtkRenderWindow* getRenderWindow() { return _qviewer->getRenderWindow();}
     const vtkRenderWindow* getRenderWindow() const { return _qviewer->getRenderWindow();}
 
     void setCursor( QCursor);

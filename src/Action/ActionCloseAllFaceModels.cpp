@@ -39,7 +39,7 @@ bool ActionCloseAllFaceModels::doBeforeAction( FVS& fvs, const QPoint&)
     for ( FM* fm : models)
     {
         fm->lockForRead();
-        if ( !fm->isSaved() || (!_fmm->hasPreferredFileFormat(fm) && fm->hasMetaData()))
+        if ( !fm->isSaved())
             doshowmsg = true;
         fm->unlock();
         if ( doshowmsg)

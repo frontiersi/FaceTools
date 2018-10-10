@@ -87,7 +87,7 @@ FaceViewSet FaceViewSet::operator()( const FM* fm) const
     if ( has(fm))
     {
         const std::unordered_set<FV*>& ifvs = _fmm.at(fm);
-        std::for_each( std::begin(ifvs), std::end(ifvs), [&](auto fv){ fvs.insert(fv);});
+        std::for_each( std::begin(ifvs), std::end(ifvs), [&](FV* fv){ fvs.insert(fv);});
     }   // end if
     return fvs;
 }   // end operator()
@@ -226,10 +226,18 @@ const FMS& FaceViewSet::models() const { return _fms;}
 FMVS FaceViewSet::dviewers() const
 {
     FMVS viewers;
-    std::for_each( std::begin(_fvs), std::end(_fvs), [&](auto fv){ viewers.insert(fv->viewer());});
+    std::for_each( std::begin(_fvs), std::end(_fvs), [&](FV* fv){ viewers.insert(fv->viewer());});
     viewers.erase(nullptr);    // Ensure no null entries (though there shouldn't be any).
     return viewers;
 }   // end dviewers
+
+
+// public
+void FaceViewSet::updateRenderers() const
+{
+    FMVS vwrs = dviewers();
+    std::for_each( std::begin(vwrs), std::end(vwrs), [](FMV *v){ v->updateRender();});
+}   // end updateRenderers
 
 
 // public

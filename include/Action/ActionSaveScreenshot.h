@@ -35,13 +35,13 @@ public:
     // If no viewers are added, screenshots are saved from viewers of the FVS passed in to doAction.
     ActionSaveScreenshot( const QString& dname, const QIcon& icon, FMV* mv=nullptr);
 
-    void addViewer( FMV* v) { _viewers.insert(v);}
+    void addViewer( FMV* v) { _viewers.push_back(v);}
    
 public slots:
     bool doAction( FVS&, const QPoint&) override;
 
 private:
-    FMVS _viewers;
+    std::vector<FMV*> _viewers;
 };  // end class
 
 }   // end namespace

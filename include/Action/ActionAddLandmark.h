@@ -20,8 +20,7 @@
 
 #include "ActionEditLandmarks.h"
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionAddLandmark : public FaceAction
 { Q_OBJECT
@@ -32,7 +31,7 @@ protected slots:
     bool testEnabled( const QPoint* mc=nullptr) const override;
     bool doBeforeAction( FVS&, const QPoint&) override;
     bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(LANDMARKS_CHANGE);}
+    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(LANDMARKS_ADD);}
 
 private:
     ActionEditLandmarks *_editor;
@@ -40,7 +39,6 @@ private:
     std::string _nname;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif
