@@ -37,9 +37,6 @@ public:
     // with the distance formula rng * e/d.
     FaceOrientationDetector( const RFeatures::ObjModelKDTree::Ptr kdt, float rng=700.0f, float d=0.30f);
 
-    // Initially with camera position at 0,0,1000 with up vector 0,1,0 and focus 0,0,0,
-    // after calling orient, the camera will be shifted to show the face in an upright pose
-    // a standardised distance from the face.
     RVTK::Viewer::Ptr offscreenViewer() const { return _vwr;}
 
     // Orient the camera in the offscreen viewer to position the face in an

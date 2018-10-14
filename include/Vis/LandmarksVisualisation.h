@@ -43,14 +43,16 @@ public:
     void setLandmarkVisible( const FM*, int, bool);
 
     // Set highlighted or not the given landmark for the given FM.
-    void setLandmarkHighlighted( const FM*, int, bool);
+    void setLandmarkHighlighted( const FM*, int, FaceLateral, bool);
+
+    // Set/update the view of the given landmark.
+    void updateLandmark( const FM*, int);
+
+    void refreshLandmarks( const FM*);
 
     // Return ID of landmark if given prop is for a landmark or -1 if not.
     // On return of >= 0, lat is set to the face lateral that the landmark appears.
     int landmarkId( const FV*, const vtkProp*, FaceLateral& lat) const;
-
-    // Refresh visualisation of landmarks for the given FaceModel.
-    //void refresh( const FM*);
 
     void pokeTransform( const FV*, const vtkMatrix4x4*) override;
     void fixTransform( const FV*) override;

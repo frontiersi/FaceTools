@@ -172,8 +172,8 @@ FM* FaceModelXMLFileHandler::read( const QString& sfname)
         boost::property_tree::read_xml( ifs, tree);
 
         const PTree& faces = tree.get_child( "faces");
-        _fversion = faces.get<double>( "<xmlattr>.version");
-        if ( _fversion < XML_VERSION)
+        _fversion = QString(faces.get<std::string>( "<xmlattr>.version").c_str()).toDouble();
+        if ( _fversion < QString( XML_VERSION.c_str()).toDouble())
             std::cerr << "[WARNING] FaceTools::FileIO::FaceModelXMLFileHandler::read: Lower version of XML file being read!" << std::endl;
 
         const std::string filedesc = faces.get<std::string>( "description");
@@ -314,7 +314,7 @@ bool FaceModelXMLFileHandler::write( const FM* fm, const QString& sfname)
 
         // Export jpeg thumbnail of model.
         const std::string thumbfile = boost::filesystem::path(xmlfile).replace_extension( "jpg").string();
-        cv::Mat img = fm->thumbnail(128);   // Generate thumbnail
+        cv::Mat img = fm->thumbnail(256);   // Generate thumbnail
         cv::imwrite( thumbfile, img);
 
         PTree tree;

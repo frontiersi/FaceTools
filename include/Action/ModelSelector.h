@@ -18,57 +18,47 @@
 #ifndef FACE_TOOLS_MODEL_SELECTOR_H
 #define FACE_TOOLS_MODEL_SELECTOR_H
 
-/**
- * Handles FaceView selections programmatically and via internal interactor.
- */
-
 #include <FaceModelViewer.h>
 #include <ModelSelectInteractor.h>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
+
 class FaceActionManager;
 
-class FaceTools_EXPORT ModelSelector : public QObject
-{ Q_OBJECT
+class FaceTools_EXPORT ModelSelector
+{
 public:
-    Interactor::ModelSelectInteractor* interactor() { return &_interactor;}
+    using Ptr = std::shared_ptr<ModelSelector>;
 
-    Vis::FV* selected() const { return _interactor.selected();}
-    const FVS& available() const { return _interactor.available();}
+    static void create( FaceActionManager*, FMV*);
+
+    static FMV* viewer();   // The currently selected viewer
+    static Vis::FV* selected() { return _me->_msi.selected();}
+    static const FVS& available() { return _me->_msi.available();}
 
     // Create a new FaceView instances and attach it to the given viewer.
     // If given viewer is null, FaceView added to currently selected viewer.
     // Returned FaceView is NOT automatically selected.
-    Vis::FV* addFaceView( FM*, FaceModelViewer *v=nullptr);
-
-    // Detach the FaceView from its viewer and delete it.
-    void removeFaceView( Vis::FV*);
-
-    // Call removeFaceView for ALL associated FaceViews of the given FaceModel.
-    void remove( FM*);
+    static Vis::FV* addFaceView( FM*, FMV *v=nullptr);
 
     // Programmatically select/deselect the given FaceView.
-    void setSelected( Vis::FV*, bool);
+    static void setSelected( Vis::FV*, bool);
 
-signals:
-    void onSelected( Vis::FV*, bool);
+    static void setSelectEnabled( bool);
 
-private slots:
-    // Set the selected FaceView to be the one on the given viewer having
-    // the same FaceModel as the currently selected FaceView. Does nothing
-    // if there's no FaceView on the given viewer with the same FaceModel as
-    // the currently selected (or if there's no currently selected FaceView).
-    void doSwitchSelectedToViewer( ModelViewer*);
+    // Detach the FaceView from its viewer and delete it.
+    static void removeFaceView( Vis::FV*);
+
+    // Call removeFaceView for ALL associated FaceViews of the given FaceModel.
+    static void remove( FM*);
 
 private:
-    Interactor::ModelSelectInteractor _interactor;
-    explicit ModelSelector( FaceModelViewer* defaultViewer);
-    ~ModelSelector() override;
-    friend class FaceActionManager;
+    static ModelSelector::Ptr _me;
+    Interactor::ModelSelectInteractor _msi;
+    ModelSelector( FaceActionManager*, FMV*);
+    virtual ~ModelSelector();
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

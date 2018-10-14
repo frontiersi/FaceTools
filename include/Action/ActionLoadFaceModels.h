@@ -21,28 +21,26 @@
 #include "FaceAction.h"
 #include <LoadFaceModelsHelper.h>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionLoadFaceModels : public FaceAction
 { Q_OBJECT
 public:
-    ActionLoadFaceModels( const QString& dname, const QIcon& icon, const QKeySequence& keys, FileIO::LoadFaceModelsHelper*);
+    ActionLoadFaceModels( const QString& dname, const QIcon& icon, QWidget* parent=nullptr);
 
-    // Load a single model returning true on success.
-    bool loadModel( const QString& filepath);
+    // Load a single model returning the associated FaceView on success or null on failure.
+    Vis::FV* loadModel( const QString& filepath);
 
 protected slots:
-    bool testEnabled( const QPoint*) const override { return !_loadHelper->reachedLoadLimit();}
+    bool testEnabled( const QPoint*) const override;
     bool doBeforeAction( FVS&, const QPoint&) override;
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet&, const FVS&, bool) override;
 
 private:
-    FileIO::LoadFaceModelsHelper *_loadHelper;
+    FileIO::LoadFaceModelsHelper _loadHelper;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

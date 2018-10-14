@@ -23,6 +23,7 @@ using FaceTools::Metric::InterlandmarkMetricCalculatorType;
 using FaceTools::Metric::MCTI;
 using FaceTools::Landmark::LandmarkSet;
 using FaceTools::FM;
+using FaceTools::FaceLateral;
 
 
 InterlandmarkMetricCalculatorType::InterlandmarkMetricCalculatorType()
@@ -31,7 +32,7 @@ InterlandmarkMetricCalculatorType::InterlandmarkMetricCalculatorType()
 
 // private
 InterlandmarkMetricCalculatorType::InterlandmarkMetricCalculatorType( int lA, int lB, bool b)
-    : _id(-1), _bilat(b), _lA(lA), _lB(lB), _edv( -1, _lA, _lB, b), _ndps(0)
+    : _id(-1), _bilat(b), _lA(lA), _lB(lB), _edv( -1, lA, lB, b), _ndps(0)
 {
 }   // end ctor
 
@@ -45,19 +46,24 @@ std::string InterlandmarkMetricCalculatorType::params() const
 MCTI::Ptr InterlandmarkMetricCalculatorType::fromParams( const std::string& prms) const
 {
     std::istringstream iss(prms);
-    int lA, lB;
-    iss >> lA;
-    lB = lA;
+    std::string cA, cB;
+    iss >> cA;
+    cB = cA;
     if ( iss.good())
-        iss >> lB;
-    if ( LDMKS_MAN::ids().count(lA) == 0 || LDMKS_MAN::ids().count(lA) == 0)
-        return nullptr;
+        iss >> cB;
 
-    FaceTools::Landmark::Landmark* lmkA = LDMKS_MAN::landmark(lA);
-    FaceTools::Landmark::Landmark* lmkB = LDMKS_MAN::landmark(lB);
+    if ( !LDMKS_MAN::hasCode(cA.c_str()) || !LDMKS_MAN::hasCode(cB.c_str()))
+    {
+        std::cerr << "[WARNING] FaceTools::Metric::InterlandmarkMetricCalculatorType::fromParams: "
+                  << "Landmarks " << cA << " and/or " << cB << " not found!" << std::endl;
+        return nullptr;
+    }   // end if
+
+    FaceTools::Landmark::Landmark* lmkA = LDMKS_MAN::landmark(cA.c_str());
+    FaceTools::Landmark::Landmark* lmkB = LDMKS_MAN::landmark(cB.c_str());
 
     // Non-bilateral landmarks CANNOT be the same since this denotes a point.
-    if ( lA == lB && !lmkA->isBilateral() && !lmkB->isBilateral())
+    if ( lmkA == lmkB && !lmkA->isBilateral() && !lmkB->isBilateral())
     {
         std::cerr << "[WARNING] FaceTools::Metric::InterlandmarkMetricCalculatorType::fromParams: "
                   << "Cannot create interlandmark distance calculator for landmark if it's non-bilateral!" << std::endl;
@@ -65,8 +71,8 @@ MCTI::Ptr InterlandmarkMetricCalculatorType::fromParams( const std::string& prms
     }   // end if
 
     // If lA and lB are the same, the measurement cannot be bilateral even if the landmarks are.
-    const bool bilat = (lA != lB) && (lmkA->isBilateral() || lmkB->isBilateral());
-    return MCTI::Ptr( new InterlandmarkMetricCalculatorType( lA, lB, bilat));
+    const bool bilat = (lmkA != lmkB) && (lmkA->isBilateral() || lmkB->isBilateral());
+    return MCTI::Ptr( new InterlandmarkMetricCalculatorType( lmkA->id(), lmkB->id(), bilat));
 }   // end fromParams
 
 
@@ -75,7 +81,7 @@ void InterlandmarkMetricCalculatorType::setName( const std::string& nm) { _name 
 void InterlandmarkMetricCalculatorType::setDescription( const std::string& ds) { _desc = ds;}
 void InterlandmarkMetricCalculatorType::setSource( const std::string& s) { _source = s;}
 void InterlandmarkMetricCalculatorType::setEthnicities( const std::string& d) { _ethnicities = d;}
-void InterlandmarkMetricCalculatorType::setSex( Sex s) { _sex = s;}
+void InterlandmarkMetricCalculatorType::setSex( FaceTools::Sex s) { _sex = s;}
 void InterlandmarkMetricCalculatorType::setNumDecimals( size_t ndps) { _ndps = ndps;}
 void InterlandmarkMetricCalculatorType::setRSD( size_t, rlib::RSD::Ptr rsd) { _rsd = rsd;}
 

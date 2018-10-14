@@ -30,6 +30,9 @@
 # VIM backup files
 *~
 
+# QtCreator file
+CMakeLists.txt.user
+
 shape_predictor_68_face_landmarks.dat
 
 todo/

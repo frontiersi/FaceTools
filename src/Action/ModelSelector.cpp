@@ -17,48 +17,71 @@
 
 #include <ModelSelector.h>
 #include <BoundingVisualisation.h>
+#include <FaceActionManager.h>
 #include <FaceModelViewer.h>
 #include <FaceView.h>
 #include <FaceModel.h>
 using FaceTools::Action::ModelSelector;
+using FaceTools::Action::FaceActionManager;
 using FaceTools::Interactor::ModelSelectInteractor;
-using FaceTools::FMV;
 using FaceTools::ModelViewer;
 using FaceTools::Vis::FV;
+using FaceTools::FMV;
 using FaceTools::FMS;
 using FaceTools::FM;
 
-// private
-ModelSelector::ModelSelector( FMV *viewer)
+ModelSelector::Ptr ModelSelector::_me;
+
+
+void ModelSelector::create( FaceActionManager* fam, FMV* viewer)
 {
-    _interactor.setViewer(viewer);
-    connect( &_interactor, &ModelSelectInteractor::onSelected, this, &ModelSelector::onSelected);
+    assert(!_me);
+    _me = Ptr( new ModelSelector( fam, viewer), [](ModelSelector* d) { delete d;});
+}   // end me
+
+
+// private
+ModelSelector::ModelSelector( FaceActionManager* fam, FMV *viewer)
+{
+    _msi.setViewer(viewer);
+    QObject::connect( &_msi, &ModelSelectInteractor::onSelected, fam, &FaceActionManager::doOnSelected);
 }   // end ctor
 
 
 // private
 ModelSelector::~ModelSelector()
 {
-    FMS fms = _interactor.available().models();  // Copy out
+    FMS fms = _msi.available().models();  // Copy out
     std::for_each( std::begin(fms), std::end(fms), [this](FM* fm){ this->remove(fm);});
 }   // end dtor
 
+FMV* ModelSelector::viewer() { return static_cast<FMV*>(_me->_msi.viewer());}
 
-// public
 FV* ModelSelector::addFaceView( FM* fm, FMV* tv)
 {
+    if ( !_me)
+    {
+        std::cerr << "[ERROR] FaceTools::Action::ModelSelector::addFaceView: ModelSelector instance not yet created!" << std::endl;
+        return nullptr;
+    }   // end if
+
     if ( !tv)
-        tv = static_cast<FMV*>(_interactor.viewer());
+        tv = static_cast<FMV*>(_me->_msi.viewer());
     FV* fv = new FV( fm, tv); // Attaches the viewer and creates the base models (calls FaceView::reset)
-    _interactor.add(fv);    // Does NOT cause onSelected(fv, true) to fire
+    _me->_msi.add(fv);    // Does NOT cause onSelected(fv, true) to fire
     return fv;
 }   // end addFaceView
 
 
-// public
 void ModelSelector::removeFaceView( FV* fv)
 {
-    _interactor.remove(fv);    // Called *before* the viewer is detached from the FaceView.
+    if ( !_me)
+    {
+        std::cerr << "[ERROR] FaceTools::Action::ModelSelector::addFaceView: ModelSelector instance not yet created!" << std::endl;
+        return;
+    }   // end if
+
+    _me->_msi.remove(fv);    // Called *before* the viewer is detached from the FaceView.
     FMV* vwr = fv->viewer();
     delete fv;
     vwr->updateRender(); // Extra render needed after detaching the viewer.
@@ -66,7 +89,6 @@ void ModelSelector::removeFaceView( FV* fv)
 }   // end removeFaceView
 
 
-// public
 void ModelSelector::remove( FM* fm)
 {
     while ( !fm->fvs().empty())
@@ -74,28 +96,24 @@ void ModelSelector::remove( FM* fm)
 }   // end remove
 
 
-// public
 void ModelSelector::setSelected( FV* fv, bool enable)
 {
-    if ( _interactor.isSelected(fv) != enable)    // Do nothing if no change in selection
-        _interactor.setSelected( fv, enable);
+    if ( !_me)
+    {
+        std::cerr << "[ERROR] FaceTools::Action::ModelSelector::addFaceView: ModelSelector instance not yet created!" << std::endl;
+        return;
+    }   // end if
+
+    if ( _me->_msi.isSelected(fv) != enable)    // Do nothing if no change in selection
+    {
+        //_me->_msi.disconnect();
+        _me->_msi.setSelected( fv, enable);
+        //connect( &_me->_msi, &ModelSelectInteractor::onSelected, &*_me, &ModelSelector::onSelected);
+    }   // end if
 }   // end setSelected
 
 
-// private
-void ModelSelector::doSwitchSelectedToViewer( ModelViewer* vwr)
+void ModelSelector::setSelectEnabled( bool v)
 {
-    FV* fv = _interactor.selected();
-    if ( !fv)
-        return;
-
-    for ( FV* f : fv->data()->fvs())
-    {
-        if ( f != fv && f->viewer() == vwr)
-        {
-            setSelected( fv, false);
-            setSelected( f, true);
-            break;
-        }   // end if
-    }   // end for
-}   // end doSwitchSelectedToViewer
+    _me->_msi.setEnabled(v);
+}   // end setSelectedEnabled

@@ -54,6 +54,30 @@ void reflectPaths( PathSet::Ptr paths, const cv::Vec3f& ppt, const cv::Vec3f& pv
     }   // end for
 }   // end reflectPaths
 
+
+void reflectLandmarks( LandmarkSet::Ptr lmks, const cv::Vec3f& ppt, const cv::Vec3f& pvec)
+{
+    using namespace FaceTools;
+    for ( int id : lmks->ids())
+    {
+        if ( LDMKS_MAN::landmark(id)->isBilateral())
+        {
+            cv::Vec3f p0 = *lmks->pos(id, FACE_LATERAL_LEFT);
+            cv::Vec3f p1 = *lmks->pos(id, FACE_LATERAL_RIGHT);
+            RFeatures::ObjModelReflector::reflectPoint( p0, ppt, pvec);
+            RFeatures::ObjModelReflector::reflectPoint( p1, ppt, pvec);
+            lmks->set( id, p0, FACE_LATERAL_LEFT);
+            lmks->set( id, p1, FACE_LATERAL_RIGHT);
+        }   // end if
+        else
+        {
+            cv::Vec3f p = *lmks->pos(id);
+            RFeatures::ObjModelReflector::reflectPoint( p, ppt, pvec);
+            lmks->set(id, p);
+        }   // end else
+    }   // end for
+}   // end reflectLandmarks
+
 }   // end namespace
 
 
@@ -78,7 +102,7 @@ bool ActionReflect::doAction( FVS& fvs, const QPoint&)
     reflector.reflect( ppt, pvec);
 
     // Also need to reflect landmarks and paths before updating FaceModel
-    fm->landmarks()->reflect();
+    reflectLandmarks( fm->landmarks(), ppt, pvec);
     reflectPaths( fm->paths(), ppt, pvec);
 
     info->reset( model);

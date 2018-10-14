@@ -16,65 +16,80 @@
  ************************************************************************/
 
 #include <ActionLoadFaceModels.h>
+#include <FaceModelManager.h>
 #include <QFileDialog>
 using FaceTools::Action::ActionLoadFaceModels;
 using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
 using FaceTools::FileIO::LoadFaceModelsHelper;
-using FaceTools::FileIO::FaceModelManager;
+using FaceTools::Vis::FV;
 using FaceTools::FVS;
 
 
-ActionLoadFaceModels::ActionLoadFaceModels( const QString& dn, const QIcon& ico, const QKeySequence& ks, LoadFaceModelsHelper* lhelper)
-    : FaceAction( dn, ico, ks), _loadHelper( lhelper)
+ActionLoadFaceModels::ActionLoadFaceModels( const QString& dn, const QIcon& ico, QWidget *p)
+    : FaceAction( dn, ico), _loadHelper(p)
 {
     setAsync(true);
 }   // end ctor
 
 
+bool ActionLoadFaceModels::testEnabled( const QPoint*) const
+{
+    using FaceTools::FileIO::FMM;
+    return FMM::numOpen() < FMM::loadLimit();
+}   // end testEnabled
+
+
 // public
-bool ActionLoadFaceModels::loadModel( const QString& fname)
+FV* ActionLoadFaceModels::loadModel( const QString& fname)
 {
     bool loaded = false;
     if ( testEnabled(nullptr))
     {
         QStringList fnames;
         fnames << fname;
-        if ( _loadHelper->setFilteredFilenames(fnames) > 0)
+        if ( _loadHelper.setFilteredFilenames(fnames) > 0)
             loaded = process();
     }   // end if
-    return loaded;
+
+    FV* fv = nullptr;
+    if ( loaded)
+        fv = _loadHelper.lastLoaded().first();
+    return fv;
 }   // end loadModel
 
 
 bool ActionLoadFaceModels::doBeforeAction( FVS&, const QPoint&)
 {
-    if ( _loadHelper->filenames().empty())
+    if ( _loadHelper.filenames().empty())
     {
         // Get the dialog filters
         QString anyf = "Any file (*.*)";
-        QStringList filters = _loadHelper->createImportFilters().split(";;");
+        QStringList filters = _loadHelper.createImportFilters().split(";;");
         filters.prepend(anyf);
         QString allf = filters.join(";;");
 
-        QStringList fnames = QFileDialog::getOpenFileNames( _loadHelper->parentWidget(),
+        QStringList fnames = QFileDialog::getOpenFileNames( _loadHelper.parent(),
                                                             tr("Select one or more models to load"), "",
                                                             allf, &anyf);
-        _loadHelper->setFilteredFilenames( fnames);
+        _loadHelper.setFilteredFilenames( fnames);
     }   // end if
-    return !_loadHelper->filenames().empty();
+    return !_loadHelper.filenames().empty();
 }   // end doBeforeAction
 
 
-bool ActionLoadFaceModels::doAction( FVS&, const QPoint&)
+bool ActionLoadFaceModels::doAction( FVS& fvs, const QPoint&)
 {
-    return _loadHelper->loadModels() > 0;   // Blocks
+    fvs.clear();
+    if ( _loadHelper.loadModels() > 0)   // Blocks
+        fvs.insert(_loadHelper.lastLoaded());
+    return !fvs.empty();
 }   // end doAction
 
 
 void ActionLoadFaceModels::doAfterAction( EventSet& cs, const FVS&, bool loaded)
 {
-    _loadHelper->showLoadErrors();
+    _loadHelper.showLoadErrors();
     if ( loaded)
         cs.insert(LOADED_MODEL);
 }   // end doAfterAction

@@ -58,7 +58,6 @@ private:
     double _radius;
     std::unordered_map<const FaceModel*, RFeatures::ObjModelRegionSelector::Ptr> _rsels;
     static const double MIN_RADIUS;
-    void makeRegionSelector( const FaceModel*, const cv::Vec3f&);
     void setRadius( const FaceModel*, double);
     void updateVis( const FaceModel*);
 };  // end class

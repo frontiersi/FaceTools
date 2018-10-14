@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>734</width>
-    <height>478</height>
+    <height>343</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -73,7 +73,7 @@
        <item>
         <widget class="QLabel" name="label">
          <property name="text">
-          <string>Human Phenotype Ontology Term</string>
+          <string>Associated Human Phenotype Ontology Term(s)</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -163,6 +163,31 @@
         </widget>
        </item>
       </layout>
+     </item>
+     <item>
+      <widget class="QToolButton" name="showScanInfoButton">
+       <property name="minimumSize">
+        <size>
+         <width>27</width>
+         <height>27</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>27</width>
+         <height>27</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>...</string>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>27</width>
+         <height>27</height>
+        </size>
+       </property>
+      </widget>
      </item>
      <item>
       <widget class="QToolButton" name="showMetricsButton">

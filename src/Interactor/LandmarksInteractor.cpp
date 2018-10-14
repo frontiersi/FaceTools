@@ -30,15 +30,9 @@ using FaceTools::FM;
 using FaceTools::Path;
 
 
-const QString LandmarksInteractor::s_defaultMsg(
-        QObject::tr("Add/remove/rename landmarks from the context menu."));
-
-const QString LandmarksInteractor::s_moveMsg(
-        QObject::tr("Reposition landmark by left-click and dragging; right click to remove/rename the landmark."));
-
 // public
-LandmarksInteractor::LandmarksInteractor( MEEI* meei, LandmarksVisualisation* vis, QStatusBar* sbar)
-    : ModelViewerInteractor( nullptr, sbar), _meei(meei), _vis(vis), _drag(-1), _hover(-1), _lat(FACE_LATERAL_MEDIAL), _view(nullptr)
+LandmarksInteractor::LandmarksInteractor( MEEI* meei, LandmarksVisualisation* vis)
+    : ModelViewerInteractor(), _meei(meei), _vis(vis), _drag(-1), _hover(-1), _lat(FACE_LATERAL_MEDIAL), _view(nullptr)
 {
     connect( meei, &MEEI::onEnterProp, this, &LandmarksInteractor::doOnEnterLandmark);
     connect( meei, &MEEI::onLeaveProp, this, &LandmarksInteractor::doOnLeaveLandmark);
@@ -55,8 +49,7 @@ void LandmarksInteractor::doOnEnterLandmark( const FV* fv, const vtkProp* p)
 
     _hover = lm;
     FM* fm = fv->data();
-    _vis->setLandmarkHighlighted( fm, lm, true);
-    showStatus( s_moveMsg, 10000);
+    _vis->setLandmarkHighlighted( fm, lm, _lat, true);
     fm->updateRenderers();
 }   // end doOnEnterLandmark
 
@@ -71,37 +64,25 @@ void LandmarksInteractor::doOnLeaveLandmark( const FV* fv, const vtkProp* p)
     FM* fm = fv->data();
     if ( _drag < 0 && lm >= 0)
     {
-        _vis->setLandmarkHighlighted( fm, _hover, false);
+        _vis->setLandmarkHighlighted( fm, _hover, _lat, false);
         fm->updateRenderers();
-        showStatus( s_defaultMsg, 10000);
     }   // end if
     _hover = -1;
 }   // end doOnLeaveLandmark
-
-
-// protected
-void LandmarksInteractor::onEnabledStateChanged( bool v)
-{
-    ModelViewerInteractor::onEnabledStateChanged(v);
-    if ( v)
-        showStatus( s_defaultMsg, 10000);
-    else
-        clearStatus();
-}   // end onEnabledStateChanged
-
 
 
 bool LandmarksInteractor::leftButtonDown( const QPoint&)
 {
     _drag = _hover;
     _view = hoverModel();
-    if ( _drag >= 0)
+    bool swallowed = false;
+    if ( _drag >= 0 && _view->pickable())
     {
         viewer()->setCursor(Qt::CrossCursor);
-        _vis->setLandmarkHighlighted( _view->data(), _drag, true);
-        showStatus( s_moveMsg, 10000);
+        _vis->setLandmarkHighlighted( _view->data(), _drag, _lat, true);
+        swallowed = true;
     }   // end if
-    return _drag >= 0;
+    return swallowed;
 }   // end leftButtonDown
 
 
@@ -109,9 +90,8 @@ bool LandmarksInteractor::leftButtonUp( const QPoint&)
 {
     if ( _drag >= 0)
     {
+        _vis->setLandmarkHighlighted( _view->data(), _drag, _lat, false);
         viewer()->setCursor(Qt::ArrowCursor);
-        _vis->setLandmarkHighlighted( _view->data(), _drag, false);
-        assert(_view);
         emit onChangedData(_view);
     }   // end if
     _view = hoverModel();
@@ -133,6 +113,7 @@ bool LandmarksInteractor::leftDrag( const QPoint& p)
     // Update the position of the landmark
     FM* fm = fv->data();
     fm->landmarks()->set(_drag, hpos, _lat);
+    _vis->updateLandmark( fm, _drag);
     fm->updateRenderers();
     return true;
 }   // end leftDrag

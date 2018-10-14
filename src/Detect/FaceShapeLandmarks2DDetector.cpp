@@ -28,6 +28,7 @@
 #include <RendererPicker.h>     // RVTK
 #include <FaceTools.h>
 #include <MiscFunctions.h>
+#include <DijkstraShortestPathFinder.h>
 
 using FaceTools::Detect::FaceShapeLandmarks2DDetector;
 using FaceTools::Landmark::LandmarkSet;
@@ -36,6 +37,7 @@ using RFeatures::ObjModelKDTree;
 
 namespace {
 
+using namespace FaceTools;
 /*
 void drawDots( cv::Mat& dimg, const std::vector<cv::Point2f>& dots)
 {
@@ -50,6 +52,27 @@ void drawDots( cv::Mat& dimg, const std::vector<cv::Point2f>& dots)
 */
 
 cv::Vec3f findMND( const cv::Vec3f& pv, const cv::Vec3f& nv) { return pv + 0.5f*(nv - pv);}
+
+cv::Vec3f findMSO( const LandmarkSet& lms, cv::Vec3f v, FaceLateral lat)
+{
+    // Ensure MSO is in vertical with pupil.
+    const cv::Vec3f& p = *lms.pos( Landmark::PS, lat);
+    v[0] = p[0];
+    return v;
+}   // end findMSO
+
+
+cv::Vec3f findAL( const ObjModelKDTree* kdt, const cv::Vec3f& sn, const cv::Vec3f& p)
+{
+    return FaceTools::findDeepestPoint( kdt, sn, sn + 0.5f*(p-sn));
+}   // end findAL
+
+
+cv::Vec3f findAC( const ObjModelKDTree* kdt, const cv::Vec3f& sn, const cv::Vec3f& al, const cv::Vec3f& p)
+{
+    cv::Vec3f tv = FaceTools::toSurface( kdt, cv::Vec3f( p[0], sn[1], p[2]));
+    return FaceTools::findDeepestPoint( kdt, tv, al);
+}   // end findAC
 
 
 // Project detected points to landmarks
@@ -67,56 +90,125 @@ void setLandmarks( const RVTK::Viewer::Ptr viewer,
     for ( size_t i = 17; i < np; ++i)
         vpts[i] = foundVec[i] ? rpicker.pickWorldPosition( cpts[i]) : cv::Vec3f(0,0,0);
 
-    using namespace FaceTools;
     auto toS = FaceTools::toSurface;
+    //auto moveTo = FaceTools::moveTo;
 
-    // LEFT EYE
+    // Left palpebral superius and inferius
     lms.set( Landmark::PS, toS( kdt, 0.5f * (vpts[37] + vpts[38])), FACE_LATERAL_LEFT);
     lms.set( Landmark::PI, toS( kdt, 0.5f * (vpts[40] + vpts[41])), FACE_LATERAL_LEFT);
-    lms.set( Landmark::EN, toS( kdt, vpts[39]), FACE_LATERAL_LEFT);
-    lms.set( Landmark::EX, toS( kdt, vpts[36]), FACE_LATERAL_LEFT);
-    lms.set( Landmark::P, toS( kdt, FaceTools::calcPupil( lms, FACE_LATERAL_LEFT)), FACE_LATERAL_LEFT);
 
-    // RIGHT EYE
+    cv::Vec3f enw( 0, 0, -25);
+    cv::Vec3f exw( 0, 0, -5);
+
+    // Left endo and exo canthi
+    cv::Vec3f en = vpts[39] + enw;
+    cv::Vec3f ex = vpts[36] + exw;
+    en[0] += 3;
+    lms.set( Landmark::EN, toS( kdt, en), FACE_LATERAL_LEFT);
+    lms.set( Landmark::EX, toS( kdt, ex), FACE_LATERAL_LEFT);
+
+    // Left pupil
+    lms.set( Landmark::P, toS( kdt, FaceTools::calcPupil( lms, FACE_LATERAL_LEFT)), FACE_LATERAL_LEFT);
+    const cv::Vec3f& pleft = *lms.pos(Landmark::P, FACE_LATERAL_LEFT);
+
+    // Right palpebral superius and inferius
     lms.set( Landmark::PS, toS( kdt, 0.5f * (vpts[43] + vpts[44])), FACE_LATERAL_RIGHT);
     lms.set( Landmark::PI, toS( kdt, 0.5f * (vpts[46] + vpts[47])), FACE_LATERAL_RIGHT);
-    lms.set( Landmark::EN, toS( kdt, vpts[42]), FACE_LATERAL_RIGHT);
-    lms.set( Landmark::EX, toS( kdt, vpts[45]), FACE_LATERAL_RIGHT);
+
+    // Right endo and exo canthi
+    en = vpts[42] + enw;
+    ex = vpts[45] + exw;
+    en[0] -= 3;
+    lms.set( Landmark::EN, toS( kdt, en), FACE_LATERAL_RIGHT);
+    lms.set( Landmark::EX, toS( kdt, ex), FACE_LATERAL_RIGHT);
+
+    // Right pupil
     lms.set( Landmark::P, toS( kdt, FaceTools::calcPupil( lms, FACE_LATERAL_RIGHT)), FACE_LATERAL_RIGHT);
+    const cv::Vec3f& pright = *lms.pos(Landmark::P, FACE_LATERAL_RIGHT);
 
+    // Mid-supraorbital
     // [17,21] left brow left to right, [22,26] right brow left to right
-    lms.set( Landmark::MSO, toS( kdt, (1.0f/3) * (vpts[18] + vpts[19] + vpts[20])), FACE_LATERAL_LEFT);    // Mid-supraorbital (left)
-    lms.set( Landmark::MSO, toS( kdt, (1.0f/3) * (vpts[23] + vpts[24] + vpts[25])), FACE_LATERAL_RIGHT);   // Mid-supraorbital (right)
-    lms.set( Landmark::G, toS( kdt, 0.5f * (vpts[21] + vpts[22])));    // Glabella
+    lms.set( Landmark::MSO, toS( kdt, findMSO( lms, (1.0f/3) * (vpts[18] + vpts[19] + vpts[20]), FACE_LATERAL_LEFT)), FACE_LATERAL_LEFT);
+    lms.set( Landmark::MSO, toS( kdt, findMSO( lms, (1.0f/3) * (vpts[23] + vpts[24] + vpts[25]), FACE_LATERAL_RIGHT)), FACE_LATERAL_RIGHT);
 
-    lms.set( Landmark::SE, toS( kdt, vpts[27]));   // Sellion (deepest part)   TODO
+    // Glabella
+    lms.set( Landmark::G, toS( kdt, 0.5f * (vpts[21] + vpts[22])));
 
-    cv::Vec3f nv = vpts[27]; // Nasion - placed at height of superoir palpebral sulcus in line with sellion.
+    // Nasion
+    // vpts[27] is nasal root, but not defined as either sellion or nasion so is not used as is.
+    cv::Vec3f nv = vpts[27];    // Nasion is placed at height of superoir palpebral sulcus in line with sellion.
     nv[1] = 0.5f * ((*lms.pos( Landmark::PS, FACE_LATERAL_LEFT))[1] + (*lms.pos( Landmark::PS, FACE_LATERAL_RIGHT))[1]);
     lms.set( Landmark::N, toS( kdt, nv));
 
-    lms.set( Landmark::SN, toS( kdt, vpts[33]));   // Subnasale
-    lms.set( Landmark::PRN, toS( kdt, vpts[30]));  // Pronasale TODO use longest restricted path between subnasale and sellion
+    // Subnasale
+    lms.set( Landmark::SN, toS( kdt, vpts[33]));
+    cv::Vec3f sn = *lms.pos(Landmark::SN);   // For use later
 
-    // TODO set left/right alare as widest points on the nose
-    // Also set subalare (SBAL) properly.
-    lms.set( Landmark::AL, vpts[31], FACE_LATERAL_LEFT);
-    lms.set( Landmark::AL, vpts[35], FACE_LATERAL_RIGHT);
-    lms.set( Landmark::SBAL, toS( kdt, vpts[32]), FACE_LATERAL_LEFT);  // Subalare
-    lms.set( Landmark::SBAL, toS( kdt, vpts[34]), FACE_LATERAL_RIGHT); // Subalare
+    // Pronasale
+    cv::Vec3f prn = vpts[30];
+    prn[2] += 20;
+    lms.set( Landmark::PRN, toS( kdt, prn));
 
-    // MND halway along nasal ridge.
+    // Mid-nasal dorsum
     lms.set( Landmark::MND, toS( kdt, findMND( *lms.pos( Landmark::PRN), *lms.pos( Landmark::N))));
 
-    // Mouth
-    lms.set( Landmark::CH, toS( kdt, vpts[48]), FACE_LATERAL_LEFT);     // Cheilion
-    lms.set( Landmark::CH, toS( kdt, vpts[54]), FACE_LATERAL_RIGHT);    // Cheilion
-    lms.set( Landmark::CPH, toS( kdt, vpts[50]), FACE_LATERAL_LEFT);    // Crista philtri
-    lms.set( Landmark::CPH, toS( kdt, vpts[52]), FACE_LATERAL_RIGHT);   // Crista philtri
-    lms.set( Landmark::LS, toS( kdt, vpts[51]));   // Labiale superius
-    lms.set( Landmark::LI, toS( kdt, 1.0f/3 * (vpts[56] + vpts[57] + vpts[58])));   // Labiale inferius
-    lms.set( Landmark::STS, toS( kdt, 1.0f/3 * (vpts[65] + vpts[66] + vpts[67])));   // Stomion superius
-    lms.set( Landmark::STI, toS( kdt, 1.0f/3 * (vpts[61] + vpts[62] + vpts[63])));   // Stomion inferius
+    // Sellion - deepest part of the nose bridge.
+    // Dynamically weighted in the direction of greatest difference.
+    double d0 = 1;
+    double d1 = 1;
+    cv::Vec3f sev = toS( kdt, FaceTools::findDeepestPoint( kdt, *lms.pos(Landmark::G), *lms.pos(Landmark::MND), &d0));
+    cv::Vec3f seh = toS( kdt, FaceTools::findDeepestPoint( kdt, pleft, pright, &d1));
+    double dsum = d0 + d1;
+    lms.set( Landmark::SE, toS( kdt, (d0/dsum*sev + d1/dsum*seh)));
+
+    // Alare
+    //lms.set( Landmark::AL, vpts[31], FACE_LATERAL_LEFT);
+    //lms.set( Landmark::AL, vpts[35], FACE_LATERAL_RIGHT);
+    lms.set( Landmark::AL, findAL( kdt, sn, pleft), FACE_LATERAL_LEFT);
+    lms.set( Landmark::AL, findAL( kdt, sn, pright), FACE_LATERAL_RIGHT);
+
+    // Alare curvature point
+    lms.set( Landmark::AC, findAC( kdt, sn, *lms.pos(Landmark::AL, FACE_LATERAL_LEFT), pleft), FACE_LATERAL_LEFT);
+    lms.set( Landmark::AC, findAC( kdt, sn, *lms.pos(Landmark::AL, FACE_LATERAL_RIGHT), pright), FACE_LATERAL_RIGHT);
+
+    // Subalare
+    //lms.set( Landmark::SBAL, toS( kdt, vpts[32]), FACE_LATERAL_LEFT);
+    //lms.set( Landmark::SBAL, toS( kdt, vpts[34]), FACE_LATERAL_RIGHT);
+    lms.set( Landmark::SBAL, toS( kdt, 0.5f*(sn + *lms.pos(Landmark::AC, FACE_LATERAL_LEFT))), FACE_LATERAL_LEFT);
+    lms.set( Landmark::SBAL, toS( kdt, 0.5f*(sn + *lms.pos(Landmark::AC, FACE_LATERAL_RIGHT))), FACE_LATERAL_RIGHT);
+
+    // Update subnasale
+    //lms.set( Landmark::SN, toS( kdt, 0.5f*(*lms.pos(Landmark::SBAL, FACE_LATERAL_LEFT) + *lms.pos(Landmark::SBAL, FACE_LATERAL_RIGHT))));
+    //sn = *lms.pos(Landmark::SN);   // For use later
+
+    // Cheilion
+    lms.set( Landmark::CH, toS( kdt, vpts[48]), FACE_LATERAL_LEFT);
+    lms.set( Landmark::CH, toS( kdt, vpts[54]), FACE_LATERAL_RIGHT);
+
+    // Crista philtri
+    lms.set( Landmark::CPH, toS( kdt, vpts[50]), FACE_LATERAL_LEFT);
+    lms.set( Landmark::CPH, toS( kdt, vpts[52]), FACE_LATERAL_RIGHT);
+
+    // Labiale superius
+    lms.set( Landmark::LS, toS( kdt, vpts[51]));
+
+    // Labiale inferius
+    lms.set( Landmark::LI, toS( kdt, 1.0f/3 * (vpts[56] + vpts[57] + vpts[58])));
+
+    // Stomion inferius/superius. Detector can get confused with the placement of these points,
+    // so see which one is lower and make inferius.
+    const cv::Vec3f s0 = toS( kdt, 1.0f/3 * (vpts[65] + vpts[66] + vpts[67]));
+    const cv::Vec3f s1 = toS( kdt, 1.0f/3 * (vpts[61] + vpts[62] + vpts[63]));
+    if ( s0[1] < s1[1])
+    {
+        lms.set( Landmark::STI, s0);
+        lms.set( Landmark::STS, s1);
+    }   // end if
+    else
+    {
+        lms.set( Landmark::STI, s1);
+        lms.set( Landmark::STS, s0);
+    }   // end else
 
     //lms.set( L_UPP_VERM, vpts[49]
     //lms.set( R_UPP_VERM, vpts[53]

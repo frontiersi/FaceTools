@@ -99,6 +99,10 @@ public:
     // Returns true iff the point projects to the surface. Ignores all other actors.
     bool projectToSurface( const QPoint&, cv::Vec3f&) const;
 
+    // Set the pickability of the face actor.
+    void setPickable( bool);
+    bool pickable() const;
+
     // Set/get the opacity of the face actor.
     void setOpacity( double);
     double opacity() const;

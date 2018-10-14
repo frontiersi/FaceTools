@@ -16,31 +16,20 @@
  ************************************************************************/
 
 #include <LandmarkSet.h>
+#include <FaceTools.h>
 #include <Transformer.h>  // RFeatures
 #include <ObjModelSurfacePointFinder.h>
 #include <Orientation.h>
 using FaceTools::Landmark::LandmarkSet;
 using FaceTools::Landmark::Landmark;
+using FaceTools::FaceLateral;
 using LDMRK_PAIR = std::pair<int, cv::Vec3f>;
 #include <algorithm>
 #include <cassert>
 
 LandmarkSet::Ptr LandmarkSet::create() { return Ptr( new LandmarkSet, [](LandmarkSet* d){ delete d;});}
 
-LandmarkSet::LandmarkSet() : _lp(&_lmksL), _rp(&_lmksR), _view(nullptr) {}
-
-
-void LandmarkSet::registerViewer( FaceTools::Vis::LandmarkSetView* v)
-{
-    _view = v;
-    assert(_view);
-    for ( const auto& p : *_lp)
-        _view->setInView( p.first, FACE_LATERAL_LEFT, p.second);
-    for ( const auto& p : _lmksM)
-        _view->setInView( p.first, FACE_LATERAL_MEDIAL, p.second);
-    for ( const auto& p : *_rp)
-        _view->setInView( p.first, FACE_LATERAL_RIGHT, p.second);
-}   // end registerViewer
+LandmarkSet::LandmarkSet() {}
 
 
 bool LandmarkSet::has( int id, FaceLateral lat) const
@@ -52,13 +41,13 @@ bool LandmarkSet::has( int id, FaceLateral lat) const
     switch (lat)
     {
         case FACE_LATERAL_LEFT:
-            hasLmk = _lp->count(id) > 0;
+            hasLmk = _lmksL.count(id) > 0;
             break;
         case FACE_LATERAL_MEDIAL:
             hasLmk = _lmksM.count(id) > 0;
             break;
         case FACE_LATERAL_RIGHT:
-            hasLmk = _rp->count(id) > 0;
+            hasLmk = _lmksR.count(id) > 0;
             break;
     }   // end switch
     return hasLmk;
@@ -72,13 +61,13 @@ const LandmarkSet::LDMRKS& LandmarkSet::lateral( FaceLateral lat) const
     switch (lat)
     {
         case FACE_LATERAL_LEFT:
-            lmks = _lp;
+            lmks = &_lmksL;
             break;
         case FACE_LATERAL_MEDIAL:
             lmks = &_lmksM;
             break;
         case FACE_LATERAL_RIGHT:
-            lmks = _rp;
+            lmks = &_lmksR;
             break;
     }   // end switch
     return *lmks;
@@ -86,7 +75,11 @@ const LandmarkSet::LDMRKS& LandmarkSet::lateral( FaceLateral lat) const
 
 
 // private
-LandmarkSet::LDMRKS& LandmarkSet::lateral( FaceLateral lat) { return const_cast<LDMRKS&>( lateral(lat));}
+LandmarkSet::LDMRKS& LandmarkSet::lateral( FaceLateral lat)
+{
+    const LandmarkSet* me = this;
+    return const_cast<LDMRKS&>( me->lateral(lat));
+}   // end lateral
 
 
 bool LandmarkSet::set( int id, const cv::Vec3f& v, FaceLateral lat)
@@ -103,8 +96,6 @@ bool LandmarkSet::set( int id, const cv::Vec3f& v, FaceLateral lat)
     _names.insert(lmk->name());
     _codes.insert(lmk->code());
     _ids.insert(id);
-    if ( _view)
-        _view->setInView(id, lat, v);
     return true;
 }   // end set
 
@@ -120,36 +111,36 @@ bool LandmarkSet::set( const QString& lmcode, const cv::Vec3f& v, FaceLateral la
 
 bool LandmarkSet::erase( int id)
 {
-    Landmark* lmk = LDMKS_MAN::landmark(id);   // Check if landmark is real and deletable first
-    if ( !lmk || !lmk->isDeletable())
+    Landmark* lmk = LDMKS_MAN::landmark(id);
+    if ( !lmk)
         return false;
 
-    const bool inleft  = _lp->count(id) > 0;
-    const bool inmid   = _lmksM.count(id) > 0;
-    const bool inright = _rp->count(id) > 0;
-
     _ids.erase(id);
-    _lp->erase(id);
+    _lmksL.erase(id);
     _lmksM.erase(id);
-    _rp->erase(id);
+    _lmksR.erase(id);
     _names.erase(lmk->name());
     _codes.erase(lmk->code());
-
-    if ( _view)
-    {
-        if ( inleft)
-            _view->removeFromView(id, FACE_LATERAL_LEFT);
-        if ( inmid)
-            _view->removeFromView(id, FACE_LATERAL_MEDIAL);
-        if ( inright)
-            _view->removeFromView(id, FACE_LATERAL_RIGHT);
-    }   // end if
     return true;
 }   // end erase
 
 
+void LandmarkSet::clear()
+{
+    IntSet ids = _ids;  // Copy out
+    for ( int id : ids)
+        erase(id);
+}   // end clear
+
+
 const cv::Vec3f* LandmarkSet::pos( int id, FaceLateral lat) const
 {
+    if ( LDMKS_MAN::landmark(id)->isBilateral() && lat == FACE_LATERAL_MEDIAL)
+    {
+        std::cerr << "[WARNING] FaceTools::Landmark::LandmarkSet::pos: Requested landmark is bilateral but requested medial!" << std::endl;
+        return nullptr;
+    }   // end if
+
     if (!has(id, lat))
         return nullptr;
     return &lateral(lat).at(id);
@@ -180,129 +171,55 @@ bool LandmarkSet::translate( int id, FaceLateral lat, const cv::Vec3f& t)
     if (!has(id,lat))
         return false;
     lateral(lat).at(id) += t;
-    if ( _view)
-        _view->setInView(id, lat, lateral(lat).at(id));
     return true;
 }   // end translate
 
 
 void LandmarkSet::translate( const cv::Vec3f& t)
 {
-    for ( auto& p : *_lp)
+    for ( auto& p : _lmksL)
         translate( p.first, FACE_LATERAL_LEFT, t);
     for ( auto& p : _lmksM)
         translate( p.first, FACE_LATERAL_MEDIAL, t);
-    for ( auto& p : *_rp)
+    for ( auto& p : _lmksR)
         translate( p.first, FACE_LATERAL_RIGHT, t);
 }   // end translate
-
-
-// private
-void LandmarkSet::updateView( int8_t lat)
-{
-    if ( _view)
-    {
-        if ( lat & FACE_LATERAL_LEFT)
-        {
-            for ( auto& p : *_lp)
-                _view->setInView( p.first, FACE_LATERAL_LEFT, p.second);
-        }   // end if
-
-        if ( lat & FACE_LATERAL_MEDIAL)
-        {
-            for ( auto& p : _lmksM)
-                _view->setInView( p.first, FACE_LATERAL_MEDIAL, p.second);
-        }   // end if
-
-        if ( lat & FACE_LATERAL_RIGHT)
-        {
-            for ( auto& p : *_rp)
-                _view->setInView( p.first, FACE_LATERAL_RIGHT, p.second);
-        }   // end if
-    }   // end if
-}   // end updateView
 
 
 void LandmarkSet::transform( const cv::Matx44d& T)
 {
     const RFeatures::Transformer mover(T);
-    for ( auto& p : *_lp)
-        mover.transform( _lp->at(p.first));
+    for ( auto& p : _lmksL)
+        mover.transform( _lmksL.at(p.first));
     for ( auto& p : _lmksM)
         mover.transform( _lmksM.at(p.first));
-    for ( auto& p : *_rp)
-        mover.transform( _rp->at(p.first));
-    updateView( FACE_LATERAL_LEFT | FACE_LATERAL_MEDIAL | FACE_LATERAL_RIGHT);
+    for ( auto& p : _lmksR)
+        mover.transform( _lmksR.at(p.first));
 }   // end transform
 
 
-double LandmarkSet::translateToSurface( RFeatures::ObjModelKDTree::Ptr kdt)
+void LandmarkSet::moveToSurface( const RFeatures::ObjModelKDTree* kdt)
 {
-    double sdiff = 0;
-    const RFeatures::ObjModelSurfacePointFinder spfinder( kdt->model());
-
-    cv::Vec3f fv;
-    int notused, vidx;
-
-    for ( const auto& p : *_lp)
-    {
-        const cv::Vec3f& v = p.second;  // Current position of landmark
-        vidx = kdt->find( v);   // Closest vertex to landmark
-        // Project v onto the model's surface. Choose from all the polygons connected to vertex vidx the
-        // projection into the plane of a polygon that gives the smallest difference in position.
-        sdiff += spfinder.find( v, vidx, notused, fv);
-        _lp->at(p.first) = fv;
-    }   // end for
-
+    for ( const auto& p : _lmksL)
+        _lmksL.at(p.first) = FaceTools::toSurface( kdt, p.second);
     for ( const auto& p : _lmksM)
-    {
-        const cv::Vec3f& v = p.second;
-        vidx = kdt->find( v);
-        sdiff += spfinder.find( v, vidx, notused, fv);
-        _lmksM.at(p.first) = fv;
-    }   // end for
-
-    for ( const auto& p : *_rp)
-    {
-        const cv::Vec3f& v = p.second;
-        vidx = kdt->find( v);
-        sdiff += spfinder.find( v, vidx, notused, fv);
-        _rp->at(p.first) = fv;
-    }   // end for
-
-    updateView( FACE_LATERAL_LEFT | FACE_LATERAL_MEDIAL | FACE_LATERAL_RIGHT);
-    return sqrt( sdiff / size());    // Average difference in reposition of landmarks
-}   // end translateToSurface
-
-
-void LandmarkSet::reflect()
-{
-    if ( _lp == &_lmksL)
-    {
-        _lp = &_lmksR;
-        _rp = &_lmksL;
-    }   // end if
-    else
-    {
-        _lp = &_lmksL;
-        _rp = &_lmksR;
-    }   // end else
-
-    updateView( FACE_LATERAL_LEFT | FACE_LATERAL_RIGHT);
-}   // end reflect
+        _lmksM.at(p.first) = FaceTools::toSurface( kdt, p.second);
+    for ( const auto& p : _lmksR)
+        _lmksR.at(p.first) = FaceTools::toSurface( kdt, p.second);
+}   // end moveToSurface
 
 
 // Write out the landmarks to record.
 void LandmarkSet::write( PTree& lnodes) const
 {
     PTree& llat = lnodes.put("LeftLateral", "");
-    for ( const auto& p : *_lp)
+    for ( const auto& p : _lmksL)
         RFeatures::putNamedVertex( llat, LDMKS_MAN::landmark(p.first)->code().toStdString(), p.second);
     PTree& mlat = lnodes.put("Medial", "");
     for ( const auto& p : _lmksM)
         RFeatures::putNamedVertex( mlat, LDMKS_MAN::landmark(p.first)->code().toStdString(), p.second);
     PTree& rlat = lnodes.put("RightLateral", "");
-    for ( const auto& p : *_rp)
+    for ( const auto& p : _lmksR)
         RFeatures::putNamedVertex( rlat, LDMKS_MAN::landmark(p.first)->code().toStdString(), p.second);
 }   // end write
 

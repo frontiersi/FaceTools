@@ -23,18 +23,15 @@
 #include <LandmarksInteractor.h>
 #include <QStatusBar>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionEditLandmarks : public ActionVisualise
 { Q_OBJECT
 public:
-    ActionEditLandmarks( const QString&, const QIcon&, Interactor::MEEI*, QStatusBar* sb=nullptr, bool visOnLoad=false);
+    ActionEditLandmarks( const QString&, const QIcon&, Interactor::MEEI*, bool visOnLoad=false);
     ~ActionEditLandmarks() override;
 
     Interactor::LandmarksInteractor* interactor() override { return _interactor;}
-
-    //void refreshVisualisation( const FM*);
 
 protected slots:
     bool doAction( FVS&, const QPoint&) override;
@@ -46,7 +43,6 @@ private:
     Interactor::LandmarksInteractor *_interactor;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

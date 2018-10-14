@@ -177,3 +177,53 @@ cv::Vec3f FaceTools::toSurface( const ObjModelKDTree* kdt, const cv::Vec3f& v)
     return fv;
 }   // end toSurface
 
+
+cv::Vec3f FaceTools::moveTo( const ObjModelKDTree* kdt, const cv::Vec3f& s, const cv::Vec3f& v)
+{
+    int notused;
+    cv::Vec3f fv;
+    const RFeatures::ObjModelSurfacePointFinder spfinder( kdt->model());
+    int vidx = kdt->find(s);
+    spfinder.find( v, vidx, notused, fv);
+    return fv;
+}   // end moveTo
+
+
+cv::Vec3f FaceTools::findDeepestPoint( const ObjModelKDTree* kdt, const cv::Vec3f& p0, const cv::Vec3f& p1, double *dout)
+{
+    using namespace RFeatures;
+    const ObjModel *model = kdt->model();
+
+    DijkstraShortestPathFinder spfinder( kdt->model());
+    const int v0 = kdt->find(p0);
+    const int v1 = kdt->find(p1);
+    spfinder.setEndPointVertexIndices( v0, v1);
+    std::vector<int> vpids;
+    spfinder.findShortestPath( vpids);
+
+    cv::Vec3f u;
+    cv::normalize( p1 - p0, u);
+
+    double maxd = 0;
+    int bv = v0;
+    const size_t n = vpids.size();
+    for ( size_t i = 0; i < n; ++i)
+    {
+        int vidx = vpids[i];
+        const cv::Vec3f& p = model->vtx(vidx);
+        const cv::Vec3f dv = p - p0;
+        const double h = cv::norm(dv);
+        const double theta = acos( double(dv.dot(u))/h);
+        const double o = h*sin(theta);
+        if ( o >= maxd)
+        {
+            maxd = o;
+            bv = vidx;
+        }   // end if
+    }   // end for
+
+    if ( dout)
+        *dout = maxd;
+
+    return model->vtx(bv);
+}   // end findDeepestPoint

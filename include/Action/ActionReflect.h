@@ -20,8 +20,7 @@
 
 #include "FaceAction.h"
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionReflect : public FaceAction
 { Q_OBJECT
@@ -30,12 +29,11 @@ public:
 
 private slots:
     bool testReady( const Vis::FV*) override;
-    bool testEnabled( const QPoint* mc=nullptr) const override { return ready1() != nullptr;}
+    bool testEnabled( const QPoint*) const override { return ready1() != nullptr;}
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet&, const FVS&, bool) override;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

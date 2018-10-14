@@ -26,12 +26,12 @@ namespace FaceTools { namespace Interactor {
 class FaceTools_EXPORT LandmarksInteractor : public ModelViewerInteractor
 { Q_OBJECT
 public:
-    LandmarksInteractor( MEEI*, Vis::LandmarksVisualisation*, QStatusBar* sbar=nullptr);
+    LandmarksInteractor( MEEI*, Vis::LandmarksVisualisation*);
 
     // Get the ID of the landmark being hovered over (if any).
     // Returns -1 if no handle hovered over. Use hoverModel() to get associated model.
-    inline int hoverId() const { return _hover;}
-    inline Vis::FV* hoverModel() const { return _meei->model();}
+    int hoverId() const { return _hover;}
+    Vis::FV* hoverModel() const { return _meei->model();}
 
 private slots:
     void doOnEnterLandmark( const Vis::FV*, const vtkProp*);
@@ -41,15 +41,12 @@ private:
     bool leftButtonDown( const QPoint&) override;
     bool leftButtonUp( const QPoint&) override;
     bool leftDrag( const QPoint&) override;
-    void onEnabledStateChanged( bool v) override;
 
     MEEI *_meei;
     Vis::LandmarksVisualisation *_vis;
     int _drag, _hover;  // IDs of the landmarks being dragged and hovered over.
     FaceLateral _lat;
     Vis::FV* _view;
-    static const QString s_defaultMsg;
-    static const QString s_moveMsg;
 };  // end class
 
 }}   // end namespaces

@@ -27,6 +27,7 @@ using FaceTools::Vis::MetricVisualiser;
 using FaceTools::Vis::FV;
 using FaceTools::FMV;
 using FaceTools::FM;
+using FaceTools::FaceLateral;
 
 
 EuclideanDistanceVisualiser::EuclideanDistanceVisualiser( int id, int lA, int lB, bool b)
@@ -81,11 +82,10 @@ void EuclideanDistanceVisualiser::apply( FV *fv, FaceLateral lA, FaceLateral lB,
     const std::vector<cv::Vec3f> vtxs = { *fm->landmarks()->pos(_lmkA, lA), *fm->landmarks()->pos(_lmkB, lB)};
 
     vtkActor* actor = actors[fv] = RVTK::VtkActorCreator::generateLineActor( vtxs);
-    //actor->SetPickable(false);
     vtkProperty* property = actor->GetProperty();
     property->SetRepresentationToWireframe();
     property->SetRenderLinesAsTubes(false);
-    property->SetLineWidth(6.0);
+    property->SetLineWidth(7.0);
     property->SetColor(1,1,1);
     property->SetAmbient( 1);
     property->SetDiffuse( 1);

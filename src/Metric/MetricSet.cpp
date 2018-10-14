@@ -52,6 +52,14 @@ bool MetricSet::erase( int id)
 }   // end erase
 
 
+void MetricSet::reset()
+{
+    IntSet ids = _ids;
+    for ( int id : ids)
+        erase(id);
+}   // end reset
+
+
 PTree& FaceTools::Metric::operator<<( PTree& mnodes, const MetricSet& ms)
 {
     const IntSet& ids = ms.ids();

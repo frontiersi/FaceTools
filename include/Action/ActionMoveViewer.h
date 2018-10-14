@@ -18,25 +18,16 @@
 #ifndef FACE_TOOLS_MOVE_VIEWER_H
 #define FACE_TOOLS_MOVE_VIEWER_H
 
-/**
- * Moves the currently selected Vis::FV instances to the target viewer.
- */
-
 #include "FaceAction.h"
-#include <ModelSelector.h>
-#include <FaceModelViewer.h>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionMoveViewer : public FaceAction
 { Q_OBJECT
 public:
     // If a source viewer is set (can be NULL), this action will only be enabled for
     // the subset of the selected Vis::FVs that are in the source viewer.
-    ActionMoveViewer( FaceModelViewer* targetViewer, ModelSelector*,
-                      FaceModelViewer* sourceViewer,
-                      const QString&, const QIcon&);
+    ActionMoveViewer( FMV* target, FMV* source, const QString&, const QIcon&);
 
 protected slots:
     bool testReady( const Vis::FV*) override;
@@ -44,12 +35,10 @@ protected slots:
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(VIEWER_CHANGE);}
 
 private:
-    FaceModelViewer *_tviewer;
-    ModelSelector *_selector;
-    FaceModelViewer *_sviewer;
+    FMV *_tviewer;
+    FMV *_sviewer;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

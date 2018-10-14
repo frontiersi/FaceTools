@@ -19,16 +19,14 @@
 #define FACE_TOOLS_ACTION_SAVE_FACE_MODELS_H
 
 #include "FaceAction.h"
-#include <FaceModelManager.h>
 #include <QWidget>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionSaveFaceModels : public FaceAction
 { Q_OBJECT
 public:
-    ActionSaveFaceModels( const QString& dname, const QIcon&, const QKeySequence&, FileIO::FaceModelManager*, QWidget *parent=nullptr);
+    ActionSaveFaceModels( const QString& dname, const QIcon&, const QKeySequence&, QWidget *parent=nullptr);
 
 protected slots:
     bool testReady( const Vis::FV*) override;
@@ -36,12 +34,10 @@ protected slots:
     void doAfterAction( EventSet&, const FVS&, bool) override;
 
 private:
-    FileIO::FaceModelManager *_fmm;
     QWidget *_parent;
     std::unordered_map<std::string, QStringList> _fails;    // Error messages --> filenames
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

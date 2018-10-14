@@ -16,22 +16,23 @@
  ************************************************************************/
 
 #include <ActionCopyViewer.h>
+#include <ModelSelector.h>
+#include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <FaceView.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionCopyViewer;
 using FaceTools::Action::EventSet;
-using FaceTools::Action::ModelSelector;
 using FaceTools::Action::FaceAction;
-using FaceTools::FaceModelViewer;
+using FaceTools::FMV;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
 using FaceTools::FM;
 
 
-ActionCopyViewer::ActionCopyViewer( FaceModelViewer *tv, ModelSelector* s, FaceModelViewer *sv, const QString& dn, const QIcon& ico)
-    : FaceAction(dn, ico), _tviewer(tv), _selector(s), _sviewer(sv)
+ActionCopyViewer::ActionCopyViewer( FMV *tv, FMV *sv, const QString& dn, const QIcon& ico)
+    : FaceAction(dn, ico), _tviewer(tv), _sviewer(sv)
 {
 }   // end ctor
 
@@ -60,14 +61,14 @@ bool ActionCopyViewer::doAction( FVS& fvs, const QPoint&)
 
         FM* fm = fv->data();
         fm->lockForRead();
-        FV* nfv = _selector->addFaceView( fm, _tviewer); // Create the new FV from the underlying data.
+        FV* nfv = Action::ModelSelector::addFaceView( fm, _tviewer); // Create the new FV from the underlying data.
         fm->unlock();
 
         // Copy over visualisations
         for ( auto vl : cfv->visualisations())
             nfv->apply(vl);
 
-        _selector->setSelected( nfv, true); // Select the new FV
+        Action::ModelSelector::setSelected( nfv, true); // Select the new FV
         fvs.insert(nfv);
     }   // end for
     return true;

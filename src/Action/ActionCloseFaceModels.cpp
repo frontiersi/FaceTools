@@ -16,19 +16,19 @@
  ************************************************************************/
 
 #include <ActionCloseFaceModels.h>
+#include <FaceModelManager.h>
 #include <QMessageBox>
 #include <boost/filesystem.hpp>
 #include <algorithm>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionCloseFaceModels;
-using FaceTools::FileIO::FaceModelManager;
 using FaceTools::FVS;
 using FaceTools::FM;
+using FaceTools::FileIO::FMM;
 
 
-ActionCloseFaceModels::ActionCloseFaceModels( const QString& dname, const QIcon& ico, const QKeySequence& keys,
-                                              FaceModelManager* fmm, QWidget* pw)
-    : FaceAction( dname, ico, keys), _fmm(fmm), _parent(pw)
+ActionCloseFaceModels::ActionCloseFaceModels( const QString& dname, const QIcon& ico, QWidget* pw)
+    : FaceAction( dname, ico), _parent(pw)
 {
 }   // end ctor
 
@@ -40,7 +40,7 @@ bool ActionCloseFaceModels::doBeforeAction( FVS& fvs, const QPoint&)
     for ( FM* fm : fms)
     {
         fm->lockForRead();
-        bool inPreferredFormat = _fmm->hasPreferredFileFormat(fm);
+        bool inPreferredFormat = FMM::hasPreferredFileFormat(fm);
 
         // If FaceModel hasn't been saved and the user doesn't want to close it (after prompting), remove from action set.
         bool doclose = false;
@@ -48,7 +48,7 @@ bool ActionCloseFaceModels::doBeforeAction( FVS& fvs, const QPoint&)
             doclose = true;
         else
         {
-            const std::string fname = boost::filesystem::path( _fmm->filepath(fm)).filename().string();
+            const std::string fname = boost::filesystem::path( FMM::filepath(fm)).filename().string();
             QString msg = tr( ("Model \"" + fname + "\" has unsaved changes! Close anyway?").c_str());
             if ( !inPreferredFormat)
                 msg = tr("Model not saved in preferred file format (.3df); close anyway?");

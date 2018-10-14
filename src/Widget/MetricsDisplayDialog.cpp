@@ -66,6 +66,8 @@ MetricsDisplayDialog::MetricsDisplayDialog(QWidget *parent) :
 
     ui->table->setStyleSheet("QTableView {selection-background-color: red;}");
     ui->table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+    ui->table->setColumnHidden(ID_COL, true);
 }   // end ctor
 
 
@@ -125,6 +127,7 @@ void MetricsDisplayDialog::doOnRowChanged( QTableWidgetItem* m)
 }   // end doOnRowChanged
 
 
+void MetricsDisplayDialog::setShowScanInfoAction( QAction* action) { ui->showScanInfoButton->setDefaultAction(action);}
 void MetricsDisplayDialog::setShowMetricsAction( QAction* action) { ui->showMetricsButton->setDefaultAction(action);}
 void MetricsDisplayDialog::setShowChartAction( QAction* action) { ui->showChartButton->setDefaultAction(action);}
 
@@ -147,9 +150,21 @@ void MetricsDisplayDialog::populate()
 void MetricsDisplayDialog::populateHPOs( const IntSet& hids)
 {
     ui->hpoComboBox->clear();
-    ui->hpoComboBox->addItem( "Any", -1);
+    ui->hpoComboBox->addItem( "-- Any --", -1);
+
+    std::unordered_map<QString, int> nids;
+    QStringList slst;
     for ( int hid : hids)
-        ui->hpoComboBox->addItem( HPOMan::hpo(hid)->name(), hid);
+    {
+        QString nm = HPOMan::hpo(hid)->name();
+        slst.append(nm);
+        nids[nm] = hid;
+    }   // end for
+
+    slst.sort();
+    for ( const QString& nm : slst)
+        ui->hpoComboBox->addItem( nm, nids.at(nm));
+
     ui->hpoComboBox->setEnabled( HPOMan::count() > 0);
 }   // end populateHPOs
 
@@ -157,9 +172,21 @@ void MetricsDisplayDialog::populateHPOs( const IntSet& hids)
 void MetricsDisplayDialog::populateSyndromes( const IntSet& sids)
 {
     ui->syndromesComboBox->clear();
-    ui->syndromesComboBox->addItem( "Any", -1);
+    ui->syndromesComboBox->addItem( "-- Any --", -1);
+
+    std::unordered_map<QString, int> nids;
+    QStringList slst;
     for ( int sid : sids)
-        ui->syndromesComboBox->addItem( SynMan::syndrome(sid)->name(), sid);
+    {
+        QString nm = SynMan::syndrome(sid)->name();
+        slst.append(nm);
+        nids[nm] = sid;
+    }   // end for
+
+    slst.sort();
+    for ( const QString& nm : slst)
+        ui->syndromesComboBox->addItem( nm, nids.at(nm));
+
     ui->syndromesComboBox->setEnabled( SynMan::count() > 0);
 }   // end populateSyndromes
 
@@ -220,19 +247,22 @@ void MetricsDisplayDialog::updateRow( int rowid)
 // private slot
 void MetricsDisplayDialog::doOnUserSelectedHPOTerm()
 {
-    int hid = ui->hpoComboBox->currentData().toInt();
+    const int hid = ui->hpoComboBox->currentData().toInt();
+    const int sid = ui->syndromesComboBox->currentData().toInt();
 
-    IntSet mset;
+    IntSet smset;   // Fill with selected metrics if necessary.
+    const IntSet *mset = &smset;
     if ( hid >= 0)
-        mset = HPOMan::hpo(hid)->metrics();
+        mset = &HPOMan::hpo(hid)->metrics(); // Metrics just from the selected HPO term
+    else if ( sid < 0)   // Any syndrome too, so use all metrics
+        mset = &MCM::ids();
     else    // If -1, then it's all metrics for the HPO terms related to the currently selected syndrome
     {
-        int sid = ui->syndromesComboBox->currentData().toInt();
         const IntSet* hset = &SynMan::syndrome(sid)->hpos(); // Get the HPO ids related to the current syndrome
         for ( int h : *hset)
         {
             const IntSet& mset0 = HPOMan::hpo(h)->metrics();
-            mset.insert( mset0.begin(), mset0.end());
+            smset.insert( mset0.begin(), mset0.end());
         }   // end for
     }   // end else
 
@@ -244,7 +274,7 @@ void MetricsDisplayDialog::doOnUserSelectedHPOTerm()
         MC::Ptr mc = MCM::metric( mid);
         const bool wasVisible = mc->isVisible();
 
-        if ( mset.count(mid) > 0)
+        if ( mset->count(mid) > 0)
         {
             ui->table->showRow( i);
             mc->setVisible( ui->table->item(i, SHOW_COL)->checkState() == Qt::Checked);

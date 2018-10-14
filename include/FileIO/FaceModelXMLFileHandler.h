@@ -22,7 +22,7 @@
 
 namespace FaceTools { namespace FileIO {
 
-static const double XML_VERSION = 3.1;
+static const std::string XML_VERSION = "3.1";
 static const std::string XML_FILE_EXTENSION = "3df";
 static const std::string XML_FILE_DESCRIPTION = "3D Face Image and Metadata";
 

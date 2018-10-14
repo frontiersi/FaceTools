@@ -78,7 +78,7 @@ void MetricVisualiser::updateCaptions( const FM* fm)
 
     const int nds = int(mc->numDecimals());
     std::ostringstream oss;
-    oss << mc->name().toStdString() << "\n";
+    oss << mc->name().toStdString() << (mc->isBilateral() ? " (L;R)" : "") << "\n";
     oss << std::fixed << std::setprecision(nds);
 
     oss << "Measure";

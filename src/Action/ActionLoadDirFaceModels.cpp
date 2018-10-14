@@ -16,48 +16,53 @@
  ************************************************************************/
 
 #include <ActionLoadDirFaceModels.h>
+#include <FaceModelManager.h>
 #include <QFileDialog>
 using FaceTools::Action::ActionLoadDirFaceModels;
 using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
 using FaceTools::FileIO::LoadFaceModelsHelper;
-using FaceTools::FileIO::FaceModelManager;
 using FaceTools::FVS;
 
 
-ActionLoadDirFaceModels::ActionLoadDirFaceModels( const QString& dn, const QIcon& ico, LoadFaceModelsHelper* lhelper)
-    : FaceAction( dn, ico), _loadHelper( lhelper)
+ActionLoadDirFaceModels::ActionLoadDirFaceModels( const QString& dn, const QIcon& ico, QWidget *p)
+    : FaceAction( dn, ico), _loadHelper(p)
 {
     setAsync(true);
 }   // end ctor
 
 
+bool ActionLoadDirFaceModels::testEnabled( const QPoint*) const
+{
+    using FaceTools::FileIO::FMM;
+    return FMM::numOpen() < FMM::loadLimit();
+}   // end testEnabled
+
+
 bool ActionLoadDirFaceModels::doBeforeAction( FVS&, const QPoint&)
 {
-    // Don't use native dialog because there's some Windows 10 debug output stating that some element of the
-    // dialog couldn't be found. On some Win10 machines, crashes occur unless non-native dialogs are used.
-    QString dname = QFileDialog::getExistingDirectory( _loadHelper->parentWidget(),
+    QString dname = QFileDialog::getExistingDirectory( _loadHelper.parent(),
                                                        tr("Select directory containing models"), "",
                                                        QFileDialog::ShowDirsOnly);
-                                                       //QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly);
-    // Get list of filenames from directory
-    QDir qdir(dname);
-    QStringList fnames = qdir.entryList( _loadHelper->createSimpleImportFilters());
+    QDir qdir(dname); // Get list of filenames from directory
+    QStringList fnames = qdir.entryList( _loadHelper.createSimpleImportFilters());
     std::for_each( std::begin(fnames), std::end(fnames), [&](QString& fn){ fn = QDir::cleanPath( qdir.filePath(fn));});
-    size_t nfiles = _loadHelper->setFilteredFilenames( fnames);
-    return nfiles > 0;
+    return _loadHelper.setFilteredFilenames( fnames) > 0;
 }   // end doBeforeAction
 
 
-bool ActionLoadDirFaceModels::doAction( FVS&, const QPoint&)
+bool ActionLoadDirFaceModels::doAction( FVS& fvs, const QPoint&)
 {
-    return _loadHelper->loadModels() > 0;
+    fvs.clear();
+    if ( _loadHelper.loadModels() > 0)  // blocks
+        fvs.insert(_loadHelper.lastLoaded());
+    return !fvs.empty();
 }   // end doAction
 
 
 void ActionLoadDirFaceModels::doAfterAction( EventSet& cs, const FVS&, bool loaded)
 {
-    _loadHelper->showLoadErrors();
+    _loadHelper.showLoadErrors();
     if ( loaded)
         cs.insert(LOADED_MODEL);
 }   // end doAfterAction

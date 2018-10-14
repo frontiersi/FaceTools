@@ -19,27 +19,23 @@
 #define FACE_TOOLS_ACTION_CLOSE_ALL_FACE_MODELS_H
 
 #include "FaceAction.h"
-#include <FaceModelManager.h>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionCloseAllFaceModels : public FaceAction
 { Q_OBJECT
 public:
-    ActionCloseAllFaceModels( const QString& dname, FileIO::FaceModelManager*, QWidget* parent=nullptr);
+    ActionCloseAllFaceModels( const QString& dname, QWidget* parent=nullptr);
 
 private slots:
-    bool testEnabled( const QPoint* mc=nullptr) const override { return _fmm->numOpen() > 0;}
+    bool testEnabled( const QPoint*) const override;
     bool doBeforeAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(CLOSE_MODEL);}
 
 private:
-    FileIO::FaceModelManager* _fmm;
     QWidget *_parent;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

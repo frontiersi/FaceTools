@@ -56,8 +56,8 @@ bool ActionDetectFace::doBeforeAction( FVS& fvs, const QPoint&)
     fm->lockForRead(); // Warn if about to overwrite!
     if ( !fm->landmarks()->empty())
     {
-        static const QString msg = tr("Really overwrite existing landmark detection and orientation?");
-        go = QMessageBox::Yes == QMessageBox::question( _parent, tr("Overwrite face detection(s)?"), msg,
+        static const QString msg = tr("Really reset existing landmark and metric detections?");
+        go = QMessageBox::Yes == QMessageBox::question( _parent, tr("Reset face detection?"), msg,
                                  QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     }   // end if
     fm->unlock();
@@ -69,15 +69,15 @@ bool ActionDetectFace::doAction( FVS& fvs, const QPoint&)
 {
     assert(fvs.size() == 1);
     FM* fm = fvs.first()->data();
-    fvs.clear();
 
     // Get a new orientation for the face
     fm->lockForRead();
     const RFeatures::ObjModelKDTree::Ptr kdt = fm->kdtree();
-    FaceOrientationDetector faceDetector( kdt);
+    FaceOrientationDetector faceDetector( kdt, 650.0f, 0.3f);
     const bool oriented = faceDetector.orient();
     fm->unlock();
 
+    fm->clearLandmarks();
     if ( !oriented)
     {
         _err = faceDetector.error();
@@ -90,10 +90,10 @@ bool ActionDetectFace::doAction( FVS& fvs, const QPoint&)
     if ( !faceDetector.detect( *fm->landmarks()))
     {
         _err = faceDetector.error();
+        fm->clearLandmarks();
         return false;
     }   // end if
 
-    fvs.insert(fm);
     fm->lockForWrite();
     fm->setCentre( FaceTools::calcFaceCentre( *fm->landmarks()));
     fm->setOrientation( faceDetector.orientation());

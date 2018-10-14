@@ -37,6 +37,13 @@ FaceTools_EXPORT cv::Vec3f calcFaceCentre( const Landmark::LandmarkSet&);
 // Return the point closest to v on the surface of the model.
 FaceTools_EXPORT cv::Vec3f toSurface( const RFeatures::ObjModelKDTree*, const cv::Vec3f& v);
 
+// Starting at the point on the surface closest to s, return the point on the surface closest to t.
+FaceTools_EXPORT cv::Vec3f moveTo( const RFeatures::ObjModelKDTree*, const cv::Vec3f& s, const cv::Vec3f& t);
+
+// Find the point farthest off the straight line distance between p0 and p1 along the shortest contour over the mesh between these points.
+// If parameter d is not null, on return it is set with the distance the returned point is orthogonally from the baseline vector p0->p1.
+FaceTools_EXPORT cv::Vec3f findDeepestPoint( const RFeatures::ObjModelKDTree*, const cv::Vec3f&, const cv::Vec3f&, double *d=nullptr);
+
 // Calculate cropping radius for a face as G times the distance from the face centre to the point halfway between the eyes.
 FaceTools_EXPORT double calcFaceCropRadius( const cv::Vec3f& faceCentre, const cv::Vec3f& leye, const cv::Vec3f& reye, double G);
 

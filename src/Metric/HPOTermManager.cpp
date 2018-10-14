@@ -50,7 +50,7 @@ int HPOTermManager::load( const QString& fname)
     _names.clear();
 
     std::vector<rlib::StringVec> lines;
-    int nrecs = rlib::readFlatFile( fname.toStdString(), lines, &IBAR, true/*skip # symbols as well as blank lines*/);
+    int nrecs = rlib::readFlatFile( fname.toStdString(), lines, IBAR, true/*skip # symbols as well as blank lines*/);
     if ( nrecs <= 0)
         return nrecs;
 
@@ -62,7 +62,7 @@ int HPOTermManager::load( const QString& fname)
         int id = QString(recs[0].c_str()).toInt(&ok);
         if ( !ok || id < 0 || _hpos.count(id) > 0)
         {
-            std::cerr << "[WARNING] FaceTools::Metric::HPOTermManager::load: Invalid HPO id read in!" << std::endl;
+            std::cerr << "[WARNING] FaceTools::Metric::HPOTermManager::load: Invalid HPO id read! Problem field: '" << recs[0] << "'" << std::endl;
             continue;
         }   // end else
 

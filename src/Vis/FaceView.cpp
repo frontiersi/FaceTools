@@ -238,6 +238,11 @@ bool FaceView::projectToSurface( const QPoint& p, cv::Vec3f& v) const
 
 
 // public
+void FaceView::setPickable( bool v) { _actor->SetPickable(v);}
+bool FaceView::pickable() const { return _actor->GetPickable();}
+
+
+// public
 double FaceView::opacity() const
 {
     assert(_actor);

@@ -42,6 +42,9 @@ public:
 
     // Returns true if metric existed and was removed.
     bool erase( int id);
+
+    // Clears all metrics from this set.
+    void reset();
     
     // Get metric ids.
     const IntSet& ids() const { return _ids;}

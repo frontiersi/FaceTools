@@ -16,7 +16,9 @@
  ************************************************************************/
 
 #include <FaceActionManager.h>
+#include <FaceModelManager.h>
 #include <FaceModelViewer.h>
+#include <ModelSelector.h>
 #include <FaceModel.h>
 #include <FaceView.h>
 #include <QApplication>
@@ -29,8 +31,7 @@ using FaceTools::Action::FaceActionGroup;
 using FaceTools::Action::ModelSelector;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::EventSet;
-using FaceTools::FileIO::FaceModelManager;
-using FaceTools::FileIO::LoadFaceModelsHelper;
+using FaceTools::FileIO::FMM;
 using FaceTools::Interactor::MVI;
 using FaceTools::Interactor::ViewerInteractionManager;
 using FaceTools::Vis::FV;
@@ -41,12 +42,14 @@ using FaceTools::FVS;
 using FaceTools::FM;
 
 // public
-FaceActionManager::FaceActionManager( FMV* viewer, FaceModelManager* fmm)
-    : QObject(), _fmm( fmm), _interactions( new ViewerInteractionManager( viewer)), _selector(viewer)
+FaceActionManager::FaceActionManager( FMV* viewer)
+    : QObject(), _interactions( new ViewerInteractionManager( viewer))
 {
-    //connect( _interactions, &ViewerInteractionManager::onActivatedViewer, &_selector, &ModelSelector::doSwitchSelectedToViewer);
-    connect( &_selector, &ModelSelector::onSelected, [this]( FV* fv, bool v){ setReady(fv,v);});
+    ModelSelector::create( this, viewer);
 }   // end ctor
+
+
+void FaceActionManager::addViewer( FMV* v){ _interactions->addViewer(v);}
 
 
 // public
@@ -79,7 +82,7 @@ QAction* FaceActionManager::addAction( FaceAction* fa)
         MVI* interactor = fa->interactor();
         if ( interactor) // Set the default viewer for the action's interactor if it defines one.
         {
-            interactor->setViewer( _selector.interactor()->viewer());
+            interactor->setViewer( ModelSelector::viewer());
             connect( interactor, &MVI::onChangedData, this, &FaceActionManager::doOnChangedData);
         }   // end if
 
@@ -93,7 +96,7 @@ QAction* FaceActionManager::addAction( FaceAction* fa)
 void FaceActionManager::doOnChangedData( FV* fv)
 {
     fv->data()->setSaved(false);
-    setReady( fv, true);    // Already selected so fine to do
+    doOnSelected( fv, true);    // Already selected so fine to do
     emit onUpdateSelected( fv->data());
 }   // end doOnChangedData
 
@@ -133,11 +136,11 @@ void FaceActionManager::doOnActionFinished( EventSet evs, FVS workSet, bool)
     FaceAction* sact = qobject_cast<FaceAction*>(sender());
     printActionInfo( sact, &evs);
 
-    FMVS vwrs = workSet.dviewers();    // The viewers before processing (e.g. before load or close)
+    FMVS vwrs = workSet.dviewers();    // The viewers before processing
     if ( !evs.empty())
     {
         processFinishedAction( sact, evs, workSet);  // Process after action bits
-        FMVS vwrs1 = workSet.dviewers();     // The viewers after processing (e.g. after load or close)
+        FMVS vwrs1 = workSet.dviewers();     // The viewers after processing
         vwrs.insert(vwrs1.begin(), vwrs1.end());
     }   // end if
 
@@ -152,7 +155,7 @@ void FaceActionManager::doOnActionFinished( EventSet evs, FVS workSet, bool)
     else
     {
         // Update the ready state for all actions using the currently selected FaceView (not the worked on set).
-        FV* sel = _selector.selected(); // May be null!
+        FV* sel = ModelSelector::selected(); // May be null!
         std::for_each(std::begin(_actions), std::end(_actions), [=](FaceAction* a){ a->resetReady( sel);});
         emit onUpdateSelected( sel ? sel->data() : nullptr);
         _mutex.unlock();
@@ -165,7 +168,13 @@ void FaceActionManager::doOnActionFinished( EventSet evs, FVS workSet, bool)
 // private
 void FaceActionManager::processFinishedAction( FaceAction* sact, EventSet &evs, FVS &workSet)
 {
-    if ( evs.count(CLOSE_MODEL) > 0)
+    if ( evs.count(LOADED_MODEL))
+    {
+        evs.insert(GEOMETRY_CHANGE);
+        evs.insert(VIEWER_CHANGE);
+        evs.insert(VIEW_CHANGE);
+    }   // end if
+    else if ( evs.count(CLOSE_MODEL) > 0)
     {
         FMVS avwrs;
         const FMS& fms = workSet.models(); // Copy out the models
@@ -176,28 +185,12 @@ void FaceActionManager::processFinishedAction( FaceAction* sact, EventSet &evs, 
             avwrs.insert( std::begin(vwrs), std::end(vwrs));
             close(fm);  // Close the FaceModel and remove its views.
         }   // end for
-        evs.erase(CLOSE_MODEL);   // Close model done
 
         // Need to notify other FaceViews in the affected viewers of VIEWER_CHANGE event
         evs.insert(VIEWER_CHANGE);
         workSet.clear();
         for ( FMV* fmv : avwrs)
             workSet.insert(fmv->attached());
-    }   // end if
-    else if ( evs.count(LOADED_MODEL) > 0)
-    {
-        // Obtain the FaceView's for the just loaded FaceModels
-        workSet.clear();
-        for ( const std::string& fpath : _fmm->loader()->lastLoaded())
-        {
-            FM* fm = _fmm->model(fpath);
-            assert(fm);
-            FV* nfv = _selector.addFaceView(fm);
-            _selector.setSelected( nfv, true);
-            workSet.insert( nfv);
-        }   // end for
-        evs.insert(GEOMETRY_CHANGE);
-        evs.insert(VIEWER_CHANGE);
     }   // end if
     else if ( !evs.empty())   // Cause actions to respond to change events
     {
@@ -229,7 +222,7 @@ void FaceActionManager::processFinishedAction( FaceAction* sact, EventSet &evs, 
 
 
 // private
-void FaceActionManager::setReady( FV* fv, bool v)
+void FaceActionManager::doOnSelected( FV* fv, bool v)
 {
     std::for_each(std::begin(_actions), std::end(_actions), [=](FaceAction* a){ a->setReady(fv,v);});
     fv->data()->updateRenderers();
@@ -249,8 +242,8 @@ void FaceActionManager::close( FM* fm)
         a->clean(fm);
     }   // end for
     fm->unlock();
-    _selector.remove(fm);
-    _fmm->close(fm);
+    ModelSelector::remove(fm);
+    FMM::close(fm);
 
     // Even though ModelSelector::remove results in a call to setReady, this comes BEFORE the FaceModel
     // itself is closed. Some actions may depend upon this state update on FaceModelManager, so need to

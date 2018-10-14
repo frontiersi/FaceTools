@@ -17,21 +17,15 @@
 
 #include <LoadFaceModelsHelper.h>
 #include <FaceModelManager.h>
+#include <ModelSelector.h>
 #include <FaceModel.h>
 #include <QMessageBox>
 using FaceTools::FileIO::LoadFaceModelsHelper;
-using FaceTools::FileIO::FaceModelManager;
 using FaceTools::FaceModel;
 
+LoadFaceModelsHelper::LoadFaceModelsHelper( QWidget* parent) : _parent(parent) {}
 
-LoadFaceModelsHelper::LoadFaceModelsHelper( FaceModelManager* fmm, QWidget *parent)
-    : _fmm(fmm), _parent(parent)
-{
-}   // end ctor
-
-
-// public
-size_t LoadFaceModelsHelper::setFilteredFilenames( const QStringList& fnames)
+int LoadFaceModelsHelper::setFilteredFilenames( const QStringList& fnames)
 {
     // Get the supported filenames.
     QStringList notsupp;
@@ -39,20 +33,20 @@ size_t LoadFaceModelsHelper::setFilteredFilenames( const QStringList& fnames)
     _filenames.clear();
     for ( const QString& qfname : fnames)
     {
-        if ( !_fmm->canRead( qfname.toStdString()))
+        if ( !FMM::canRead( qfname.toStdString()))
             notsupp << qfname;
-        else if ( _fmm->isOpen( qfname.toStdString()))
+        else if ( FMM::isOpen( qfname.toStdString()))
             areopen << qfname;
         else
             _filenames << qfname;
     }   // end for
 
     // Check the load limit (assume that all selected can be loaded)
-    if ( _filenames.size() + _fmm->numOpen() > _fmm->loadLimit())
+    if ( _filenames.size() + int(FMM::numOpen()) > int(FMM::loadLimit()))
     {
-        const size_t nallowed = _fmm->loadLimit() - _fmm->numOpen();
+        const size_t nallowed = FMM::loadLimit() - FMM::numOpen();
         QString msg = QObject::tr("Too many files selected! Only ");
-        msg.append( QString::number( _fmm->loadLimit())).append( QObject::tr(" models are allowed to be open at once."));
+        msg.append( QString::number( FMM::loadLimit())).append( QObject::tr(" models are allowed to be open at once."));
         if ( nallowed == 1)
             msg.append( QObject::tr("Only one more model may be loaded."));
         else
@@ -76,25 +70,27 @@ size_t LoadFaceModelsHelper::setFilteredFilenames( const QStringList& fnames)
 }   // end setFilteredFilenames
 
 
-// public
 size_t LoadFaceModelsHelper::loadModels()
 {
-    _failnames.clear();
     _loaded.clear();
+    _failnames.clear();
     for ( const QString& fname : _filenames)
     {
-        FaceModel* fm = _fmm->read( fname.toStdString());   // Blocks
+        FaceModel* fm = FMM::read( fname.toStdString());   // Blocks
         if ( fm)
-            _loaded.push_back(fname.toStdString());
+        {
+            Vis::FV* fv = Action::ModelSelector::addFaceView(fm);
+            Action::ModelSelector::setSelected(fv, true);
+            _loaded.insert( fv);
+        }   // end if
         else
-            _failnames[_fmm->error().c_str()] << fname;
+            _failnames[FMM::error().c_str()] << fname;
     }   // end for
     _filenames.clear();
     return _loaded.size();
 }   // end loadModels
 
 
-// public
 bool LoadFaceModelsHelper::loadModel( const QString& filename)
 {
     QStringList flist;
@@ -105,7 +101,6 @@ bool LoadFaceModelsHelper::loadModel( const QString& filename)
 }   // end loadModel
 
 
-// public
 void LoadFaceModelsHelper::showLoadErrors()
 {
     // For each error type, display a warning dialog
@@ -119,12 +114,5 @@ void LoadFaceModelsHelper::showLoadErrors()
 }   // end showLoadErrors
 
 
-// public
-bool LoadFaceModelsHelper::reachedLoadLimit() const
-{
-    return _fmm->numOpen() >= _fmm->loadLimit();
-}   // end reachedLoadLimit
-
-
-QString LoadFaceModelsHelper::createImportFilters() const { return _fmm->fileFormats().createImportFilters();}
-QStringList LoadFaceModelsHelper::createSimpleImportFilters() const { return _fmm->fileFormats().createSimpleImportFilters();}
+QString LoadFaceModelsHelper::createImportFilters() const { return FMM::fileFormats().createImportFilters();}
+QStringList LoadFaceModelsHelper::createSimpleImportFilters() const { return FMM::fileFormats().createSimpleImportFilters();}

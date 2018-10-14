@@ -31,6 +31,7 @@ ActionToggleCameraActorInteraction::ActionToggleCameraActorInteraction( const QS
     setCheckable( true, false);
     // Use this action's reportFinished signal to push through affine transform changes on FaceModels to other actions.
     connect( &_interactor, &ModelViewerInteractor::onChangedData, this, &ActionToggleCameraActorInteraction::doOnAffineChange);
+    setRespondToEvent( CLOSE_MODEL, false);
 }   // end ctor
 
 

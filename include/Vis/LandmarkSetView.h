@@ -19,33 +19,37 @@
 #define FACE_TOOLS_LANDMARK_SET_VIEW_H
 
 #include "SphereView.h"
+#include <LandmarkSet.h>
 
 namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT LandmarkSetView
 {
 public:
-    explicit LandmarkSetView( double defaultRadius=1.0);
+    LandmarkSetView( const Landmark::LandmarkSet&, double radius=1.0);
     virtual ~LandmarkSetView();
 
     void setLandmarkRadius( double);
     double landmarkRadius() const { return _lmrad;}
 
-    void setVisible( bool, ModelViewer*);               // Show/hide all landmarks (also sets current viewer)
+    void setVisible( bool, ModelViewer*);              // Show/hide all landmarks (also sets current viewer)
 
     const IntSet& visible() const { return _visible;}  // IDs of visible landmarks
-    void showLandmark( bool, int lmID);                 // Show/hide individual landmark
+    void showLandmark( bool, int lmID);                // Show/hide individual landmark
 
     const IntSet& highlighted() const { return _highlighted;} // IDs of highlighted landmarks
-    void highlightLandmark( bool, int lmID);            // Highlights a (visible) landmark
+    void highlightLandmark( bool, int, FaceLateral);          // Highlights a (visible) landmark
+
+    void set( int, FaceLateral, const cv::Vec3f&);
+    void remove( int);
+
+    // Refresh from the given set of landmarks.
+    void refresh( const Landmark::LandmarkSet&);
 
     // Returns ID of landmark for prop or -1 if not found.
     // On return >= 0, out parameter FaceLateral is set to the
     // lateral on which the landmark appears.
     int landmarkId( const vtkProp*, FaceLateral&) const;
-
-    void removeFromView( int, FaceLateral);
-    void setInView( int, FaceLateral, const cv::Vec3f&);
 
     void pokeTransform( const vtkMatrix4x4*);                     
     void fixTransform();
@@ -60,8 +64,8 @@ private:
     IntSet _highlighted;
     IntSet _visible;
 
-    void removeFromView( int, SphereMap&, PropMap&);
-    void setInView( int lm, SphereMap&, PropMap&, const cv::Vec3f&);
+    void remove( int, SphereMap&, PropMap&);
+    void set( int, SphereMap&, PropMap&, const cv::Vec3f&);
     LandmarkSetView( const LandmarkSetView&) = delete;
     void operator=( const LandmarkSetView&) = delete;
 };  // end class

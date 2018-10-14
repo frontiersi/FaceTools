@@ -33,6 +33,7 @@ using FaceTools::Landmark::LandmarkSet;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
 using FaceTools::FM;
+using FaceTools::FaceLateral;
 
 
 const double ActionRadialSelect::MIN_RADIUS = 7.0;
@@ -103,20 +104,34 @@ bool ActionRadialSelect::doAction( FVS& fvs, const QPoint& mc)
     const FM* fm = fv->data();
     cv::Vec3f cpos = _rsels.count(fm) > 0 ? centre(fm) : fm->findClosestSurfacePoint( fm->centre());
 
+    fm->lockForRead();
+
+    const LandmarkSet::Ptr lmks = fm->landmarks();
     // In the first case, select as the centre the point projected onto the surface my the
-    // given 2D point (mouse coords). In the second instance, use the NASAL_TIP landmark
-    // if available, otherwise just use the point on the surface closest to the model's centre.
+    // given 2D point (mouse coords). In the second instance, use pronasale if available,
+    // otherwise just use the point on the surface closest to the model's centre.
     if ( !fv->projectToSurface( mc, cpos))
     {
-        fm->lockForRead();
-        const LandmarkSet::Ptr lmks = fm->landmarks();
         if ( lmks->hasCode( Landmark::PRN))
             cpos = *lmks->pos( Landmark::PRN);
-        fm->unlock();
     }   // end if
 
     if ( _rsels.count(fm) == 0)
-        makeRegionSelector( fm, cpos);
+    {
+        const int sv = fm->kdtree()->find( cpos);
+        _rsels[fm] = RFeatures::ObjModelRegionSelector::create( fm->info()->cmodel(), sv);
+    }   // end if
+
+    // If landmarks set, get the radius as 2.3 times the distance between pronasale and pupils.
+    double rad = _radius;
+    if ( lmks->hasCode( Landmark::P) && lmks->hasCode( Landmark::PRN))
+    {
+        cv::Vec3f mp = 0.5f * (*lmks->pos(Landmark::P, FACE_LATERAL_LEFT) + *lmks->pos(Landmark::P, FACE_LATERAL_RIGHT));
+        rad = 2.3 * cv::norm( mp - *lmks->pos(Landmark::PRN));
+    }   // end if
+    _rsels[fm]->setRadius( fm->info()->cmodel(), rad);
+
+    fm->unlock();
 
     bool actioned = ActionVisualise::doAction( fvs, mc);
     if ( isChecked())
@@ -137,17 +152,6 @@ void ActionRadialSelect::purge( const FM* fm)
     ActionVisualise::purge(fm);
     _rsels.erase(fm);
 }   // end purge
-
-
-// private
-void ActionRadialSelect::makeRegionSelector( const FM* fm, const cv::Vec3f& cpos)
-{
-    fm->lockForRead();
-    const int sv = fm->kdtree()->find( cpos);
-    _rsels[fm] = RFeatures::ObjModelRegionSelector::create( fm->info()->cmodel(), sv);
-    _rsels[fm]->setRadius( fm->info()->cmodel(), _radius);
-    fm->unlock();
-}   // end makeRegionSelector
 
 
 // private slot

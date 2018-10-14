@@ -36,7 +36,7 @@ int GeneManager::load( const QString& fname)
     _codes.clear();
 
     std::vector<rlib::StringVec> lines;
-    int nrecs = rlib::readFlatFile( fname.toStdString(), lines, &IBAR, true/*skip # symbols as well as blank lines*/);
+    int nrecs = rlib::readFlatFile( fname.toStdString(), lines, IBAR, true/*skip # symbols as well as blank lines*/);
     if ( nrecs <= 0)
         return nrecs;
 

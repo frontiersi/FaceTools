@@ -37,9 +37,9 @@ void SphereView::init()
     _caption->GetCaptionTextProperty()->ItalicOff();
     _caption->GetCaptionTextProperty()->ShadowOff();
     _caption->GetCaptionTextProperty()->SetFontFamilyToCourier();
-    _caption->GetCaptionTextProperty()->SetFontSize(6);
+    _caption->GetCaptionTextProperty()->SetFontSize(21);
     _caption->GetCaptionTextProperty()->SetColor( 1,1,1);
-    _caption->GetCaptionTextProperty()->SetUseTightBoundingBox(true);
+    //_caption->GetCaptionTextProperty()->SetUseTightBoundingBox(true);
     _caption->SetVisibility(false);
     _caption->SetPickable(false);
 
@@ -87,7 +87,7 @@ void SphereView::setResolution( int t)
 {
     t = std::max<int>(t,8);
     _source->SetPhiResolution(t);
-    _source->SetThetaResolution((int)(double(t+1)/2));
+    _source->SetThetaResolution(int(double(t+1)/2));
 }   // end setResolution
 
 int SphereView::resolution() const { return _source->GetPhiResolution();}
@@ -104,8 +104,7 @@ double SphereView::scaleFactor() const { return _actor->scaleFactor();}
 void SphereView::setCentre( const cv::Vec3f& pos)
 {
     _actor->setPosition(pos);
-    double attachPoint[3] = {pos[0], pos[1], pos[2]};
-    _caption->SetAttachmentPoint( attachPoint);
+    setHighlighted(highlighted());  // Just for resetting the caption attachment point
 }   // end setCentre
 
 cv::Vec3f SphereView::centre() const { return _actor->position();}
@@ -120,15 +119,29 @@ void SphereView::setColour( double r, double g, double b) { _actor->setColour(r,
 void SphereView::setColour( const double c[]) { _actor->setColour(c);}
 const double* SphereView::colour() const { return _actor->colour();}
 
-void SphereView::setCaption( const std::string& lname) { _caption->SetCaption( lname.c_str());}
+void SphereView::setCaption( const std::string& lname)
+{
+    _caption->SetCaption( lname.c_str());
+    _caption->SetPosition2( lname.size() * 0.015, 0.05);
+    //_caption->SetHeight(0.05);
+}   // end setCaption
+
+
 std::string SphereView::caption() const
 {
     const char* cap = _caption->GetCaption();
     return cap == nullptr ? "" : cap;
 }   // end caption
 
-void SphereView::setHighlighted( bool v) { _caption->SetVisibility( v);}
-bool SphereView::highlighted() const { return (bool)_caption->GetVisibility();}
+void SphereView::setHighlighted( bool v)
+{
+    const cv::Vec3f& pos = _actor->position();
+    double attachPoint[3] = {double(pos[0]), double(pos[1]), double(pos[2])};
+    _caption->SetAttachmentPoint( attachPoint);
+    _caption->SetVisibility( v);
+}   // end setHighlighted
+
+bool SphereView::highlighted() const { return static_cast<bool>(_caption->GetVisibility());}
 
 const vtkProp* SphereView::prop() const { return _actor->prop();}
 
@@ -148,4 +161,8 @@ void SphereView::setVisible( bool v, ModelViewer* vwr)
 }   // end setVisible
 
 void SphereView::pokeTransform( const vtkMatrix4x4* vm) { _actor->pokeTransform(vm);}
-void SphereView::fixTransform() { _actor->fixTransform();}
+
+void SphereView::fixTransform()
+{
+    _actor->fixTransform();
+}   // end fixTransform

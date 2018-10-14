@@ -112,6 +112,9 @@ public:
     bool isSaved() const { return _saved;}
     void setSaved( bool s=true) { _saved = s;}
 
+    // Clears orientation, landmarks and metrics.
+    void clearLandmarks();
+
     // The views associated with this model.
     const FVS& fvs() const { return _fvs;}
 

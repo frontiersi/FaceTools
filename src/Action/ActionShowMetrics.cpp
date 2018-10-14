@@ -18,6 +18,7 @@
 #include <ActionShowMetrics.h>
 #include <MetricCalculatorManager.h>
 #include <MetricVisualiser.h>
+#include <ModelSelector.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <algorithm>
@@ -127,7 +128,8 @@ bool ActionShowMetrics::testReady( const FV* fv)
 bool ActionShowMetrics::doAction( FVS& fvsin, const QPoint&)
 {
     assert(fvsin.size() == 1);
-    FM* fm = fvsin.first()->data();
+    FV* fv = fvsin.first();
+    FM* fm = fv->data();
     purge( fm); // Remove all visualisers initially
 
     size_t numShownMetrics = 0;
@@ -150,6 +152,11 @@ bool ActionShowMetrics::doAction( FVS& fvsin, const QPoint&)
     // Won't stay checked if no metrics were shown!
     if ( isChecked() && numShownMetrics == 0)
         setChecked(false);
+
+    // Prevent deselection of the selected view until no longer showing metrics
+    // since repicking the model will be disabled.
+    fv->setPickable(!isChecked());
+    ModelSelector::setSelectEnabled( !isChecked());
 
     return true;
 }   // end doAction

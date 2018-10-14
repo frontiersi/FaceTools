@@ -16,26 +16,28 @@
  ************************************************************************/
 
 #include <ActionCloseAllFaceModels.h>
+#include <FaceModelManager.h>
 #include <QMessageBox>
 #include <algorithm>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionCloseAllFaceModels;
-using FaceTools::FileIO::FaceModelManager;
+using FaceTools::FileIO::FMM;
 using FaceTools::FVS;
 using FaceTools::FMS;
 using FaceTools::FM;
 
 
-ActionCloseAllFaceModels::ActionCloseAllFaceModels( const QString& dname, FaceModelManager* fmm, QWidget* pw)
-    : FaceAction( dname), _fmm(fmm), _parent(pw)
+ActionCloseAllFaceModels::ActionCloseAllFaceModels( const QString& dname, QWidget* pw)
+    : FaceAction( dname), _parent(pw)
 {
 }   // end ctor
 
+bool ActionCloseAllFaceModels::testEnabled( const QPoint*) const { return FMM::numOpen() > 0;}
 
 bool ActionCloseAllFaceModels::doBeforeAction( FVS& fvs, const QPoint&)
 {
     bool doshowmsg = false;
-    const FMS& models = _fmm->opened();
+    const FMS& models = FMM::opened();
     for ( FM* fm : models)
     {
         fm->lockForRead();

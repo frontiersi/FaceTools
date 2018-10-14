@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <ActionExportPDF.h>
+#include <FaceModelManager.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <PDFGenerator.h>       // RModelIO
@@ -76,20 +77,24 @@ ActionExportPDF::ActionExportPDF( BaseReportTemplate* t, const QIcon& icon, cons
 
 bool ActionExportPDF::testReady( const FV* fv) { return _template->isAvailable(fv->data());}
 
-bool ActionExportPDF::testEnabled( const QPoint*) const { return gotReady() && isAvailable();}
+bool ActionExportPDF::testEnabled( const QPoint*) const { return ready1() && isAvailable();}
 
 
 // Get the save filepath for the report
-bool ActionExportPDF::doBeforeAction( FVS&, const QPoint&)
+bool ActionExportPDF::doBeforeAction( FVS& fvs, const QPoint&)
 {
-    //std::string outfile = "report.pdf";
+    assert( fvs.size() == 1);
+    const FV* fv = fvs.first();
+    std::string fname = FileIO::FMM::filepath( fv->data());
+    QString outfile = boost::filesystem::path(fname).filename().replace_extension( "pdf").string().c_str();
+
     QFileDialog fileDialog;
     fileDialog.setWindowTitle( tr("Export as PDF"));
     fileDialog.setFileMode( QFileDialog::AnyFile);
     fileDialog.setNameFilter( "Portable Document Format (*.pdf)");
     //fileDialog.setDirectory( parentDir);    // Default save directory is last save location for model
     fileDialog.setDefaultSuffix( "pdf");
-    //fileDialog.selectFile( outfile.c_str());
+    fileDialog.selectFile( outfile);
     fileDialog.setAcceptMode( QFileDialog::AcceptSave);
     //fileDialog.setOption( QFileDialog::DontUseNativeDialog);
 

@@ -31,8 +31,7 @@
 #include <QStatusBar>
 #include <QPoint>
 
-namespace FaceTools {
-namespace Interactor {
+namespace FaceTools { namespace Interactor {
 
 class FaceTools_EXPORT ModelViewerInteractor : public QTools::VVI
 { Q_OBJECT
@@ -68,7 +67,6 @@ private:
     int _ilock;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <MetricCalculatorTypeRegistry.h>
+#include <LandmarksManager.h>
 #include <boost/algorithm/string.hpp>
 #include <iostream>
 #include <cassert>
@@ -49,8 +50,21 @@ void MetricCalculatorTypeRegistry::clearTemplateTypes()
 
 MCTI::Ptr MetricCalculatorTypeRegistry::createFrom( const std::string& cat, const std::string& prms)
 {
-    if ( s_types.count(cat) == 0)
+    if ( LDMKS_MAN::count() == 0)
+    {
+        std::cerr << "[ERROR] FaceTools::Metric::MetricCalculatorTypeRegistry::createFrom: "
+                  << "Load some landmarks first!" << std::endl;
         return nullptr;
+    }   // end if
+
+    if ( s_types.count(cat) == 0)
+    {
+        std::cerr << "[ERROR] FaceTools::Metric::MetricCalculatorTypeRegistry::createFrom: "
+                  << "Required category '" << cat << "' not present!" << std::endl;
+        return nullptr;
+    }   // end if
+
     MCTI::Ptr mcti = s_types.at(cat)->fromParams(prms);
+    assert( mcti != nullptr);
     return mcti;
 }   // end createFrom

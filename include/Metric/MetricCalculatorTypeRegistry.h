@@ -33,6 +33,6 @@ private:
     static std::unordered_map<std::string, MCTI*> s_types;
 };  // end class
 
-} }  // end namespaces
+}}  // end namespaces
 
 #endif

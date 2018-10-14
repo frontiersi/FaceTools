@@ -16,21 +16,21 @@
  ************************************************************************/
 
 #include <ActionSaveFaceModels.h>
+#include <FaceModelManager.h>
 #include <QMessageBox>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionSaveFaceModels;
 using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
-using FaceTools::FileIO::FaceModelManager;
+using FaceTools::FileIO::FMM;
 using FaceTools::FVS;
 using FaceTools::Vis::FV;
 using FaceTools::FaceModel;
 
 
-ActionSaveFaceModels::ActionSaveFaceModels( const QString& dn, const QIcon& ico, const QKeySequence& ks,
-                                            FaceModelManager* fmm, QWidget *parent)
-    : FaceAction( dn, ico, ks), _fmm(fmm), _parent(parent)
+ActionSaveFaceModels::ActionSaveFaceModels( const QString& dn, const QIcon& ico, const QKeySequence& ks, QWidget *parent)
+    : FaceAction( dn, ico, ks), _parent(parent)
 {
     setAsync(true);
 }   // end ctor
@@ -39,7 +39,7 @@ ActionSaveFaceModels::ActionSaveFaceModels( const QString& dn, const QIcon& ico,
 bool ActionSaveFaceModels::testReady( const FV* fv)
 {
     FaceModel *fm = fv->data();
-    return !fm->isSaved() && (_fmm->hasPreferredFileFormat(fm) || !fm->hasMetaData());
+    return !fm->isSaved() && (FMM::hasPreferredFileFormat(fm) || !fm->hasMetaData());
 }   // end testReady
 
 
@@ -49,8 +49,8 @@ bool ActionSaveFaceModels::doAction( FVS& fset, const QPoint&)
     for ( FaceModel* fm : fms)
     {
         std::string filepath;   // Will be the last saved filepath
-        if ( !_fmm->write( fm, &filepath))  // Save using current filepath for the model
-            _fails[_fmm->error()] << filepath.c_str();
+        if ( !FMM::write( fm, &filepath))  // Save using current filepath for the model
+            _fails[FMM::error()] << filepath.c_str();
     }   // end for
     return true;
 }   // end doAction

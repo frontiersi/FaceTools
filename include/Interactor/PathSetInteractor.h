@@ -21,27 +21,25 @@
 #include "ModelEntryExitInteractor.h"
 #include <PathSetVisualisation.h>
 
-namespace FaceTools {
-namespace Interactor {
+namespace FaceTools { namespace Interactor {
 
 class FaceTools_EXPORT PathSetInteractor : public ModelViewerInteractor
 { Q_OBJECT
 public:
     PathSetInteractor( MEEI*, Vis::PathSetVisualisation*, QStatusBar *sbar=nullptr);
 
-    inline Vis::FV* hoverModel() const { return _meei->model();}
-
     // Get the ID of the path associated with the handle being hovered over (if any).
     // Returns -1 if no handle hovered over. Use hoverModel() to get associated model.
-    inline int hoverPathId() const { return _hover;}
+    int hoverPathId() const { return _hover;}
+    Vis::FV* hoverModel() const { return _meei->model();}
 
     void setPathDrag( int pid);
     bool moveDragHandle( const cv::Vec3f&);
     void setCaptionInfo( const FM*, int);
 
 public slots:
-    void doOnEnterHandle( const Vis::FV*, const Vis::PathView::Handle*);
-    void doOnLeaveHandle( const Vis::FV*, const Vis::PathView::Handle *h=nullptr);
+    void doOnEnterHandle( const Vis::FV*, const vtkProp*);
+    void doOnLeaveHandle( const Vis::FV*, const vtkProp*);
 
 private:
     bool leftButtonDown( const QPoint&) override;
@@ -55,13 +53,13 @@ private:
     int _drag;  // Path currently being dragged
     int _hover; // Path hovered over
     int _handle;// Handle hovered over or being dragged (0|1) - only valid if _hover >= 0 or _drag >= 0
+    Vis::FV* _view;
+
     static const QString s_msg0;
     static const QString s_msg1;
-
     void setCaptionAttachPoint( const FM*, int);
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

@@ -31,7 +31,7 @@ public:
 private slots:
     bool testReady( const Vis::FV*) override;
     bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(VIEW_CHANGE);}
+    //void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(VIEW_CHANGE);}
 };  // end class
 
 }   // end namespace

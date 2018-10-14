@@ -19,16 +19,14 @@
 #define FACE_TOOLS_ACTION_SAVE_AS_FACE_MODEL_H
 
 #include "FaceAction.h"
-#include <FaceModelManager.h>
 #include <QWidget>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionSaveAsFaceModel : public FaceAction
 { Q_OBJECT
 public:
-    ActionSaveAsFaceModel( const QString& dname, const QIcon&, FileIO::FaceModelManager*, QWidget *parent=nullptr);
+    ActionSaveAsFaceModel( const QString& dname, const QIcon&, QWidget *parent=nullptr);
 
 signals:
     void onSavedAs( const Vis::FV*);
@@ -39,12 +37,10 @@ protected slots:
     void doAfterAction( EventSet&, const FVS&, bool) override;
 
 private:
-    FileIO::FaceModelManager *_fmm;
     QWidget *_parent;
     std::string _filename;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

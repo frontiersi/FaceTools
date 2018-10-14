@@ -114,7 +114,6 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/FaceActionGroup.h"
     "${INCLUDE_ACTION_DIR}/FaceActionManager.h"
     "${INCLUDE_ACTION_DIR}/FaceActionWorker.h"
-    "${INCLUDE_ACTION_DIR}/ModelSelector.h"
 
     "${INCLUDE_FILEIO_DIR}/FaceModelAssImpFileHandler.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelFileHandler.h"
@@ -173,6 +172,7 @@ set( INCLUDE_FILES
 
     "${INCLUDE_ACTION_DIR}/ActionExecutionQueue.h"
     "${INCLUDE_ACTION_DIR}/EventProcessResponse.h"
+    "${INCLUDE_ACTION_DIR}/ModelSelector.h"
 
     "${INCLUDE_DETECT_DIR}/FaceFinder2D.h"
     "${INCLUDE_DETECT_DIR}/FaceOrientationDetector.h"

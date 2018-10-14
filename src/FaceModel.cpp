@@ -177,8 +177,8 @@ bool FaceModel::update( ObjModelInfo::Ptr nfo)
     }   // end if
 
     _kdtree = ObjModelKDTree::create( _minfo->cmodel());
-    _landmarks->translateToSurface( _kdtree);   // Ensure landmarks remapped to surface
-    _paths->recalculate( _kdtree);                                  // Ensure stored paths remap to the new surface.
+    _landmarks->moveToSurface( &*_kdtree);   // Ensure landmarks remapped to surface
+    _paths->recalculate( _kdtree);           // Ensure stored paths remap to the new surface.
     calculateBounds();
 
     _saved = false;
@@ -199,8 +199,8 @@ void FaceModel::transform( const cv::Matx44d& m)
     _minfo->rebuildInfo();
     _kdtree = ObjModelKDTree::create( _minfo->cmodel());
 
-    _landmarks->translateToSurface( _kdtree);   // Ensure landmarks remapped to surface
-    _paths->recalculate( _kdtree);                             // Ensure stored paths remap to the new surface.
+    _landmarks->moveToSurface( &*_kdtree);   // Ensure landmarks remapped to surface
+    _paths->recalculate( _kdtree);           // Ensure stored paths remap to the new surface.
     calculateBounds();
 
     vtkSmartPointer<vtkMatrix4x4> vm = RVTK::toVTK(m);
@@ -298,6 +298,19 @@ bool FaceModel::hasMetaData() const
         || !_metricsL.empty()
         || !_metricsR.empty();
 }   // end hasMetaData
+
+
+void FaceModel::clearLandmarks()
+{
+    _orientation = RFeatures::Orientation();
+    _centreSet = false;
+    _centre = cv::Vec3f(0,0,0);
+    _landmarks->clear();
+    _metrics.reset();
+    _metricsL.reset();
+    _metricsR.reset();
+    setSaved(false);
+}   // end clearLandmarks
 
 
 void FaceModel::updateRenderers() const

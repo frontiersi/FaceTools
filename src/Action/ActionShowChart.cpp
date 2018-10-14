@@ -85,7 +85,7 @@ void ActionShowChart::tellReady( const FV* fv, bool isready)
 
 namespace {
 
-QtCharts::QScatterSeries* createMetricPoint( MC::Ptr mc, const MetricValue *mv, const QString& title, const QColor& c, double age, double &xmin, double &xmax)
+QtCharts::QScatterSeries* createMetricPoint( MC::Ptr mc, const MetricValue *mv, const QString& title, const QColor& c, double age)
 {
     using namespace QtCharts;
     QScatterSeries *dpoints = new QScatterSeries;
@@ -98,8 +98,6 @@ QtCharts::QScatterSeries* createMetricPoint( MC::Ptr mc, const MetricValue *mv, 
     for ( size_t i = 0; i < dims; ++i)
     {
         const rlib::RSD::Ptr rsd = mc->type()->rsd(i);
-        xmin = std::min( xmin, rsd->tmin());
-        xmax = std::max( xmax, rsd->tmax());
         dpoints->append( age, mv->values()[i]);
     }   // end for
     return dpoints;
@@ -125,20 +123,23 @@ void ActionShowChart::resetChart( const FM* fm)
     if ( fm)
     {
         const double age = fm->age();
+        xmin = std::min<double>(xmin, age);
+        xmax = std::max<double>(xmax, age);
+
         if ( mc->isBilateral())
         {
             const MetricValue *mvl = fm->metricsL().get( _mid);
             const MetricValue *mvr = fm->metricsR().get( _mid);
             if ( mvl)
-                chart->addSeries( createMetricPoint( mc, mvl, "Subject (L)", Qt::darkBlue, age, xmin, xmax));
+                chart->addSeries( createMetricPoint( mc, mvl, "Subject (L)", Qt::darkBlue, age));
             if ( mvr)
-                chart->addSeries( createMetricPoint( mc, mvr, "Subject (R)", Qt::darkGreen, age, xmin, xmax));
+                chart->addSeries( createMetricPoint( mc, mvr, "Subject (R)", Qt::darkGreen, age));
         }   // end if
         else
         {
             const MetricValue *mv = fm->metrics().get( _mid);
             if ( mv)
-                chart->addSeries( createMetricPoint( mc, mv, "Subject", Qt::darkRed, age, xmin, xmax));
+                chart->addSeries( createMetricPoint( mc, mv, "Subject", Qt::darkRed, age));
         }   // end else
     }   // end if
 
@@ -158,11 +159,12 @@ void ActionShowChart::resetChart( const FM* fm)
     chart->axisX()->setTitleText( "Age");
     chart->axisY()->setTitleText( "Distance (mm)");
 
-    QString demog = toLongSexString( mc->sex());
+    QString demog;
     if ( !mc->ethnicities().isEmpty())
-        demog += "; " + mc->ethnicities();
+        demog = mc->ethnicities() + ", ";
+    demog += toLongSexString( mc->sex());
 
-    chart->setTitle( QString("%1 (%2)\nRef: %3").arg( mc->name(), demog, mc->source()));
+    chart->setTitle( QString("<center><big><b>%1</b> (%2)</big><br><em>%3</em></center>").arg( mc->name(), demog, mc->source()));
 }   // end tellReady
 
 

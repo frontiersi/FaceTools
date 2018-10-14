@@ -25,31 +25,26 @@
 #include <cassert>
 using FaceTools::FileIO::FaceModelManager;
 using FaceTools::FileIO::FaceModelFileHandler;
-using FaceTools::FileIO::LoadFaceModelsHelper;
+using FaceTools::FileIO::FaceModelFileHandlerMap;
+using FaceTools::FMS;
 using FaceTools::FM;
 
 
-// public
-FaceModelManager::FaceModelManager( QWidget* parent, size_t llimit)
-    : _loader( nullptr), _loadLimit(llimit)
-{
-    _loader = new LoadFaceModelsHelper( this, parent);
-}  // end ctor
+size_t FaceModelManager::_loadLimit(0);
+FaceModelFileHandlerMap FaceModelManager::_fhmap;
+FMS FaceModelManager::_models;
+std::unordered_map<FM*, std::string> FaceModelManager::_mdata;
+std::unordered_map<std::string, FM*> FaceModelManager::_mfiles;    // Lookup models by current filepath
+std::string FaceModelManager::_err;
 
 
-// public
-FaceModelManager::~FaceModelManager()
-{
-    delete _loader;
-}   // end dtor
+void FaceModelManager::setLoadLimit( size_t llimit) { _loadLimit = llimit;}
 
 
-// public
 void FaceModelManager::add( FaceModelFileHandler* fii) { if ( fii) _fhmap.add(fii);}
 
 
-// public
-bool FaceModelManager::hasPreferredFileFormat( FM* fm) const
+bool FaceModelManager::hasPreferredFileFormat( FM* fm)
 {
     assert( fm != nullptr);
     assert( _models.count(fm) > 0);
@@ -57,8 +52,7 @@ bool FaceModelManager::hasPreferredFileFormat( FM* fm) const
 }   // end hasPreferredFileFormat
 
 
-// public
-bool FaceModelManager::isPreferredFileFormat( const std::string& fname) const
+bool FaceModelManager::isPreferredFileFormat( const std::string& fname)
 {
     const QString& pext = _fhmap.preferredExt();
     const std::string cext = rlib::getExtension( fname);
@@ -76,7 +70,6 @@ void FaceModelManager::setModelFilepath( FM* fm, const std::string& fname)
 }   // end setModelFilepath
 
 
-// public
 bool FaceModelManager::write( FM* fm, std::string* fpath)
 {
     assert( _models.count(fm) > 0);
@@ -115,8 +108,7 @@ bool FaceModelManager::write( FM* fm, std::string* fpath)
 }   // end save
 
 
-// public
-bool FaceModelManager::canRead( const std::string& fname) const
+bool FaceModelManager::canRead( const std::string& fname)
 {
     if ( !boost::filesystem::exists( fname))
        return false;
@@ -125,11 +117,9 @@ bool FaceModelManager::canRead( const std::string& fname) const
 }   // end canRead
 
 
-// public
-bool FaceModelManager::isOpen( const std::string& fname) const { return _mfiles.count(fname) > 0;}
+bool FaceModelManager::isOpen( const std::string& fname) { return _mfiles.count(fname) > 0;}
 
 
-// public
 FM* FaceModelManager::read( const std::string& fname)
 {
     assert( !fname.empty());
@@ -161,16 +151,14 @@ FM* FaceModelManager::read( const std::string& fname)
 }   // end read
 
 
-// public
-const std::string& FaceModelManager::filepath( const FM* fm) const
+const std::string& FaceModelManager::filepath( const FM* fm)
 {
     assert(_models.count(const_cast<FM*>(fm)) > 0);
     return _mdata.at(const_cast<FM*>(fm));
 }   // end filepath
 
 
-// public
-FM* FaceModelManager::model( const std::string& fname) const
+FM* FaceModelManager::model( const std::string& fname)
 {
     FM* fm = nullptr;
     if ( _mfiles.count(fname) > 0)
@@ -179,7 +167,6 @@ FM* FaceModelManager::model( const std::string& fname) const
 }   // end model
 
 
-// public
 void FaceModelManager::close( FM* fm)
 {
     assert(_models.count(fm) > 0);
@@ -193,8 +180,7 @@ void FaceModelManager::close( FM* fm)
 }   // end close
 
 
-// public
-void FaceModelManager::printFormats( std::ostream& os) const
+void FaceModelManager::printFormats( std::ostream& os)
 {
     os << _fhmap << std::endl;
 }   // end printFormats

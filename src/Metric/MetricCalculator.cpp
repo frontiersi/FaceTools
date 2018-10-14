@@ -27,6 +27,7 @@ using FaceTools::Metric::MetricValue;
 using FaceTools::Metric::MetricSet;
 using FaceTools::Metric::MCTI;
 using FaceTools::FM;
+using FaceTools::FaceLateral;
 
 
 MetricCalculator::Ptr MetricCalculator::create( MCTI::Ptr mcti)
@@ -41,7 +42,7 @@ MetricCalculator::Ptr MetricCalculator::fromFile( const std::string &fpath)
     try
     {
         std::ifstream ifs;
-        ifs.open( fpath, std::ifstream::in);
+        ifs.open( fpath);
         if ( !ifs.good())
         {
             ifs.close();
@@ -151,15 +152,32 @@ double MetricCalculator::addSeriesToChart( QtCharts::QChart *chart, double *xmin
         }   // end for
 
         QString dsuff = ndims > 1 ? QString(" (D%1)").arg(d) : "";
+        z2pseries->setName("+2SD" + dsuff);
+        z1pseries->setName("+1SD" + dsuff);
         mseries->setName("Mean" + dsuff);
-        z1pseries->setName("+Z" + dsuff);
-        z2pseries->setName("+2Z" + dsuff);
-        z1nseries->setName("-Z" + dsuff);
-        z2nseries->setName("-2Z" + dsuff);
+        z1nseries->setName("-1SD" + dsuff);
+        z2nseries->setName("-2SD" + dsuff);
 
-        chart->addSeries(mseries);
-        chart->addSeries(z1pseries);
+        QPen pen;
+        pen.setWidth(1);
+        pen.setStyle(Qt::DashLine);
+        pen.setColor(Qt::red);
+        z2pseries->setPen(pen);
+        pen.setColor(Qt::darkRed);
+        z1pseries->setPen(pen);
+
+        pen.setColor(Qt::blue);
+        z2nseries->setPen(pen);
+        pen.setColor(Qt::darkBlue);
+        z1nseries->setPen(pen);
+
+        pen.setStyle(Qt::SolidLine);
+        pen.setColor(Qt::black);
+        mseries->setPen(pen);
+
         chart->addSeries(z2pseries);
+        chart->addSeries(z1pseries);
+        chart->addSeries(mseries);
         chart->addSeries(z1nseries);
         chart->addSeries(z2nseries);
 

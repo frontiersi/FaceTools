@@ -27,8 +27,7 @@
 #include "ModelViewerInteractor.h"
 #include <FaceViewSet.h>
 
-namespace FaceTools {
-namespace Interactor {
+namespace FaceTools { namespace Interactor {
 
 class FaceTools_EXPORT ModelSelectInteractor : public ModelViewerInteractor
 { Q_OBJECT
@@ -60,7 +59,6 @@ private:
     Vis::FV* underPoint( const QPoint&) const;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

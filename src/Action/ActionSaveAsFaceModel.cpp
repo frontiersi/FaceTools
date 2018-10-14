@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <ActionSaveAsFaceModel.h>
+#include <FaceModelManager.h>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <boost/filesystem.hpp>
@@ -24,14 +25,13 @@
 using FaceTools::Action::ActionSaveAsFaceModel;
 using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
-using FaceTools::FileIO::FaceModelManager;
+using FaceTools::FileIO::FMM;
 using FaceTools::FVS;
 using FaceTools::FaceModel;
 
 
-ActionSaveAsFaceModel::ActionSaveAsFaceModel( const QString& dn, const QIcon& ico, FaceModelManager* fmm, QWidget *parent)
-    : FaceAction( dn, ico),
-      _fmm(fmm), _parent(parent)
+ActionSaveAsFaceModel::ActionSaveAsFaceModel( const QString& dn, const QIcon& ico, QWidget *parent)
+    : FaceAction( dn, ico), _parent(parent)
 {
     setAsync(true);
 }   // end ctor
@@ -43,16 +43,16 @@ bool ActionSaveAsFaceModel::doBeforeAction( FVS& fset, const QPoint&)
     FaceModel* fm = fset.first()->data();
 
     // Make default save filename have the preferred extension
-    std::string filename = _fmm->filepath( fm);
+    std::string filename = FMM::filepath( fm);
     boost::filesystem::path outpath( filename);
     const QString parentDir = outpath.parent_path().string().c_str();
-    const QString dsuff = _fmm->fileFormats().preferredExt();
+    const QString dsuff = FMM::fileFormats().preferredExt();
     filename = outpath.replace_extension( dsuff.toStdString()).string();
 
     QFileDialog fileDialog( _parent);
     fileDialog.setWindowTitle( tr("Save model as..."));
     fileDialog.setFileMode( QFileDialog::AnyFile);
-    fileDialog.setNameFilters( _fmm->fileFormats().createExportFilters().split(";;"));
+    fileDialog.setNameFilters( FMM::fileFormats().createExportFilters().split(";;"));
     fileDialog.setDirectory( parentDir);    // Default save directory is last save location for model
     fileDialog.setDefaultSuffix( dsuff);
     fileDialog.selectFile( filename.c_str());
@@ -72,7 +72,7 @@ bool ActionSaveAsFaceModel::doBeforeAction( FVS& fset, const QPoint&)
             _filename = fnames.first().toStdString();
 
         // Display a warning if the model has meta-data and the selected format is not XML based.
-        if ( !_filename.empty() && fm->hasMetaData() && !_fmm->isPreferredFileFormat( _filename))
+        if ( !_filename.empty() && fm->hasMetaData() && !FMM::isPreferredFileFormat( _filename))
         {
             QString msg = tr("Landmark and other meta-data will not be saved using the chosen file format! Continue saving?");
             if ( QMessageBox::No == QMessageBox::warning( _parent, tr("Incomplete save!"), msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes))
@@ -91,7 +91,7 @@ bool ActionSaveAsFaceModel::doAction( FVS& fset, const QPoint&)
 {
     assert(fset.size() == 1);
     assert( !_filename.empty());
-    return _fmm->write( fset.first()->data(), &_filename); // Save by specifying new filename
+    return FMM::write( fset.first()->data(), &_filename); // Save by specifying new filename
 }   // end doAction
 
 
@@ -102,7 +102,7 @@ void ActionSaveAsFaceModel::doAfterAction( EventSet&, const FVS &fvs, bool succe
     else
     {
         QString msg( ("\nUnable to save to \"" + _filename + "\"!").c_str());
-        msg.append( ("\n" + _fmm->error()).c_str());
+        msg.append( ("\n" + FMM::error()).c_str());
         QMessageBox::critical( _parent, tr("Unable to save file!"), tr(msg.toStdString().c_str()));
     }   // end else
     _filename = "";

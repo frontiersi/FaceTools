@@ -19,7 +19,6 @@
 #define FACE_TOOLS_LANDMARK_LANDMARK_SET_H
 
 #include <Landmark.h>
-#include <LandmarkSetView.h>
 #include <LandmarksManager.h>
 #include <ObjModelKDTree.h>
 #include <boost/property_tree/ptree.hpp>
@@ -33,17 +32,18 @@ public:
     using Ptr = std::shared_ptr<LandmarkSet>;
     static Ptr create();
 
-    void registerViewer( Vis::LandmarkSetView*);
-
     // Add/change position of landmark with given id on given lateral.
     // If landmark is not bilateral, the FaceLateral argument may be ignored.
     // Returns true iff landmark with given id on the given lateral exists.
     bool set( int id, const cv::Vec3f&, FaceLateral=FACE_LATERAL_MEDIAL);
     bool set( const QString& code, const cv::Vec3f&, FaceLateral=FACE_LATERAL_MEDIAL);
 
-    // Deletes landmark(s) and returns true if landmark with given id exists, and it can be deleted.
+    // Deletes landmark(s) and returns true if landmark with given id exists.
     // In the case of bilateral landmarks, both landmarks are deleted.
     bool erase( int id);
+
+    // Remove all landmarks from the set.
+    void clear();
 
     // Return the position of the landmark for the given lateral.
     // The FACE_LATERAL_MEDIAL constant does not need to be specified if the
@@ -63,13 +63,7 @@ public:
     void translate( const cv::Vec3f&);     // Add translation vector v to all landmarks
     void transform( const cv::Matx44d&);   // Transform landmarks according to the given matrix.
 
-    // Translate each landmark in the set to be incident with the closest part of the given object's surface.
-    // Returns the mean positional difference between the old and new landmark positions.
-    double translateToSurface( RFeatures::ObjModelKDTree::Ptr);
-
-    // Laterally reflect the positions of the bilateral landmarks.
-    // Simply swaps the left and right lateral pointers.
-    void reflect();
+    void moveToSurface( const RFeatures::ObjModelKDTree*);
 
     // Get the names/codes/ids of landmarks in this set.
     const QStringSet& names() const { return _names;}
@@ -99,13 +93,9 @@ private:
     LDMRKS _lmksL;  // Left lateral
     LDMRKS _lmksM;  // Medial (none)
     LDMRKS _lmksR;  // Right lateral
-    LDMRKS *_lp;    // Pointer to "left" lateral (changes upon reflect)
-    LDMRKS *_rp;    // Pointer to "right" lateral (changes upon reflect)
-    Vis::LandmarkSetView *_view;
 
     const std::unordered_map<int, cv::Vec3f>& lateral( FaceLateral) const;
     std::unordered_map<int, cv::Vec3f>& lateral( FaceLateral);
-    void updateView( int8_t);
 
     LandmarkSet();
     ~LandmarkSet(){}

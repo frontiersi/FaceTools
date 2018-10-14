@@ -22,9 +22,15 @@
 #include <cassert>
 using FaceTools::Vis::LandmarkSetView;
 using FaceTools::Vis::SphereView;
+using FaceTools::ModelViewer;
+using FaceTools::FaceLateral;
+using FaceTools::Landmark::LandmarkSet;
 using ViewPair = std::pair<int, SphereView*>;
 
-LandmarkSetView::LandmarkSetView( double r) : _lmrad(r), _viewer(nullptr) {}
+LandmarkSetView::LandmarkSetView( const LandmarkSet& lmks, double r) : _lmrad(r), _viewer(nullptr)
+{
+    refresh( lmks);
+}   // end ctor
 
 
 LandmarkSetView::~LandmarkSetView()
@@ -34,6 +40,38 @@ LandmarkSetView::~LandmarkSetView()
     std::for_each( std::begin(_mviews), std::end(_mviews), [](const ViewPair& p){ delete p.second;});
     std::for_each( std::begin(_rviews), std::end(_rviews), [](const ViewPair& p){ delete p.second;});
 }   // end dtor
+
+
+void LandmarkSetView::refresh( const LandmarkSet& lmks)
+{
+    // First remove any landmarks not in the given set.
+    IntSet rids;
+
+    for ( const auto& p : _lviews)
+        if ( lmks.ids().count(p.first) == 0)
+            rids.insert(p.first);
+    for ( const auto& p : _mviews)
+        if ( lmks.ids().count(p.first) == 0)
+            rids.insert(p.first);
+    for ( const auto& p : _rviews)
+        if ( lmks.ids().count(p.first) == 0)
+            rids.insert(p.first);
+
+    for ( int i : rids)
+        remove(i);
+
+    // Now set/update all in lmks
+    for ( int id : lmks.ids())
+    {
+        if ( LDMKS_MAN::landmark(id)->isBilateral())
+        {
+            set(id, FACE_LATERAL_LEFT, *lmks.pos(id, FACE_LATERAL_LEFT));
+            set(id, FACE_LATERAL_RIGHT, *lmks.pos(id, FACE_LATERAL_RIGHT));
+        }   // end if
+        else
+            set(id, FACE_LATERAL_MEDIAL, *lmks.pos(id, FACE_LATERAL_MEDIAL));
+    }   // end for
+}   // end refresh
 
 
 void LandmarkSetView::setVisible( bool enable, ModelViewer* viewer)
@@ -82,22 +120,23 @@ void LandmarkSetView::showLandmark( bool enable, int lm)
 }   // end showLandmark
 
 
-void LandmarkSetView::highlightLandmark( bool enable, int lm)
+void LandmarkSetView::highlightLandmark( bool enable, int lm, FaceLateral lat)
 {
     enable = enable && _visible.count(lm) > 0;
 
     bool hasLmk = false;
-    if ( _lviews.count(lm) > 0)
+
+    if ( (lat & FACE_LATERAL_LEFT) && _lviews.count(lm) > 0)
     {
         _lviews.at(lm)->setHighlighted( enable);
         hasLmk = true;
     }   // end if
-    if ( _mviews.count(lm) > 0)
+    if ( (lat & FACE_LATERAL_MEDIAL) && _mviews.count(lm) > 0)
     {
         _mviews.at(lm)->setHighlighted( enable);
         hasLmk = true;
     }   // end if
-    if ( _rviews.count(lm) > 0)
+    if ( (lat & FACE_LATERAL_RIGHT) && _rviews.count(lm) > 0)
     {
         _rviews.at(lm)->setHighlighted( enable);
         hasLmk = true;
@@ -155,8 +194,28 @@ int LandmarkSetView::landmarkId( const vtkProp* prop, FaceLateral& lat) const
 }   // end landmarkId
 
 
+void LandmarkSetView::remove( int lm)
+{
+    assert(lm >= 0);
+    remove( lm, _lviews, _lprops);
+    remove( lm, _mviews, _mprops);
+    remove( lm, _rviews, _rprops);
+}   // end remove
+
+
+void LandmarkSetView::set( int lm, FaceLateral lat, const cv::Vec3f& pos)
+{
+    if ( lat == FACE_LATERAL_LEFT)
+        set( lm, _lviews, _lprops, pos);
+    else if ( lat == FACE_LATERAL_MEDIAL)
+        set( lm, _mviews, _mprops, pos);
+    else if ( lat == FACE_LATERAL_RIGHT)
+        set( lm, _rviews, _rprops, pos);
+}   // end set
+
+
 // private
-void LandmarkSetView::removeFromView( int lm, SphereMap& views, PropMap& props)
+void LandmarkSetView::remove( int lm, SphereMap& views, PropMap& props)
 {
     if ( views.count(lm) > 0)
     {
@@ -166,11 +225,11 @@ void LandmarkSetView::removeFromView( int lm, SphereMap& views, PropMap& props)
         props.erase(sv->prop());
         delete sv;
     }   // end if
-}   // end removeFromView
+}   // end remove
 
 
 // private
-void LandmarkSetView::setInView( int lm, SphereMap& views, PropMap& props, const cv::Vec3f& pos)
+void LandmarkSetView::set( int lm, SphereMap& views, PropMap& props, const cv::Vec3f& pos)
 {
     SphereView *sv = nullptr;
     if ( views.count(lm) > 0) // Get the landmark sphere view to update
@@ -182,29 +241,6 @@ void LandmarkSetView::setInView( int lm, SphereMap& views, PropMap& props, const
     }   // end if
     sv->setResolution(20);
     sv->setColour(0.5,0.9,0.0);
-    sv->setCentre( pos);
     sv->setCaption( LDMKS_MAN::landmark(lm)->name().toStdString());
-}   // end setInView
-
-
-void LandmarkSetView::removeFromView( int lm, FaceLateral lat)
-{
-    assert(lm >= 0);
-    if ( lat == FACE_LATERAL_LEFT)
-        removeFromView( lm, _lviews, _lprops);
-    else if ( lat == FACE_LATERAL_MEDIAL)
-        removeFromView( lm, _mviews, _mprops);
-    else if ( lat == FACE_LATERAL_RIGHT)
-        removeFromView( lm, _rviews, _rprops);
-}   // end removeFromView
-
-
-void LandmarkSetView::setInView( int lm, FaceLateral lat, const cv::Vec3f& pos)
-{
-    if ( lat == FACE_LATERAL_LEFT)
-        setInView( lm, _lviews, _lprops, pos);
-    else if ( lat == FACE_LATERAL_MEDIAL)
-        setInView( lm, _mviews, _mprops, pos);
-    else if ( lat == FACE_LATERAL_RIGHT)
-        setInView( lm, _rviews, _rprops, pos);
-}   // end setInView
+    sv->setCentre( pos);
+}   // end set

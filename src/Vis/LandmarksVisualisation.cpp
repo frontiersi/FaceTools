@@ -26,6 +26,8 @@ using FaceTools::Vis::LandmarkSetView;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
 using FaceTools::FM;
+using FaceTools::FaceLateral;
+using FaceTools::Landmark::LandmarkSet;
 
 
 LandmarksVisualisation::LandmarksVisualisation( const QString& dname, const QIcon& icon)
@@ -53,8 +55,8 @@ void LandmarksVisualisation::apply( FV* fv, const QPoint*)
     assert(fv);
     if ( !hasView(fv))
     {
-        _views[fv] = new LandmarkSetView;
-        fv->data()->landmarks()->registerViewer( _views.at(fv));
+        LandmarkSet::Ptr lmks = fv->data()->landmarks();
+        _views[fv] = new LandmarkSetView(*lmks);
     }   // end if
     _views.at(fv)->setVisible( true, fv->viewer());
 }   // end apply
@@ -76,21 +78,50 @@ void LandmarksVisualisation::setLandmarkVisible( const FM* fm, int lm, bool v)
 }   // end setLandmarkVisible
 
 
-void LandmarksVisualisation::setLandmarkHighlighted( const FM* fm, int lm, bool v)
+void LandmarksVisualisation::setLandmarkHighlighted( const FM* fm, int lm, FaceLateral lat, bool v)
 {
     assert(fm);
-    const FVS& fvs = fm->fvs();
-    std::for_each( std::begin(fvs), std::end(fvs), [=](FV* fv){ if ( this->hasView(fv)) _views.at(fv)->highlightLandmark(v,lm);});
+    for ( FV* fv : fm->fvs())
+    {
+        if ( this->hasView(fv))
+            _views.at(fv)->highlightLandmark(v, lm, lat);
+    }   // end for
 }   // end setLandmarkHighlighted
 
-/*
-void LandmarksVisualisation::refresh( const FM* fm)
+
+void LandmarksVisualisation::updateLandmark( const FM* fm, int id)
 {
     assert(fm);
-    const FVS& fvs = fm->fvs();
-    std::for_each( std::begin(fvs), std::end(fvs), [=](FV* fv){ if ( this->hasView(fv)) _views.at(fv)->refresh();});
-}   // end refresh
-*/
+    for ( FV* fv : fm->fvs())
+    {
+        if ( hasView(fv))
+        {
+            LandmarkSet::Ptr lmks = fv->data()->landmarks();
+            assert( lmks->ids().count(id) == 0);
+            const bool isBilateral = LDMKS_MAN::landmark(id)->isBilateral();
+            LandmarkSetView* view = _views.at(fv);
+
+            if ( isBilateral)
+            {
+                view->set(id, FACE_LATERAL_LEFT, *lmks->pos(id, FACE_LATERAL_LEFT));
+                view->set(id, FACE_LATERAL_RIGHT, *lmks->pos(id, FACE_LATERAL_RIGHT));
+            }   // end if
+            else
+                view->set(id, FACE_LATERAL_MEDIAL, *lmks->pos(id, FACE_LATERAL_MEDIAL));
+        }   // end if
+    }   // end for
+}   // end updateLandmark
+
+
+void LandmarksVisualisation::refreshLandmarks( const FM* fm)
+{
+    LandmarkSet::Ptr lmks = fm->landmarks();
+    for ( FV* fv : fm->fvs())
+    {
+        if ( hasView(fv))
+            _views.at(fv)->refresh(*lmks);
+    }   // end for
+}   // end refreshLandmarks
 
 
 int LandmarksVisualisation::landmarkId( const FV* fv, const vtkProp* prop, FaceLateral &lat) const

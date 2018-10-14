@@ -32,6 +32,7 @@ public:
     explicit MetricsDisplayDialog( QWidget *parent = nullptr);
     ~MetricsDisplayDialog() override;
 
+    void setShowScanInfoAction( QAction*);
     void setShowMetricsAction( QAction*);
     void setShowChartAction( QAction*);
 

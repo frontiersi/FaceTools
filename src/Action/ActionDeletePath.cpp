@@ -66,7 +66,7 @@ bool ActionDeletePath::doAction( FVS& fvs, const QPoint&)
         fm->setSaved(false);
         //fm->unlock();
         fvs.insert( fm);
-        _editor->interactor()->doOnLeaveHandle( fv);
+        _editor->interactor()->doOnLeaveHandle( fv, nullptr);
     }   // end if
 
     return !fvs.empty();
