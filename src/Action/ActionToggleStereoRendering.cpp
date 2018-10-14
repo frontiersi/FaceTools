@@ -20,12 +20,13 @@
 #include <vtkRenderWindow.h>
 using FaceTools::Action::ActionToggleStereoRendering;
 using FaceTools::Action::FaceAction;
+using FaceTools::Vis::FV;
 using FaceTools::FVS;
 using FaceTools::FMV;
 
 
 ActionToggleStereoRendering::ActionToggleStereoRendering( const QString& dn, const QIcon& ico)
-    : FaceAction( dn, ico)
+    : FaceAction( dn, ico), _sren(false)
 {
     setCheckable( true, false);
 }   // end ctor
@@ -46,13 +47,17 @@ void setStereoRendering( FMV* v, bool enable)
 void ActionToggleStereoRendering::addViewer( FMV* v)
 {
     _viewers.insert(v);
-    setStereoRendering( v, isChecked());
+    setStereoRendering( v, _sren);
 }   // end addViewer
+
+
+bool ActionToggleStereoRendering::testIfCheck( const FV*) const { return _sren;}
 
 
 bool ActionToggleStereoRendering::doAction( FVS&, const QPoint&)
 {
+    _sren = isChecked();
     for ( FMV* v : _viewers)
-        setStereoRendering( v, isChecked());
+        setStereoRendering( v, _sren);
     return true;
 }   // end doAction

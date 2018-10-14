@@ -190,7 +190,8 @@ void FaceAction::setReady( FV* fv, bool v)
         _ready.insert( fv);
 
     testSetEnabled();
-    setChecked( fv ? testIfCheck(fv) : _defaultCheckState);
+    //setChecked( fv ? testIfCheck(fv) : _defaultCheckState);
+    setChecked( testIfCheck(fv));
 
     if ( wasReady != isReady(fv))
     {

@@ -20,8 +20,7 @@
 
 #include "FaceAction.h"
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionToggleStereoRendering : public FaceAction
 { Q_OBJECT
@@ -32,13 +31,14 @@ public:
 
 private slots:
     bool testEnabled( const QPoint* mc=nullptr) const override { return true;}
+    bool testIfCheck( const Vis::FV*) const override;
     bool doAction( FVS&, const QPoint&) override;
 
 private:
     FMVS _viewers;
+    bool _sren;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

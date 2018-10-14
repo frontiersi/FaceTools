@@ -46,13 +46,15 @@ void ActionToggleAxes::addViewer( FaceModelViewer* v)
     //actor->SetStickyAxes(true);
     actor->SetCamera( const_cast<vtkRenderer*>(v->getRenderer())->GetActiveCamera());
 
-    actor->GetXAxesGridlinesProperty()->SetColor(0.1,0.4,0.1);
-    actor->GetYAxesGridlinesProperty()->SetColor(0.1,0.4,0.1);
-    actor->GetZAxesGridlinesProperty()->SetColor(0.1,0.4,0.1);
+    static const cv::Vec3d GCOL(0.05,0.3,0.05);  // rgb
 
-    actor->GetXAxesInnerGridlinesProperty()->SetColor(0.1,0.4,0.1);
-    actor->GetYAxesInnerGridlinesProperty()->SetColor(0.1,0.4,0.1);
-    actor->GetZAxesInnerGridlinesProperty()->SetColor(0.1,0.4,0.1);
+    actor->GetXAxesGridlinesProperty()->SetColor( GCOL[0], GCOL[1], GCOL[2]);
+    actor->GetYAxesGridlinesProperty()->SetColor( GCOL[0], GCOL[1], GCOL[2]);
+    actor->GetZAxesGridlinesProperty()->SetColor( GCOL[0], GCOL[1], GCOL[2]);
+
+    actor->GetXAxesInnerGridlinesProperty()->SetColor( GCOL[0], GCOL[1], GCOL[2]);
+    actor->GetYAxesInnerGridlinesProperty()->SetColor( GCOL[0], GCOL[1], GCOL[2]);
+    actor->GetZAxesInnerGridlinesProperty()->SetColor( GCOL[0], GCOL[1], GCOL[2]);
 
     actor->GetXAxesGridlinesProperty()->SetLineWidth(1.0);
     actor->GetYAxesGridlinesProperty()->SetLineWidth(1.0);

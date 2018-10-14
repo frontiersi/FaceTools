@@ -89,6 +89,8 @@ void ActionShowMetrics::doOnLeaveMetric( const FV* fv, int mid)
 
 bool ActionShowMetrics::testIfCheck( const FV* fv) const
 {
+    if ( !fv)
+        return false;
     for ( MC::Ptr mc : MCM::vmetrics())
     {
         if ( fv->isApplied( mc->visualiser()))
