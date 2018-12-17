@@ -16,6 +16,8 @@
  ************************************************************************/
 
 #include <PathSetView.h>
+#include <vtkTextProperty.h>
+#include <FaceModel.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Vis::PathSetView;
@@ -26,37 +28,50 @@ using FaceTools::Path;
 using ViewPair = std::pair<int, PathView*>;
 
 
-// public
 PathSetView::PathSetView( const PathSet::Ptr paths) : _paths(paths), _viewer(nullptr)
 {
+    // The bottom right text.
+    _text->GetTextProperty()->SetJustificationToRight();
+    _text->GetTextProperty()->SetFontFamilyToCourier();
+    _text->GetTextProperty()->SetFontSize(17);
+    _text->GetTextProperty()->SetBackgroundOpacity(0.7);
+    _text->SetPickable( false);
+    static const QColor tcol(255,255,255);
+    _text->GetTextProperty()->SetColor( tcol.redF(), tcol.greenF(), tcol.blueF());
+    _text->SetVisibility(false);
+
     for ( int id : paths->ids())
         addPath(id);
 }   // end ctor
 
 
-// public
 PathSetView::~PathSetView()
 {
     std::for_each( std::begin(_views), std::end(_views), [](const ViewPair& p){ delete p.second;});
 }   // end dtor
 
 
-// public
 bool PathSetView::isVisible() const { return !_visible.empty();}
 
 
-// public
 void PathSetView::setVisible( bool enable, ModelViewer *viewer)
 {
+    if ( _viewer)
+        _viewer->remove(_text);
+
     while ( isVisible())
         showPath( false, *_visible.begin());
+
     _viewer = viewer;
+
     if ( enable && _viewer)
+    {
         std::for_each( std::begin(_views), std::end(_views), [this](const ViewPair& p){ this->showPath(true, p.first);});
+        _viewer->add(_text);
+    }   // end if
 }   // end setVisible
 
 
-// public
 void PathSetView::showPath( bool enable, int id)
 {
     assert( _views.count(id) > 0);
@@ -65,6 +80,28 @@ void PathSetView::showPath( bool enable, int id)
     if ( enable)
         _visible.insert(id);
 }   // end showPath
+
+
+void PathSetView::setText( int pid, int xpos, int ypos)
+{
+    const Path* path = _paths->path(pid);
+    const std::string lnunits = FaceTools::FM::LENGTH_UNITS.toStdString();
+    // Set the text contents for the label and the caption
+    std::ostringstream oss0, oss1, oss2;
+    if ( !path->name.empty())
+        oss0 << path->name << std::endl;
+    oss1 << "Caliper: " << std::setw(5) << std::fixed << std::setprecision(1) << path->elen << " " << lnunits;
+    oss2 << "\nSurface: ";
+    if ( path->psum >= path->elen)
+        oss2 << std::setw(5) << std::fixed << std::setprecision(1) << path->psum << " " << lnunits;
+    else
+        oss2 << " N/A";
+    _text->SetInput( (oss0.str() + oss1.str() + oss2.str()).c_str());
+    _text->SetDisplayPosition( xpos, ypos);
+}   // end setText
+
+
+void PathSetView::setTextVisible( bool v) { _text->SetVisibility(v);}
 
 
 // public

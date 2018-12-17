@@ -18,11 +18,14 @@
 #ifndef FACE_TOOLS_H
 #define FACE_TOOLS_H
 
+#include "FaceTypes.h"
 #include "LandmarkSet.h"
 #include "MiscFunctions.h"
 #include <Viewer.h> // RVTK
 
 namespace FaceTools {
+
+FaceTools_EXPORT size_t findCommonLandmarks( std::vector<int>& lmkIds, const FMS&);
 
 // Are the nasal root and subnasale landmarks present?
 FaceTools_EXPORT bool hasCentreLandmarks( const Landmark::LandmarkSet&);
@@ -38,11 +41,14 @@ FaceTools_EXPORT cv::Vec3f calcFaceCentre( const Landmark::LandmarkSet&);
 FaceTools_EXPORT cv::Vec3f toSurface( const RFeatures::ObjModelKDTree*, const cv::Vec3f& v);
 
 // Starting at the point on the surface closest to s, return the point on the surface closest to t.
-FaceTools_EXPORT cv::Vec3f moveTo( const RFeatures::ObjModelKDTree*, const cv::Vec3f& s, const cv::Vec3f& t);
+FaceTools_EXPORT cv::Vec3f toTarget( const RFeatures::ObjModelKDTree*, const cv::Vec3f& s, const cv::Vec3f& t);
+
+FaceTools_EXPORT bool findPath( const RFeatures::ObjModelKDTree*, const cv::Vec3f& p0, const cv::Vec3f& p1, std::list<cv::Vec3f>& pts);
 
 // Find the point farthest off the straight line distance between p0 and p1 along the shortest contour over the mesh between these points.
 // If parameter d is not null, on return it is set with the distance the returned point is orthogonally from the baseline vector p0->p1.
 FaceTools_EXPORT cv::Vec3f findDeepestPoint( const RFeatures::ObjModelKDTree*, const cv::Vec3f&, const cv::Vec3f&, double *d=nullptr);
+FaceTools_EXPORT cv::Vec3f findDeepestPoint2( const RFeatures::ObjModelKDTree*, const cv::Vec3f&, const cv::Vec3f&, double *d=nullptr);
 
 // Calculate cropping radius for a face as G times the distance from the face centre to the point halfway between the eyes.
 FaceTools_EXPORT double calcFaceCropRadius( const cv::Vec3f& faceCentre, const cv::Vec3f& leye, const cv::Vec3f& reye, double G);
@@ -64,15 +70,10 @@ FaceTools_EXPORT RFeatures::ObjModel::Ptr createFromTransformedSubset( const RFe
 // from the new vertices in the returned (flattened) model.
 FaceTools_EXPORT RFeatures::ObjModel::Ptr makeFlattened( const RFeatures::ObjModel* source, std::unordered_map<int,int>* newVidxsToOld=nullptr);
 
-// Create and return an offscreen viewer for the given model with given square dimensions
-// and camera at a distance of R along the Z axis and focused at the origin.
-FaceTools_EXPORT RVTK::Viewer::Ptr makeOffscreenViewer( size_t sqdims, float R, const RFeatures::ObjModel*);
-
-// Take and return a colour snapshot from the given viewer.
-FaceTools_EXPORT cv::Mat_<cv::Vec3b> snapshot( RVTK::Viewer::Ptr v);
-
 // Update exactly once all renderers referenced by all views of all models in the provided set.
 FaceTools_EXPORT void updateRenderers( const FMS&);
+
+FaceTools_EXPORT cv::Mat_<cv::Vec3b> makeThumbnail( const FM*, const cv::Size& dims, float d);
 
 }   // end namespace
 

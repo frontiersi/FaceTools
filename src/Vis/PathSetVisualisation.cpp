@@ -21,7 +21,6 @@
 #include <algorithm>
 #include <cassert>
 #include <vtkProperty.h>
-#include <vtkTextProperty.h>
 using FaceTools::Vis::PathSetVisualisation;
 using FaceTools::Vis::BaseVisualisation;
 using FaceTools::Vis::PathSetView;
@@ -34,27 +33,8 @@ using FaceTools::Path;
 
 
 PathSetVisualisation::PathSetVisualisation( const QString& dname, const QIcon& icon)
-    : BaseVisualisation(dname, icon), _caption( vtkCaptionActor2D::New()), _text( vtkTextActor::New())
+    : BaseVisualisation(dname, icon)
 {
-    // The caption for the current path.
-    _caption->BorderOff();
-    _caption->GetCaptionTextProperty()->BoldOff();
-    _caption->GetCaptionTextProperty()->ItalicOff();
-    _caption->GetCaptionTextProperty()->ShadowOff();
-    _caption->GetCaptionTextProperty()->SetFontFamilyToCourier();
-    _caption->GetCaptionTextProperty()->SetFontSize(8);
-    _caption->SetPickable( false);
-    _caption->SetLayerNumber(1);
-
-    // The bottom right text.
-    _text->GetTextProperty()->SetJustificationToRight();
-    _text->GetTextProperty()->SetFontFamilyToCourier();
-    _text->GetTextProperty()->SetFontSize(16);
-    _text->SetPickable( false);
-
-    QColor tcol(255,255,255);
-    _caption->GetCaptionTextProperty()->SetColor( tcol.redF(), tcol.greenF(), tcol.blueF());
-    _text->GetTextProperty()->SetColor( tcol.redF(), tcol.greenF(), tcol.blueF());
 }   // end ctor
 
 
@@ -62,8 +42,6 @@ PathSetVisualisation::~PathSetVisualisation()
 {
     while (!_views.empty())
         purge( const_cast<FV*>(_views.begin()->first));
-    _caption->Delete();
-    _text->Delete();
 }   // end dtor
 
 
@@ -86,8 +64,6 @@ void PathSetVisualisation::apply( FV* fv, const QPoint*)
         _views[fv] = new PathSetView( fv->data()->paths());
     FMV* viewer = fv->viewer();
     _views.at(fv)->setVisible( true, viewer);
-    viewer->add( _caption);
-    viewer->add( _text);
 }   // end apply
 
 
@@ -97,8 +73,6 @@ void PathSetVisualisation::clear( FV* fv)
     {
         FMV* viewer = fv->viewer();
         _views.at(fv)->setVisible( false, viewer);
-        viewer->remove( _caption);
-        viewer->remove( _text);
     }   // end if
 }   // end clear
 
@@ -117,7 +91,6 @@ void PathSetVisualisation::addPath( const FM* fm, int pathId)
 }   // end addPath
 
 
-// public
 void PathSetVisualisation::updatePath( const FM* fm, int pathId)
 {
     for ( FV* fv : fm->fvs())
@@ -126,7 +99,6 @@ void PathSetVisualisation::updatePath( const FM* fm, int pathId)
 }   // end updatePath
 
 
-// public
 void PathSetVisualisation::refresh( const FM* fm)
 {
     assert(fm);
@@ -140,33 +112,29 @@ void PathSetVisualisation::refresh( const FM* fm)
 }   // end refresh
 
 
-// public
-void PathSetVisualisation::setCaptions( const std::string& pname, double elen, double psum, int xpos, int ypos)
+void PathSetVisualisation::setText( const FM* fm, int pid, int xpos, int ypos)
 {
-    // Set the text contents for the label and the caption
-    std::ostringstream oss0, oss1, oss2;
-    if ( !pname.empty())
-        oss0 << pname << std::endl;
-    oss1 << "Caliper: " << std::setw(5) << std::fixed << std::setprecision(1) << elen << " " << FM::LENGTH_UNITS << std::endl;
-    oss2 << "Surface: " << std::setw(5) << std::fixed << std::setprecision(1) << psum << " " << FM::LENGTH_UNITS << std::endl;
-    _text->SetInput( (oss0.str() + oss1.str() + oss2.str()).c_str());
-    _text->SetDisplayPosition( xpos, ypos);
-
-    std::ostringstream caposs;
-    caposs << std::fixed << std::setprecision(1) << elen << " " << FM::LENGTH_UNITS;
-    _caption->SetCaption( caposs.str().c_str());
-}   // end setCaptions
+    for ( FV* fv : fm->fvs())
+        if ( hasView(fv))
+            _views.at(fv)->setText( pid, xpos, ypos);
+}   // end setText
 
 
-// public
-void PathSetVisualisation::setCaptionAttachPoint( const cv::Vec3f& av)
+void PathSetVisualisation::showText( const FM* fm)
 {
-    double attachPoint[3] = { av[0], av[1], av[2]};
-    _caption->SetAttachmentPoint( attachPoint);
-}   // end setCaptionAttachPoint
+    for ( auto& p : _views)
+        p.second->setTextVisible(false);
+
+    if ( fm)
+    {
+        for ( FV* fv : fm->fvs())
+            if ( hasView(fv))
+                _views.at(fv)->setTextVisible(true);
+    }   // end if
+}   // end showText
 
 
-const PathView::Handle* PathSetVisualisation::pathHandle( const FV* fv, const vtkProp* prop) const
+PathView::Handle* PathSetVisualisation::pathHandle( const FV* fv, const vtkProp* prop) const
 {
     PathView::Handle *h = nullptr;
     if ( hasView(fv))
@@ -175,7 +143,7 @@ const PathView::Handle* PathSetVisualisation::pathHandle( const FV* fv, const vt
 }   // end pathHandle
 
 
-const PathView::Handle* PathSetVisualisation::pathHandle0( const FV* fv, int pid) const
+PathView::Handle* PathSetVisualisation::pathHandle0( const FV* fv, int pid) const
 {
     PathView::Handle* h = nullptr;
     if ( hasView(fv))
@@ -188,7 +156,7 @@ const PathView::Handle* PathSetVisualisation::pathHandle0( const FV* fv, int pid
 }   // end pathHandle0
 
 
-const PathView::Handle* PathSetVisualisation::pathHandle1( const FV* fv, int pid) const
+PathView::Handle* PathSetVisualisation::pathHandle1( const FV* fv, int pid) const
 {
     PathView::Handle* h = nullptr;
     if ( hasView(fv))
@@ -199,13 +167,6 @@ const PathView::Handle* PathSetVisualisation::pathHandle1( const FV* fv, int pid
     }   // end if
     return h;
 }   // end pathHandle1
-
-// public
-void PathSetVisualisation::setCaptionsVisible( bool v)
-{
-    _caption->SetVisibility( v);
-    _text->SetVisibility( v);
-}   // end setCaptionsVisible
 
 
 // protected

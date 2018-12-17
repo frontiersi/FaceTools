@@ -50,6 +50,7 @@ void LandmarksInteractor::doOnEnterLandmark( const FV* fv, const vtkProp* p)
     _hover = lm;
     FM* fm = fv->data();
     _vis->setLandmarkHighlighted( fm, lm, _lat, true);
+    viewer()->setCursor(Qt::CrossCursor);
     fm->updateRenderers();
 }   // end doOnEnterLandmark
 
@@ -64,6 +65,7 @@ void LandmarksInteractor::doOnLeaveLandmark( const FV* fv, const vtkProp* p)
     FM* fm = fv->data();
     if ( _drag < 0 && lm >= 0)
     {
+        viewer()->setCursor(Qt::ArrowCursor);
         _vis->setLandmarkHighlighted( fm, _hover, _lat, false);
         fm->updateRenderers();
     }   // end if
@@ -78,8 +80,8 @@ bool LandmarksInteractor::leftButtonDown( const QPoint&)
     bool swallowed = false;
     if ( _drag >= 0 && _view->pickable())
     {
-        viewer()->setCursor(Qt::CrossCursor);
         _vis->setLandmarkHighlighted( _view->data(), _drag, _lat, true);
+        _view->data()->updateRenderers();
         swallowed = true;
     }   // end if
     return swallowed;
@@ -91,7 +93,6 @@ bool LandmarksInteractor::leftButtonUp( const QPoint&)
     if ( _drag >= 0)
     {
         _vis->setLandmarkHighlighted( _view->data(), _drag, _lat, false);
-        viewer()->setCursor(Qt::ArrowCursor);
         emit onChangedData(_view);
     }   // end if
     _view = hoverModel();

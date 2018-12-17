@@ -18,8 +18,6 @@
 #include <FaceModel.h>
 #include <FaceModelViewer.h>
 #include <BaseVisualisation.h>
-#include <ObjModelSurfacePointFinder.h>
-#include <CameraParams.h>
 #include <FaceTools.h>
 #include <VtkTools.h>       // RVTK
 #include <algorithm>
@@ -31,12 +29,14 @@ using FaceTools::FMVS;
 using FaceTools::Vis::VisualisationLayers;
 using FaceTools::Vis::BaseVisualisation;
 using RFeatures::ObjModelKDTree;
+using RFeatures::ObjModelPolyUnfolder;
+using RFeatures::ObjModelTriangleMeshParser;
 using RFeatures::ObjModelInfo;
 using RFeatures::ObjModel;
 
 
 // public static
-std::string FaceModel::LENGTH_UNITS("mm");
+QString FaceModel::LENGTH_UNITS("mm");
 
 
 namespace {
@@ -106,21 +106,6 @@ int findLargest( const std::vector<cv::Vec6d>& bounds)
 }   // end findLargest
 
 
-cv::Vec6d calcSuperBounds( const std::vector<cv::Vec6d>& bset)
-{
-    cv::Vec6d bounds(DBL_MAX,-DBL_MAX,DBL_MAX,-DBL_MAX,DBL_MAX,-DBL_MAX);
-    for ( const cv::Vec6d& b : bset)
-    {
-        bounds[0] = std::min(bounds[0], b[0]);  // xmin
-        bounds[1] = std::max(bounds[1], b[1]);  // xmax
-        bounds[2] = std::min(bounds[2], b[2]);  // ymin
-        bounds[3] = std::max(bounds[3], b[3]);  // ymax
-        bounds[4] = std::min(bounds[4], b[4]);  // zmin
-        bounds[5] = std::max(bounds[5], b[5]);  // zmax
-    }   // end for
-    return bounds;
-}   // end calcSuperBounds
-
 
 // Return true if the cuboids specified with given edge extents intersect.
 bool intersect( const cv::Vec6d& a, const cv::Vec6d& b)
@@ -176,10 +161,7 @@ bool FaceModel::update( ObjModelInfo::Ptr nfo)
         return false;
     }   // end if
 
-    _kdtree = ObjModelKDTree::create( _minfo->cmodel());
-    _landmarks->moveToSurface( &*_kdtree);   // Ensure landmarks remapped to surface
-    _paths->recalculate( _kdtree);           // Ensure stored paths remap to the new surface.
-    calculateBounds();
+    updateMeta();
 
     _saved = false;
     return true;
@@ -197,11 +179,8 @@ void FaceModel::transform( const cv::Matx44d& m)
     transformer.transform( _centre);    // Transform the centre point in-place
 
     _minfo->rebuildInfo();
-    _kdtree = ObjModelKDTree::create( _minfo->cmodel());
 
-    _landmarks->moveToSurface( &*_kdtree);   // Ensure landmarks remapped to surface
-    _paths->recalculate( _kdtree);           // Ensure stored paths remap to the new surface.
-    calculateBounds();
+    updateMeta();
 
     vtkSmartPointer<vtkMatrix4x4> vm = RVTK::toVTK(m);
     pokeTransform( vm);
@@ -240,7 +219,7 @@ void FaceModel::fixTransform( vtkMatrix4x4* m)
     for ( BaseVisualisation* vis : vlayers)
         std::for_each( std::begin(_fvs), std::end(_fvs), [=]( Vis::FV* fv){ vis->fixTransform( fv);});
 
-    // Probably not needed
+    // Reset transforms back to the identity matrix.
     vtkNew<vtkMatrix4x4> I;
     I->Identity();
     pokeTransform( I);
@@ -254,6 +233,37 @@ cv::Vec3f FaceModel::findClosestSurfacePoint( const cv::Vec3f& v) const
     unlock();
     return cv;
 }   // end findClosestSurfacePoint
+
+
+namespace {
+
+cv::Vec6d calcSuperBounds( const std::vector<cv::Vec6d>& bset)
+{
+    cv::Vec6d bounds(DBL_MAX,-DBL_MAX,DBL_MAX,-DBL_MAX,DBL_MAX,-DBL_MAX);
+    for ( const cv::Vec6d& b : bset)
+    {
+        bounds[0] = std::min(bounds[0], b[0]);  // xmin
+        bounds[1] = std::max(bounds[1], b[1]);  // xmax
+        bounds[2] = std::min(bounds[2], b[2]);  // ymin
+        bounds[3] = std::max(bounds[3], b[3]);  // ymax
+        bounds[4] = std::min(bounds[4], b[4]);  // zmin
+        bounds[5] = std::max(bounds[5], b[5]);  // zmax
+    }   // end for
+    return bounds;
+}   // end calcSuperBounds
+
+}   // end namespace
+
+
+// private
+void FaceModel::updateMeta()
+{
+    calculateBounds();
+    const ObjModel* model = _minfo->cmodel();
+    _kdtree = ObjModelKDTree::create( model);
+    _landmarks->moveToSurface( &*_kdtree);   // Remap landmarks to surface
+    _paths->recalculate( &*_kdtree);   // Ensure stored paths remap to the new surface.
+}   // end updateMeta
 
 
 // private
@@ -284,11 +294,11 @@ void FaceModel::unlock() const { _mutex.unlock();}
 
 bool FaceModel::hasMetaData() const
 {
-    return !_description.empty()
-        || !_source.empty()
+    return !_description.isEmpty()
+        || !_source.isEmpty()
         || _age != 0.0
         || _sex != FaceTools::UNKNOWN_SEX
-        || !_ethnicity.empty()
+        || !_ethnicity.isEmpty()
         || _cdate != QDate::currentDate()
         || _centreSet
         || _orientation != RFeatures::Orientation()
@@ -338,13 +348,15 @@ bool FaceModel::supersIntersect( const FaceModel& fm) const
 }   // end supersIntersect
 
 
-cv::Mat_<cv::Vec3b> FaceModel::thumbnail( size_t I) const
+void FaceModel::clearPhenotypes()
 {
-    RVTK::Viewer::Ptr viewer = FaceTools::makeOffscreenViewer( I, 1, info()->cmodel());
-    cv::Vec3f cpos = (550 * orientation().nvec()) + centre();
-    RFeatures::CameraParams cam( cpos, centre(), orientation().uvec(), 30);
-    viewer->setCamera( cam);
-    viewer->updateRender();
-    return FaceTools::snapshot( viewer);
-}   // end thumbnail
+    if ( !_phenotypes.empty())
+        _phenotypes.clear();
+}   // end clearPhenotypes
 
+
+void FaceModel::addPhenotype( int hid)
+{
+    if ( _phenotypes.count(hid) == 0)
+        _phenotypes.insert(hid);
+}   // end addPhenotype

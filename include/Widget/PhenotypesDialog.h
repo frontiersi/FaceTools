@@ -15,52 +15,40 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACETOOLS_WIDGET_METRICS_DISPLAY_DIALOG_H
-#define FACETOOLS_WIDGET_METRICS_DISPLAY_DIALOG_H
+#ifndef FACETOOLS_WIDGET_PHENOTYPES_DIALOG_H
+#define FACETOOLS_WIDGET_PHENOTYPES_DIALOG_H
 
 #include <FaceTypes.h>
 #include <QTableWidgetItem>
 #include <QDialog>
 
-namespace Ui { class MetricsDisplayDialog; }
+namespace Ui { class PhenotypesDialog; }
 
 namespace FaceTools { namespace Widget {
 
-class FaceTools_EXPORT MetricsDisplayDialog : public QDialog
+class FaceTools_EXPORT PhenotypesDialog : public QDialog
 { Q_OBJECT
 public:
-    explicit MetricsDisplayDialog( QWidget *parent = nullptr);
-    ~MetricsDisplayDialog() override;
-
-    void setShowScanInfoAction( QAction*);
-    void setShowMetricsAction( QAction*);
-    void setShowChartAction( QAction*);
-
-    // Populate from statically accessed SyndromeManager, HPOTermManager, and MetricCalculatorManager.
-    void populate();
-
-signals:
-    void onChangeOpacity( double);
-    void onSelectMetric( int);  // Metric ID
+    explicit PhenotypesDialog( QWidget *parent = nullptr);
+    ~PhenotypesDialog() override;
 
 public slots:
-    void setMetricSelected( int);   // Pass in metric ID
-    void setRowSelected( int);      // Pass in row ID
+    void doOnShowPhenotypes( const IntSet&);
 
 private slots:
-    void doOnResizeColumns();
-    void doOnRowChanged( QTableWidgetItem*);
     void doOnUserSelectedSyndrome();
-    void doOnUserSelectedHPOTerm();
+    void sortOnColumn(int);
 
 private:
-    Ui::MetricsDisplayDialog *ui;
-    std::unordered_map<int, int> _mIdRows;  // Metric ID --> Row index
+    Ui::PhenotypesDialog *_ui;
+    int _chid;
+    std::unordered_map<int, int> _idRows;  // ID --> Row index
+    IntSet _dhids;
 
     void appendRow( int);
-    void updateRow( int);
-    void populateHPOs( const IntSet&);
     void populateSyndromes( const IntSet&);
+    void highlightRow(int);
+    void setSelectedPhenotype(int);
 };  // end class
 
 }}  // end namespaces

@@ -22,45 +22,54 @@
 #include <FaceView.h>
 #include <VtkTools.h>
 using FaceTools::Action::ActionTransformToStandardPosition;
+using FaceTools::Action::ActionOrientCameraToFace;
 using FaceTools::Action::FaceAction;
+using FaceTools::Vis::FV;
 using FaceTools::FVS;
 using FaceTools::FMS;
 using FaceTools::FM;
 
 
-ActionTransformToStandardPosition::ActionTransformToStandardPosition( const QString &dn, const QIcon& ico)
-    : FaceAction( dn, ico)
+ActionTransformToStandardPosition::ActionTransformToStandardPosition( const QString &dn, const QIcon& ico, ActionOrientCameraToFace* camSetter)
+    : FaceAction( dn, ico), _camSetter(camSetter)
 {
-    setRespondToEvent( ORIENTATION_CHANGE);
 }   // end ctor
 
 
 bool ActionTransformToStandardPosition::doAction( FVS& fvs, const QPoint&)
 {
-    FMS fms = fvs.models(); // Copy out
-    for ( FM* fm : fms)
+    assert(fvs.size() == 1);
+    FM* fm = fvs.first()->data();
+
+    fm->lockForWrite();
+    const cv::Vec3f& c = fm->centre();
+    const RFeatures::Orientation& on = fm->orientation();
+    cv::Matx44d m = RFeatures::toStandardPosition( on.nvec(), on.uvec(), c);
+
+    /*
+    std::cerr << "PRE-TRANSFORM:" << std::endl;
+    std::cerr << "  Centre : " << c << std::endl;
+    std::cerr << "  Orientation (norm,up)  : " << on << std::endl;
+    */
+
+    fm->transform(m);
+
+    /*
+    std::cerr << "POST-TRANSFORM:" << std::endl;
+    std::cerr << "  Centre : " << c << std::endl;
+    std::cerr << "  Orientation (norm,up)  : " << on << std::endl;
+    */
+
+    fm->unlock();
+
+    fvs.clear();
+    fvs.insert(fm);
+
+    if ( _camSetter)
     {
-        fm->lockForWrite();
-        const cv::Vec3f& c = fm->centre();
-        const RFeatures::Orientation& on = fm->orientation();
-        cv::Matx44d m = RFeatures::toStandardPosition( on.nvec(), on.uvec(), c);
+        for ( FV* fv : fm->fvs())
+            _camSetter->process(fv);
+    }   // end if
 
-        /*
-        std::cerr << "PRE-TRANSFORM:" << std::endl;
-        std::cerr << "  Centre : " << c << std::endl;
-        std::cerr << "  Orientation (norm,up)  : " << on << std::endl;
-        */
-
-        fm->transform(m);
-
-        /*
-        std::cerr << "POST-TRANSFORM:" << std::endl;
-        std::cerr << "  Centre : " << c << std::endl;
-        std::cerr << "  Orientation (norm,up)  : " << on << std::endl;
-        */
-
-        fm->unlock();
-        fvs.insert(fm);
-    }   // end for
     return true;
 }   // end doAction

@@ -56,12 +56,13 @@ enum Sex : int8_t
     UNKNOWN_SEX = 0,
     FEMALE_SEX = 1,
     MALE_SEX = 2,
-    INTERSEX = 4
 };  // end enum
 
-std::string toSexString( Sex);  // any of "F M", "F", "M"
-QString toLongSexString( Sex);  // any of "Female / Male", "Female", "Male"
-Sex fromSexString( const std::string&);
+QString toSexString( int8_t);// any of "U", "F M", "F", "M"
+int8_t fromSexString( const QString&);
+
+QString toLongSexString( int8_t);// any of "Unknown", "Female | Male", "Female", "Male"
+int8_t fromLongSexString( const QString&);
 
 static const char IBAR = '|';
 static const char SC = ';';
@@ -145,8 +146,7 @@ enum EventId : int16_t
 };  // end enum
 
 using EventSet = std::unordered_set<EventId>;
-using ResponsePredicate = std::function<bool(FVS&)>;
-using ProcessFlagPredicate = std::function<bool(const FVS&)>;
+using TestFVSTrue = std::function<bool(const FVS&)>;
 
 }   // end namespace (Action)
 

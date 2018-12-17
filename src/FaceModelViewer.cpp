@@ -71,7 +71,6 @@ size_t FaceModelViewer::findOverlaps( FVFlags &olaps) const
     const size_t n = fvs.size();
 
     // Initialise all to false.
-    olaps.clear();
     for ( size_t i = 0; i < n; ++i)
         olaps[fvs[i]] = false;
 
@@ -109,6 +108,7 @@ void FaceModelViewer::resizeEvent( QResizeEvent* evt)
 {
     const int oldsize = evt->oldSize().width() * evt->oldSize().height();
     const int newsize = evt->size().width() * evt->size().height();
+    ModelViewer::resizeEvent(evt);
     if ( newsize == 0 && oldsize > 0)
         emit toggleZeroArea( true);
     else if ( newsize > 0 && oldsize == 0)

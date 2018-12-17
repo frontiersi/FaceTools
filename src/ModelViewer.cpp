@@ -61,9 +61,10 @@ void ModelViewer::showLegend( bool enable) { _scalarLegend->setVisible(enable); 
 
 // public
 ModelViewer::ModelViewer( QWidget* parent, bool floodFill)
-    : QWidget(parent), _qviewer( new QTools::VtkActorViewer( nullptr)), _scalarLegend(nullptr), _axes(nullptr),
+    : QWidget(parent), _qviewer( nullptr), _scalarLegend(nullptr), _axes(nullptr),
       _floodLightsEnabled(floodFill)
 {
+    _qviewer = new QTools::VtkActorViewer(this);
     _scalarLegend = new RVTK::ScalarLegend( _qviewer->GetInteractor());
     _axes = new RVTK::Axes( _qviewer->GetInteractor());
     showAxes(false);
@@ -72,7 +73,7 @@ ModelViewer::ModelViewer( QWidget* parent, bool floodFill)
 
     setLayout(new QVBoxLayout);
     layout()->setContentsMargins( QMargins(0,0,0,0));
-    addToLayout( layout());
+    layout()->addWidget(_qviewer);
 }   // end ctor
 
 
@@ -102,7 +103,7 @@ bool ModelViewer::isAttached( MVI* iface) const
     }   // end else
 #endif
     return attached;
-}   // end iface
+}   // end isAttached
 
 
 size_t ModelViewer::transferInteractors( ModelViewer *tv)
@@ -136,12 +137,7 @@ bool ModelViewer::detach( MVI* iface)
 
 
 // public
-void ModelViewer::addToLayout( QLayout* layout) { layout->addWidget(_qviewer);}
-void ModelViewer::removeFromLayout( QLayout* layout) { layout->removeWidget(_qviewer);}
-
-
-// public
-void ModelViewer::setSize( const cv::Size& sz) { _qviewer->setSize( sz.width, sz.height);}
+void ModelViewer::setSize( const cv::Size& sz) { _qviewer->setSize( static_cast<size_t>(sz.width), static_cast<size_t>(sz.height));}
 void ModelViewer::show() { _qviewer->show();}
 void ModelViewer::hide() { _qviewer->hide();}
 cv::Point2f ModelViewer::projectProp( const cv::Vec3f& v) const { return _qviewer->projectToDisplayProportion( v);}
@@ -152,6 +148,7 @@ void ModelViewer::setCursor( QCursor cursor) { _qviewer->setCursor(cursor);}
 
 void ModelViewer::add( vtkProp* prop) { if ( prop) _qviewer->add(prop);}
 void ModelViewer::remove( vtkProp* prop) { if ( prop) _qviewer->remove(prop);}
+void ModelViewer::clear() { _qviewer->clear();}
 
 void ModelViewer::setCamera( const CameraParams& cp) { _qviewer->setCamera( cp);}
 size_t ModelViewer::getWidth() const { return _qviewer->getWidth();}
@@ -174,7 +171,8 @@ const vtkProp* ModelViewer::getPointedAt( const QPoint& p) const { return _qview
 // public
 const vtkProp* ModelViewer::getPointedAt( const cv::Point2f& p) const
 {
-    const cv::Point preal = FaceTools::fromProportion( p, cv::Size2i( (int)getWidth(), (int)getHeight()));
+    const cv::Point preal = FaceTools::fromProportion( p, cv::Size2i( static_cast<int>(getWidth()),
+                                                                      static_cast<int>(getHeight())));
     return getPointedAt(preal);
 }   // end getPointedAt
 
@@ -205,7 +203,8 @@ bool ModelViewer::calcSurfacePosition( const vtkProp *prop, const cv::Point& p, 
 // public
 bool ModelViewer::calcSurfacePosition( const vtkProp *prop, const cv::Point2f& pf, cv::Vec3f& worldPos) const
 {
-    const cv::Point p = FaceTools::fromProportion( pf, cv::Size2i( (int)getWidth(), (int)getHeight()));
+    const cv::Point p = FaceTools::fromProportion( pf, cv::Size2i( static_cast<int>(getWidth()),
+                                                                   static_cast<int>(getHeight())));
     return calcSurfacePosition( prop, p, worldPos);
 }   // end calcSurfacePosition
 
@@ -239,16 +238,16 @@ void ModelViewer::resetDefaultCamera( float camRng)
 }   // end resetDefaultCamera
 
 
-float ModelViewer::cameraDistance() const
+double ModelViewer::cameraDistance() const
 {
     CameraParams cp = getCamera();
     return cv::norm( cp.pos - cp.focus);
 }   // end cameraDistance
 
 
-void ModelViewer::setCamera( const cv::Vec3f& focus, const cv::Vec3f& nvec, const cv::Vec3f& uvec, float camRng)
+void ModelViewer::setCamera( const cv::Vec3f& focus, const cv::Vec3f& nvec, const cv::Vec3f& uvec, double camRng)
 {
-    const cv::Vec3f pos = focus + camRng*nvec;
+    const cv::Vec3d pos = focus + camRng*nvec;
     const CameraParams cp( pos, focus, uvec);
     setCamera( cp);
 }   // end setCamera

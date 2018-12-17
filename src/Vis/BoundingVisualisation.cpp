@@ -45,16 +45,18 @@ BoundingVisualisation::~BoundingVisualisation()
 
 void BoundingVisualisation::apply( FV* fv, const QPoint*)
 {
-    if ( _views.count(fv) == 0)
-        _views[fv] = new BoundingView( fv->data()->bounds());
+    //if ( _views.count(fv) == 0)
+    assert( _views.count(fv) == 0);
+    _views[fv] = new BoundingView( fv->data()->bounds());
     _views.at(fv)->setVisible( true, fv->viewer());
 }   // end apply
 
 
 void BoundingVisualisation::clear( FV* fv)
 {
-    if (_views.count(fv) > 0)
-        _views.at(fv)->setVisible( false, fv->viewer());
+    purge(fv);
+    //if (_views.count(fv) > 0)
+    //_views.at(fv)->setVisible( false, fv->viewer());
 }   // end clear
 
 

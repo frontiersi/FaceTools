@@ -59,13 +59,15 @@ private:
     QString _logoFile;
     QString _author;
 
-    std::string _pdffile;
-    std::string _err;
-    bool writeLaTeX( const FaceModel*,
+    const RFeatures::ObjModel *_cmodel;
+    RFeatures::CameraParams _cam;
+    QString _pdffile;
+    QString _err;
+    bool writeLaTeX( const RFeatures::ObjModel*,
                      const RFeatures::CameraParams&,
-                     const std::string&,
-                     const std::string&,
-                     const std::string&,
+                     const QString&,
+                     const QString&,
+                     const QString&,
                      std::vector<RModelIO::LaTeXU3DInserter::Ptr>&);
 };  // end class
 

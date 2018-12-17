@@ -28,7 +28,7 @@ using FaceTools::FMV;
 ActionToggleFXAA::ActionToggleFXAA( const QString& dn, const QIcon& ico)
     : FaceAction( dn, ico)
 {
-    setCheckable( true, true);
+    setCheckable( true, false);
 }   // end ctor
 
 

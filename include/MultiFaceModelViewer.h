@@ -31,7 +31,7 @@ public:
     MultiFaceModelViewer( QWidget *parent=nullptr);
     ~MultiFaceModelViewer() override;
 
-    FMV * leftViewer() { return _v0;}
+    FMV* leftViewer() { return _v0;}
     FMV* centreViewer() { return _v1;}
     FMV* rightViewer() { return _v2;}
 

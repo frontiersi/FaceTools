@@ -26,13 +26,12 @@
 #include <ModelViewer.h>
 #include <vtkCubeSource.h>
 
-namespace FaceTools {
-namespace Vis {
+namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT BoundingView
 {
 public:
-    BoundingView( const std::vector<cv::Vec6d>& bounds, float lineWidth=1.0f, float red=0.6f, float green=0.3f, float blue=0.8f);
+    BoundingView( const std::vector<cv::Vec6d>& bounds, float lineWidth=1.0f, float red=0.5f, float green=0.2f, float blue=0.8f);
     ~BoundingView();
 
     // Not pickable by default.
@@ -63,7 +62,6 @@ private:
     void operator=( const BoundingView&) = delete;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+} }   // end namespace
 
 #endif

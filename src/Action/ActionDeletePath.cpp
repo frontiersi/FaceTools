@@ -25,40 +25,36 @@ using FaceTools::Action::ActionEditPaths;
 using FaceTools::Action::ActionDeletePath;
 using FaceTools::Action::EventSet;
 using FaceTools::Interactor::PathSetInteractor;
+using FaceTools::Vis::PathSetVisualisation;
 using FaceTools::FVS;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
 
 
 ActionDeletePath::ActionDeletePath( const QString& dn, const QIcon& ico, ActionEditPaths* e)
-    : FaceAction( dn, ico), _editor(e)
+    : FaceAction( dn, ico),
+      _vis( static_cast<PathSetVisualisation*>(e->visualisation())),
+      _interactor( e->interactor())
 {
 }   // end ctor
 
 
 bool ActionDeletePath::testEnabled( const QPoint*) const
 {
-    bool enabled = false;
-    assert(_editor);
-    if ( gotReady() && _editor->isChecked())
-    {
-        const FV* fv = _editor->interactor()->hoverModel();
-        enabled = isReady( fv) && _editor->interactor()->hoverPathId() >= 0;
-    }   // end if
-    return enabled;
+    const FV* fv = _interactor->hoverModel();
+    return isReady(fv) && _interactor->hoverPathId() >= 0;
 }   // end testEnabled
 
 
 bool ActionDeletePath::doAction( FVS& fvs, const QPoint&)
 {
-    assert(_editor);
     FV* fv = fvs.first();
-    assert( fv);
-    assert( _editor->interactor()->hoverModel() == fv);
+    assert(fv);
+    assert( _interactor->hoverModel() == fv);
     fvs.clear();
 
     FM* fm = fv->data();
-    const int pid = _editor->interactor()->hoverPathId();
+    const int pid = _interactor->hoverPathId();
     if ( pid >= 0)
     {
         //fm->lockForWrite();
@@ -66,7 +62,8 @@ bool ActionDeletePath::doAction( FVS& fvs, const QPoint&)
         fm->setSaved(false);
         //fm->unlock();
         fvs.insert( fm);
-        _editor->interactor()->doOnLeaveHandle( fv, nullptr);
+        _interactor->doOnLeaveHandle( fv);
+        _vis->refresh(fm);
     }   // end if
 
     return !fvs.empty();

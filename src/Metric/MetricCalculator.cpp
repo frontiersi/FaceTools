@@ -18,17 +18,25 @@
 #include <MetricCalculator.h>
 #include <MetricCalculatorTypeRegistry.h>
 #include <FaceModel.h>
+#include <MiscFunctions.h>
 #include <QtCharts/QSplineSeries>
-#include <boost/algorithm/string.hpp>
 #include <cassert>
 #include <fstream>
+#include <boost/algorithm/string.hpp>
+#include <sol.hpp>
 using FaceTools::Metric::MetricCalculator;
 using FaceTools::Metric::MetricValue;
+using FaceTools::Metric::DimensionStat;
+using FaceTools::Metric::GrowthData;
 using FaceTools::Metric::MetricSet;
 using FaceTools::Metric::MCTI;
 using FaceTools::FM;
 using FaceTools::FaceLateral;
 
+
+namespace {
+static const QStringSet EMPTY_QSTRING_SET;
+}   // end namespace
 
 MetricCalculator::Ptr MetricCalculator::create( MCTI::Ptr mcti)
 {
@@ -36,37 +44,175 @@ MetricCalculator::Ptr MetricCalculator::create( MCTI::Ptr mcti)
 }   // end create
 
 
-MetricCalculator::Ptr MetricCalculator::fromFile( const std::string &fpath)
+MetricCalculator::Ptr MetricCalculator::load( const QString &fpath)
 {
+    sol::state lua;
+    lua.open_libraries( sol::lib::base);
+
     MetricCalculator::Ptr mc;
     try
     {
-        std::ifstream ifs;
-        ifs.open( fpath);
-        if ( !ifs.good())
-        {
-            ifs.close();
-            return mc;
-        }   // end if
-
+        lua.script_file( fpath.toStdString());
         mc = Ptr( new MetricCalculator, [](MetricCalculator* d){ delete d;});
-        ifs >> *mc;
-        ifs.close();
-
-        if ( mc->type() == nullptr)  // Failed to read
-            mc = nullptr;
     }   // end try
-    catch ( const std::exception& e)
+    catch ( const sol::error& e)
     {
-        std::cerr << e.what() << std::endl;
-        mc = nullptr;
+        std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: Unable to load and execute file '" << fpath.toStdString() << "'!" << std::endl;
+        std::cerr << "\t" << e.what() << std::endl;
     }   // end catch
 
+    if ( !mc)
+        return nullptr;
+
+    auto table = lua["mc"];
+    if ( !table.valid())
+    {
+        std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: Lua file has no global member named mc!" << std::endl;
+        return nullptr;
+    }   // end if
+
+    if ( !table["stats"].valid())
+    {
+        std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: stats member is not a table!" << std::endl;
+        return nullptr;
+    }   // end if
+
+    int id = table["id"].get_or(-1);
+    int ndps = table["ndps"].get_or(-1);
+    int ndims = table["dims"].get_or(0);
+
+    QString name, desc, catg, prms;
+    if ( sol::optional<std::string> v = table["name"]) name = v.value().c_str();
+    if ( sol::optional<std::string> v = table["desc"]) desc = v.value().c_str();
+    if ( sol::optional<std::string> v = table["catg"]) catg = v.value().c_str();
+    if ( sol::optional<std::string> v = table["prms"]) prms = v.value().c_str();
+
+    if ( id < 0 || name.isEmpty() || ndps < 0 || catg.isEmpty() || prms.isEmpty() || ndims <= 0)
+    {
+        std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: incomplete metric metadata!" << std::endl;
+        return nullptr;
+    }   // end if
+
+    MCTI::Ptr mcti = MetricCalculatorTypeRegistry::createFrom( catg, prms);
+    if ( !mcti)
+    {
+        std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: Invalid category or parameters for metric " << id << ":" << std::endl;
+        std::cerr << "\t" << catg.toStdString() << "; " << prms.toStdString() << std::endl;
+        return nullptr;
+    }   // end if
+
+    mc->setType(mcti);
+    mcti->setId(id);
+    mcti->setName(name);
+    mcti->setDescription(desc);
+    mcti->setNumDecimals(static_cast<size_t>(ndps));
+
+    // Read in the growth data
+    sol::table stats = table["stats"];
+    for ( size_t i = 1; i <= stats.size(); ++i)   // for each distribution i in the stats table
+    {
+        if ( !stats[i].valid())
+        {
+            std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: stats member is not a table for metric " << id << "!" << std::endl;
+            continue;
+        }   // end if
+
+        sol::table dist = stats[i];
+
+        QString ethn, sexs, srcs, note;
+        int nsmp = dist["nsmp"].get_or(0);  // Number of sample points
+        if ( sol::optional<std::string> v = dist["ethn"]) ethn = v.value().c_str();
+        if ( sol::optional<std::string> v = dist["sexs"]) sexs = v.value().c_str();
+        if ( sol::optional<std::string> v = dist["srce"]) srcs = v.value().c_str();
+        if ( sol::optional<std::string> v = dist["note"]) note = v.value().c_str();
+
+        if ( ethn.isEmpty())
+        {
+            std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: distribution ethnicity not specified for metric " << id << "!" << std::endl;
+            continue;
+        }   // end if
+
+        if ( sexs.isEmpty())
+        {
+            std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: distribution sexs not specified for metric " << id << "!" << std::endl;
+            continue;
+        }   // end if
+
+        if ( srcs.isEmpty())
+        {
+            std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: distribution source not specified for metric " << id << "!" << std::endl;
+            continue;
+        }   // end if
+
+        if ( !dist["data"].valid())
+        {
+            std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: Distribution data member is not a table for metric " << id << "!" << std::endl;
+            continue;
+        }   // end if
+
+        sol::table data = dist["data"];
+        const int tdims = int( data.size());
+        if ( tdims != ndims)
+        {
+            std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: number of dimensions mismatch in growth data for metric " << id << "!" << std::endl;
+            continue;
+        }   // end if
+
+        // Collect the distribution data
+        std::vector<rlib::RSD::Ptr> rsds(static_cast<size_t>(tdims));
+        for ( int j = 1; j <= tdims; ++j)
+        {
+            if ( !data[j].valid())
+            {
+                std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: data dimension is not a table for metric " << id << "!" << std::endl;
+                continue;
+            }   // end if
+
+            // Collect the data points for this dimension
+            Vec_3DP dvec;
+            sol::table dimj = data[j];
+            for ( size_t k = 1; k <= dimj.size(); ++k)
+            {
+                if ( !dimj[k].valid())
+                {
+                    std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: distribution dimension datapoint is not a table for metric " << id << "!" << std::endl;
+                    continue;
+                }   // end if
+
+                sol::table dp = dimj[k];
+                if ( dp.size() != 3 || !dp[1].valid() || !dp[2].valid() || !dp[3].valid())
+                {
+                    std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: distribution dimension datapoints must be numberic 3-tuples for metric " << id << "!" << std::endl;
+                    continue;
+                }   // end if
+
+                double t = dp[1];
+                double y = dp[2];
+                double z = dp[3];
+                dvec.push_back( {t,y,z});
+            }   // end for
+
+            rsds[static_cast<size_t>(j-1)] = rlib::RSD::create(dvec);
+        }   // end for
+
+        GrowthData* gd = new GrowthData( static_cast<size_t>(ndims));
+        gd->setEthnicity(ethn);
+        gd->setSex( fromSexString( sexs));
+        gd->setSource( srcs);
+        gd->setNote( note);
+        gd->setN( nsmp);
+        for ( size_t j = 0; j < static_cast<size_t>(ndims); ++j)
+        {
+            if ( rsds.at(j))
+                gd->setRSD( j, rsds.at(j));
+        }   // end for
+        mc->addGrowthData(gd);
+    }   // end for
+
     return mc;
-}   // end fromFile
+}   // end load
 
 
-// private
 MetricCalculator::MetricCalculator( MCTI::Ptr mcti)
     : _mcti(mcti), _visible(false) {}
 
@@ -74,31 +220,117 @@ MetricCalculator::MetricCalculator()
     : _mcti(nullptr), _visible(false) {}
 
 
+MetricCalculator::~MetricCalculator()
+{
+    for ( GrowthData* gd : _agd) delete gd;
+    _gdata.clear();
+    _agd.clear();
+}   // end dtor
+
+
+const GrowthData* MetricCalculator::growthData( const QString& ethn, int8_t sex) const
+{
+    if ( _gdata.empty())
+        return nullptr;
+
+    const MetricGrowthData* mgd = &_gdata.at(_csrc);
+    assert(mgd);
+
+    // Use the defult ethnicity unless the specified one is available.
+    const std::unordered_map<int8_t, GrowthData*> *sdata = &mgd->at(_deth);
+    const QString lethn = ethn.toLower();
+    if ( mgd->count(lethn) > 0)
+        sdata = &mgd->at(lethn);
+
+    if ( sdata->count( sex) == 0)
+        return nullptr;
+
+    return sdata->at( sex);
+}   // end growthData
+
+
+const GrowthData* MetricCalculator::growthData( const FM* fm) const
+{
+    const QString& ethn = fm->ethnicity();
+    const GrowthData* gd = growthData( ethn, FEMALE_SEX | MALE_SEX);
+    if ( !gd)
+        gd = growthData( ethn, fm->sex());
+    return gd;
+}   // end growthData
+
+
+bool MetricCalculator::canCalculate( const FM* fm) const
+{
+    return _mcti->canCalculate(fm);
+}   // end canCalculate
+
+
+void MetricCalculator::addGrowthData( GrowthData* gd)
+{
+    const QString src = gd->source();
+    const QString eth = gd->ethnicity().toLower();
+    _gdata[src][eth][gd->sex()] = gd;
+    _agd.insert(gd);
+    _ethnicities[src].insert(gd->ethnicity());
+    _sources.insert(src);
+    if ( _csrc.isEmpty())
+        _csrc = src;
+    if ( _deth.isEmpty())
+        _deth = eth;
+}   // end addGrowthData
+
+
 // private
 MetricValue MetricCalculator::calcMetricValue( const FM* fm, FaceLateral faceLat) const
 {
-    const size_t d = dims();
-    std::vector<double> v(d);
-    std::vector<double> z(d);
-    std::vector<bool> zok(d);
-    for ( size_t i = 0; i < d; ++i)
-    {
-        v[i] = _mcti->measure( i, fm, faceLat);
-        rlib::RSD::Ptr rsd = _mcti->rsd(i);
-        const double MAX_AGE = int(rsd->tmax() + 0.5);
-        const double tage = std::min<double>( fm->age(), MAX_AGE);
+    MetricValue mv( id());
 
-        z[i] = DBL_MAX;
-        zok[i] = false;
-        if ( rsd)
+    const GrowthData* gd = growthData(fm);
+    if ( gd)
+    {
+        mv.setEthnicity( gd->ethnicity().toStdString());
+        mv.setSource( gd->source().toStdString());
+        mv.setSex( gd->sex());
+    }   // end if
+
+    for ( size_t i = 0; i < dims(); ++i)
+    {
+        DimensionStat dstat( _mcti->measure( i, fm, faceLat)); // Facial measurement at dimension i
+        if ( gd)
         {
-            z[i] = rsd->zscore( tage, v[i]);
-            zok[i] = fabs( tage - fm->age()) < 0.00001;
+            rlib::RSD::Ptr rsd = gd->rsd(i);
+            assert(rsd);
+            const double t = std::min<double>( fm->age(), int(rsd->tmax() + 0.5));
+            dstat.eage = t;
+            dstat.mean = rsd->mval( t);   // Mean at t
+            dstat.stdv = rsd->zval( t);   // Standard deviation at t
         }   // end if
+
+        mv.addStat(dstat);
     }   // end for
 
-    return MetricValue( id(), v, z, zok);
+    return mv;
 }   // end calcMetricValue
+
+
+bool MetricCalculator::setSource( const QString& src)
+{
+    if ( !src.isEmpty() && _sources.count(src) == 0)
+    {
+        std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::setSource: requested source \"" << src.toStdString() << "\" is not available!" << std::endl;
+        return false;
+    }   // end if
+    _csrc = src;
+    return true;
+}   // end setSource
+
+
+const QStringSet& MetricCalculator::ethnicities() const
+{
+    if ( _ethnicities.empty())
+        return EMPTY_QSTRING_SET;
+    return _ethnicities.at(_csrc);
+}   // end ethnicities
 
 
 bool MetricCalculator::calculate( FM* fm) const
@@ -119,8 +351,9 @@ bool MetricCalculator::calculate( FM* fm) const
 }   // end calculate
 
 
-double MetricCalculator::addSeriesToChart( QtCharts::QChart *chart, double *xmin, double *xmax) const
+double MetricCalculator::addSeriesToChart( QtCharts::QChart *chart, const GrowthData* gdata, double *xmin, double *xmax) const
 {
+    assert(gdata);
     using namespace QtCharts;
 
     double x0 = DBL_MAX;
@@ -135,7 +368,7 @@ double MetricCalculator::addSeriesToChart( QtCharts::QChart *chart, double *xmin
         QSplineSeries *z1nseries = new QSplineSeries;
         QSplineSeries *z2nseries = new QSplineSeries;
 
-        const rlib::RSD::Ptr rsd = _mcti->rsd(d);
+        const rlib::RSD::Ptr rsd = gdata->rsd(d);
         const int minx = int(rsd->tmin());
         const int maxx = int(rsd->tmax() + 0.5);
 
@@ -192,203 +425,3 @@ double MetricCalculator::addSeriesToChart( QtCharts::QChart *chart, double *xmin
 
     return x1 - x0;
 }   // end addSeriesToChart
-
-
-namespace {
-const std::string ID_TAG   = "ID:";
-const std::string NAME_TAG = "NAME:";
-const std::string DESC_TAG = "DESC:";
-const std::string NDPS_TAG = "NDPS:";
-const std::string CATG_TAG = "CATG:";
-const std::string PRMS_TAG = "PRMS:";
-const std::string SRCE_TAG = "SRCE:";
-const std::string ETHN_TAG = "ETHN:";
-const std::string SEXS_TAG = "SEXS:";
-const std::string DIMS_TAG = "DIMS:";
-
-
-std::string getRmLine( std::istringstream& iss, bool lower=false)
-{
-    std::string ln;
-    std::getline( iss, ln);
-    boost::algorithm::trim(ln);
-    if ( lower)
-        boost::algorithm::to_lower(ln);
-    return ln;
-}   // end getRmLine
-
-
-bool isSampleHeader( const std::string& tag, size_t didx)
-{
-    std::ostringstream oss;
-    oss << "D_" << didx << ":";
-    return tag == oss.str();
-}   // end isSampleHeader
-
-}   // end namespace
-
-
-std::ostream& FaceTools::Metric::operator<<( std::ostream& os, const MetricCalculator& mc)
-{
-    MCTI::Ptr mcti = mc.type();
-    os << ID_TAG   << " " << mcti->id() << std::endl;
-    os << NAME_TAG << " " << mcti->name() << std::endl;
-    os << DESC_TAG << " " << mcti->description() << std::endl;
-    os << NDPS_TAG << " " << mcti->numDecimals() << std::endl;
-    os << CATG_TAG << " " << mcti->category() << std::endl;
-    os << PRMS_TAG << " " << mcti->params() << std::endl;
-    os << SRCE_TAG << " " << mcti->source() << std::endl;
-    os << ETHN_TAG << " " << mcti->ethnicities() << std::endl;
-    os << SEXS_TAG << " " << toSexString( mcti->sex()) << std::endl;
-
-    const size_t ndims = mcti->dims();
-    os << DIMS_TAG << " " << ndims << std::endl << std::endl;   // Starts data section
-
-    for ( size_t i = 0; i < ndims; ++i)
-    {
-        rlib::RSD::Ptr rsd = mcti->rsd(i);
-        const Vec_3DP& dvec = rsd->data();
-        os << "D_" << i << ": " << dvec.size() << std::endl;  // E.g. denote 17 samples making dimension 0 as "D_0: 17"
-
-        /** Normal use of streaming syntax (below) failed to compile on G++ 5.4.0!
-        using namespace rlib;
-        os << dvec << std::endl; */
-        // so forcing the use of the correct output stream operator function:
-        rlib::operator<<( os, dvec);    // Write out the samples (with extra lnfd).
-        os << std::endl;
-    }   // end for
-    return os;
-}   // end operator<<
-
-
-
-std::istream& FaceTools::Metric::operator>>( std::istream& is, MetricCalculator& mc)
-{
-    bool inHeader = true;
-    size_t ndims = 0;      // Number of dimensions expected
-    size_t didx = 0;       // Dimension index
-    size_t nsamples = 0;   // Number of samples expected
-    size_t sidx = 0;       // Sample index
-
-    int ndps;
-    int id;
-    std::string ln, tag, dtag, name, desc, srce, ethn, cat, prms, emsg;
-    FaceTools::Sex sex = FaceTools::UNKNOWN_SEX;
-    DP t, y, z;
-    Vec_3DP dvec;
-    MCTI::Ptr mcti;
-
-    while ( is.good() && !is.eof())
-    {
-        std::getline( is, ln);
-
-        // Skip empty lines or lines starting with # (comments).
-        if ( ln.empty() || ln[0] == '#')
-            continue;
-
-        std::istringstream iss(ln);
-
-        if ( inHeader)
-        {
-            iss >> tag;
-            if ( tag == ID_TAG)
-                iss >> id;
-            else if ( tag == NAME_TAG)
-                name = getRmLine( iss);
-            else if ( tag == DESC_TAG)
-                desc = getRmLine(iss);
-            else if ( tag == NDPS_TAG)
-                iss >> ndps;
-            else if ( tag == CATG_TAG)
-                cat = getRmLine( iss, true);
-            else if ( tag == PRMS_TAG)
-                prms = getRmLine( iss, true);
-            else if ( tag == SRCE_TAG)
-                srce = getRmLine( iss, false);
-            else if ( tag == ETHN_TAG)
-                ethn = getRmLine( iss, true);
-            else if ( tag == SEXS_TAG)
-                sex = fromSexString( getRmLine( iss, true));
-            else if ( tag == DIMS_TAG)
-            {
-                iss >> ndims;  // Read in the number of expected dimensions
-                didx = 0;      // Next dimension to read in
-                inHeader = false; // Ended header section
-
-                if ( cat.empty() || prms.empty())
-                {
-                    emsg = "Reached end of header without metric category or parameters set!";
-                    break;  // Skip remainder of file
-                }   // end if
-                else if ( (mcti = FaceTools::Metric::MetricCalculatorTypeRegistry::createFrom( cat, prms)) == nullptr)
-                {
-                    emsg = "Unable to create MetricCalculatorType from category " + cat + " with parameters " + prms;
-                    break;  // Skip remainder of file
-                }   // end else if
-            }   // end else if
-            else
-            {
-                emsg = "Unknown tag " + tag + " in header section!";
-                break;  // Skip remainder of file
-            }   // end else
-        }   // end if
-        else if ( didx < ndims)
-        {
-            if ( nsamples == 0)
-            {
-                iss >> tag;
-                if ( isSampleHeader( tag, didx))
-                {
-                    iss >> nsamples;
-                    sidx = 0;
-                    dvec.clear();
-                    if ( nsamples < 2)
-                    {
-                        emsg = "Too few samples!";
-                        break;
-                    }   // end else
-                }   // end else if
-            }   // end if
-            else if ( sidx < nsamples)
-            {
-                t = y = z = 0;
-                iss >> t >> y >> z;
-                dvec.push_back( {t, y, z});
-                sidx++;
-            }   // end else
-
-            if ( sidx == nsamples)
-            {
-                assert( nsamples > 0);
-
-                rlib::RSD::Ptr rsd = rlib::RSD::create(dvec);
-                mcti->setRSD( didx, rsd);
-
-                nsamples = 0;
-                didx++; // Next dimension to read
-            }   // end else
-        }   // end else if
-        else
-        {
-            emsg = "Extra file content beyond specified number of metric dimensions.";
-            break;
-        }   // end else
-    }   // end while
-
-    if ( !emsg.empty())
-        std::cerr << "[WARNING] operator>>( istream&, FaceTools::Metric::MetricCalculator): " << emsg << std::endl;
-    else
-    {
-        mcti->setId( id);
-        mcti->setName( name);
-        mcti->setDescription( desc);
-        mcti->setSource( srce);
-        mcti->setEthnicities( ethn);
-        mcti->setSex( sex);
-        mcti->setNumDecimals( size_t(ndps < 0 ? 0 : ndps));
-        mc.setType( mcti);
-        mc.setVisible( mcti->visualiser() != nullptr);
-    }   // end if
-
-    return is;
-}   // end operator>>

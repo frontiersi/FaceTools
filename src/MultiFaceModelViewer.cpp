@@ -28,6 +28,15 @@ QToolButton* makeButton()
     b->setMaximumSize( QSize(27,27));
     b->setIconSize( QSize(27,27));
     //b->setStyleSheet( "QToolButton::menu-indicator { image: none; }");
+    b->setStyleSheet( "\
+        QToolButton{ \
+            border: none; \
+        } \
+        QToolButton:hover{ \
+            border: 1px solid #8f8f91; \
+            border-radius: 4px; \
+        }");
+
     return b;
 }   // makeButton
 
@@ -67,7 +76,7 @@ MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent) : QWidget(parent)
 
     _copyButton.resize(4);
     _moveButton.resize(4);
-    for ( int i = 0; i < 4; ++i)
+    for ( size_t i = 0; i < 4; ++i)
     {
         _copyButton[i] = makeButton();
         _moveButton[i] = makeButton();

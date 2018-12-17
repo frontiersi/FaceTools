@@ -40,43 +40,17 @@ ActionVisualise::ActionVisualise( BaseVisualisation* vis, bool visOnLoad)
     setVisible( vis->isUIVisible());
     setPurgeOnEvent(GEOMETRY_CHANGE);
 
-    /*
-    // The process flag predicate is used to set the flag for this action's process function.
-    // The flag is set true iff the given set of FaceViews can be set to be compatible with
-    // this action's visualisation specification.
-    std::function<bool(const FVS&)> processFlagPredicate = [=](const FVS& fvs)
-    {
-        FVS nfvs = fvs;
-        this->setViewsToProcess(nfvs);     // Get the set of views to process over according to the visualisation spec.
-        return this->isVisAvailable(nfvs); // Process flag true iff visualisation can be applied to all views.
-    };  // end processFlagPredicate
-    */
-
     if ( visOnLoad)
     {
-        std::function<bool(FVS&)> loadResponsePredicate = [=](FVS& fvs)
+        TestFVSTrue loadResponsePredicate = [=]( const FVS& fvs)
         {
             const FMS& fms = fvs.models();
             assert(fms.size() == 1);    // LOADED_MODEL events are only ever a single model.
             const FM* fm = *fms.begin();
             return vis->allowShowOnLoad( fm);
         };  // end loadResponsePredicate
-        //setRespondToEventIf( LOADED_MODEL, loadResponsePredicate, processFlagPredicate);
         setRespondToEventIf( LOADED_MODEL, loadResponsePredicate, true);
     }   // end if
-
-    /*
-    // On GEOMETRY_CHANGE, if this action is checked then this action's process function must be called
-    // with a process flag that reflects the availability of this visualisation to the given FaceViews.
-    std::function<bool(FVS&)> geometryResponsePredicate = [=](FVS& fvs)
-    {
-        const bool ischecked = this->isChecked();
-        if ( ischecked)
-            this->setViewsToProcess(fvs);
-        return ischecked;
-    };  // end geometryResponsePredicate
-    setRespondToEventIf( GEOMETRY_CHANGE, geometryResponsePredicate, processFlagPredicate);
-    */
 }   // end ctor
 
 
@@ -198,7 +172,7 @@ void ActionVisualise::clean( const FM* fm)
 }   // end clean
 
 
-// private
+// protected
 size_t ActionVisualise::setViewsToProcess( FVS& fvs) const
 {
     if ( _vis->applyToSelectedModel())

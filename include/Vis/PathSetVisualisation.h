@@ -20,10 +20,8 @@
 
 #include "BaseVisualisation.h"
 #include "PathSetView.h"
-#include <vtkTextActor.h>
 
-namespace FaceTools {
-namespace Vis {
+namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT PathSetVisualisation : public BaseVisualisation
 { Q_OBJECT
@@ -50,37 +48,29 @@ public:
     void refresh( const FM*);
 
     // Returns the handle for a path by looking for it by prop.
-    const PathView::Handle* pathHandle( const FV*, const vtkProp*) const;
+    PathView::Handle* pathHandle( const FV*, const vtkProp*) const;
     // Returns handles 0 or 1 for the given path.
-    const PathView::Handle* pathHandle0( const FV*, int pathID) const;
-    const PathView::Handle* pathHandle1( const FV*, int pathID) const;
+    PathView::Handle* pathHandle0( const FV*, int pathID) const;
+    PathView::Handle* pathHandle1( const FV*, int pathID) const;
 
-    // Set caption info name, Euclidean length and path sum.
-    // Caption will be displayed at render coordinates x,y.
-    void setCaptions( const std::string&, double elen, double psum, int x, int y);
+    // Update text info from the specified path from the given model.
+    // Text displayed at display coordinates x,y.
+    void setText( const FM*, int pid, int x, int y);
 
-    // Set the point in space at which the caption should be attached.
-    void setCaptionAttachPoint( const cv::Vec3f&);
-
-    // Show/hide the captions.
-    void setCaptionsVisible( bool v);
+    // Show the text caption for all views of the associated model - turning off all others.
+    void showText( const FM* fm=nullptr);
 
     void pokeTransform( const FV*, const vtkMatrix4x4*) override;
     void fixTransform( const FV*) override;
 
     void purge( FV*) override;
 
-    static std::string CAPTION_LENGTH_METRIC;   // Defaults to "mm"
-
 private:
     // The paths associated with a FV.
     std::unordered_map<const FV*, PathSetView*> _views;
-    vtkCaptionActor2D* _caption; // Shared between all
-    vtkTextActor* _text;         // Shared between all
     bool hasView( const FV*) const;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

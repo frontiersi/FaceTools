@@ -20,24 +20,17 @@
 
 #include "ModelEntryExitInteractor.h"
 
-namespace FaceTools {
-namespace Interactor {
+namespace FaceTools { namespace Interactor {
 
 class FaceTools_EXPORT MetricsInteractor : public ModelViewerInteractor
 { Q_OBJECT
 public:
     explicit MetricsInteractor( const MEEI*);
 
-signals:
-    void onEnterMetric( const Vis::FV*, int) const;
-    void onLeaveMetric( const Vis::FV*, int) const;
-
 private slots:
     void doOnEnterProp( const Vis::FV*, const vtkProp*);
-    void doOnLeaveProp( const Vis::FV*, const vtkProp*);
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

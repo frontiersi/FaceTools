@@ -27,10 +27,10 @@ class FaceTools_EXPORT MetricCalculatorTypeRegistry
 public:
     static void addTemplateType( MCTI*);
     static void clearTemplateTypes();   // Remove all template types from memory
-    static MCTI::Ptr createFrom( const std::string& category, const std::string& parameters);
+    static MCTI::Ptr createFrom( const QString& category, const QString& parameters);
 
 private:
-    static std::unordered_map<std::string, MCTI*> s_types;
+    static std::unordered_map<QString, MCTI*> s_types;
 };  // end class
 
 }}  // end namespaces

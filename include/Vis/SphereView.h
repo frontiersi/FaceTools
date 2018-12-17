@@ -23,8 +23,7 @@
 #include <vtkSphereSource.h>
 #include <vtkCaptionActor2D.h>
 
-namespace FaceTools {
-namespace Vis {
+namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT SphereView
 {
@@ -60,6 +59,7 @@ public:
     const double* colour() const;                       // Return a 3-tuple array for the rgb components.
 
     void setCaption( const std::string&);               // Set caption used when highlighting.
+    void setCaption( const QString&);
     std::string caption() const;
 
     void setHighlighted( bool);                         // Show the caption (only if already visible).
@@ -81,7 +81,6 @@ private:
     void init();
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

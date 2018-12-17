@@ -25,7 +25,7 @@ namespace FaceTools {
 class FaceTools_EXPORT FaceViewSet
 {
 public:
-    typedef std::shared_ptr<FaceViewSet> Ptr;
+    using Ptr = std::shared_ptr<FaceViewSet>;
     static Ptr create();
     static Ptr create( const FaceViewSet&);
 
@@ -38,6 +38,7 @@ public:
     FaceViewSet& operator/( const FaceViewSet&);      // Remove from this set those NOT in given set (intersection)
     FaceViewSet operator()( const FM*) const;         // Return the set of FaceViews matching the given model.
 
+    size_t insert( const FMS&);         // Insert views associated with the models returning number inserted.
     size_t insert( const FaceViewSet&); // Returns the number from the given set inserted into this set.
     bool insert( Vis::FV*);             // Returns true on successful insert.
     bool erase( const Vis::FV*);        // Returns true on successful erasure.

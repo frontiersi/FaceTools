@@ -21,6 +21,7 @@
 #include "FaceTools_Export.h"
 #include <ObjModelKDTree.h> // RFeatures
 #include <opencv2/opencv.hpp>
+#include <QString>
 #include <vtkSmartPointer.h>
 #include <vtkIdList.h>
 #include <string>
@@ -119,6 +120,8 @@ FaceTools_EXPORT int growOut( const RFeatures::ObjModel*, const cv::Vec3f& growV
 // Returns the number of elements copied in. Does not clear contents of vector first.
 FaceTools_EXPORT int toVector( const vtkSmartPointer<vtkIdList>&, std::vector<int>&);
 
+// Return contents of stream as a front/rear trimmed QString optionally in lowercase.
+FaceTools_EXPORT QString getRmLine( std::istringstream&, bool lower=false);
 }   // end namespace
 
 #endif

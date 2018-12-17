@@ -17,6 +17,7 @@
 
 #include <LandmarksVisualisation.h>
 #include <FaceModelViewer.h>
+#include <ModelSelector.h>
 #include <FaceModel.h>
 #include <algorithm>
 #include <cassert>
@@ -97,7 +98,6 @@ void LandmarksVisualisation::updateLandmark( const FM* fm, int id)
         if ( hasView(fv))
         {
             LandmarkSet::Ptr lmks = fv->data()->landmarks();
-            assert( lmks->ids().count(id) == 0);
             const bool isBilateral = LDMKS_MAN::landmark(id)->isBilateral();
             LandmarkSetView* view = _views.at(fv);
 
@@ -115,11 +115,17 @@ void LandmarksVisualisation::updateLandmark( const FM* fm, int id)
 
 void LandmarksVisualisation::refreshLandmarks( const FM* fm)
 {
+    const FV* sfv = Action::ModelSelector::selected();
+    cv::Vec3d col = (sfv && sfv->data() == fm) ? LandmarkSetView::SPEC0_COL : LandmarkSetView::BASE0_COL;
+
     LandmarkSet::Ptr lmks = fm->landmarks();
     for ( FV* fv : fm->fvs())
     {
         if ( hasView(fv))
+        {
             _views.at(fv)->refresh(*lmks);
+            _views.at(fv)->setColour( col);
+        }   // end if
     }   // end for
 }   // end refreshLandmarks
 

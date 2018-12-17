@@ -17,20 +17,18 @@
 
 #include <MetricCalculatorTypeRegistry.h>
 #include <LandmarksManager.h>
-#include <boost/algorithm/string.hpp>
 #include <iostream>
 #include <cassert>
 using FaceTools::Metric::MetricCalculatorTypeRegistry;
 using FaceTools::Metric::MCTI;
 using FaceTools::Metric::MC;
 
-std::unordered_map<std::string, MCTI*> MetricCalculatorTypeRegistry::s_types;
+std::unordered_map<QString, MCTI*> MetricCalculatorTypeRegistry::s_types;
 
 
 void MetricCalculatorTypeRegistry::addTemplateType( MCTI* mcti)
 {
-    std::string cat = mcti->category();
-    boost::algorithm::to_lower(cat);
+    QString cat = mcti->category().toLower();
     if ( s_types.count(cat) > 0)
     {
         std::cerr << "[WARNING] FaceTools::Metric::MetricCalculatorTypeRegistry::addTemplateType: Overwriting existing template!" << std::endl;
@@ -48,19 +46,20 @@ void MetricCalculatorTypeRegistry::clearTemplateTypes()
 }   // end clearTemplateTypes
 
 
-MCTI::Ptr MetricCalculatorTypeRegistry::createFrom( const std::string& cat, const std::string& prms)
+MCTI::Ptr MetricCalculatorTypeRegistry::createFrom( const QString& acat, const QString& prms)
 {
     if ( LDMKS_MAN::count() == 0)
     {
-        std::cerr << "[ERROR] FaceTools::Metric::MetricCalculatorTypeRegistry::createFrom: "
+        std::cerr << "[WARNING] FaceTools::Metric::MetricCalculatorTypeRegistry::createFrom: "
                   << "Load some landmarks first!" << std::endl;
         return nullptr;
     }   // end if
 
+    const QString cat = acat.toLower();
     if ( s_types.count(cat) == 0)
     {
-        std::cerr << "[ERROR] FaceTools::Metric::MetricCalculatorTypeRegistry::createFrom: "
-                  << "Required category '" << cat << "' not present!" << std::endl;
+        std::cerr << "[WARNING] FaceTools::Metric::MetricCalculatorTypeRegistry::createFrom: "
+                  << "Required category '" << cat.toStdString() << "' not present!" << std::endl;
         return nullptr;
     }   // end if
 

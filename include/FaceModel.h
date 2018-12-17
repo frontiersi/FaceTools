@@ -53,8 +53,8 @@ public:
     // to the wrapped ObjModel, ensure that ObjModelInfo::reset is called before update.
     RFeatures::ObjModelInfo::Ptr info() const { return _minfo;}
 
-    // Get the KD-tree - DO NOT MAKE CHANGES TO IT DIRECTLY!
-    RFeatures::ObjModelKDTree::Ptr kdtree() const { return _kdtree;}
+    // Get the KD-tree.
+    const RFeatures::ObjModelKDTree* kdtree() const { return _kdtree.get();}
 
     // Returns boundary values for each model component as [xmin,xmax,ymin,ymax,zmin,zmax].
     const std::vector<cv::Vec6d>& bounds() const { return _cbounds;}
@@ -84,25 +84,29 @@ public:
     Metric::MetricSet& metricsR() { return _metricsR;}
     const Metric::MetricSet& metricsR() const { return _metricsR;}
 
+    const IntSet& phenotypes() const { return _phenotypes;}
+    void clearPhenotypes();
+    void addPhenotype( int);
+
     // Set/get description of data.
-    void setDescription( const std::string& d) { if (_description != d) setSaved(false); _description = d;}
-    const std::string& description() const { return _description;}
+    void setDescription( const QString& d) { if (_description != d) setSaved(false); _description = d;}
+    const QString& description() const { return _description;}
 
     // Set/get source of data.
-    void setSource( const std::string& s) { if (_source != s) setSaved(false); _source = s;}
-    const std::string& source() const { return _source;}
+    void setSource( const QString& s) { if (_source != s) setSaved(false); _source = s;}
+    const QString& source() const { return _source;}
 
     // Set/get age of individual.
     void setAge( double a) { if (_age != a) setSaved(false); _age = a;}
     double age() const { return _age;}
 
     // Set/get sex of individual.
-    void setSex( Sex s) { if (_sex != s) setSaved(false); _sex = s;}
-    Sex sex() const { return _sex;}
+    void setSex( int8_t s) { if (_sex != s) setSaved(false); _sex = s;}
+    int8_t sex() const { return _sex;}
 
     // Set/get ethnicity of individual.
-    void setEthnicity( const std::string& t) { if (_ethnicity != t) setSaved(false); _ethnicity = t;}
-    const std::string& ethnicity() const { return _ethnicity;}
+    void setEthnicity( const QString& t) { if (_ethnicity != t) setSaved(false); _ethnicity = t;}
+    const QString& ethnicity() const { return _ethnicity;}
 
     // Set/get capture date of image.
     void setCaptureDate( const QDate& d) { if (_cdate != d) setSaved(false); _cdate = d;}
@@ -136,18 +140,15 @@ public:
     // closest point on the surface using the internal kd-tree.
     double translateToSurface( cv::Vec3f&) const;
 
-    // Create a thumbnail image of this model with given image dimensions.
-    cv::Mat_<cv::Vec3b> thumbnail( size_t sqdims=128) const;
-
-    static std::string LENGTH_UNITS;
+    static QString LENGTH_UNITS;
 
 private:
     bool _saved;
-    std::string _description;   // Long form description
-    std::string _source;        // Data source info
+    QString _description;   // Long form description
+    QString _source;        // Data source info
     double _age;
-    Sex _sex;
-    std::string _ethnicity;
+    int8_t _sex;
+    QString _ethnicity;
     QDate _cdate;               // Date of image capture.
     bool _centreSet;            // If face centre has been set.
     cv::Vec3f _centre;          // Face "centre"
@@ -157,6 +158,7 @@ private:
     Metric::MetricSet _metrics;
     Metric::MetricSet _metricsL;
     Metric::MetricSet _metricsR;
+    IntSet _phenotypes;
     RFeatures::ObjModelInfo::Ptr _minfo;
     RFeatures::ObjModelKDTree::Ptr _kdtree;
     std::vector<cv::Vec6d> _cbounds;
@@ -168,6 +170,7 @@ private:
 
     void fixTransform( vtkMatrix4x4*);
     void calculateBounds();
+    void updateMeta();
     FaceModel( const FaceModel&) = delete;
     void operator=( const FaceModel&) = delete;
 };  // end class

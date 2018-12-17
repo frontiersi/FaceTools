@@ -56,10 +56,12 @@ QStringList LandmarksManager::names()
 
 
 bool LandmarksManager::hasName( const QString& nm) { return _names.count(nm.toLower()) > 0;}
+bool LandmarksManager::hasName( const std::string& nm) { return hasName( QString(nm.c_str()));}
 bool LandmarksManager::hasCode( const QString& cd) { return _clmks.count(cd.toLower()) > 0;}
+bool LandmarksManager::hasCode( const std::string& nm) { return hasCode( QString(nm.c_str()));}
 
 
-int LandmarksManager::load( const QString& fname)
+int LandmarksManager::load( const std::string& fname)
 {
     _ids.clear();
     _codes.clear();
@@ -68,7 +70,7 @@ int LandmarksManager::load( const QString& fname)
     _clmks.clear();
 
     std::vector<rlib::StringVec> lines;
-    int nrecs = rlib::readFlatFile( fname.toStdString(), lines, IBAR, true/*skip # symbols as well as blank lines*/);
+    int nrecs = rlib::readFlatFile( fname, lines, IBAR, true/*skip # symbols as well as blank lines*/);
     if ( nrecs <= 0)
         return nrecs;
 
@@ -123,9 +125,9 @@ int LandmarksManager::load( const QString& fname)
 }   // end load
 
 
-bool LandmarksManager::save( const QString& fname)
+bool LandmarksManager::save( const std::string& fname)
 {
-    QFile file( fname);
+    QFile file( fname.c_str());
     if ( !file.open(QIODevice::WriteOnly | QIODevice::Text))
         return false;
 

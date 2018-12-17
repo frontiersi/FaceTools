@@ -21,6 +21,8 @@
 using FaceTools::PathSet;
 using FaceTools::Path;
 using PathPair = std::pair<int, Path>;
+using RFeatures::ObjModelKDTree;
+
 
 PathSet::Ptr PathSet::create()
 {
@@ -29,17 +31,20 @@ PathSet::Ptr PathSet::create()
 
 
 // private
-PathSet::PathSet() : _sid(0) {}
+PathSet::PathSet() : _sid(0)
+{
+}   // end ctor
+
 
 // private
 PathSet::~PathSet(){}
 
 
-void PathSet::recalculate( RFeatures::ObjModelKDTree::Ptr kdt)
+void PathSet::recalculate( const ObjModelKDTree *kdt)
 {
     for ( auto& p : _paths)
-        p.second.recalculate(kdt);
-}   // end calculate
+        p.second.recalculate( kdt);
+}   // end recalculate
 
 
 // private
@@ -85,7 +90,7 @@ void PathSet::transform( const cv::Matx44d& T)
     const RFeatures::Transformer mover(T);
     for ( auto& p : _paths)
     {
-        std::vector<cv::Vec3f>& vtxs = p.second.vtxs;
+        std::list<cv::Vec3f>& vtxs = p.second.vtxs;
         std::for_each(std::begin(vtxs), std::end(vtxs), [&](cv::Vec3f& v) { mover.transform(v); });  // Move in-place
     }   // end for
 }   // end transform

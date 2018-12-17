@@ -24,12 +24,11 @@ using FaceTools::Vis::PathView;
 using FaceTools::ModelViewer;
 
 
-// public
-PathView::PathView( int id, const std::vector<cv::Vec3f>& vtxs)
+PathView::PathView( int id, const std::list<cv::Vec3f>& vtxs)
     : _viewer(nullptr), _id(id), _h0(nullptr), _h1(nullptr), _lprop(nullptr)
 {
-    _h0 = new Handle( 0, _id, *vtxs.begin(), 1.4);
-    _h1 = new Handle( 1, _id, *vtxs.rbegin(), 1.4);
+    _h0 = new Handle( 0, _id, vtxs.front(), 1.4);
+    _h1 = new Handle( 1, _id, vtxs.back(), 1.4);
 
     _h0->_sv->setResolution(30);
     _h0->_sv->setColour( 1.0, 0.0, 0.0);
@@ -43,7 +42,6 @@ PathView::PathView( int id, const std::vector<cv::Vec3f>& vtxs)
 }   // end ctor
 
 
-// public
 PathView::~PathView()
 {
     setVisible( false, nullptr);
@@ -52,7 +50,6 @@ PathView::~PathView()
 }   // end dtor
 
 
-// public
 void PathView::setVisible( bool enable, ModelViewer *viewer)
 {
     if ( _viewer)
@@ -73,21 +70,20 @@ void PathView::setVisible( bool enable, ModelViewer *viewer)
 }   // end setVisible
 
 
-// public
-void PathView::update( const std::vector<cv::Vec3f>& vtxs)
+void PathView::update( const std::list<cv::Vec3f>& vtxs)
 {
-    _h0->_sv->setCentre( *vtxs.begin());
-    _h1->_sv->setCentre( *vtxs.rbegin());
+    _h0->_sv->setCentre( vtxs.front());
+    _h1->_sv->setCentre( vtxs.back());
     if ( _lprop)
     {
         if ( _viewer)
             _viewer->remove(_lprop);
         _lprop->Delete();
+        _lprop = nullptr;
     }   // end if
 
     _lprop = RVTK::VtkActorCreator::generateLineActor( vtxs);
     _lprop->SetPickable(false);
-
     vtkProperty* property = _lprop->GetProperty();
     property->SetRepresentationToWireframe();
     property->SetRenderLinesAsTubes(false);
@@ -99,7 +95,6 @@ void PathView::update( const std::vector<cv::Vec3f>& vtxs)
 }   // end update
 
 
-// public
 void PathView::pokeTransform( const vtkMatrix4x4* vm)
 {
     _h0->_sv->pokeTransform( vm);

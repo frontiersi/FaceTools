@@ -19,7 +19,7 @@
 #include <AssetImporter.h>  // RModelIO
 #include <iomanip>
 using FaceTools::FileIO::FaceModelOBJFileHandler;
-using FaceTools::FaceModel;
+using FaceTools::FM;
 
 
 FaceModelOBJFileHandler::FaceModelOBJFileHandler()
@@ -31,16 +31,16 @@ FaceModelOBJFileHandler::FaceModelOBJFileHandler()
 }   // end ctor
 
 
-FaceModel* FaceModelOBJFileHandler::read( const QString& fname)
+FM* FaceModelOBJFileHandler::read( const QString& fname)
 {
     _err = "";
-    FaceModel* fm = NULL;
+    FM* fm = nullptr;
     RFeatures::ObjModel::Ptr model = _importer.load( fname.toStdString());
     if ( model)
     {
         RFeatures::ObjModelInfo::Ptr minfo = RFeatures::ObjModelInfo::create(model);
         if ( minfo)
-            fm = new FaceModel(minfo);
+            fm = new FM(minfo);
         else
             _err = ("Failed to clean object loaded from \"" + fname.toStdString() + "\"").c_str();
     }   // end if
@@ -50,7 +50,7 @@ FaceModel* FaceModelOBJFileHandler::read( const QString& fname)
 }   // end read
 
 
-bool FaceModelOBJFileHandler::write( const FaceModel* fm, const QString& qfname)
+bool FaceModelOBJFileHandler::write( const FM* fm, const QString& qfname)
 {
     _err = "";
     const std::string fname = qfname.toStdString();

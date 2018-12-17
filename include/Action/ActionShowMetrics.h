@@ -20,33 +20,40 @@
 
 #include "FaceAction.h"
 #include <MetricsInteractor.h>
+#include <MetricsDialog.h>
+#include <ChartDialog.h>
+#include <PhenotypesDialog.h>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionShowMetrics : public FaceAction
 { Q_OBJECT
 public:
-    ActionShowMetrics( const QString&, const QIcon&, const Interactor::MEEI*);
+    ActionShowMetrics( const QString&, const QIcon&, QWidget *parent=nullptr);
 
-signals:
-    void onEnterMetric( int);
+    QWidget* getWidget() const override { return _mdialog;}
+
+    void setShowScanInfoAction( QAction*);
 
 protected slots:
     bool testReady( const Vis::FV*) override;
-    bool testEnabled( const QPoint*) const override { return ready1();}
+    void tellReady( const Vis::FV*, bool) override;
+    bool testEnabled( const QPoint*) const override;
     bool testIfCheck( const Vis::FV*) const override;
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(VIEW_CHANGE);}
     void purge( const FM*) override;
 
 private slots:
-    void doOnMetricUpdated();
-    void doOnEnterMetric( const Vis::FV*, int);
-    void doOnLeaveMetric( const Vis::FV*, int);
+    void doOnMetricUpdated(int);
+    void doOnMetricActivated();
+    void doOnShowChart();
+    void doOnShowPhenotypes();
 
 private:
-    const Interactor::MetricsInteractor _interactor;
+    Widget::MetricsDialog *_mdialog;
+    Widget::ChartDialog *_cdialog;
+    Widget::PhenotypesDialog *_pdialog;
     FMS _vmodels;
 };  // end class
 

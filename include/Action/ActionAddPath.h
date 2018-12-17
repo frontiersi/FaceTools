@@ -20,8 +20,7 @@
 
 #include "ActionEditPaths.h"
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionAddPath : public FaceAction
 { Q_OBJECT
@@ -34,10 +33,10 @@ protected slots:
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(PATHS_CHANGE);}
 
 private:
-    ActionEditPaths *_editor;
+    Vis::PathSetVisualisation *_vis;
+    Interactor::PathSetInteractor *_interactor;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

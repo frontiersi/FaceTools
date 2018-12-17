@@ -20,6 +20,7 @@
 
 #include "FaceActionGroup.h"
 #include "ActionExecutionQueue.h"
+#include <BoundingVisualisation.h>
 #include <ViewerInteractionManager.h>
 #include <QMutex>
 
@@ -35,8 +36,8 @@ public:
     QAction* addAction( FaceAction*);       // Return added action's QAction if added okay (duplicates not allowed).
 
 signals:
-    void addedAction( FaceAction*); // Emitted whenever an action added
-    void onUpdateSelected( FM*);
+    void addedAction( FaceAction*);
+    void onUpdateSelected( FM*, bool);
 
 public slots:
     void doOnSelected( Vis::FV*, bool);
@@ -51,6 +52,7 @@ private:
     std::unordered_set<FaceAction*> _actions;
     ActionExecutionQueue _aqueue;
     QMutex _mutex;
+    Vis::BoundingVisualisation _bvis;
 
     void processFinishedAction( FaceAction*, EventSet&, FVS&);
     void close( FM*);

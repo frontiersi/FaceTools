@@ -29,39 +29,84 @@ using FaceTools::Vis::MetricVisualiser;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
 using MCM = FaceTools::Metric::MetricCalculatorManager;
+using MC = FaceTools::Metric::MetricCalculator;
+using FaceTools::Metric::MetricValue;
 
 
-MetricVisualiser::MetricVisualiser( int id)
-    : BaseVisualisation( "Metric"), _id(id), _text( vtkTextActor::New())
+MetricVisualiser::MetricVisualiser( int id) : BaseVisualisation( "Metric"), _id(id)
+{}   // end ctor
+
+
+MetricVisualiser::~MetricVisualiser()
 {
-    _text->GetTextProperty()->SetJustificationToLeft();
-    _text->GetTextProperty()->SetFontFamilyToCourier();
-    _text->GetTextProperty()->SetFontSize(17);
-    _text->SetDisplayPosition( 10, 10);
-    _text->SetPickable(false);
-
-    QColor tcol(255,255,255);
-    _text->GetTextProperty()->SetColor( tcol.redF(), tcol.greenF(), tcol.blueF());
-    _text->SetVisibility(false);
-}   // end ctor
+    while (!_texts.empty())
+        purge( const_cast<FV*>(_texts.begin()->first));
+}   // end dtor
 
 
-MetricVisualiser::~MetricVisualiser() { _text->Delete();}
+void MetricVisualiser::apply( FV* fv, const QPoint*)
+{
+    vtkTextActor* text = nullptr;
+    if ( _texts.count(fv) == 0)
+    {
+        text = _texts[fv] = vtkTextActor::New();
+        text->GetTextProperty()->SetJustificationToLeft();
+        text->GetTextProperty()->SetFontFamilyToCourier();
+        text->GetTextProperty()->SetFontSize(17);
+        text->GetTextProperty()->SetBackgroundOpacity(0.7);
+        text->SetDisplayPosition( 8, 3);
+        text->SetPickable(false);
+        static const QColor tcol(255,255,255);
+        text->GetTextProperty()->SetColor( tcol.redF(), tcol.greenF(), tcol.blueF());
+        text->SetVisibility(false);
+    }   // end if
+    text = _texts.at(fv);
+    fv->viewer()->add(text);
+}   // end apply
 
 
-void MetricVisualiser::apply( FV* fv, const QPoint*) { fv->viewer()->add(_text);}
-void MetricVisualiser::clear( FV* fv) { fv->viewer()->remove(_text);}
-void MetricVisualiser::setCaptionsVisible( bool show) { _text->SetVisibility(show);}
+void MetricVisualiser::clear( FV* fv)
+{
+    if ( _texts.count(fv) > 0)
+        fv->viewer()->remove( _texts.at(fv));
+}   // end clear
 
 
-void MetricVisualiser::updateCaptions( const FM* fm)
+void MetricVisualiser::purge( FV* fv)
+{
+    clear(fv);
+    if ( _texts.count(fv) > 0)
+    {
+        _texts.at(fv)->Delete();
+        _texts.erase(fv);
+    }   // end if
+}   // end purge
+
+
+void MetricVisualiser::showText( const FM* fm)
+{
+    for ( auto& p : _texts)
+        p.second->SetVisibility(false);
+
+    if ( fm)
+    {
+        for ( const FV* fv : fm->fvs())
+        {
+            if ( _texts.count(fv) > 0)
+                _texts.at(fv)->SetVisibility(true);
+        }   // end for
+    }   // end if
+}   // end showText
+
+
+void MetricVisualiser::updateText( const FM* fm)
 {
     // Get the correct metric value based on laterality
-    const FaceTools::Metric::MetricValue* mv = nullptr;
-    const FaceTools::Metric::MetricValue* mvl = nullptr;
-    const FaceTools::Metric::MetricValue* mvr = nullptr;
+    const MetricValue* mv = nullptr;
+    const MetricValue* mvl = nullptr;
+    const MetricValue* mvr = nullptr;
 
-    Metric::MC::Ptr mc = MCM::metric(_id);
+    MC::Ptr mc = MCM::metric(_id);
     if ( !mc->isBilateral())
     {
         mv = fm->metrics().get( _id);
@@ -78,7 +123,7 @@ void MetricVisualiser::updateCaptions( const FM* fm)
 
     const int nds = int(mc->numDecimals());
     std::ostringstream oss;
-    oss << mc->name().toStdString() << (mc->isBilateral() ? " (L;R)" : "") << "\n";
+    oss << mc->name().toStdString() << (mc->isBilateral() ? " (L;R;Mean)" : "") << "\n";
     oss << std::fixed << std::setprecision(nds);
 
     oss << "Measure";
@@ -90,56 +135,81 @@ void MetricVisualiser::updateCaptions( const FM* fm)
     {
         std::ostringstream voss;    // Just used to check required space for text
         if ( mv)
-            voss << std::fixed << std::setprecision(nds) << mv->values()[i];
+            voss << std::fixed << std::setprecision(nds) << mv->value(i);
         else
-            voss << std::fixed << std::setprecision(nds) << mvl->values()[i];
+            voss << std::fixed << std::setprecision(nds) << mvl->value(i);
 
         fws[i] = int(voss.str().size()) + 1;
 
         if ( mv)
-            oss << std::right << std::setw(fws[i]) << mv->values()[i];
+            oss << std::right << std::setw(fws[i]) << mv->value(i);
         else
         {
-            oss << std::right << std::setw(fws[i]) << mvl->values()[i] << "; ";
-            oss << std::right << std::setw(fws[i]) << mvr->values()[i];
+            oss << std::right << std::setw(fws[i]) << mvl->value(i) << "; ";
+            oss << std::right << std::setw(fws[i]) << mvr->value(i) << "; ";
+            oss << std::right << std::setw(fws[i]) << (0.5 * (mvl->value(i) + mvr->value(i)));
         }   // end else
     }   // end for
 
-    bool ageInStats = true;
-    oss << "\nZ-score"; // Z-scores on line below
-    oss << (dims > 1 ? "s: " : ": ");
-    for ( size_t i = 0; i < dims; ++i)
+    const Metric::GrowthData* gd = mc->growthData(fm);
+    oss << "\nZ-score" << (dims > 1 ? "s: " : ": ");    // Z-scores on line below
+    if ( !gd)
+        oss << " N/A (sex mismatch)";
+    else
     {
-        const int fw = fws[i];
-
-        if ( mv)
+        // Warn if model age outside of growth data range
+        bool inAgeRange = fm->age() > 0.0;
+        if ( inAgeRange)
         {
-            oss << std::right << std::setw(fw);
-            double zs = mv->zscores()[i];
-            if ( zs < DBL_MAX)
-                oss << zs;
-            else
-                oss << "N/A";
+            for ( size_t i = 0; i < dims; ++i)
+            {
+                double minAge = gd->rsd(i)->tmin();
+                double maxAge = gd->rsd(i)->tmax();
+                if ( fm->age() < minAge || fm->age() > maxAge)
+                {
+                    inAgeRange = false;
+                    break;
+                }   // end if
+            }   // end for
+        }   // end if
 
-            if ( !mv->zokays()[i])
-                ageInStats = false;
+        if ( !inAgeRange)
+        {
+            if ( fm->age() > 0)
+                oss << " N/A (subject age out of range)";
+            else
+                oss << " N/A (set subject age > 0)";
         }   // end if
         else
         {
-            double zsl = mvl->zscores()[i];
-            double zsr = mvr->zscores()[i];
-            if ( zsl < DBL_MAX && zsr < DBL_MAX)
-                oss << std::right << std::setw(fw) << zsl << "; " << std::setw(fw) << zsr;
-            else
-                oss << std::right << std::setw(fw) << "N/A";
+            for ( size_t i = 0; i < dims; ++i)
+            {
+                const int fw = fws[i];
+                if ( mv)
+                {
+                    oss << std::right << std::setw(fw);
+                    oss << mv->zscore(i);
+                }   // end if
+                else
+                {
+                    const double zsl = mvl->zscore(i);
+                    const double zsr = mvr->zscore(i);
+                    const double zsm = 0.5 * (zsl + zsr);
+                    oss << std::right << std::setw(fw) << zsl << "; "
+                                      << std::setw(fw) << zsr << "; "
+                                      << std::setw(fw) << zsm;
+                }   // end if
+            }   // end for
 
-            if ( !mvl->zokays()[i] || !mvr->zokays()[i])
-                ageInStats = false;
-        }   // end if
+            if ( gd->ethnicity() != fm->ethnicity())
+                oss << " [Ethnic Mismatch!]";
+        }   // end else
+    }   // end else
+
+    const std::string ostr = oss.str();
+    for ( const FV* fv : fm->fvs())
+    {
+        if ( _texts.count(fv) > 0)
+            _texts.at(fv)->SetInput( ostr.c_str());
     }   // end for
-
-    if ( !ageInStats)
-        oss << " (TRUNCATED Z-SCORE" << (dims > 1 ? "S!)" : "!)");
-
-    _text->SetInput( oss.str().c_str());
-}   // end updateCaptions
+}   // end updateText

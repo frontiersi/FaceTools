@@ -30,16 +30,16 @@ public:
     // Parse the files in the given directory to create MetricCalculator instances.
     // Returns the number of MetricCalculators created. If MetricCalculators with the
     // same id already exist, they are overridden. On error, returns < 0.
-    static int load( const QString& metricsDir);
-
-    // Save the metrics back out to the given directory.
-    static bool save( const QString& metricsDir);
+    static int load( const QString&);
 
     // Return the number of metric calculator's available.
     static size_t count() { return _metrics.size();}
 
     // Returns alphanumerically sorted list of unique metric names.
     static const QStringList& names() { return _names;}
+
+    // Returns alphanumerically sorted list of all ethnicities used by growth metrics.
+    static const QStringList& ethnicities() { return _ethnicities;}
 
     static const IntSet& ids() { return _ids;}
 
@@ -52,12 +52,25 @@ public:
     // Return the metric calculator with given id or null if it doesn't exist.
     static MC::Ptr metric( int);
 
+    // Return the currently active metric (null if none yet loaded).
+    static MC::Ptr activeMetric();
+
+    // Return the metric active prior to the currently active one (null if none prior).
+    static MC::Ptr previousActiveMetric();
+
+    // Set the current metric - firing it's activated signal if different from the existing activated.
+    // Returns true only if a new metric was activated (false if mid same as currently active).
+    static bool setActiveMetric( int mid);
+
 private:
     static IntSet _ids;
     static std::unordered_map<int, MC::Ptr> _metrics;
     static MCSet _mset;
     static MCSet _vmset;
     static QStringList _names;
+    static QStringList _ethnicities;
+    static int _activeMetricId;
+    static int _prevActiveMetricId;
 };  // end class
 
 }}  // end namespaces

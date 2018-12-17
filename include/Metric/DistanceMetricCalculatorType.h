@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_METRIC_INTERLANDMARK_METRIC_CALCULATOR_TYPE_H
-#define FACE_TOOLS_METRIC_INTERLANDMARK_METRIC_CALCULATOR_TYPE_H
+#ifndef FACE_TOOLS_METRIC_DISTANCE_METRIC_CALCULATOR_TYPE_H
+#define FACE_TOOLS_METRIC_DISTANCE_METRIC_CALCULATOR_TYPE_H
 
 /**
  * A new InterlandmarkMetricCalculatorType should be created for each
@@ -28,50 +28,43 @@
 
 namespace FaceTools { namespace Metric {
 
-class FaceTools_EXPORT InterlandmarkMetricCalculatorType : public MetricCalculatorTypeInterface
+class FaceTools_EXPORT DistanceMetricCalculatorType : public MetricCalculatorTypeInterface
 { Q_OBJECT
 public:
-    InterlandmarkMetricCalculatorType();    // Required for setting as template type in MetricCalculatorTypeRegistry.
+    DistanceMetricCalculatorType();    // Required for setting as template type in MetricCalculatorTypeRegistry.
 
     int id() const override { return _id;}
-    std::string category() const override { return "Interlandmark";}
-    std::string params() const override;
-    std::string name() const override { return _name;}
-    std::string source() const override { return _source;}
-    std::string ethnicities() const override { return _ethnicities;}
-    Sex sex() const override { return _sex;}
-    std::string description() const override { return _desc;}
-    bool isBilateral() const override { return _bilat;}
-    size_t dims() const override { return 1;}
-    rlib::RSD::Ptr rsd( size_t) const override { return _rsd;}
+    const QString& name() const override { return _name;}
+    const QString& description() const override { return _desc;}
     size_t numDecimals() const override { return _ndps;}
-    Vis::MetricVisualiser* visualiser() override { return &_edv;}
 
     void setId( int id) override;
-    void setName( const std::string&) override;
-    void setDescription( const std::string&) override;
-    void setSource( const std::string&) override;
-    void setEthnicities( const std::string&) override;
-    void setSex( Sex) override;
+    void setName( const QString&) override;
+    void setDescription( const QString&) override;
     void setNumDecimals( size_t) override;
-    void setRSD( size_t, rlib::RSD::Ptr rsd) override;
 
-    bool isAvailable( const FM*) const override;
+    QString category() const override { return s_cat;}
+    QString params() const override;
+    size_t dims() const override { return 1;}
+    bool isBilateral() const override { return _bilat;}
+
+    Vis::MetricVisualiser* visualiser() override { return &_edv;}
+    bool canCalculate( const FM*) const override;
+
     double measure( size_t, const FM*, FaceLateral) const override;
 
-    MCTI::Ptr fromParams( const std::string& params) const override;
+    MCTI::Ptr fromParams( const QString& params) const override;
 
 private:
+    static const QString s_cat;
     int _id;
     bool _bilat;
-    std::string _name, _desc, _source, _ethnicities;
-    Sex _sex;
+    QString _name, _desc;
     int _lA, _lB;
     Vis::EuclideanDistanceVisualiser _edv;
     size_t _ndps;
-    rlib::RSD::Ptr _rsd;
 
-    InterlandmarkMetricCalculatorType( int lmA, int lmB, bool);
+    DistanceMetricCalculatorType( int lmA, int lmB, bool);
 };  // end class
 
 }}   // end namespaces

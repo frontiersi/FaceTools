@@ -43,7 +43,7 @@ if(WITH_TINYXML)
 endif()
 
 if(WITH_BOOST)
-    target_link_libraries( ${PROJECT_NAME} Boost::system Boost::filesystem Boost::regex Boost::random Boost::thread)
+    target_link_libraries( ${PROJECT_NAME} Boost::regex Boost::random Boost::thread Boost::filesystem Boost::system)
 endif()
 
 if(WITH_OPENCV)
@@ -74,3 +74,6 @@ if(WITH_ZLIB)
     target_link_libraries( ${PROJECT_NAME} ${ZLIB_LIBRARIES})
 endif()
 
+if(WITH_LUA)
+    target_link_libraries( ${PROJECT_NAME} ${LUA_LIBRARIES})
+endif()

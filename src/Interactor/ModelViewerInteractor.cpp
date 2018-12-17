@@ -30,7 +30,7 @@ ModelViewerInteractor::ModelViewerInteractor( ModelViewer* mv, QStatusBar* sb)
 
 ModelViewerInteractor::~ModelViewerInteractor()
 {
-    setViewer(nullptr);
+//    setViewer(nullptr);
 }   // end dtor
 
 

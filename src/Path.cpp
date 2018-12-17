@@ -16,66 +16,82 @@
  ************************************************************************/
 
 #include <Path.h>
-#include <ObjModelGeodesicPathFinder.h>
-#include <ObjModelSurfacePointFinder.h>
-#include <Orientation.h>    // RFeatures (for putVertex and getVertex)
+#include <ObjModelTools.h>
+#include <Orientation.h>    // RFeatures (putVertex and getVertex)
+#include <FaceTools.h>
 #include <algorithm>
 using FaceTools::Path;
 
 
-Path::Path() : id(-1), elen(0), psum(0)
-{
-}   // end ctor
+Path::Path() : id(-1), elen(0), psum(0) {}
 
 
 Path::Path( int i, const cv::Vec3f& v0) : id(i), elen(0), psum(0)
 {
     vtxs.resize(2);
-    vtxs[0] = vtxs[1] = v0;
+    vtxs.front() = v0;
+    vtxs.back() = v0;
     name = "";
 }   // end ctor
 
+/*
+namespace {
 
-void Path::recalculate( RFeatures::ObjModelKDTree::Ptr kdt)
+    // Set the vertex indices as those on the start and finish polygons (sT and fT)
+    // that give a line segment that is most parallel to line segment v0-->v1.
+    cv::Vec3d u;
+    cv::normalize( v1-v0, u);
+    v0i = findMostParallelVertex( u, model, v1, sT);
+    v1i = findMostParallelVertex( u, model, v0, fT);
+
+int findMostParallelVertex( const cv::Vec3d& u, const RFeatures::ObjModel* model, const cv::Vec3f& sv, int f)
+{
+    cv::Vec3d v;
+    double m;
+    int bi = 0;
+    double d = 0;
+    const int* vidxs = model->fvidxs(f);
+    for ( int i = 0; i < 3; ++i)
+    {
+        cv::normalize( model->vtx(vidxs[i]) - sv, v);
+        m = fabs(v.dot(u));
+        if ( m > d)
+        {
+            d = m;
+            bi = i;
+        }   // end if
+    }   // end for
+    return vidxs[bi];
+}   // end findMostParallelVertex
+
+}   // end namespace
+*/
+
+
+bool Path::recalculate( const RFeatures::ObjModelKDTree* kdt)
 {
     if ( vtxs.empty())
-        return;
+        return false;
 
-    cv::Vec3f v0 = vtxs[0];
-    cv::Vec3f v1 = vtxs[vtxs.size()-1];
+    cv::Vec3f v0 = vtxs.front();
+    cv::Vec3f v1 = vtxs.back();
+    //v0 = cv::Vec3f( 1.16529, 18.5761, 6.63304);   // mouth.3df
+    //v1 = cv::Vec3f( 2.44465, 7.49523, 0.568123);
 
-    // Set the path endpoints to be coincident with the model surface.
-    int notused;
-    cv::Vec3f vs0, vs1;
-    const RFeatures::ObjModelSurfacePointFinder spfinder( kdt->model());
-    int vidx0 = kdt->find(v0);
-    int vidx1 = kdt->find(v1);
-    spfinder.find( v0, vidx0, notused, vs0);
-    spfinder.find( v1, vidx1, notused, vs1);
-    v0 = vs0;
-    v1 = vs1;
-
-    // Recalculate the surface path.
+    elen = cv::norm(v1-v0);    // The l2-norm (straight line distance)
     vtxs.clear();
-    RFeatures::ObjModelGeodesicPathFinder pfinder(kdt.get());
-    pfinder.findGeodesic( v0, v1, vtxs);    // vtxs now contains path
-    vtxs.push_back(v0);
-    std::reverse( std::begin(vtxs), std::end(vtxs));
-    vtxs.push_back(v1);
-    /*
-    vtxs.resize(2);
-    vtxs[0] = v0;
-    vtxs[1] = v1;
-    */
-
-    elen = (float)cv::norm( v1-v0);    // The l2-norm (straight line distance)
-    psum = 0;   // Calculate the path sum over the discovered path.
-    cv::Vec3f vp = *vtxs.begin();
-    for ( const cv::Vec3f& v : vtxs)
+    psum = 0;
+    if ( findPath( kdt, v0, v1, vtxs))
     {
-        psum += (float)cv::norm( v - vp);
-        vp = v;
-    }   // end for
+        const cv::Vec3f* vp = &vtxs.front();
+        for ( const cv::Vec3f& v : vtxs)
+        {
+            psum += cv::norm( v - *vp);
+            vp = &v;
+        }   // end for
+    }   // end if
+
+    return true;
 }   // end calculate
 
 
@@ -83,8 +99,8 @@ PTree& FaceTools::operator<<( PTree& pathsNode, const Path& p)
 {
     PTree& pnode = pathsNode.add("path","");
     pnode.put( "<xmlattr>.name", p.name);
-    RFeatures::putNamedVertex( pnode, "v0", *p.vtxs.begin());
-    RFeatures::putNamedVertex( pnode, "v1", *p.vtxs.rbegin());
+    RFeatures::putNamedVertex( pnode, "v0", p.vtxs.front());
+    RFeatures::putNamedVertex( pnode, "v1", p.vtxs.back());
     PTree& metrics = pnode.add( "metrics", "");
     metrics.put("elen", p.elen);
     metrics.put("psum", p.psum);
@@ -96,8 +112,9 @@ const PTree& FaceTools::operator>>( const PTree& pnode, Path& p)
 {
     p.name = pnode.get<std::string>( "<xmlattr>.name");
     p.vtxs.resize(2);
-    p.vtxs[0] = RFeatures::getVertex( pnode.get_child("v0"));
-    p.vtxs[1] = RFeatures::getVertex( pnode.get_child("v1"));
+    p.vtxs.front() = RFeatures::getVertex( pnode.get_child("v0"));
+    p.vtxs.back()  = RFeatures::getVertex( pnode.get_child("v1"));
     // elen and plen need calculate via a call to recalculate
     return pnode;
 }   // end operator>>
+

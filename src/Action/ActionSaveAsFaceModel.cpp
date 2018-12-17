@@ -57,7 +57,7 @@ bool ActionSaveAsFaceModel::doBeforeAction( FVS& fset, const QPoint&)
     fileDialog.setDefaultSuffix( dsuff);
     fileDialog.selectFile( filename.c_str());
     fileDialog.setAcceptMode( QFileDialog::AcceptSave);
-    //fileDialog.setOption( QFileDialog::DontUseNativeDialog);
+    fileDialog.setOption( QFileDialog::DontUseNativeDialog);
 
     bool tryagain = true;
     while ( tryagain)

@@ -15,21 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_METRIC_HPO_TERM_MANAGER_H
-#define FACE_TOOLS_METRIC_HPO_TERM_MANAGER_H
+#ifndef FACE_TOOLS_METRIC_PHENOTYPE_MANAGER_H
+#define FACE_TOOLS_METRIC_PHENOTYPE_MANAGER_H
 
-#include <HPOTerm.h>
+#include <Phenotype.h>
 
 namespace FaceTools { namespace Metric {
 
-class FaceTools_EXPORT HPOTermManager
+class FaceTools_EXPORT PhenotypeManager
 {
 public:
-    // Load all HPO terms from the given file.
-    static int load( const QString& fname);
-
-    // Save all HPO terms to the given file.
-    static bool save( const QString& fname);
+    // Load all HPO terms from the given directory of Lua scripts.
+    static int load( const QString&);
 
     // Return the number of HPO terms.
     static size_t count() { return _hpos.size();}
@@ -41,16 +38,16 @@ public:
     static const IntSet& ids() { return _ids;}
 
     // Returns the set of HPO term Ids associated with the given metric Id (reverse lookup).
-    static const IntSet& metricHPOs( int metricId);
+    static const IntSet& metricPhenotypeIds( int metricId);
 
-    // Return reference to the HPO term with given id or null if doesn't exist.
-    static HPOTerm* hpo( int id) { return _hpos.count(id) > 0 ? &_hpos.at(id) : nullptr;}
+    // Return reference to the phenotype term with given id or null if doesn't exist.
+    static Phenotype::Ptr phenotype( int id) { return _hpos.count(id) > 0 ? _hpos.at(id) : nullptr;}
 
 private:
     static IntSet _ids;
-    static QStringList _names;                      // HPO names
-    static std::unordered_map<int, HPOTerm> _hpos;  // HPO terms keyed by their IDs
-    static std::unordered_map<int, IntSet> _mhpos;  // IDs of HPO terms keyed by metric ID
+    static QStringList _names;                             // Phenotype names
+    static std::unordered_map<int, Phenotype::Ptr> _hpos;  // Phenotype terms keyed by their IDs
+    static std::unordered_map<int, IntSet> _mhpos;         // IDs of terms keyed by metric ID
 };  // end class
 
 }}  // end namespaces

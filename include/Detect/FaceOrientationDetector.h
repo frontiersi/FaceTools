@@ -19,7 +19,9 @@
 #define FACE_TOOLS_DETECT_FACE_ORIENTATION_DETECTOR_H
 
 #include "FeaturesDetector.h"
-#include <FaceTools.h>
+#include "FaceShapeLandmarks2DDetector.h"
+#include <LandmarkSet.h>
+#include <OffscreenModelViewer.h>   // RVTK
 #include <ObjModelKDTree.h>         // RFeatures
 #include <Orientation.h>            // RFeatures
 
@@ -35,38 +37,28 @@ public:
     // Provide the initial detection range with d used to scale how closely the camera
     // is positioned to the face based on the detected distance between the eyes e
     // with the distance formula rng * e/d.
-    FaceOrientationDetector( const RFeatures::ObjModelKDTree::Ptr kdt, float rng=700.0f, float d=0.30f);
+    FaceOrientationDetector( const RFeatures::ObjModelKDTree* kdt, float rng=700.0f, float d=0.30f);
 
-    RVTK::Viewer::Ptr offscreenViewer() const { return _vwr;}
-
-    // Orient the camera in the offscreen viewer to position the face in an
-    // upright pose at a standardised distance to cause the face to fill the
-    // viewer in preparation for landmark detection.
-    bool orient();
-
-    // Detect and place into the given landmarks set the detected features of the
-    // face. Call after orient(). This also provides a more accurate detection
-    // of the face's orientation.
+    // Detect and place into the given landmarks set the detected features of the face and set orientation.
     bool detect( Landmark::LandmarkSet&);
 
-    // Returns the orientation of the face after return from orient().
-    RFeatures::Orientation orientation() const { return RFeatures::Orientation(_nvec, _uvec);}
+    // Returns the orientation of the face after return from detect.
+    RFeatures::Orientation orientation() const;
 
-    // Returns the detection range the camera is set to after return from orient().
-    float detectRange() const { return _eprop * _dfact;}
-
-    // If orient returns false, return the error string.
+    // If detect returns false, return the error string.
     const std::string& error() const { return _err;}
 
 private:
-    float detect3DEyePositionsFrom2D();
-    void setCameraToFace();
+    void setCameraToFace(float);
+    // Orient the camera in the offscreen viewer to position the face in an
+    // upright pose at a standardised distance to cause the face to fill the
+    // viewer in preparation for landmark detection. Returns detection range.
+    float orient();
 
-    RVTK::Viewer::Ptr _vwr;
-    const RFeatures::ObjModelKDTree::Ptr _kdt;
-    float _orng, _dfact, _eprop;
-    cv::Vec3f _evec, _nvec, _uvec;
-    cv::Vec3f _v0, _v1;
+    RVTK::OffscreenModelViewer _vwr;
+    const RFeatures::ObjModelKDTree* _kdt;
+    float _orng, _dfact;
+    cv::Vec3f _nvec, _v0, _v1;
     std::string _err;
 };  // end class
 
@@ -77,10 +69,10 @@ private:
 // be given by the surface locations of the left and right pupils.
 // After obtaining the normal vector, the up vector is calculated simply
 // as the normalized vector vnorm.cross(v1-v0)
-FaceTools_EXPORT void findOrientation( const RFeatures::ObjModelKDTree::Ptr kdt,
-                                       const cv::Vec3f& v0,    // Position of left eye
-                                       const cv::Vec3f& v1,    // Position of right eye
-                                       cv::Vec3f& vnorm);      // Output face norm
+FaceTools_EXPORT void findNormal( const RFeatures::ObjModelKDTree* kdt,
+                                  const cv::Vec3f& v0,    // Position of left eye
+                                  const cv::Vec3f& v1,    // Position of right eye
+                                  cv::Vec3f& vnorm);      // Output face norm
 }}   // end namespace
 
 #endif

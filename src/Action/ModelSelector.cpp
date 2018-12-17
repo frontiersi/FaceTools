@@ -51,8 +51,10 @@ ModelSelector::ModelSelector( FaceActionManager* fam, FMV *viewer)
 // private
 ModelSelector::~ModelSelector()
 {
+    /*
     FMS fms = _msi.available().models();  // Copy out
     std::for_each( std::begin(fms), std::end(fms), [this](FM* fm){ this->remove(fm);});
+    */
 }   // end dtor
 
 FMV* ModelSelector::viewer() { return static_cast<FMV*>(_me->_msi.viewer());}
@@ -107,7 +109,7 @@ void ModelSelector::setSelected( FV* fv, bool enable)
     if ( _me->_msi.isSelected(fv) != enable)    // Do nothing if no change in selection
     {
         //_me->_msi.disconnect();
-        _me->_msi.setSelected( fv, enable);
+        _me->_msi.setSelected( fv, enable); // Causes onSelected to fire
         //connect( &_me->_msi, &ModelSelectInteractor::onSelected, &*_me, &ModelSelector::onSelected);
     }   // end if
 }   // end setSelected

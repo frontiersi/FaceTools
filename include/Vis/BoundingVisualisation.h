@@ -21,8 +21,7 @@
 #include "BaseVisualisation.h"
 #include "BoundingView.h"
 
-namespace FaceTools {
-namespace Vis {
+namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT BoundingVisualisation : public BaseVisualisation
 { Q_OBJECT
@@ -52,7 +51,6 @@ private:
     std::unordered_map<const FV*, BoundingView*> _views;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+} }   // end namespace
 
 #endif

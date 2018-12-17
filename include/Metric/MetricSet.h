@@ -19,6 +19,9 @@
 #define FACE_TOOLS_METRIC_METRIC_SET_H
 
 #include "MetricValue.h"
+#include <unordered_map>
+#include <unordered_set>
+using IntSet = std::unordered_set<int>;
 
 namespace FaceTools { namespace Metric {
 
@@ -65,7 +68,6 @@ private:
 
 
 FaceTools_EXPORT PTree& operator<<( PTree&, const MetricSet&);        // Write out the set of metric
-FaceTools_EXPORT const PTree& operator>>( const PTree&, MetricSet&);  // Read in the set of metrics
 
 }}   // end namespace
 

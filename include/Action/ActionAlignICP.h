@@ -26,7 +26,7 @@ namespace Action {
 class FaceTools_EXPORT ActionAlignICP : public FaceAction
 { Q_OBJECT
 public:
-    ActionAlignICP( const QString& dname="ICP", const QIcon& icon=QIcon(), QProgressBar* pb=NULL);   // Async if pb not NULL
+    ActionAlignICP( const QString& dname="ICP", const QIcon& icon=QIcon(), QProgressBar* pb=nullptr);   // Async if pb not NULL
 
 protected slots:
     bool testEnabled( const QPoint* mc=nullptr) const override;

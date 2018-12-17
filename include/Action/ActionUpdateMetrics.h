@@ -20,8 +20,7 @@
 
 #include "FaceAction.h"
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionUpdateMetrics : public FaceAction
 { Q_OBJECT

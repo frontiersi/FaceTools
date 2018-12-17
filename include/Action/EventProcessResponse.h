@@ -28,29 +28,30 @@ class EventProcessResponse
 public:
     EventProcessResponse()
         : _eid(NULL_EVENT),
-          _rpred([](FVS&){return true;}),
+          _rpred([](const FVS&){return true;}),
           _fpred([](const FVS&){return false;}),
           _granted(false) {}
 
     EventProcessResponse( EventId e, bool flag)
         : _eid(e),
-          _rpred([](FVS&){return true;}),
+          _rpred([](const FVS&){return true;}),
           _fpred([=](const FVS&){return flag;}),
           _granted(false) {}
 
-    EventProcessResponse( EventId e, const ProcessFlagPredicate& fp)
+    EventProcessResponse( EventId e, const TestFVSTrue& fp)
         : _eid(e),
-          _rpred([](FVS&){return true;}),
+          _rpred([](const FVS&){return true;}),
           _fpred(fp),
           _granted(false) {}
 
-    EventProcessResponse( EventId e, const ResponsePredicate& rp=[](FVS&){return true;}, bool flag=true)
+    //EventProcessResponse( EventId e, const ProcessPredicate& rp=[](const FVS&){return true;}, bool flag=true)
+    EventProcessResponse( EventId e, const TestFVSTrue& rp, bool flag)
         : _eid(e),
           _rpred(rp),
           _fpred([=](const FVS&){return flag;}),
           _granted(false) {}
 
-    EventProcessResponse( EventId e, const ResponsePredicate& rp, const ProcessFlagPredicate& fp)
+    EventProcessResponse( EventId e, const TestFVSTrue& rp, const TestFVSTrue& fp)
         : _eid(e),
           _rpred(rp),
           _fpred(fp),
@@ -60,15 +61,15 @@ public:
     inline const EventId& event() const { return _eid;}
 
     // Should this event be granted a response according to the internal response predicate?
-    inline bool grantResponse( FVS& fvs) const { return _granted = _rpred(fvs);}
+    inline bool grantResponse( const FVS& fvs) const { return _granted = _rpred(fvs);}
 
     // Return the required process flag for a response (should grantResponse return true).
     inline bool processFlag( const FVS& fvs) const { return _granted && _fpred(fvs);}
 
 private:
     EventId _eid;
-    ResponsePredicate _rpred;
-    ProcessFlagPredicate _fpred;
+    TestFVSTrue _rpred;
+    TestFVSTrue _fpred;
     mutable bool _granted;
 };  // end struct
 

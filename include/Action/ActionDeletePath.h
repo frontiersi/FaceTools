@@ -34,7 +34,8 @@ protected slots:
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(PATHS_CHANGE);}
 
 private:
-    ActionEditPaths *_editor;
+    Vis::PathSetVisualisation *_vis;
+    Interactor::PathSetInteractor *_interactor;
 };  // end class
 
 }   // end namespace

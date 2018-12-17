@@ -8,6 +8,7 @@ set(WITH_CPD TRUE)
 set(WITH_DLIB TRUE)
 set(WITH_RMODELIO TRUE)
 set(WITH_QTOOLS TRUE)
+set(WITH_LUA TRUE)
 include( "cmake/FindLibs.cmake")
 
 set( INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
@@ -48,7 +49,9 @@ include_directories( ${INCLUDE_INT_DIR})
 include_directories( ${PROJECT_BINARY_DIR}) # Req. for generated Qt form headers
 
 set( FORMS
-    "${FORMS_DIR}/MetricsDisplayDialog.ui"
+    "${FORMS_DIR}/ChartDialog.ui"
+    "${FORMS_DIR}/MetricsDialog.ui"
+    "${FORMS_DIR}/PhenotypesDialog.ui"
     "${FORMS_DIR}/ScanInfoDialog.ui"
     )
 
@@ -61,7 +64,6 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionChangeSurfaceMappingRange.h"
     "${INCLUDE_ACTION_DIR}/ActionCloseAllFaceModels.h"
     "${INCLUDE_ACTION_DIR}/ActionCloseFaceModels.h"
-    "${INCLUDE_ACTION_DIR}/ActionComponentSelect.h"
     "${INCLUDE_ACTION_DIR}/ActionCopyViewer.h"
     "${INCLUDE_ACTION_DIR}/ActionCrop.h"
     #"${INCLUDE_ACTION_DIR}/ActionDeleteLandmark.h"
@@ -96,7 +98,6 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionSetOpacity.h"
     "${INCLUDE_ACTION_DIR}/ActionSetParallelProjection.h"
     "${INCLUDE_ACTION_DIR}/ActionSetSurfaceColour.h"
-    "${INCLUDE_ACTION_DIR}/ActionShowChart.h"
     "${INCLUDE_ACTION_DIR}/ActionShowMetrics.h"
     "${INCLUDE_ACTION_DIR}/ActionShowScanInfo.h"
     "${INCLUDE_ACTION_DIR}/ActionSmooth.h"
@@ -108,6 +109,7 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionToggleStereoRendering.h"
     "${INCLUDE_ACTION_DIR}/ActionTransformToStandardPosition.h"
     "${INCLUDE_ACTION_DIR}/ActionUpdateMetrics.h"
+    "${INCLUDE_ACTION_DIR}/ActionUpdateThumbnail.h"
     "${INCLUDE_ACTION_DIR}/ActionVisualise.h"
     "${INCLUDE_ACTION_DIR}/CameraWorker.h"
     "${INCLUDE_ACTION_DIR}/FaceAction.h"
@@ -122,7 +124,8 @@ set( QOBJECTS
     "${INCLUDE_FILEIO_DIR}/FaceModelU3DFileHandler.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelXMLFileHandler.h"
 
-    "${INCLUDE_METRIC_DIR}/InterlandmarkMetricCalculatorType.h"
+    "${INCLUDE_METRIC_DIR}/AngleMetricCalculatorType.h"
+    "${INCLUDE_METRIC_DIR}/DistanceMetricCalculatorType.h"
     "${INCLUDE_METRIC_DIR}/MetricCalculatorTypeInterface.h"
     "${INCLUDE_METRIC_DIR}/MetricCalculator.h"
 
@@ -130,6 +133,7 @@ set( QOBJECTS
     "${INCLUDE_REPORT_DIR}/ReportInterface.h"
     "${INCLUDE_REPORT_DIR}/SampleReport.h"
 
+    "${INCLUDE_VIS_DIR}/AngleVisualiser.h"
     "${INCLUDE_VIS_DIR}/BaseVisualisation.h"
     "${INCLUDE_VIS_DIR}/BoundingVisualisation.h"
     "${INCLUDE_VIS_DIR}/EuclideanDistanceVisualiser.h"
@@ -155,7 +159,10 @@ set( QOBJECTS
     "${INCLUDE_INT_DIR}/PathSetInteractor.h"
     "${INCLUDE_INT_DIR}/ViewerInteractionManager.h"
 
-    "${INCLUDE_WIDGET_DIR}/MetricsDisplayDialog.h"
+    "${INCLUDE_WIDGET_DIR}/ChartDialog.h"
+    "${INCLUDE_WIDGET_DIR}/MetricsDialog.h"
+    "${INCLUDE_WIDGET_DIR}/MetricsTableHeader.h"
+    "${INCLUDE_WIDGET_DIR}/PhenotypesDialog.h"
     "${INCLUDE_WIDGET_DIR}/ScanInfoDialog.h"
 
     "${INCLUDE_DIR}/FaceModelSurfaceData.h"
@@ -191,12 +198,13 @@ set( INCLUDE_FILES
 
     "${INCLUDE_METRIC_DIR}/Gene.h"
     "${INCLUDE_METRIC_DIR}/GeneManager.h"
+    "${INCLUDE_METRIC_DIR}/GrowthData.h"
     "${INCLUDE_METRIC_DIR}/MetricCalculatorTypeRegistry.h"
     "${INCLUDE_METRIC_DIR}/MetricCalculatorManager.h"
     "${INCLUDE_METRIC_DIR}/MetricSet.h"
     "${INCLUDE_METRIC_DIR}/MetricValue.h"
-    "${INCLUDE_METRIC_DIR}/HPOTerm.h"
-    "${INCLUDE_METRIC_DIR}/HPOTermManager.h"
+    "${INCLUDE_METRIC_DIR}/Phenotype.h"
+    "${INCLUDE_METRIC_DIR}/PhenotypeManager.h"
     "${INCLUDE_METRIC_DIR}/Syndrome.h"
     "${INCLUDE_METRIC_DIR}/SyndromeManager.h"
 
@@ -207,6 +215,8 @@ set( INCLUDE_FILES
     "${INCLUDE_VIS_DIR}/PathSetView.h"
     "${INCLUDE_VIS_DIR}/SphereView.h"
     "${INCLUDE_VIS_DIR}/SurfaceDataMapper.h"
+
+    "${INCLUDE_WIDGET_DIR}/IntTableWidgetItem.h"
 
     "${INCLUDE_DIR}/CurvatureSpeedFunctor.h"
     "${INCLUDE_DIR}/CurvatureVariableSpeedFunctor.h"
@@ -230,7 +240,6 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/ActionChangeSurfaceMappingRange
     ${SRC_ACTION_DIR}/ActionCloseAllFaceModels
     ${SRC_ACTION_DIR}/ActionCloseFaceModels
-    ${SRC_ACTION_DIR}/ActionComponentSelect
     ${SRC_ACTION_DIR}/ActionCopyViewer
     ${SRC_ACTION_DIR}/ActionCrop
     #${SRC_ACTION_DIR}/ActionDeleteLandmark
@@ -266,7 +275,6 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/ActionSetOpacity
     ${SRC_ACTION_DIR}/ActionSetParallelProjection
     ${SRC_ACTION_DIR}/ActionSetSurfaceColour
-    ${SRC_ACTION_DIR}/ActionShowChart
     ${SRC_ACTION_DIR}/ActionShowMetrics
     ${SRC_ACTION_DIR}/ActionShowScanInfo
     ${SRC_ACTION_DIR}/ActionSmooth
@@ -278,6 +286,7 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/ActionToggleStereoRendering
     ${SRC_ACTION_DIR}/ActionTransformToStandardPosition
     ${SRC_ACTION_DIR}/ActionUpdateMetrics
+    ${SRC_ACTION_DIR}/ActionUpdateThumbnail
     ${SRC_ACTION_DIR}/ActionVisualise
     ${SRC_ACTION_DIR}/CameraWorker
     ${SRC_ACTION_DIR}/FaceAction
@@ -318,21 +327,24 @@ set( SRC_FILES
     ${SRC_LNDMRK_DIR}/LandmarkSet
     ${SRC_LNDMRK_DIR}/LandmarksManager
 
-    ${SRC_METRIC_DIR}/InterlandmarkMetricCalculatorType
+    ${SRC_METRIC_DIR}/AngleMetricCalculatorType
+    ${SRC_METRIC_DIR}/DistanceMetricCalculatorType
     ${SRC_METRIC_DIR}/Gene
     ${SRC_METRIC_DIR}/GeneManager
+    ${SRC_METRIC_DIR}/GrowthData
     ${SRC_METRIC_DIR}/MetricCalculatorTypeRegistry
     ${SRC_METRIC_DIR}/MetricCalculatorManager
     ${SRC_METRIC_DIR}/MetricCalculator
     ${SRC_METRIC_DIR}/MetricSet
     ${SRC_METRIC_DIR}/MetricValue
-    ${SRC_METRIC_DIR}/HPOTerm
-    ${SRC_METRIC_DIR}/HPOTermManager
+    ${SRC_METRIC_DIR}/Phenotype
+    ${SRC_METRIC_DIR}/PhenotypeManager
     ${SRC_METRIC_DIR}/Syndrome
     ${SRC_METRIC_DIR}/SyndromeManager
 
     ${SRC_REPORT_DIR}/SampleReport
 
+    ${SRC_VIS_DIR}/AngleVisualiser
     ${SRC_VIS_DIR}/BaseVisualisation
     ${SRC_VIS_DIR}/BoundingView
     ${SRC_VIS_DIR}/BoundingVisualisation
@@ -351,7 +363,11 @@ set( SRC_FILES
     ${SRC_VIS_DIR}/SurfaceDataMapper
     ${SRC_VIS_DIR}/SurfaceVisualisation
 
-    ${SRC_WIDGET_DIR}/MetricsDisplayDialog
+    ${SRC_WIDGET_DIR}/ChartDialog
+    ${SRC_WIDGET_DIR}/IntTableWidgetItem
+    ${SRC_WIDGET_DIR}/MetricsDialog
+    ${SRC_WIDGET_DIR}/MetricsTableHeader
+    ${SRC_WIDGET_DIR}/PhenotypesDialog
     ${SRC_WIDGET_DIR}/ScanInfoDialog
 
     ${SRC_DIR}/CurvatureSpeedFunctor

@@ -33,9 +33,13 @@ public:
     bool belongs( const vtkProp*, const FV*) const override;
     void pokeTransform( const FV*, const vtkMatrix4x4*) override;
     void fixTransform( const FV*) override;
+
     void apply( FV*, const QPoint* mc=nullptr) override;
     void clear( FV*) override;
+    void purge( FV* fv) override { MetricVisualiser::purge(fv);}
     void purge( const FM*) override;
+
+    void setHighlighted( const FM* fm=nullptr) override;
 
 private:
     const int _lmkA;

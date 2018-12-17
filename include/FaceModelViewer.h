@@ -47,7 +47,7 @@ public:
     // Find out if any of the views attached to this viewer overlap with others; the given map
     // is set with true values for views that overlap. Returns the number of views that overlap
     // with others (i.e. the number of true settings in out parameter overlaps).
-    // Out parameter is always cleared first before setting.
+    // Out parameter is NOT cleared before setting.
     size_t findOverlaps( FVFlags& overlaps) const;
 
     // Given the overlaps set from a call to findOverlaps, refresh the opacity values of the views

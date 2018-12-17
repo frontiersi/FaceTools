@@ -51,18 +51,31 @@ ActionEditLandmarks::~ActionEditLandmarks()
 
 bool ActionEditLandmarks::doAction( FVS& fvs, const QPoint& mc)
 {
-    // TODO: Should probably consider making this a separate action instead of making this use ActionVisualise.
-    const FMS& fms = fvs.models();
-    std::for_each( std::begin(fms), std::end(fms), [=](FM* fm){ _vis->refreshLandmarks(fm);});
-    return ActionVisualise::doAction(fvs, mc);
+    const bool aokay = ActionVisualise::doAction( fvs, mc);
+    if ( isChecked())   // Is visualised, ensure all landmarks are refreshed and visible
+    {
+        for ( FM* fm : fvs.models())
+        {
+            _vis->refreshLandmarks(fm);
+            for ( FV* fv : fm->fvs())
+                _vis->apply( fv);
+        }   // end for
+    }   // end if
+    return aokay;
 }   // end doAction
 
 
-void ActionEditLandmarks::doAfterAction( EventSet& cs, const FVS& fvs, bool v)
+void ActionEditLandmarks::doAfterAction( EventSet& cs, const FVS&, bool)
 {
-    ActionVisualise::doAfterAction( cs, fvs, v);
+    cs.insert( VIEW_CHANGE);
     _interactor->setEnabled(isChecked());
 }   // end doAfterAction
+
+
+void ActionEditLandmarks::tellReady( const FV* fv, bool)
+{
+    _vis->refreshLandmarks(fv->data());
+}   // end tellReady
 
 
 void ActionEditLandmarks::doOnEditedLandmark( const FV* fv)

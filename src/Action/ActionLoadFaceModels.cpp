@@ -17,7 +17,6 @@
 
 #include <ActionLoadFaceModels.h>
 #include <FaceModelManager.h>
-#include <QFileDialog>
 using FaceTools::Action::ActionLoadFaceModels;
 using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
@@ -27,9 +26,16 @@ using FaceTools::FVS;
 
 
 ActionLoadFaceModels::ActionLoadFaceModels( const QString& dn, const QIcon& ico, QWidget *p)
-    : FaceAction( dn, ico), _loadHelper(p)
+    : FaceAction( dn, ico), _loadHelper(p), _dialog( new QFileDialog(p, tr("Select one or more models to load")))
 {
     setAsync(true);
+    QStringList filters = _loadHelper.createImportFilters().split(";;");
+    filters.prepend( "Any file (*)");
+    _dialog->setNameFilters(filters);
+    _dialog->setViewMode(QFileDialog::Detail);
+    _dialog->setFileMode(QFileDialog::ExistingFiles);
+    _dialog->setOption(QFileDialog::DontUseCustomDirectoryIcons);
+    _dialog->setOption(QFileDialog::DontUseNativeDialog);
 }   // end ctor
 
 
@@ -63,16 +69,8 @@ bool ActionLoadFaceModels::doBeforeAction( FVS&, const QPoint&)
 {
     if ( _loadHelper.filenames().empty())
     {
-        // Get the dialog filters
-        QString anyf = "Any file (*.*)";
-        QStringList filters = _loadHelper.createImportFilters().split(";;");
-        filters.prepend(anyf);
-        QString allf = filters.join(";;");
-
-        QStringList fnames = QFileDialog::getOpenFileNames( _loadHelper.parent(),
-                                                            tr("Select one or more models to load"), "",
-                                                            allf, &anyf);
-        _loadHelper.setFilteredFilenames( fnames);
+        if (_dialog->exec())
+            _loadHelper.setFilteredFilenames( _dialog->selectedFiles());
     }   // end if
     return !_loadHelper.filenames().empty();
 }   // end doBeforeAction

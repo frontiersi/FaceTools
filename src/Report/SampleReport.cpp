@@ -16,20 +16,19 @@
  ************************************************************************/
 
 #include <SampleReport.h>
-#include <FaceModel.h>
 using FaceTools::Report::SampleReport;
 using RModelIO::LaTeXU3DInserter;
 using RFeatures::CameraParams;
+using RFeatures::ObjModel;
 using FaceTools::FM;
 
 
-LaTeXU3DInserter::Ptr SampleReport::createFigure( size_t, const std::string& tdir, const FM* fm, const CameraParams& cam)
+LaTeXU3DInserter::Ptr SampleReport::createFigure( size_t, const QString& tdir, const ObjModel* cmodel, const CameraParams& cam)
 {
     // Currently, the model itself is written out, not the VTK view (next version!)
     float widthMM = 180;
     float heightMM = 200;
-    const RFeatures::ObjModel* model = fm->info()->cmodel();
-    LaTeXU3DInserter::Ptr fig = LaTeXU3DInserter::create( model, tdir, widthMM, heightMM, cam, "3D Model", "", true, false);
+    LaTeXU3DInserter::Ptr fig = LaTeXU3DInserter::create( cmodel, tdir.toStdString(), widthMM, heightMM, cam, "3D Model", "", true, false);
     if ( !fig)
         std::cerr << "Failed to create U3D model from data!" << std::endl;
     return fig;

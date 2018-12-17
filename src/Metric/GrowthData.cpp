@@ -15,35 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <HPOTerm.h>
-using FaceTools::Metric::HPOTerm;
+#include <GrowthData.h>
+#include <MiscFunctions.h>
+#include <boost/algorithm/string.hpp>
+using FaceTools::Metric::GrowthData;
 
-HPOTerm::HPOTerm() : _id(-1) {}
-
-
-void HPOTerm::cleanStrings()
+GrowthData::GrowthData( size_t ndims) : _sex(UNKNOWN_SEX), _n(0), _rsds(ndims)
 {
-    _name.replace( IBAR, '/');
-    _region.replace( IBAR, '/');
-    for ( QString& s: _synonyms)
-    {
-        s.replace( IBAR, '/');
-        s.replace( SC, '-');
-    }   // end for
-    _criteria.replace( IBAR, '/');
-    _remarks.replace( IBAR, '/');
-}   // end cleanStrings
-
-
-QTextStream& FaceTools::Metric::operator<<( QTextStream& os, const HPOTerm& hpoin)
-{
-    HPOTerm hpo = hpoin;
-    hpo.cleanStrings();
-    os << hpo.id() << IBAR << hpo.name() << IBAR << hpo.region() << IBAR;
-    for ( const QString& syn : hpo.synonyms())
-        os << syn << SC;
-    os << IBAR << hpo.criteria() << IBAR << hpo.remarks() << IBAR;
-    for ( int id : hpo.metrics())
-        os << id << SC;
-    return os;
-}   // end operator<<
+}   // end ctor

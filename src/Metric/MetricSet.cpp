@@ -25,7 +25,7 @@ MetricSet::Ptr MetricSet::create() { return Ptr( new MetricSet, [](MetricSet* d)
 
 void MetricSet::set( const MetricValue& m)
 {
-    int id = m.metricId();
+    int id = m.id();
     _metrics[id] = m;
     _ids.insert(id);
 }   // end set
@@ -66,18 +66,3 @@ PTree& FaceTools::Metric::operator<<( PTree& mnodes, const MetricSet& ms)
     std::for_each( std::begin(ids), std::end(ids), [&](int id){ mnodes << *ms.get(id);});
     return mnodes;
 }   // end operator<<
-
-
-const PTree& FaceTools::Metric::operator>>( const PTree& mnodes, MetricSet& ms)
-{
-    for ( const PTree::value_type& mnode : mnodes)
-    {
-        if ( mnode.first == "Metric")
-        {
-            MetricValue m;
-            mnode.second >> m;
-            ms.set( m);
-        }   // end if
-    }   // end foreach
-    return mnodes;
-}   // end operator>>

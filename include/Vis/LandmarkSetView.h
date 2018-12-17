@@ -26,11 +26,14 @@ namespace FaceTools { namespace Vis {
 class FaceTools_EXPORT LandmarkSetView
 {
 public:
-    LandmarkSetView( const Landmark::LandmarkSet&, double radius=1.0);
+    LandmarkSetView( const Landmark::LandmarkSet&, double radius=1.1);
     virtual ~LandmarkSetView();
 
     void setLandmarkRadius( double);
     double landmarkRadius() const { return _lmrad;}
+
+    void setColour( double r, double g, double b);
+    void setColour( const cv::Vec3d&);
 
     void setVisible( bool, ModelViewer*);              // Show/hide all landmarks (also sets current viewer)
 
@@ -53,6 +56,9 @@ public:
 
     void pokeTransform( const vtkMatrix4x4*);                     
     void fixTransform();
+
+    static cv::Vec3d BASE0_COL;
+    static cv::Vec3d SPEC0_COL;
 
 private:
     double _lmrad;

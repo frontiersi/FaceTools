@@ -21,6 +21,7 @@
 #include <cmath>
 #include <cassert>
 using FaceTools::Action::ActionShowScanInfo;
+using FaceTools::Action::ActionUpdateThumbnail;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::EventSet;
 using FaceTools::Widget::ScanInfoDialog;
@@ -30,7 +31,7 @@ using FaceTools::FM;
 
 
 ActionShowScanInfo::ActionShowScanInfo( const QString& dname, const QIcon& icon, QWidget* parent)
-    : FaceAction( dname, icon), _dialog( new ScanInfoDialog(parent))
+    : FaceAction( dname, icon), _dialog( new ScanInfoDialog(parent)), _tupdater(nullptr)
 {
     connect( _dialog, &ScanInfoDialog::onUpdated, this, &ActionShowScanInfo::doOnUpdated);
     setAsDialogShower( _dialog);
@@ -43,9 +44,23 @@ ActionShowScanInfo::~ActionShowScanInfo()
 }   // end dtor
 
 
+void ActionShowScanInfo::setThumbnailUpdater( ActionUpdateThumbnail* act)
+{
+    _tupdater = act;
+    const int dims = _dialog->minThumbDims();
+    _tupdater->setThumbnailSize( dims, dims);
+    connect( act, &ActionUpdateThumbnail::updated, this, &ActionShowScanInfo::doOnUpdatedThumbnail);
+}   // end setThumbnailUpdater
+
+
 void ActionShowScanInfo::tellReady( const FV* fv, bool v)
 {
-    _dialog->set( v && fv != nullptr ? fv->data() : nullptr);
+    FM* fm = nullptr;
+    if ( fv && v)
+        fm = fv->data();
+    _dialog->set( fm);
+    if ( fm && _tupdater)
+        doOnUpdatedThumbnail( fm, _tupdater->thumbnail(fm));
 }   // end tellReady
 
 
@@ -57,3 +72,10 @@ void ActionShowScanInfo::doOnUpdated( FM* fm)
     fvs.insert(fm);
     emit reportFinished( eset, fvs, true);
 }   // end doOnUpdated
+
+
+void ActionShowScanInfo::doOnUpdatedThumbnail( const FM* fm, const cv::Mat& img)
+{
+    if ( _dialog->get() == fm)
+        _dialog->setThumbnail(img);
+}   // end doOnUpdatedThumbnail

@@ -17,104 +17,103 @@
 
 #include <MetricValue.h>
 #include <MetricCalculatorManager.h>
-#include <cassert>
 #include <Round.h>  // rlib
+#include <cassert>
 using FaceTools::Metric::MetricValue;
+using FaceTools::Metric::DimensionStat;
 using MCM = FaceTools::Metric::MetricCalculatorManager;
 
-MetricValue::MetricValue( int id, const std::vector<double>& v, const std::vector<double>& z, const std::vector<bool>& zok)
-    : _id(id)
+
+namespace {
+void checkId( int id)
 {
-    if ( !set(v, z, zok))
+    FaceTools::Metric::MC::Ptr metric = MCM::metric(id);
+    if ( !metric)
     {
         std::cerr << "[ERROR] FaceTools::Metric::MetricValue::ctor: Invalid metric values set!" << std::endl;
+        assert(metric);
+    }   // end if
+}   // end checkId
+}   // end namespace
+
+
+MetricValue::MetricValue( int id)
+    : _id(id), _sex(0), _eth(""), _src("")
+{
+    checkId(id);
+}   // end ctor
+
+
+MetricValue::MetricValue( int id, const std::vector<DimensionStat>& ds)
+    : _id(id), _sex(0), _eth(""), _src(""), _dstats(ds)
+{
+    checkId(id);
+    MC::Ptr mc = MCM::metric( id);
+    const size_t rdims = mc->dims();    // Required number of dimensions
+    if ( ndims() > rdims)
+    {
+        _dstats.resize(rdims);  // Truncate!
+        std::cerr << "[ERROR] FaceTools::Metric::MetricValue::ctor: Too many statistics added for the allowed number of dimensions!" << std::endl;
         assert(false);
     }   // end if
 }   // end ctor
 
 
-bool MetricValue::set( const std::vector<double>& v, const std::vector<double>& z, const std::vector<bool>& zok)
+MetricValue::MetricValue( const MetricValue& mv)
 {
-    MC::Ptr metric = MCM::metric(_id);
-    assert(metric);
-    if ( !metric)
+    *this = mv;
+}   // end ctor
+
+
+MetricValue& MetricValue::operator=( const MetricValue& mv)
+{
+    _id = mv._id;
+    _sex = mv._sex;
+    _eth = mv._eth;
+    _src = mv._src;
+    _dstats = mv._dstats;
+    return *this;
+}   // end operator=
+
+
+bool MetricValue::addStat( const DimensionStat& ds)
+{
+    MC::Ptr mc = MCM::metric( id());
+    const size_t rdims = mc->dims();    // Required number of dimensions
+    if ( ndims() >= rdims)
         return false;
-
-    const size_t dims = metric->dims(); // Required dimensions
-
-    assert( v.size() == z.size());
-    assert( z.size() == zok.size());
-    assert( zok.size() == dims);
-    if ( v.size() != z.size() || z.size() != zok.size() || zok.size() != dims)
-        return false;
-
-    _vals = v;
-    _zscs = z;
-    _zoks = zok;
+    _dstats.push_back(ds);
     return true;
-}   // end set
+}   // end addStat
 
 
 PTree& FaceTools::Metric::operator<<( PTree& pnode, const MetricValue& m)
 {
-    MC::Ptr mc = MCM::metric( m.metricId());
+    MC::Ptr mc = MCM::metric( m.id());
 
     PTree& mnode = pnode.add("MetricValue","");
-    mnode.put( "<xmlattr>.name", mc->name().toStdString());
+
     mnode.put( "<xmlattr>.id", mc->id());
+    mnode.put( "<xmlattr>.name", mc->name().toStdString());
     mnode.put( "category", mc->category().toStdString());
     const int ndps = static_cast<int>(mc->numDecimals());
     const size_t dims = mc->dims();
     mnode.put( "ndims", dims);
+    mnode.put( "sex", FaceTools::toLongSexString(m.sex()).toStdString());
+    mnode.put( "ethnicity", m.ethnicity());
+    mnode.put( "source", m.source());
 
-    PTree& vnode = mnode.put( "values", "");
+    // Output the statistics for the metric
+    PTree& dnode = mnode.put( "stats", "");
     for ( size_t i = 0; i < dims; ++i)
     {
-        std::ostringstream ossd;
-        ossd << "dim_" << i;
-        PTree& dnode = vnode.put( ossd.str(), "");
-        dnode.put( "measure", rlib::dps( m.values()[i], ndps));
-        dnode.put( "zscore", rlib::dps( m.zscores()[i], ndps));
-        dnode.put( "zokay", m.zokays()[i]);
+        PTree& node = dnode.add( "dimension", "");
+        node.put( "axis", i);
+        node.put( "value",  rlib::dps( m.value(i),  ndps));
+        node.put( "zscore", rlib::dps( m.zscore(i), ndps));
+        node.put( "mean",   rlib::dps( m.mean(i),   ndps));
+        node.put( "stdv",   rlib::dps( m.stdv(i),   ndps));
     }   // end for
+
     return pnode;
 }   // end write
-
-
-const PTree& FaceTools::Metric::operator>>( const PTree& mnode, MetricValue& m)
-{
-    m.setMetricId( mnode.get<int>( "<xmlattr>.id"));
-    const size_t dims = mnode.get<size_t>( "ndims");
-
-    MC::Ptr mc = MCM::metric( m.metricId());
-    assert( mc);
-    if ( !mc)
-    {
-        std::cerr << "[ERROR] FaceTools::Metric::operator>>: MetricValue; metric ID not found!" << std::endl;
-        return mnode;
-    }   // end if
-
-    assert( dims == mc->dims());
-    if ( dims != mc->dims())
-    {
-        std::cerr << "[ERROR] FaceTools::Metric::operator>>: MetricValue; metric dimension mismatch!" << std::endl;
-        return mnode;
-    }   // end if
-
-    std::vector<double> vs(dims);
-    std::vector<double> zs(dims);
-    std::vector<bool> zok(dims);
-    const PTree& vnode = mnode.get_child("values");
-    for ( size_t i = 0; i < dims; ++i)
-    {
-        std::ostringstream ossd;
-        ossd << "dim_" << i;
-        const PTree& dnode = vnode.get_child(ossd.str());
-        vs[i]  = dnode.get<double>("measure");
-        zs[i]  = dnode.get<double>("zscore");
-        zok[i] = dnode.get<bool>("zokay");
-    }   // end for
-    m.set( vs, zs, zok);
-
-    return mnode;
-}   // end operator>>

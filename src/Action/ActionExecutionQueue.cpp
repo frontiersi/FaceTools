@@ -33,38 +33,26 @@ bool ActionExecutionQueue::push( FaceAction* act, const FVS& fvs, const EventSet
         return false;
 
     const size_t qsize = _queue.size();
-    assert(act);
 
-    // Get all event responses registered for the action.
-    std::unordered_set<const EPR*> eprs;
+    // Parse all event responses registered for the action to see if the action should be pushed
+    // onto the queue for popping later.
+    bool respond = false;
+    bool pflag = true;
     for ( EventId e : E)
     {
-        const EventProcessResponse* response = act->eventResponse(e);
-        if ( response)
-            eprs.insert(response);
-    }   // end for
-
-    // Of these, choose the response one that maximises the size of the FaceViewSet.
-    const EPR* bestResponse = nullptr;
-    FVS mfvs;   // Initially empty
-    bool pflag = true;
-    for ( const EPR* response : eprs)
-    {
-        FVS nfvs = fvs; // Copy out since in granting the response, the contents may change
-        const bool granted = response->grantResponse( nfvs);
-        if ( granted && nfvs.size() >= mfvs.size())
+        const EPR* epr = act->eventResponse(e);   // Is event e responded to by the action?
+        if ( epr && epr->grantResponse( fvs))
         {
-            bestResponse = response;
-            mfvs = nfvs;
-            pflag = pflag && response->processFlag( mfvs);  // process flag must be true over ALL granted responses to stay true
+            pflag = pflag && epr->processFlag( fvs);  // process flag must be true over ALL granted responses to stay true
+            respond = true;
         }   // end if
     }   // end for
 
-    if ( bestResponse)
+    if ( respond)
     {
-        _queue.push_back( {act, FVS::create(mfvs), pflag});
+        _queue.push_back( {act, FVS::create(fvs), pflag});
         _actions.insert(act);
-        std::cerr << " Q<<-- : " << act->dname() << " <" << act << "> (#FV = " << mfvs.size() << ")" << std::endl;
+        std::cerr << " Q<<-- : " << act->dname() << " <" << act << "> (#FV = " << fvs.size() << ")" << std::endl;
     }   // end if
     return _queue.size() > qsize;
 }   // end push

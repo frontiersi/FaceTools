@@ -29,7 +29,6 @@ ActionResetCamera::ActionResetCamera( const QString& dn, const QIcon& ico, FMV *
 {
     if ( mv)
         addViewer(mv);
-    setRespondToEvent( VIEWER_CHANGE, static_cast<ProcessFlagPredicate>([](const FVS& fvs){ return fvs.empty();}));
 }   // end ctor
 
 

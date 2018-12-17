@@ -34,6 +34,7 @@ public:
     Interactor::LandmarksInteractor* interactor() override { return _interactor;}
 
 protected slots:
+    void tellReady( const Vis::FV*, bool) override;
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet&, const FVS&, bool) override;
     void doOnEditedLandmark( const Vis::FV*);

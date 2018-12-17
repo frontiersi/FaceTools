@@ -19,6 +19,7 @@
 #include <FaceShapeLandmarks2DDetector.h>
 #include <FaceTools.h>
 #include <FaceModel.h>
+#include <PhenotypeManager.h>
 #include <MiscFunctions.h>
 #include <AssetImporter.h>
 #include <OBJExporter.h>
@@ -32,6 +33,8 @@
 #include <sstream>
 #include <ctime>
 using FaceTools::FileIO::FaceModelXMLFileHandler;
+using FaceTools::Metric::PhenotypeManager;
+using FaceTools::Metric::Phenotype;
 using FaceTools::FM;
 
 namespace {
@@ -40,11 +43,11 @@ void writeFaceModel( const FM* fm, const std::string& objfname, PTree& rnode)
 {
     const std::string relfname = boost::filesystem::path( objfname).filename().string(); // Relative filepath
     rnode.put( "objfilename", relfname);
-    rnode.put( "description", fm->description());
-    rnode.put( "source", fm->source());
+    rnode.put( "description", fm->description().toStdString());
+    rnode.put( "source", fm->source().toStdString());
     rnode.put( "age", fm->age());
-    rnode.put( "sex", FaceTools::toSexString(fm->sex()));
-    rnode.put( "ethnicity", fm->ethnicity());
+    rnode.put( "sex", FaceTools::toSexString(fm->sex()).toStdString());
+    rnode.put( "ethnicity", fm->ethnicity().toStdString());
     rnode.put( "capture_date", fm->captureDate().toString().toStdString());
 
     PTree& onode = rnode.put("Orientation", "");
@@ -57,9 +60,19 @@ void writeFaceModel( const FM* fm, const std::string& objfname, PTree& rnode)
     fm->paths()->write( rnode.put("Paths", ""));
 
     PTree& mgrps = rnode.put("MetricGroups", "");
-    mgrps.add("MetricsM", "") << fm->metrics();
-    mgrps.add("MetricsL", "") << fm->metricsL();
-    mgrps.add("MetricsR", "") << fm->metricsR();
+    mgrps.add("Frontal", "") << fm->metrics();
+    mgrps.add("LeftLateral", "") << fm->metricsL();
+    mgrps.add("RightLateral", "") << fm->metricsR();
+
+    PTree& hpos = rnode.put("CriteriaMatchedPhenotypes", "");
+    for ( int hid : fm->phenotypes())
+    {
+        PTree& node = hpos.add( "HPOTerm", "");
+        node.put( "<xmlattr>.id", hid);
+        const Phenotype::Ptr hpo = PhenotypeManager::phenotype(hid);
+        node.put( "<xmlattr>.name", hpo->name().toStdString());
+        node.put( "ValidDemographics", hpo->isDemographicMatch(fm));
+    }   // end for
 }   // end writeFaceModel
 
 
@@ -69,15 +82,15 @@ FM* readFaceModel( const PTree& rnode, std::string& objfilename)
     objfilename = rnode.get<std::string>( "objfilename");  // Without path info
 
     if ( rnode.count("description") > 0)
-        fm->setDescription( rnode.get<std::string>( "description"));
+        fm->setDescription( rnode.get<std::string>( "description").c_str());
     if ( rnode.count("source") > 0)
-        fm->setSource( rnode.get<std::string>( "source"));
+        fm->setSource( rnode.get<std::string>( "source").c_str());
     if ( rnode.count("age") > 0)
         fm->setAge( rnode.get<double>("age"));
     if ( rnode.count("sex") > 0)
-        fm->setSex( FaceTools::fromSexString(rnode.get<std::string>("sex")));
+        fm->setSex( FaceTools::fromSexString( rnode.get<std::string>("sex").c_str()));
     if ( rnode.count("ethnicity") > 0)
-        fm->setEthnicity( rnode.get<std::string>( "ethnicity"));
+        fm->setEthnicity( rnode.get<std::string>( "ethnicity").c_str());
     if ( rnode.count("capture_date") > 0)
         fm->setCaptureDate( QDate::fromString( rnode.get<std::string>( "capture_date").c_str()));
 
@@ -110,15 +123,6 @@ FM* readFaceModel( const PTree& rnode, std::string& objfilename)
     // Read in the saved paths
     if ( rnode.count("Paths") > 0)
         fm->paths()->read( rnode.get_child("Paths"));
-
-    // Read in the metric groups
-    if ( rnode.count("MetricGroups") > 0)
-    {
-        const PTree& mgrps = rnode.get_child("MetricGroups");
-        mgrps.get_child("MetricsM") >> fm->metrics();
-        mgrps.get_child("MetricsL") >> fm->metricsL();
-        mgrps.get_child("MetricsR") >> fm->metricsR();
-    }   // end if
 
     fm->setSaved(true);
     return fm;
@@ -314,7 +318,7 @@ bool FaceModelXMLFileHandler::write( const FM* fm, const QString& sfname)
 
         // Export jpeg thumbnail of model.
         const std::string thumbfile = boost::filesystem::path(xmlfile).replace_extension( "jpg").string();
-        cv::Mat img = fm->thumbnail(256);   // Generate thumbnail
+        cv::Mat img = FaceTools::makeThumbnail( fm, cv::Size(256,256), 500);   // Generate thumbnail
         cv::imwrite( thumbfile, img);
 
         PTree tree;

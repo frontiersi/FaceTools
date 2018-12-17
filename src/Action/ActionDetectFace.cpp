@@ -69,36 +69,37 @@ bool ActionDetectFace::doAction( FVS& fvs, const QPoint&)
 {
     assert(fvs.size() == 1);
     FM* fm = fvs.first()->data();
+    fvs.clear();
 
-    // Get a new orientation for the face
-    fm->lockForRead();
-    const RFeatures::ObjModelKDTree::Ptr kdt = fm->kdtree();
+    fm->lockForWrite();
+
+    const RFeatures::ObjModelKDTree* kdt = fm->kdtree();
     FaceOrientationDetector faceDetector( kdt, 650.0f, 0.3f);
-    const bool oriented = faceDetector.orient();
-    fm->unlock();
-
+    Landmark::LandmarkSet& lmks = *fm->landmarks();
     fm->clearLandmarks();
-    if ( !oriented)
+
+    if ( faceDetector.detect( lmks))
     {
-        _err = faceDetector.error();
-        return false;
+        auto on = faceDetector.orientation();
+        fm->setOrientation( on);
+        //std::cerr << "[INFO] FaceTools::Action::ActionDetectFace: Detected orientation (norm, up) " << on << std::endl;
+        //std::cerr << "[INFO] FaceTools::Action::ActionDetectFace: Landmarks detection range set to " << faceDetector.detectRange() << std::endl;
+
+        const cv::Vec3f c = FaceTools::calcFaceCentre( lmks);
+        fm->setCentre( c);
+        cv::Matx44d m = RFeatures::toStandardPosition( on.nvec(), on.uvec(), c);
+        fm->transform(m);
+        fvs.insert(fm);
     }   // end if
-
-    std::cerr << "[INFO] FaceTools::Action::ActionDetectFace: Detected orientation (norm, up) " << faceDetector.orientation() << std::endl;
-    std::cerr << "[INFO] FaceTools::Action::ActionDetectFace: Landmarks detection range set to " << faceDetector.detectRange() << std::endl;
-
-    if ( !faceDetector.detect( *fm->landmarks()))
+    else
     {
         _err = faceDetector.error();
         fm->clearLandmarks();
-        return false;
-    }   // end if
+    }   // end else
 
-    fm->lockForWrite();
-    fm->setCentre( FaceTools::calcFaceCentre( *fm->landmarks()));
-    fm->setOrientation( faceDetector.orientation());
     fm->unlock();
-    return true;
+
+    return _err.empty();
 }   // end doAction
 
 
@@ -108,4 +109,5 @@ void ActionDetectFace::doAfterAction( EventSet& cset, const FVS&, bool v)
         QMessageBox::warning(_parent, tr("Face Detection Failed!"), tr( _err.c_str()));
     cset.insert(ORIENTATION_CHANGE);
     cset.insert(LANDMARKS_ADD);
+    cset.insert(AFFINE_CHANGE);
 }   // end doAfterAction

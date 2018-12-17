@@ -50,6 +50,7 @@ bool ContextMenuInteractor::rightButtonDown( const QPoint& p)
 {
     _rDownTime = 0;
     const vtkProp* prop = viewer()->getPointedAt(p);
+    viewer()->updateRender();
     if ( prop && const_cast<vtkProp*>(prop)->GetPickable())
         _rDownTime = QDateTime::currentDateTime().currentMSecsSinceEpoch();
     return false;
@@ -80,5 +81,6 @@ size_t ContextMenuInteractor::testEnabledActions( const QPoint& p) const
         if ( a->testSetEnabled(&p))
             nenabled++;
     }   // end for
+    viewer()->updateRender();
     return nenabled;
 }   // end testEnabledActions

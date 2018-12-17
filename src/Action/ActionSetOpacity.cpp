@@ -29,7 +29,7 @@ using FaceTools::Vis::FV;
 
 
 ActionSetOpacity::ActionSetOpacity( const QString& dname, double mooo, double minOpacity, QWidget* parent)
-    : FaceAction( dname), _maxOpacityOnOverlap(mooo), _opacitySpinBox(new QDoubleSpinBox(parent))
+    : FaceAction( dname), _maxOpacityOnOverlap(mooo), _opacitySpinBox(new QDoubleSpinBox(parent)), _viewer(nullptr)
 {
     _opacitySpinBox->setDecimals(2);
     _opacitySpinBox->setSingleStep(0.05);
@@ -55,20 +55,23 @@ ActionSetOpacity::ActionSetOpacity( const QString& dname, double mooo, double mi
 double ActionSetOpacity::setOpacityOnOverlap( double v)
 {
     _maxOpacityOnOverlap = std::max( _opacitySpinBox->minimum(), std::min( v, 1.0));
+    _opacitySpinBox->setValue( _maxOpacityOnOverlap);
     return _maxOpacityOnOverlap;
 }   // end setOpacityOnOverlap
 
 
-bool ActionSetOpacity::testEnabled( const QPoint*) const { return ready1() != nullptr;}
+bool ActionSetOpacity::testEnabled( const QPoint*) const { return _viewer != nullptr;}
 
 
 void ActionSetOpacity::tellReady( const FV* fv, bool v)
 {
-    _opacitySpinBox->disconnect(this);
+    // Make the opacity spinbox reflect the opacity of the current view.
+    disconnect( _opacitySpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ActionSetOpacity::doOnValueChanged);
     if ( v)
     {
         _opacitySpinBox->setValue( fv->opacity());
         connect( _opacitySpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ActionSetOpacity::doOnValueChanged);
+        _viewer = fv->viewer();
     }   // end if
 }   // end tellReady
 
@@ -86,29 +89,34 @@ void checkForMetricVisualise( FVFlags& fmap)
 // Check overlap bounds to set opacity.
 bool ActionSetOpacity::doAction( FVS& fvs, const QPoint&)
 {
-    assert(fvs.size() == 1);
-    FV* fv = fvs.first();
+    assert(_viewer);
 
     FVFlags fmap; // Data structure to record which views should have their opacity lowered.
-
-    fv->viewer()->findOverlaps( fmap); // Find overlaps in fv's viewer
+    _viewer->findOverlaps( fmap); // Find overlaps in fv's viewer
     checkForMetricVisualise( fmap);
-    fv->viewer()->refreshOverlapOpacity( fmap, _maxOpacityOnOverlap);   // Set overlaps according to fmap
+    _viewer->refreshOverlapOpacity( fmap, _maxOpacityOnOverlap);   // Set overlaps according to fmap
 
-    // Refresh overlaps in viewer FV came from (could've been actioned as a result of VIEWER_CHANGE)
-    if ( fv->pviewer() != nullptr)
+    // Of the identified FaceViews, get their previous viewers.
+    // Refresh overlaps in these viewers (could've been actioned as a result of VIEWER_CHANGE)
+    FMVS fmvs;
+    for ( const auto& p : fmap)
+        fmvs.insert( p.first->pviewer());
+    fmvs.erase(nullptr);
+
+    for ( FMV* fmv : fmvs)
     {
-        fv->pviewer()->findOverlaps( fmap);
+        fmap.clear();
+        fmv->findOverlaps( fmap);
         checkForMetricVisualise( fmap);
-        fv->pviewer()->refreshOverlapOpacity( fmap, _maxOpacityOnOverlap);
-    }   // end if
+        fmv->refreshOverlapOpacity( fmap, _maxOpacityOnOverlap);
+    }   // end for
 
     // Record the changed views.
-    fvs.insert( fv->viewer()->attached());
-    if ( fv->pviewer())
-        fvs.insert( fv->pviewer()->attached());
-
-    _opacitySpinBox->setValue( fv->opacity());
+    for ( const auto& p : fmap)
+    {
+        if ( p.second)
+            fvs.insert( const_cast<FV*>(p.first));
+    }   // end for
 
     return true;
 }   // end doAction
@@ -116,15 +124,13 @@ bool ActionSetOpacity::doAction( FVS& fvs, const QPoint&)
 
 void ActionSetOpacity::doOnValueChanged( double newValue)
 {
-    if ( !isEnabled())  // Do nothing if not currently enabled
+    if ( !isEnabled())
         return;
 
-    assert(gotReady());
-    const FVS& fvs = ready().first()->viewer()->attached();
+    const FVS& fvs = _viewer->attached();
     for ( FV* fv : fvs)
-        fv->setOpacity(newValue);
+        fv->setOpacity( newValue);
     EventSet cset;
     doAfterAction( cset, fvs, true);
     emit reportFinished( cset, fvs, true);
 }   // end doOnValueChanged
-

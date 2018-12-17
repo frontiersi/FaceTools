@@ -18,24 +18,26 @@
 #ifndef FACE_TOOLS_ACTION_TRANSFORM_TO_STANDARD_POSITION_H
 #define FACE_TOOLS_ACTION_TRANSFORM_TO_STANDARD_POSITION_H
 
-#include "FaceAction.h"
+#include "ActionOrientCameraToFace.h"
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionTransformToStandardPosition : public FaceAction
 { Q_OBJECT
 public:
     ActionTransformToStandardPosition( const QString& dname="Transform to Standard Position",
-                                       const QIcon& icon=QIcon());
+                                       const QIcon& icon=QIcon(),
+                                       ActionOrientCameraToFace* camSetter=nullptr);
 
 private slots:
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(AFFINE_CHANGE);}
+
+private:
+    ActionOrientCameraToFace *_camSetter;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+} }   // end namespace
 
 #endif
 

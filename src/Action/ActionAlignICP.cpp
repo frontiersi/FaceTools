@@ -53,7 +53,7 @@ bool ActionAlignICP::doAction( FVS& rset, const QPoint&)
 
     // Get the source model to align against
     sfm->lockForRead();
-    RFeatures::ObjModelAligner aligner( sfm->info()->cmodel());
+    RFeatures::ObjModelICPAligner aligner( sfm->info()->cmodel());
     sfm->unlock();
 
     // In the same viewer, look at every other model and align to the source.

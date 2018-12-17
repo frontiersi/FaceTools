@@ -35,36 +35,29 @@ class FaceTools_EXPORT MetricCalculatorTypeInterface : public QTools::PluginInte
 { Q_OBJECT
 public:
     virtual int id() const = 0;
-    virtual std::string category() const = 0;               // The category (type) name of this metric calculator.
-    virtual std::string params() const = 0;                 // Parameters specifying how this measurement is made.
-    virtual std::string name() const = 0;                   // The individual name of this metric calculator.
-    virtual std::string description() const = 0;            // Description of this metric calculation.
-    virtual bool isBilateral() const = 0;                   // Is this metic bilateral, or medial/singular only?
-    virtual std::string source() const = 0;                 // The source of the metric's data.
-    virtual std::string ethnicities() const = 0;            // Ethnicities the calculation is applicable to.
-    virtual Sex sex() const = 0;                            // Sex(s) the calculation is applicable to.
-    virtual size_t dims() const = 0;                        // Number of dimensions this metric has (defined by category).
-    virtual rlib::RSD::Ptr rsd( size_t d=0) const = 0;      // Get the RSD for d=dimension-1
-    virtual size_t numDecimals() const = 0;                 // The nunber of decimals.
-    virtual Vis::MetricVisualiser* visualiser() = 0;        // Return the visualisation method.
+    virtual const QString& name() const = 0;            // The individual name of this metric calculator.
+    virtual const QString& description() const = 0;     // Description of this metric calculation.
+    virtual size_t numDecimals() const = 0;             // The nunber of decimals.
 
     virtual void setId( int) = 0;
-    virtual void setName( const std::string&) = 0;          // Set the name of the particular instance.
-    virtual void setDescription( const std::string&) = 0;   // Set the description.
-    virtual void setSource( const std::string&) = 0;        // The source of the metric's data.
-    virtual void setEthnicities( const std::string&) = 0;   // Ethnicities the calculation is applicable to.
-    virtual void setSex( Sex) = 0;                          // Sex(s) the calculation is applicable to.
-    virtual void setRSD( size_t d, rlib::RSD::Ptr) = 0;     // Set the RSD for d=dimension-1
-    virtual void setNumDecimals( size_t) = 0;               // Set the number of decimals to display.
+    virtual void setName( const QString&) = 0;          // Set the name of the particular instance.
+    virtual void setDescription( const QString&) = 0;   // Set the description.
+    virtual void setNumDecimals( size_t) = 0;           // Set the number of decimals to display.
 
-    virtual bool isAvailable( const FM*) const = 0;         // Can this metric be calculated for given model?
+    virtual QString category() const = 0;               // The category (type) name of this metric calculator.
+    virtual QString params() const = 0;                 // Parameters specifying how this measurement is made.
+    virtual size_t dims() const = 0;                    // Number of dimensions this metric has (defined by category).
+    virtual bool isBilateral() const = 0;               // Is this metic bilateral, or medial/singular only?
+
+    virtual Vis::MetricVisualiser* visualiser() = 0;    // Return the visualisation method.
+    virtual bool canCalculate( const FM*) const = 0;     // Can this metric be calculated for given model?
 
     // Measure for d=dimension-1 against given model for the given face lateral.
     virtual double measure( size_t d, const FM*, FaceLateral fl=FACE_LATERAL_MEDIAL) const = 0;
 
     // Make and return a default initialised version of this object configured with given params.
     using Ptr = std::shared_ptr<MetricCalculatorTypeInterface>;
-    virtual Ptr fromParams( const std::string&) const = 0;
+    virtual Ptr fromParams( const QString&) const = 0;
 };  // end class
 
 using MCTI = MetricCalculatorTypeInterface;

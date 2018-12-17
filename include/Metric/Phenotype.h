@@ -15,19 +15,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_METRIC_HPO_TERM_H
-#define FACE_TOOLS_METRIC_HPO_TERM_H
+#ifndef FACE_TOOLS_METRIC_PHENOTYPE_H
+#define FACE_TOOLS_METRIC_PHENOTYPE_H
 
 #include <FaceTypes.h>
 #include "MetricSet.h"
 #include <QTextStream>
+#include <sol.hpp>
 
 namespace FaceTools { namespace Metric {
 
-class FaceTools_EXPORT HPOTerm
+class FaceTools_EXPORT Phenotype
 {
 public:
-    HPOTerm();
+    using Ptr = std::shared_ptr<Phenotype>;
+
+    // Load from lua script returning null on error.
+    static Ptr load( const QString&);
+
+    // Create a new empty Phenotype object.
+    static Ptr create();
 
     void setId( int id) { _id = id;}
     int id() const { return _id;}
@@ -52,10 +59,15 @@ public:
     void addMetric( int id) { _metrics.insert(id);}
     void removeMetric( int id) { _metrics.erase(id);}
 
-    bool isPresent( const MetricSet&) const { return false;}    // TODO - requires lookup logic
+    // Check if this HPO term is present. Pass in metric sets for the front (non-bilateral),
+    // left and right laterals. Metrics that are not bilateral are in the f set while bilateral
+    // metrics appear in the left and right sets (llat and rlat).
+    bool isPresent( const MetricSet* f, const MetricSet* llat, const MetricSet* rlat) const;
 
-    // Ensure all string fields have problematic characters replaced.
-    void cleanStrings();
+    // Returns true iff the associated metrics have data about the provided model that
+    // would allow the isPresent function to return true in principle if the associated
+    // measurements meet the criteria for this phenotype.
+    bool isDemographicMatch( const FM*) const;
 
 private:
     int _id;
@@ -65,9 +77,14 @@ private:
     QString _criteria;
     QString _remarks;
     IntSet _metrics;
-};  // end class
+    sol::state _lua;
+    sol::function _determine;
 
-FaceTools_EXPORT QTextStream& operator<<( QTextStream&, const HPOTerm&);
+    Phenotype();
+    ~Phenotype();
+    Phenotype( const Phenotype&) = delete;
+    Phenotype& operator=( const Phenotype&) = delete;
+};  // end class
 
 }}   // end namespaces
 

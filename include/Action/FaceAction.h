@@ -20,6 +20,7 @@
 
 #include "EventProcessResponse.h"
 #include <ModelViewerInteractor.h>
+#include <ModelSelector.h>
 #include <PluginInterface.h>    // QTools
 #include <QProgressUpdater.h>
 #include <QToolButton>
@@ -29,8 +30,7 @@
 #include <QDialog>
 #include <QMutex>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 // Must remain pure virtual so Qt can make it a plugin interface.
 class FaceTools_EXPORT FaceActionInterface : public QTools::PluginInterface
@@ -129,18 +129,18 @@ public:
     // function if a response can be granted to a received event. Alternatively, a delegate predicte can be used
     // to determine the process flag dynamically.
     void setRespondToEvent( EventId, bool processFlag=true);
-    void setRespondToEvent( EventId, const ProcessFlagPredicate&);
+    void setRespondToEvent( EventId, const TestFVSTrue& flag);
 
     // Use setRespondToEventIf if the calling of this action's process function should depend both on
     // the event being received and the given predicate returning true. If this action is set to respond
     // to more than one event, this action's process function be called if any of the corresponding
     // response predicates return true for a given set of events.
-    void setRespondToEventIf( EventId, const ResponsePredicate&, bool processFlag=true);
-    void setRespondToEventIf( EventId, const ResponsePredicate&, const ProcessFlagPredicate&);
+    void setRespondToEventIf( EventId, const TestFVSTrue& response, bool processFlag=true);
+    void setRespondToEventIf( EventId, const TestFVSTrue& response, const TestFVSTrue& flag);
 
     // Respond to the given event with process flag if this action is enabled for the ready set.
     void setRespondToEventIfAllReady( EventId, bool processFlag=true);
-    void setRespondToEventIfAllReady( EventId, const ProcessFlagPredicate&);
+    void setRespondToEventIfAllReady( EventId, const TestFVSTrue& response);
 
     // Returns non-null iff the given event is in this action's response set.
     const EPR* eventResponse( EventId e) const { return _eprs.count(e) > 0 ? &_eprs.at(e) : nullptr;}
@@ -295,7 +295,6 @@ private:
     void operator=( const FaceAction&) = delete;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+} }   // end namespace
 
 #endif

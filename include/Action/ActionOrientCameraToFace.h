@@ -20,18 +20,17 @@
 
 #include "FaceAction.h"
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionOrientCameraToFace : public FaceAction
 { Q_OBJECT
 public:
-    ActionOrientCameraToFace( const QString& dname="Orient Camera to Face", const QIcon& icon=QIcon(), float d=450.0f, float r=0.0f);
+    ActionOrientCameraToFace( const QString& dname="Orient Camera to Face", const QIcon& icon=QIcon(), double d=600., double r=0.);
 
     // Set/get the distance in world units to the face centre point
     // for the new position of the camera when transformed.
-    void setDistance( float d) { _distance = d;}
-    float distance() const { return _distance;}
+    void setDistance( double d) { _distance = d;}
+    double distance() const { return _distance;}
 
     // Set/get the angle about the face that will be viewed.
     // Angles are given about the face up vector looking toward
@@ -41,20 +40,19 @@ public:
     // +pi/2 radians will cause the camera to look at the RIGHT
     // profile of the face and an angle of -pi/2 radians will cause
     // the camera to look at the LEFT profile of the face.
-    void setAngleAboutUpVector( float rads) { _urads = rads;}
-    float angleAboutUpVector() const { return _urads;}
+    void setAngleAboutUpVector( double rads) { _urads = rads;}
+    double angleAboutUpVector() const { return _urads;}
 
 protected slots:
-    bool testReady( const Vis::FV*);
+    bool testReady( const Vis::FV*) override { return true;}
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet& cs, const FVS&, bool) override{ cs.insert(CAMERA_CHANGE);}
 
 private:
-    float _distance;
-    float _urads;
+    double _distance;
+    double _urads;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+} }   // end namespace
 
 #endif

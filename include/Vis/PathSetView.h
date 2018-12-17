@@ -26,6 +26,7 @@
 
 #include "PathView.h"
 #include <PathSet.h>
+#include <vtkTextActor.h>
 
 namespace FaceTools {
 namespace Vis {
@@ -39,6 +40,8 @@ public:
     bool isVisible() const;                             // Returns true iff ANY path shown
     void setVisible( bool, ModelViewer*);               // Show/hide all paths (also sets current viewer)
 
+    void setText( int pathID, int xpos, int ypos);
+    void setTextVisible( bool);
     void showPath( bool, int pathID);                   // Show/hide individual path
     bool isPathVisible( int pathID) const;              // Returns true iff a particular path is shown
     const std::unordered_set<int>& visible() const;     // Returns the set of visible paths
@@ -58,6 +61,7 @@ private:
     std::unordered_map<int, PathView*> _views;
     std::unordered_map<const vtkProp*, PathView::Handle*> _handles;
     std::unordered_set<int> _visible;   // Which paths are visible
+    vtkNew<vtkTextActor> _text; // Bottom right text
 
     PathSetView( const PathSetView&) = delete;
     void operator=( const PathSetView&) = delete;

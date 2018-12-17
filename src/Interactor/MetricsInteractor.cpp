@@ -16,34 +16,36 @@
  ************************************************************************/
 
 #include <MetricsInteractor.h>
+#include <MetricCalculatorManager.h>
 #include <MetricVisualiser.h>
+#include <ModelSelector.h>
+#include <FaceModel.h>
 #include <FaceView.h>
 using FaceTools::Interactor::MetricsInteractor;
 using FaceTools::Interactor::MEEI;
 using FaceTools::Vis::MetricVisualiser;
 using FaceTools::Vis::FV;
+using MCM = FaceTools::Metric::MetricCalculatorManager;
+using FaceTools::Metric::MC;
+using FaceTools::Action::ModelSelector;
 
 
 MetricsInteractor::MetricsInteractor( const MEEI* meei)
     : ModelViewerInteractor( nullptr, nullptr)
 {
     connect( meei, &MEEI::onEnterProp, this, &MetricsInteractor::doOnEnterProp);
-    connect( meei, &MEEI::onLeaveProp, this, &MetricsInteractor::doOnLeaveProp);
-    setEnabled(true);
+    setEnabled(false);
 }   // end ctor
 
 
 void MetricsInteractor::doOnEnterProp( const FV* fv, const vtkProp* p)
 {
     MetricVisualiser* vis = qobject_cast<MetricVisualiser*>( fv->layer(p));
-    if ( vis)
-        emit onEnterMetric( fv, vis->metricId());
+    if ( vis && fv == ModelSelector::selected())
+    {
+        setEnabled(false);  // Prevent interactor from responding to a possible change in prop
+        MCM::setActiveMetric( vis->metricId());
+        setEnabled(true);
+    }   // end if
 }   // end doOnEnterProp
 
-
-void MetricsInteractor::doOnLeaveProp( const FV* fv, const vtkProp* p)
-{
-    MetricVisualiser* vis = qobject_cast<MetricVisualiser*>( fv->layer(p));
-    if ( vis)
-        emit onLeaveMetric( fv, vis->metricId());
-}   // end doOnLeaveProp

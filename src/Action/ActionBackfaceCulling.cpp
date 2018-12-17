@@ -33,14 +33,36 @@ ActionBackfaceCulling::ActionBackfaceCulling( const QString& dn, const QIcon& ic
     : FaceAction( dn, ico)
 {
     setCheckable( true, false);
+
+    // If the face normal is in the same space half as the orientation normal,
+    // then we want to automatically turn on backface culling.
+    TestFVSTrue tfvs = []( const FVS& fvs)
+    {
+        if ( fvs.size() != 1)
+            return false;
+
+        // Find a polygon at the glabella
+        FM* fm = fvs.first()->data();
+        const cv::Vec3f* v = fm->landmarks()->pos( Landmark::G);
+
+        // Don't respond if the landmark isn't present.
+        if ( !v)
+            return false;
+
+        // Calculate the norm given by the ordering of the vertices on the polygon.
+        const RFeatures::ObjModel* model = fm->info()->cmodel();
+        int vidx = fm->kdtree()->find(*v);
+        const cv::Vec3f fnrm = model->calcFaceNorm( *model->getFaceIds(vidx).begin());
+
+        // If normal in same direction (positive inner product) as orientation, respond (return true).
+        const cv::Vec3f onrm = fm->orientation().nvec();
+
+        return onrm.dot(fnrm) > 0;
+    };  // end tfvs
+
+    setRespondToEventIf( GEOMETRY_CHANGE, tfvs, true);
+    setRespondToEventIf( ORIENTATION_CHANGE, tfvs, true);
 }   // end ctor
-
-
-bool ActionBackfaceCulling::testReady( const FV* fv)
-{
-    setChecked( fv->backfaceCulling());
-    return true;
-}   // end testReady
 
 
 bool ActionBackfaceCulling::doAction( FVS& fvs, const QPoint&)

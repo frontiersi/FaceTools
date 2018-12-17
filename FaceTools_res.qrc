@@ -17,6 +17,14 @@
     <file alias="TEXTURE">res/icons/if_stock_3d-texture-only_29244.png</file>
 
     <file alias="ARROW_RIGHT">res/icons/icons8-arrow-40.png</file>
+    <file alias="EYE">res/icons/icons8-eye-18.png</file>
+
+    <file alias="CHART">res/icons/icons8-plot-40.png</file>
+    <file alias="METRICS">res/icons/icons8-scales-40.png</file>
+    <file alias="FACEQ">res/icons/icons8-decision-40.png</file>
+    <file alias="MODEL_INFO">res/icons/icons8-identification-documents-30.png</file>
+    <file alias="BELOW">res/icons/icons8-below-48.png</file>
+    <file alias="ABOVE">res/icons/icons8-above-48.png</file>
 </qresource>
 </RCC>
 

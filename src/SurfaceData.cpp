@@ -133,9 +133,9 @@ void SurfaceDataWorker::calculate()
     lock.lockForWrite();
 
     // Create SurfaceData via a worker thread
-    QThread *wthread = QThread::create( [=](){ createSurfaceData( surfaceData, fmodel);});
+    QThread *wthread = QThread::create( [&](){ createSurfaceData( surfaceData, fmodel);});
     moveToThread( wthread);
-    connect( wthread, &QThread::finished, [=](){
+    connect( wthread, &QThread::finished, [&](){
             moveToThread( QApplication::instance()->thread());
             working = false;
             lock.unlock();

@@ -27,6 +27,10 @@ using FaceTools::FaceLateral;
 using FaceTools::Landmark::LandmarkSet;
 using ViewPair = std::pair<int, SphereView*>;
 
+cv::Vec3d LandmarkSetView::BASE0_COL(0.4, 0.0, 1.0);
+cv::Vec3d LandmarkSetView::SPEC0_COL(0.7, 1., 0.3);
+
+
 LandmarkSetView::LandmarkSetView( const LandmarkSet& lmks, double r) : _lmrad(r), _viewer(nullptr)
 {
     refresh( lmks);
@@ -92,6 +96,17 @@ void LandmarkSetView::setVisible( bool enable, ModelViewer* viewer)
         std::for_each( std::begin(_rviews), std::end(_rviews), [this](const ViewPair& p){ this->showLandmark( true, p.first);});
     }   // end if
 }   // end setVisible
+
+
+void LandmarkSetView::setColour( double r, double g, double b)
+{
+    std::for_each( std::begin(_lviews), std::end(_lviews), [=](const ViewPair& p){ p.second->setColour( r, g, b);});
+    std::for_each( std::begin(_mviews), std::end(_mviews), [=](const ViewPair& p){ p.second->setColour( r, g, b);});
+    std::for_each( std::begin(_rviews), std::end(_rviews), [=](const ViewPair& p){ p.second->setColour( r, g, b);});
+}   // end setColour
+
+
+void LandmarkSetView::setColour( const cv::Vec3d& c) { setColour(c[0], c[1], c[2]);}
 
 
 void LandmarkSetView::showLandmark( bool enable, int lm)
@@ -238,9 +253,9 @@ void LandmarkSetView::set( int lm, SphereMap& views, PropMap& props, const cv::V
     {
         sv = views[lm] = new SphereView( pos, _lmrad, true/*pickable*/, true/*fixed scale*/);
         props[sv->prop()] = lm;
+        sv->setColour( BASE0_COL[0], BASE0_COL[1], BASE0_COL[2]);
+        sv->setResolution(23);
     }   // end if
-    sv->setResolution(20);
-    sv->setColour(0.5,0.9,0.0);
     sv->setCaption( LDMKS_MAN::landmark(lm)->name().toStdString());
     sv->setCentre( pos);
 }   // end set

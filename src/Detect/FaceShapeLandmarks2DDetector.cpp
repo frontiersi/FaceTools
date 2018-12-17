@@ -32,6 +32,7 @@
 
 using FaceTools::Detect::FaceShapeLandmarks2DDetector;
 using FaceTools::Landmark::LandmarkSet;
+using RVTK::OffscreenModelViewer;
 using RFeatures::ObjModelKDTree;
 
 
@@ -51,32 +52,24 @@ void drawDots( cv::Mat& dimg, const std::vector<cv::Point2f>& dots)
 }   // end drawDots
 */
 
-cv::Vec3f findMND( const cv::Vec3f& pv, const cv::Vec3f& nv) { return pv + 0.5f*(nv - pv);}
+auto toS = FaceTools::toSurface;
+auto toT = FaceTools::toTarget;
+auto toD = FaceTools::findDeepestPoint;
 
-cv::Vec3f findMSO( const LandmarkSet& lms, cv::Vec3f v, FaceLateral lat)
+
+cv::Vec3f findMSO( const ObjModelKDTree* kdt, cv::Vec3f v, const cv::Vec3f& p)
 {
-    // Ensure MSO is in vertical with pupil.
-    const cv::Vec3f& p = *lms.pos( Landmark::PS, lat);
-    v[0] = p[0];
-    return v;
+    float x = p[0]; // In line with pupil
+    float y = 0.5f * (p[1] + v[1]); // Halfway between pupil and reference vertex
+    float z = v[2]; // Depth of reference vertex
+    cv::Vec3f t0 = toS( kdt, cv::Vec3f( x,          y, z));    // Bottom
+    cv::Vec3f t1 = toS( kdt, cv::Vec3f( x, 2*v[1] - y, z));    // Top
+    return toD( kdt, t0, t1, nullptr);
 }   // end findMSO
 
 
-cv::Vec3f findAL( const ObjModelKDTree* kdt, const cv::Vec3f& sn, const cv::Vec3f& p)
-{
-    return FaceTools::findDeepestPoint( kdt, sn, sn + 0.5f*(p-sn));
-}   // end findAL
-
-
-cv::Vec3f findAC( const ObjModelKDTree* kdt, const cv::Vec3f& sn, const cv::Vec3f& al, const cv::Vec3f& p)
-{
-    cv::Vec3f tv = FaceTools::toSurface( kdt, cv::Vec3f( p[0], sn[1], p[2]));
-    return FaceTools::findDeepestPoint( kdt, tv, al);
-}   // end findAC
-
-
 // Project detected points to landmarks
-void setLandmarks( const RVTK::Viewer::Ptr viewer,
+void setLandmarks( const OffscreenModelViewer& vwr,
                    const std::vector<bool>& foundVec,
                    const std::vector<cv::Point2f>& cpts,
                    const ObjModelKDTree* kdt,
@@ -84,117 +77,195 @@ void setLandmarks( const RVTK::Viewer::Ptr viewer,
 {
     const size_t np = foundVec.size();
     assert( np == cpts.size());
-    RVTK::RendererPicker rpicker( viewer->renderer(), RVTK::RendererPicker::TOP_LEFT);
     std::vector<cv::Vec3f> vpts(np);
     // Vertices < 17 ignored since these are boundary vertices and are not accurate.
     for ( size_t i = 17; i < np; ++i)
-        vpts[i] = foundVec[i] ? rpicker.pickWorldPosition( cpts[i]) : cv::Vec3f(0,0,0);
+        vpts[i] = foundVec[i] ? vwr.worldPosition( cpts[i]) : cv::Vec3f(0,0,0);
 
-    auto toS = FaceTools::toSurface;
-    //auto moveTo = FaceTools::moveTo;
+    // Left and right palpebral superius
+    std::cerr << " * Detecting [PS] L" << std::endl;
+    cv::Vec3f lps = toS( kdt, 0.5f * (vpts[37] + vpts[38]));
+    std::cerr << " * Detecting [PS] R" << std::endl;
+    cv::Vec3f rps = toS( kdt, 0.5f * (vpts[43] + vpts[44]));
 
-    // Left palpebral superius and inferius
-    lms.set( Landmark::PS, toS( kdt, 0.5f * (vpts[37] + vpts[38])), FACE_LATERAL_LEFT);
-    lms.set( Landmark::PI, toS( kdt, 0.5f * (vpts[40] + vpts[41])), FACE_LATERAL_LEFT);
+    // Left and right palpebral inferius
+    std::cerr << " * Detecting [PI] L" << std::endl;
+    cv::Vec3f lpi = toS( kdt, 0.5f * (vpts[40] + vpts[41]));
+    std::cerr << " * Detecting [PI] R" << std::endl;
+    cv::Vec3f rpi = toS( kdt, 0.5f * (vpts[46] + vpts[47]));
 
     cv::Vec3f enw( 0, 0, -25);
     cv::Vec3f exw( 0, 0, -5);
 
     // Left endo and exo canthi
-    cv::Vec3f en = vpts[39] + enw;
-    cv::Vec3f ex = vpts[36] + exw;
-    en[0] += 3;
-    lms.set( Landmark::EN, toS( kdt, en), FACE_LATERAL_LEFT);
-    lms.set( Landmark::EX, toS( kdt, ex), FACE_LATERAL_LEFT);
-
-    // Left pupil
-    lms.set( Landmark::P, toS( kdt, FaceTools::calcPupil( lms, FACE_LATERAL_LEFT)), FACE_LATERAL_LEFT);
-    const cv::Vec3f& pleft = *lms.pos(Landmark::P, FACE_LATERAL_LEFT);
-
-    // Right palpebral superius and inferius
-    lms.set( Landmark::PS, toS( kdt, 0.5f * (vpts[43] + vpts[44])), FACE_LATERAL_RIGHT);
-    lms.set( Landmark::PI, toS( kdt, 0.5f * (vpts[46] + vpts[47])), FACE_LATERAL_RIGHT);
+    std::cerr << " * Detecting [EN] L" << std::endl;
+    std::cerr << " * Detecting [EX] L" << std::endl;
+    cv::Vec3f len = vpts[39] + enw;
+    cv::Vec3f lex = vpts[36] + exw;
+    len[0] += 3;
+    len = toS( kdt, len);
+    lex = toS( kdt, lex);
 
     // Right endo and exo canthi
-    en = vpts[42] + enw;
-    ex = vpts[45] + exw;
-    en[0] -= 3;
-    lms.set( Landmark::EN, toS( kdt, en), FACE_LATERAL_RIGHT);
-    lms.set( Landmark::EX, toS( kdt, ex), FACE_LATERAL_RIGHT);
+    std::cerr << " * Detecting [EN] R" << std::endl;
+    std::cerr << " * Detecting [EX] R" << std::endl;
+    cv::Vec3f ren = vpts[42] + enw;
+    cv::Vec3f rex = vpts[45] + exw;
+    ren[0] -= 3;
+    ren = toS( kdt, ren);
+    rex = toS( kdt, rex);
+
+    // Left pupil
+    std::cerr << " * Detecting [P] L" << std::endl;
+    const cv::Vec3f lp = toS( kdt, 0.25f * (len + lex + lps + lpi));
 
     // Right pupil
-    lms.set( Landmark::P, toS( kdt, FaceTools::calcPupil( lms, FACE_LATERAL_RIGHT)), FACE_LATERAL_RIGHT);
-    const cv::Vec3f& pright = *lms.pos(Landmark::P, FACE_LATERAL_RIGHT);
+    std::cerr << " * Detecting [P] R" << std::endl;
+    const cv::Vec3f rp = toS( kdt, 0.25f * (ren + rex + rps + rpi));
+
+    // Sellion - deepest part of the nose bridge between the pupils
+    std::cerr << " * Detecting [SE]" << std::endl;
+    const cv::Vec3f se = toS( kdt, toD( kdt, lp, rp, nullptr));
 
     // Mid-supraorbital
     // [17,21] left brow left to right, [22,26] right brow left to right
-    lms.set( Landmark::MSO, toS( kdt, findMSO( lms, (1.0f/3) * (vpts[18] + vpts[19] + vpts[20]), FACE_LATERAL_LEFT)), FACE_LATERAL_LEFT);
-    lms.set( Landmark::MSO, toS( kdt, findMSO( lms, (1.0f/3) * (vpts[23] + vpts[24] + vpts[25]), FACE_LATERAL_RIGHT)), FACE_LATERAL_RIGHT);
+    std::cerr << " * Detecting [MSO] L" << std::endl;
+    cv::Vec3f lmso = findMSO( kdt, (1.0f/3) * (vpts[18] + vpts[19] + vpts[20]), lp);    // Left
+    std::cerr << " * Detecting [MSO] R" << std::endl;
+    cv::Vec3f rmso = findMSO( kdt, (1.0f/3) * (vpts[23] + vpts[24] + vpts[25]), rp);    // Right
 
     // Glabella
-    lms.set( Landmark::G, toS( kdt, 0.5f * (vpts[21] + vpts[22])));
+    std::cerr << " * Detecting [G]" << std::endl;
+    cv::Vec3f g = 0.5f * (lmso + rmso);
+    g[0] = se[0];
+    g = toS( kdt, g);
+    cv::Vec3f tmp = se;  // Place temp point in line with sellion halfway in y between palpebral superius and mso points
+    tmp[1] = 0.25f * (lps[1] + rps[1] + lmso[1] + rmso[1]);
+    tmp = toS( kdt, tmp);
+    // Find glabella as maximally off curve point between tmp and tmp point placed above halfway (x) between mso points
+    g = toD( kdt, tmp, toS( kdt, 2*g - tmp), nullptr);
 
     // Nasion
+    std::cerr << " * Detecting [N]" << std::endl;
     // vpts[27] is nasal root, but not defined as either sellion or nasion so is not used as is.
-    cv::Vec3f nv = vpts[27];    // Nasion is placed at height of superoir palpebral sulcus in line with sellion.
-    nv[1] = 0.5f * ((*lms.pos( Landmark::PS, FACE_LATERAL_LEFT))[1] + (*lms.pos( Landmark::PS, FACE_LATERAL_RIGHT))[1]);
-    lms.set( Landmark::N, toS( kdt, nv));
+    cv::Vec3f n = vpts[27];    // Nasion is placed at height of superoir palpebral sulcus in line with sellion.
+    /*
+    n[0] = se[0];
+    n[1] = std::max( 0.5f * (lps[1] + rps[1]), se[1]);
+    n = toS( kdt, n);
+    n[1] = std::max(n[1], se[1]); // Ensure nasion remains no lower on face than sellion
+    */
+    n = toD( kdt, g, se, nullptr);
+
+    // Pronasale as on detected nose tip but high in z axis.
+    std::cerr << " * Detecting [PRN]" << std::endl;
+    cv::Vec3f prn = toS( kdt, vpts[30]);
+    prn = toT( kdt, prn, cv::Vec3f(prn[0], prn[1], prn[2] + 100));
+
+    // Mid-nasal dorsum as halfway between sellion and pronasale and high in z axis.
+    std::cerr << " * Detecting [MND]" << std::endl;
+    cv::Vec3f mnd = toS( kdt, se + 0.5f*( cv::Vec3f( prn[0], prn[1] + 5, prn[2] + 10) - se));
 
     // Subnasale
-    lms.set( Landmark::SN, toS( kdt, vpts[33]));
-    cv::Vec3f sn = *lms.pos(Landmark::SN);   // For use later
+    std::cerr << " * Detecting [SN]" << std::endl;
+    cv::Vec3f sn = toS( kdt, vpts[33]);
 
-    // Pronasale
-    cv::Vec3f prn = vpts[30];
-    prn[2] += 20;
-    lms.set( Landmark::PRN, toS( kdt, prn));
-
-    // Mid-nasal dorsum
-    lms.set( Landmark::MND, toS( kdt, findMND( *lms.pos( Landmark::PRN), *lms.pos( Landmark::N))));
-
-    // Sellion - deepest part of the nose bridge.
-    // Dynamically weighted in the direction of greatest difference.
-    double d0 = 1;
-    double d1 = 1;
-    cv::Vec3f sev = toS( kdt, FaceTools::findDeepestPoint( kdt, *lms.pos(Landmark::G), *lms.pos(Landmark::MND), &d0));
-    cv::Vec3f seh = toS( kdt, FaceTools::findDeepestPoint( kdt, pleft, pright, &d1));
-    double dsum = d0 + d1;
-    lms.set( Landmark::SE, toS( kdt, (d0/dsum*sev + d1/dsum*seh)));
-
-    // Alare
-    //lms.set( Landmark::AL, vpts[31], FACE_LATERAL_LEFT);
-    //lms.set( Landmark::AL, vpts[35], FACE_LATERAL_RIGHT);
-    lms.set( Landmark::AL, findAL( kdt, sn, pleft), FACE_LATERAL_LEFT);
-    lms.set( Landmark::AL, findAL( kdt, sn, pright), FACE_LATERAL_RIGHT);
-
-    // Alare curvature point
-    lms.set( Landmark::AC, findAC( kdt, sn, *lms.pos(Landmark::AL, FACE_LATERAL_LEFT), pleft), FACE_LATERAL_LEFT);
-    lms.set( Landmark::AC, findAC( kdt, sn, *lms.pos(Landmark::AL, FACE_LATERAL_RIGHT), pright), FACE_LATERAL_RIGHT);
-
-    // Subalare
-    //lms.set( Landmark::SBAL, toS( kdt, vpts[32]), FACE_LATERAL_LEFT);
-    //lms.set( Landmark::SBAL, toS( kdt, vpts[34]), FACE_LATERAL_RIGHT);
-    lms.set( Landmark::SBAL, toS( kdt, 0.5f*(sn + *lms.pos(Landmark::AC, FACE_LATERAL_LEFT))), FACE_LATERAL_LEFT);
-    lms.set( Landmark::SBAL, toS( kdt, 0.5f*(sn + *lms.pos(Landmark::AC, FACE_LATERAL_RIGHT))), FACE_LATERAL_RIGHT);
-
-    // Update subnasale
-    //lms.set( Landmark::SN, toS( kdt, 0.5f*(*lms.pos(Landmark::SBAL, FACE_LATERAL_LEFT) + *lms.pos(Landmark::SBAL, FACE_LATERAL_RIGHT))));
-    //sn = *lms.pos(Landmark::SN);   // For use later
-
-    // Cheilion
-    lms.set( Landmark::CH, toS( kdt, vpts[48]), FACE_LATERAL_LEFT);
-    lms.set( Landmark::CH, toS( kdt, vpts[54]), FACE_LATERAL_RIGHT);
+    // Alare (vpts[31] and vpts[35] left and right respectively)
+    std::cerr << " * Detecting [AL] L" << std::endl;
+    cv::Vec3f lal = toS( kdt, vpts[31]);
+    std::cerr << " * Detecting [AL] R" << std::endl;
+    cv::Vec3f ral = toS( kdt, vpts[35]);
 
     // Crista philtri
-    lms.set( Landmark::CPH, toS( kdt, vpts[50]), FACE_LATERAL_LEFT);
-    lms.set( Landmark::CPH, toS( kdt, vpts[52]), FACE_LATERAL_RIGHT);
+    std::cerr << " * Detecting [CPH] L" << std::endl;
+    cv::Vec3f lcph = toS( kdt, vpts[50]);
+    std::cerr << " * Detecting [CPH] R" << std::endl;
+    cv::Vec3f rcph = toS( kdt, vpts[52]);
+
+    // Subalare (32 and 34 left and right)
+    std::cerr << " * Detecting [SBAL] L" << std::endl;
+    cv::Vec3f lsbal = toS( kdt, vpts[32]);
+    std::cerr << " * Detecting [SBAL] R" << std::endl;
+    cv::Vec3f rsbal = toS( kdt, vpts[34]);
+
+    cv::Vec3f lac, rac;
+
+    for ( int i = 0; i < 1; ++i)
+    {
+        std::cerr << " * Updating  [SN]" << std::endl;
+        sn = toD( kdt, lsbal, rsbal, nullptr);
+
+        // Find reference points on alare as highest points between subnasale and halfway to pupils.
+        std::cerr << " * Updating  [AL] L" << std::endl;
+        cv::Vec3f lt = toD( kdt, sn, sn + 0.5f*(lp - sn), nullptr);
+        std::cerr << " * Updating  [AL] R" << std::endl;
+        cv::Vec3f rt = toD( kdt, sn, sn + 0.5f*(rp - sn), nullptr);
+
+        // Alare curvature point points
+        std::cerr << " * Updating  [AC] L" << std::endl;
+        lac = toD( kdt, lt, toS( kdt, cv::Vec3f( lp[0], sn[1], 0.5f* (lp[2] + sn[2]))), nullptr);
+        std::cerr << " * Updatint  [AC] R" << std::endl;
+        rac = toD( kdt, rt, toS( kdt, cv::Vec3f( rp[0], sn[1], 0.5f* (rp[2] + sn[2]))), nullptr);
+
+        // Now update alare points using the just calculated curvature points and the reference points.
+        cv::Vec3f lt2 = toS( kdt, lac + 2*(lt - lac));
+        lal = toD( kdt, lac, lt2, nullptr);
+        cv::Vec3f rt2 = toS( kdt, rac + 2*(rt - rac));
+        ral = toD( kdt, rac, rt2, nullptr);
+
+        // Update subalare
+        std::cerr << " * Updating  [SBAL] L" << std::endl;
+        lsbal = toD( kdt, lal, lcph, nullptr);
+        std::cerr << " * Updating  [SBAL] R" << std::endl;
+        rsbal = toD( kdt, ral, rcph, nullptr);
+
+        std::cerr << " * Updating  [SN]" << std::endl;
+        sn = toD( kdt, lsbal, rsbal, nullptr);
+    }   // end for
+
+    lms.set( Landmark::PI,   lpi,   FACE_LATERAL_LEFT);
+    lms.set( Landmark::PI,   rpi,   FACE_LATERAL_RIGHT);
+    lms.set( Landmark::PS,   lps,   FACE_LATERAL_LEFT);
+    lms.set( Landmark::PS,   rps,   FACE_LATERAL_RIGHT);
+    lms.set( Landmark::EN,   len,   FACE_LATERAL_LEFT);
+    lms.set( Landmark::EX,   lex,   FACE_LATERAL_LEFT);
+    lms.set( Landmark::EN,   ren,   FACE_LATERAL_RIGHT);
+    lms.set( Landmark::EX,   rex,   FACE_LATERAL_RIGHT);
+    lms.set( Landmark::P,    lp,    FACE_LATERAL_LEFT);
+    lms.set( Landmark::P,    rp,    FACE_LATERAL_RIGHT);
+    lms.set( Landmark::MSO,  lmso,  FACE_LATERAL_LEFT);
+    lms.set( Landmark::MSO,  rmso,  FACE_LATERAL_RIGHT);
+    lms.set( Landmark::SE,   se);
+    lms.set( Landmark::G,    g);
+    lms.set( Landmark::N,    n);
+    lms.set( Landmark::PRN,  prn);
+    lms.set( Landmark::MND,  mnd);
+    lms.set( Landmark::SN,   sn);
+    lms.set( Landmark::AC,   lac,   FACE_LATERAL_LEFT);
+    lms.set( Landmark::AC,   rac,   FACE_LATERAL_RIGHT);
+    lms.set( Landmark::AL,   lal,   FACE_LATERAL_LEFT);
+    lms.set( Landmark::AL,   ral,   FACE_LATERAL_RIGHT);
+    lms.set( Landmark::CPH,  lcph,  FACE_LATERAL_LEFT);
+    lms.set( Landmark::CPH,  rcph,  FACE_LATERAL_RIGHT);
+    lms.set( Landmark::SBAL, lsbal, FACE_LATERAL_LEFT);
+    lms.set( Landmark::SBAL, rsbal, FACE_LATERAL_RIGHT);
+
+    // Cheilion
+    std::cerr << " * Detecting [CH] L" << std::endl;
+    lms.set( Landmark::CH, toS( kdt, vpts[48]), FACE_LATERAL_LEFT);
+    std::cerr << " * Detecting [CH] R" << std::endl;
+    lms.set( Landmark::CH, toS( kdt, vpts[54]), FACE_LATERAL_RIGHT);
 
     // Labiale superius
+    std::cerr << " * Detecting [LS]" << std::endl;
     lms.set( Landmark::LS, toS( kdt, vpts[51]));
 
     // Labiale inferius
+    std::cerr << " * Detecting [LI]" << std::endl;
     lms.set( Landmark::LI, toS( kdt, 1.0f/3 * (vpts[56] + vpts[57] + vpts[58])));
 
+    std::cerr << " * Detecting [STS]" << std::endl;
+    std::cerr << " * Detecting [STI]" << std::endl;
     // Stomion inferius/superius. Detector can get confused with the placement of these points,
     // so see which one is lower and make inferius.
     const cv::Vec3f s0 = toS( kdt, 1.0f/3 * (vpts[65] + vpts[66] + vpts[67]));
@@ -250,7 +321,7 @@ bool FaceShapeLandmarks2DDetector::initialise( const std::string& fdat)
 
 
 // public static
-bool FaceShapeLandmarks2DDetector::detect( RVTK::Viewer::Ptr viewer, const ObjModelKDTree* kdt, LandmarkSet& lms)
+bool FaceShapeLandmarks2DDetector::detect( const OffscreenModelViewer& vwr, const ObjModelKDTree* kdt, LandmarkSet& lms)
 {
     if ( s_shapePredictor.num_parts() == 0)
     {
@@ -259,9 +330,10 @@ bool FaceShapeLandmarks2DDetector::detect( RVTK::Viewer::Ptr viewer, const ObjMo
         return false;
     }   // end if
 
-    const int nrows = viewer->height();
-    const int ncols = viewer->width();
-    cv::Mat_<cv::Vec3b> map = RVTK::ImageGrabber(*viewer).colour();
+    cv::Mat_<cv::Vec3b> map = vwr.snapshot();
+    const int nrows = map.rows;
+    const int ncols = map.cols;
+
     dlib::cv_image<dlib::bgr_pixel> img(map);
 
     dlib::frontal_face_detector faceDetector( dlib::get_frontal_face_detector());
@@ -304,6 +376,6 @@ bool FaceShapeLandmarks2DDetector::detect( RVTK::Viewer::Ptr viewer, const ObjMo
         }   // end else
     }   // end for
 
-    setLandmarks( viewer, foundVec, cpts, kdt, lms);
+    setLandmarks( vwr, foundVec, cpts, kdt, lms);
     return nfound == 68;
 }   // end detectFeatures

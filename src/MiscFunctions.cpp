@@ -548,3 +548,15 @@ int FaceTools::toVector( const vtkSmartPointer<vtkIdList>& vlist, std::vector<in
         vs[size_t(j)] = int(vlist->GetId(i));
     return n;
 }   // end toVector
+
+
+QString FaceTools::getRmLine( std::istringstream& is, bool lower)
+{
+    std::string ln;
+    std::getline( is, ln);
+    QString qln = QString(ln.c_str()).trimmed();
+    if ( lower)
+        qln = qln.toLower();
+    return qln;
+}   // end getRmLine
+

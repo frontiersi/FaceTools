@@ -26,42 +26,70 @@
 #pragma warning( disable : 4251)
 #endif
 
-#include <FaceTypes.h>
+#include <FaceTools_Export.h>
 #include <boost/property_tree/ptree.hpp>
 using PTree = boost::property_tree::ptree;
+#include <RangedScalarDistribution.h>
+#include <string>
 
-namespace FaceTools {
-namespace Metric {
+namespace FaceTools { namespace Metric {
+
+struct FaceTools_EXPORT DimensionStat
+{
+    DimensionStat( double v) : value(v), eage(0), mean(0), stdv(0) {}
+    DimensionStat() : value(0), eage(0), mean(0), stdv(0) {}
+
+    double zscore() const { return stdv > 0.0 ? (value - mean) / stdv : 0.0;}
+
+    double value;           // Value
+    double eage;            // Evaluation age
+    double mean;            // Mean
+    double stdv;            // Standard deviation
+};  // end struct
+
 
 class FaceTools_EXPORT MetricValue
 {
 public:
-    MetricValue() : _id(-1) {}
-    MetricValue( int id, const std::vector<double>& v, const std::vector<double>& z, const std::vector<bool>& zok);
+    MetricValue(){}
+    MetricValue( int id);
+    MetricValue( int id, const std::vector<DimensionStat>&);
+    MetricValue( const MetricValue&);
+    MetricValue& operator=( const MetricValue&);
 
-    void setMetricId( int id) { _id = id;}
-    int metricId() const { return _id;}
+    int id() const { return _id;}
 
-    const std::vector<double>& values() const { return _vals;}
-    const std::vector<double>& zscores() const { return _zscs;}
-    const std::vector<bool>& zokays() const { return _zoks;}
+    // Set/get the sex presumed for the statistical data.
+    void setSex( int8_t s) { _sex = s;}
+    int8_t sex() const { return _sex;}
 
-    // Length of vectors must match and also match the required dimensions
-    // for the MetricCalculator associated with the metric id.
-    bool set( const std::vector<double>& v, const std::vector<double>& z, const std::vector<bool>& zok);
+    // Set/get the ethnicity presumed for the statistical data.
+    void setEthnicity( const std::string& e) { _eth = e;}
+    const std::string& ethnicity() const { return _eth;}
+
+    // Set/get the source of the statistical data.
+    void setSource( const std::string& s) { _src = s;}
+    const std::string& source() const { return _src;}
+
+    // Add a new metric statistic only if doing so does not add more dimensions than allowed.
+    bool addStat( const DimensionStat& ds);
+    size_t ndims() const { return _dstats.size();}
+
+    double value( size_t i=0) const { return _dstats.at(i).value;}
+    double zscore( size_t i=0) const { return _dstats.at(i).zscore();}
+    double mean( size_t i=0) const { return _dstats.at(i).mean;}
+    double stdv( size_t i=0) const { return _dstats.at(i).stdv;}
 
 private:
     int _id;
-    std::vector<double> _vals;
-    std::vector<double> _zscs;
-    std::vector<bool> _zoks;
+    int8_t _sex;
+    std::string _eth, _src;
+    std::vector<DimensionStat> _dstats;
 };  // end class
 
 
-FaceTools_EXPORT const PTree& operator>>( const PTree&, MetricValue&);
 FaceTools_EXPORT PTree& operator<<( PTree&, const MetricValue&);
 
-}   // end namespace
-}   // end namespace
+} }   // end namespace
 
 #endif

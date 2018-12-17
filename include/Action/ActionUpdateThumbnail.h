@@ -15,39 +15,40 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_ACTION_SHOW_CHART_H
-#define FACE_TOOLS_ACTION_ACTION_SHOW_CHART_H
+#ifndef FACE_TOOLS_ACTION_ACTION_UPDATE_THUMBNAIL_H
+#define FACE_TOOLS_ACTION_ACTION_UPDATE_THUMBNAIL_H
+
+/**
+ * Automatically handles updating of model thumbnails whenever their centre/orientation/geometry changes.
+ */
 
 #include "FaceAction.h"
-#include <MetricCalculator.h>
-#include <QtCharts/QChartView>
+#include <OffscreenModelViewer.h>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
-class FaceTools_EXPORT ActionShowChart : public FaceAction
+class FaceTools_EXPORT ActionUpdateThumbnail : public FaceAction
 { Q_OBJECT
 public:
-    ActionShowChart( const QString&, const QIcon&, QWidget *parent=nullptr);
+    ActionUpdateThumbnail( int width=256, int height=256);
+    ~ActionUpdateThumbnail() override;
 
-    QWidget* getWidget() const override { return _dialog;}
+    void setThumbnailSize( int w, int h) { _omv.setSize(cv::Size(w,h));}
 
-public slots:
-    void setMetric( int metricId);
+    // Returns thumbnail for the given model - generates if not already available.
+    const cv::Mat& thumbnail( const FM*);
+
+signals:
+    void updated( const FM*, const cv::Mat&);   // Emitted whenever a new thumbnail generated for the model.
 
 protected slots:
-    bool testReady( const Vis::FV*) override { return true;}
-    void tellReady( const Vis::FV*, bool) override;
-    bool testEnabled( const QPoint*) const override;
-    bool testIfCheck( const Vis::FV*) const override { return _dialog->isVisible();}
+    bool testEnabled( const QPoint*) const override { return ready1();}
     bool doAction( FVS&, const QPoint&) override;
     void purge( const FM*) override;
 
 private:
-    QDialog* _dialog;
-    QtCharts::QChartView *_cview;
-    int _mid;   // ID of the metric currently being displayed
-    void resetChart( const FM* fm=nullptr);
+    RVTK::OffscreenModelViewer _omv;
+    std::unordered_map<const FM*, cv::Mat_<cv::Vec3b> > _thumbs;
 };  // end class
 
 }}   // end namespaces

@@ -18,11 +18,10 @@
 #ifndef FACE_TOOLS_ACTION_SHOW_SCAN_INFO_H
 #define FACE_TOOLS_ACTION_SHOW_SCAN_INFO_H
 
-#include "FaceAction.h"
+#include "ActionUpdateThumbnail.h"
 #include <ScanInfoDialog.h>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionShowScanInfo : public FaceAction
 { Q_OBJECT
@@ -30,15 +29,18 @@ public:
     ActionShowScanInfo( const QString& dname, const QIcon& icon, QWidget* parent=nullptr);
     ~ActionShowScanInfo() override;
 
+    void setThumbnailUpdater( ActionUpdateThumbnail*);
+
 private slots:
     void tellReady( const Vis::FV*, bool) override;
     void doOnUpdated( FM*);
+    void doOnUpdatedThumbnail( const FM*, const cv::Mat&);
 
 private:
     Widget::ScanInfoDialog *_dialog;
+    ActionUpdateThumbnail *_tupdater;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

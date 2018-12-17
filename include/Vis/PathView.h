@@ -21,17 +21,16 @@
 #include "SphereView.h"
 #include <ModelViewer.h>
 
-namespace FaceTools {
-namespace Vis {
+namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT PathView
 {
 public:
-    PathView( int id, const std::vector<cv::Vec3f>& vtxs);
+    PathView( int id, const std::list<cv::Vec3f>& vtxs);
     virtual ~PathView();
 
     // Call whenever given Path instance is changed (id of given path must match internal).
-    void update( const std::vector<cv::Vec3f>&);
+    void update( const std::list<cv::Vec3f>&);
 
     int id() const { return _id;}
     void setVisible( bool, ModelViewer*);  // Add/remove the path actors (handles and path) to the viewer.
@@ -42,6 +41,8 @@ public:
         int pathId() const { return _pid;}
         cv::Vec3f pos() const { return _sv->centre();}
         const vtkProp* prop() { return _sv->prop();}
+        void setCaption( const QString& c) { _sv->setCaption(c);}
+        void showCaption( bool v) { _sv->setHighlighted(v);}
 
     private:
         Handle( int, int, const cv::Vec3f&, double);
@@ -52,8 +53,8 @@ public:
         friend class PathView;
     };  // end struct
 
-    Handle* handle0() const { return _h0;}
-    Handle* handle1() const { return _h1;}
+    Handle* handle0() { return _h0;}
+    Handle* handle1() { return _h1;}
 
     void pokeTransform( const vtkMatrix4x4*);
     void fixTransform();
@@ -68,7 +69,6 @@ private:
     void operator=( const PathView&) = delete;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

@@ -17,6 +17,8 @@
 
 #include <MetricCalculatorManager.h>
 #include <QDir>
+#include <QFile>
+#include <QTextStream>
 #include <iostream>
 #include <cassert>
 using FaceTools::Metric::MetricCalculatorManager;
@@ -29,34 +31,48 @@ std::unordered_map<int, MC::Ptr> MetricCalculatorManager::_metrics;
 MCSet MetricCalculatorManager::_mset;
 MCSet MetricCalculatorManager::_vmset;
 QStringList MetricCalculatorManager::_names;
+QStringList MetricCalculatorManager::_ethnicities;
+int MetricCalculatorManager::_activeMetricId(-1);
+int MetricCalculatorManager::_prevActiveMetricId(-1);
 
 
-int MetricCalculatorManager::load( const QString& mdirname)
+int MetricCalculatorManager::load( const QString& dname)
 {
-    QDir mdir( mdirname);
+    _ids.clear();
+    _metrics.clear();
+    _mset.clear();
+    _vmset.clear();
+    _names.clear();
+    _ethnicities.clear();
+
+    QDir mdir( dname);
     if ( !mdir.exists() || !mdir.isReadable())
     {
-        std::cerr << "[WARNING] FaceTools::Metric:MetricCalculatorManager::createFromFiles: "
-                  << "Unable to open directory: " << mdirname.toStdString() << std::endl;
+        std::cerr << "[WARNING] FaceTools::Metric::MetricCalculatorManager::load: Unable to open directory: " << dname.toStdString() << std::endl;
         return -1;
     }   // end if
 
+    QStringSet ethnSet;
     int nloaded = 0;
     const QStringList fnames = mdir.entryList( QDir::Files | QDir::Readable, QDir::Type | QDir::Name);
     for ( const QString& fname : fnames)
     {
-        const std::string fpath = mdir.absoluteFilePath(fname).toStdString();
-        MC::Ptr mc = MC::fromFile( fpath);
+        MC::Ptr mc = MC::load( mdir.absoluteFilePath(fname));
         if ( mc)
         {
             if ( _metrics.count(mc->id()) > 0)    // Overwritting an existing MetricCalculator?
-            {
-                std::cerr << "[WARNING] FaceTools::Metric:MetricCalculatorManager::createFromFiles: "
-                    << "Overwriting existing MetricCalculator!" << std::endl;
-            }   // end if
+                std::cerr << "[WARNING] FaceTools::Metric:MetricCalculatorManager::load: Overwriting existing MetricCalculator!" << std::endl;
             else
             {
                 _names.append(mc->name());
+
+                for ( const QString& s : mc->sources())
+                {
+                    mc->setSource(s);
+                    for ( const QString& e : mc->ethnicities())
+                        ethnSet.insert( e);
+                }   // end for
+
                 nloaded++;
             }   // end else
 
@@ -69,43 +85,32 @@ int MetricCalculatorManager::load( const QString& mdirname)
     }   // end for
 
     _names.sort();
+    for ( const QString& e : ethnSet)
+        _ethnicities.append(e);
+    _ethnicities.sort();
+
+    _prevActiveMetricId = -1;
+    _activeMetricId = *_ids.begin();
     return nloaded;
 }   // end load
 
 
-bool MetricCalculatorManager::save( const QString& mdirname)
-{
-
-    QDir mdir( mdirname);
-    if ( !mdir.exists())
-        return false;
-
-    bool saveok = false;
-    for ( MC::Ptr mc : _mset)
-    {
-        saveok = false;
-        std::string fpath = mdir.filePath( QString("%1.txt").arg(mc->id())).toStdString();
-        try
-        {
-            std::ofstream ofs;
-            ofs.open(fpath, std::ofstream::out);
-            ofs << *mc;
-            ofs.close();
-            saveok = true;
-        }   // end try
-        catch ( const std::exception& e)
-        {
-            std::cerr << "[ERROR] FaceTools::Metric::MetricCalculatorManager::save: "
-                      << "Failed to write out metric " << mc->name().toStdString() << ": " << e.what() << std::endl;
-            saveok = false;
-        }   // end catch
-
-        if ( !saveok)
-            break;
-    }   // end for
-
-    return saveok;
-}   // end save
-
-
 MC::Ptr MetricCalculatorManager::metric( int id) { return _metrics.count(id) > 0 ? _metrics.at(id) : nullptr;}
+
+MC::Ptr MetricCalculatorManager::activeMetric() { return _metrics.count(_activeMetricId) > 0 ? _metrics.at(_activeMetricId) : nullptr;}
+
+MC::Ptr MetricCalculatorManager::previousActiveMetric() { return _metrics.count(_prevActiveMetricId) > 0 ? _metrics.at(_prevActiveMetricId) : nullptr;}
+
+
+bool MetricCalculatorManager::setActiveMetric( int mid)
+{
+    if ( _activeMetricId != mid)
+    {
+        assert( _metrics.count(mid) > 0);
+        _prevActiveMetricId = _activeMetricId;
+        _activeMetricId = mid;
+        _metrics.at(mid)->setActive();  // Cause the active signal on the metric to fire
+        return true;
+    }   // end if
+    return false;
+}   // end setActiveMetric

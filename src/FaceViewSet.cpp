@@ -94,6 +94,16 @@ FaceViewSet FaceViewSet::operator()( const FM* fm) const
 
 
 // public
+size_t FaceViewSet::insert( const FMS& fms)
+{
+    size_t n = 0;
+    for ( const FM* fm : fms)
+        n += insert( fm->fvs());
+    return n;
+}   // end insert
+
+
+// public
 size_t FaceViewSet::insert( const FaceViewSet& fvs)
 {
     if ( this == &fvs)  // Can't insert into self!

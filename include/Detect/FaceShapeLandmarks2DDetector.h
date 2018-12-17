@@ -24,7 +24,7 @@
 #include <dlib/serialize.h>
 #include <dlib/opencv.h>
 
-#include <Viewer.h> // RVTK
+#include <OffscreenModelViewer.h>
 #include <LandmarkSet.h>
 
 namespace FaceTools {  namespace Detect {
@@ -36,7 +36,7 @@ public:
     static bool initialise( const std::string& faceShapeLandmarksDat);
     static bool isinit();   // Returns true iff initialised.
 
-    static bool detect( RVTK::Viewer::Ptr, const RFeatures::ObjModelKDTree*, Landmark::LandmarkSet&);
+    static bool detect( const RVTK::OffscreenModelViewer&, const RFeatures::ObjModelKDTree*, Landmark::LandmarkSet&);
 
 private:
     static dlib::shape_predictor s_shapePredictor;

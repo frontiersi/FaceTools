@@ -28,8 +28,7 @@ using FaceTools::FVS;
 using FaceTools::Action::EventId;
 using FaceTools::Action::EventSet;
 using FaceTools::Action::EPR;
-using FaceTools::Action::ResponsePredicate;
-using FaceTools::Action::ProcessFlagPredicate;
+using FaceTools::Action::TestFVSTrue;
 using QTools::QProgressUpdater;
 
 
@@ -128,8 +127,8 @@ void FaceAction::setEnabled( bool v)
                   << dname() << " setting to " << std::boolalpha << v << std::endl;
     }   // end if
     assert( _action.isEnabled() == v);
-    if ( getWidget())
-        getWidget()->setEnabled(v);
+    //if ( getWidget())
+    //    getWidget()->setEnabled(v);
 }   // end setEnabled
 
 
@@ -194,10 +193,7 @@ void FaceAction::setReady( FV* fv, bool v)
     setChecked( testIfCheck(fv));
 
     if ( wasReady != isReady(fv))
-    {
-        assert(fv);
         tellReady( fv, v);
-    }   // end if
 }   // end setReady
 
 
@@ -247,7 +243,7 @@ void FaceAction::setRespondToEvent( EventId e, bool cval)
 
 
 // public
-void FaceAction::setRespondToEvent( EventId e, const ProcessFlagPredicate& fp)
+void FaceAction::setRespondToEvent( EventId e, const TestFVSTrue& fp)
 {
     checkOverwritingResponseEvent( e);
     _eprs[e] = EPR( e, fp);
@@ -255,7 +251,7 @@ void FaceAction::setRespondToEvent( EventId e, const ProcessFlagPredicate& fp)
 
 
 // public
-void FaceAction::setRespondToEventIf( EventId e, const ResponsePredicate& rp, bool cval)
+void FaceAction::setRespondToEventIf( EventId e, const TestFVSTrue& rp, bool cval)
 {
     checkOverwritingResponseEvent( e);
     _eprs[e] = EPR( e, rp, cval);
@@ -263,7 +259,7 @@ void FaceAction::setRespondToEventIf( EventId e, const ResponsePredicate& rp, bo
 
 
 // public
-void FaceAction::setRespondToEventIf( EventId e, const ResponsePredicate& rp, const ProcessFlagPredicate& fp)
+void FaceAction::setRespondToEventIf( EventId e, const TestFVSTrue& rp, const TestFVSTrue& fp)
 {
     checkOverwritingResponseEvent( e);
     _eprs[e] = EPR( e, rp, fp);
@@ -274,16 +270,16 @@ void FaceAction::setRespondToEventIf( EventId e, const ResponsePredicate& rp, co
 void FaceAction::setRespondToEventIfAllReady( EventId e, bool cval)
 {
     checkOverwritingResponseEvent( e);
-    _eprs[e] = EPR( e, [this](FVS& fvs)
+    _eprs[e] = EPR( e, [this](const FVS& fvs)
             { return std::all_of(std::begin(fvs), std::end(fvs), [this](FV* fv){ return this->testReady(fv);});}, cval);
 }   // end setRespondToEventIfAllReady
 
 
 // public
-void FaceAction::setRespondToEventIfAllReady( EventId e, const ProcessFlagPredicate& fp)
+void FaceAction::setRespondToEventIfAllReady( EventId e, const TestFVSTrue& fp)
 {
     checkOverwritingResponseEvent( e);
-    _eprs[e] = EPR( e, [this](FVS& fvs)
+    _eprs[e] = EPR( e, [this](const FVS& fvs)
             { return std::all_of(std::begin(fvs), std::end(fvs), [this](FV* fv){ return this->testReady(fv);});}, fp);
 }   // end setRespondToEventIfAllReady
 

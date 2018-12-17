@@ -1,12 +1,12 @@
 /************************************************************************
  * Copyright (C) 2018 Spatial Information Systems Research Limited
  *
- * This program is free software: you can redistribute it and/or modify
+ * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * Cliniface is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
@@ -15,27 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_COMPONENT_SELECT_H
-#define FACE_TOOLS_ACTION_COMPONENT_SELECT_H
+#ifndef FACETOOLS_WIDGET_INT_TABLE_WIDGET_ITEM_H
+#define FACETOOLS_WIDGET_INT_TABLE_WIDGET_ITEM_H
 
-#include "ActionVisualise.h"
-#include <BoundingVisualisation.h>
-#include <ModelEntryExitInteractor.h>
+// For columns of properly sorted int data.
 
-namespace FaceTools {
-namespace Action {
+#include <FaceTypes.h>
+#include <QTableWidgetItem>
 
-class FaceTools_EXPORT ActionComponentSelect : public ActionVisualise
-{ Q_OBJECT
+namespace FaceTools { namespace Widget {
+
+class FaceTools_EXPORT IntTableWidgetItem : public QTableWidgetItem
+{
 public:
-    explicit ActionComponentSelect( Interactor::MEEI*);
-    ~ActionComponentSelect() override;
+    explicit IntTableWidgetItem( int v, int rightJustifyFieldWidth=0);
 
-private:
-    Vis::BoundingVisualisation *_vis;
+    bool operator<( const QTableWidgetItem& other) const override;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

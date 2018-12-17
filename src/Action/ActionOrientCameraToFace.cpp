@@ -29,30 +29,25 @@ using FaceTools::Vis::FV;
 using FaceTools::ModelViewer;
 
 
-ActionOrientCameraToFace::ActionOrientCameraToFace( const QString& dn, const QIcon& ico, float d, float r)
+ActionOrientCameraToFace::ActionOrientCameraToFace( const QString& dn, const QIcon& ico, double d, double r)
     : FaceAction( dn, ico), _distance(d), _urads(r)
 {
 }   // end ctor
 
 
-bool ActionOrientCameraToFace::testReady( const FV* fv)
+bool ActionOrientCameraToFace::doAction( FVS& fvs, const QPoint&)
 {
-    const FaceModel* fm = fv->data();
-    fm->lockForRead();
-    const bool glmk = fm->centreSet();
-    fm->unlock();
-    return glmk;
-}   // end testReady
-
-
-bool ActionOrientCameraToFace::doAction( FVS& fset, const QPoint&)
-{
-    assert(fset.size() == 1);
-    const FV* fv = fset.first();
-    const FaceModel* fm = fv->data();
+    assert(fvs.size() == 1);
+    const FV* fv = fvs.first();
+    const FM* fm = fv->data();
 
     fm->lockForRead();
-    RFeatures::Orientation on = fm->orientation();
+    RFeatures::Orientation on = fm->orientation();  // Copy out the orientation
+    if ( !fm->centreSet())
+    {
+        on.setN(cv::Vec3f(0,0,1));
+        on.setU(cv::Vec3f(0,1,0));
+    }   // end if
     cv::Vec3f focus = fm->centre();
     fm->unlock();
 

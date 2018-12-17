@@ -26,10 +26,10 @@ class FaceTools_EXPORT LandmarksManager
 {
 public:
     // Load all landmarks from the given file.
-    static int load( const QString& fname);
+    static int load( const std::string& fname);
 
     // Save all landmarks to the given file.
-    static bool save( const QString& fname);
+    static bool save( const std::string& fname);
 
     // Return the number of landmarks.
     static size_t count() { return _lmks.size();}
@@ -43,10 +43,12 @@ public:
     // Check if the given landmark name is present.
     // Lower case versions of landmark names are unique.
     static bool hasName( const QString& nm);
+    static bool hasName( const std::string&);
 
     // Check if the given landmark code is present.
     // Landmark codes are unique and case insensitive.
     static bool hasCode( const QString& cd);
+    static bool hasCode( const std::string&);
 
     // Returns true if name of landmark with given id was changed.
     // Landmark names cannot be changed to existing names.
@@ -60,6 +62,7 @@ public:
 
     // Return reference to the landmark with given code or null if doesn't exist.
     static Landmark* landmark( const QString& cd) { return _clmks.count(cd) > 0 ? landmark(_clmks.at(cd)) : nullptr;}
+    static Landmark* landmark( const std::string& cd) { return landmark(QString(cd.c_str()));}
 
 private:
     static IntSet _ids;

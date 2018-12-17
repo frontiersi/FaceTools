@@ -17,7 +17,6 @@
 
 #include <FaceTypes.h>
 #include <FaceViewSet.h>
-#include <boost/algorithm/string.hpp>
 
 void FaceTools::registerTypes()
 {
@@ -28,42 +27,69 @@ void FaceTools::registerTypes()
 }   // end registerTypes
 
 
-std::string FaceTools::toSexString( FaceTools::Sex s)
+QString FaceTools::toSexString( int8_t s)
 {
+    if ( s == FaceTools::UNKNOWN_SEX)
+        return "U";
+
     std::ostringstream oss;
     if ( s & FaceTools::FEMALE_SEX)
         oss << "F ";
     if ( s & FaceTools::MALE_SEX)
         oss << "M";
-    return oss.str();
+
+    QString sstr = oss.str().c_str();
+    return sstr.trimmed();
 }   // end toSexString
 
 
-QString FaceTools::toLongSexString( FaceTools::Sex s)
+QString FaceTools::toLongSexString( int8_t s)
 {
+    if ( s == FaceTools::UNKNOWN_SEX)
+        return "Unknown";
+
     QString fstr, mstr, estr;
-    if ( s | FaceTools::FEMALE_SEX)
+    if ( s & FaceTools::FEMALE_SEX)
         fstr = "Female";
-    if ( s | FaceTools::MALE_SEX)
+    if ( s & FaceTools::MALE_SEX)
         mstr = "Male";
     if ( !mstr.isEmpty() && !fstr.isEmpty())
-        estr = " / ";
+        estr = " | ";
     return fstr + estr + mstr;
 }   // end namespace
 
 
-FaceTools::Sex FaceTools::fromSexString( const std::string& s)
+int8_t FaceTools::fromSexString( const QString& s)
 {
-    std::vector<std::string> toks;
-    boost::split( toks, s, boost::is_space());
-    int8_t sex = 0x0;
-    for ( std::string t : toks)
+    int8_t sex = FaceTools::UNKNOWN_SEX;
+    QStringList toks = s.split(QRegExp("\\W+"), QString::SkipEmptyParts);
+
+    for ( const QString& t : toks)
     {
-        boost::algorithm::to_lower(t);
-        if ( t == "f")
+        QString lt = t.toLower();
+        if ( lt == "f")
             sex |= FaceTools::FEMALE_SEX;
-        else if ( t == "m")
+        else if ( lt == "m")
             sex |= FaceTools::MALE_SEX;
     }   // end for
-    return static_cast<Sex>(sex);
+
+    return sex;
 }   // end fromSexString
+
+
+int8_t FaceTools::fromLongSexString( const QString& s)
+{
+    int8_t sex = FaceTools::UNKNOWN_SEX;
+    QStringList toks = s.split(QRegExp("\\W+"), QString::SkipEmptyParts);
+
+    for ( const QString& t : toks)
+    {
+        QString lt = t.toLower();
+        if ( lt == "female")
+            sex |= FaceTools::FEMALE_SEX;
+        else if ( lt == "male")
+            sex |= FaceTools::MALE_SEX;
+    }   // end for
+
+    return sex;
+}   // end fromLongSexString

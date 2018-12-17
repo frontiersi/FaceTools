@@ -35,9 +35,8 @@ const QString PathSetInteractor::s_msg1(
         QObject::tr("Right click on the model and select \"Add Path\" to place the end-point for a new path."));
 
 
-// public
 PathSetInteractor::PathSetInteractor( MEEI* meei, PathSetVisualisation* vis, QStatusBar *sbar)
-    : ModelViewerInteractor( nullptr, sbar), _meei(meei), _vis(vis), _drag(-1), _hover(-1), _handle(0), _view(nullptr)
+    : ModelViewerInteractor( nullptr, sbar), _meei(meei), _vis(vis), _drag(false), _handle(nullptr), _view(nullptr)
 {
     connect( meei, &MEEI::onEnterProp, this, &PathSetInteractor::doOnEnterHandle);
     connect( meei, &MEEI::onLeaveProp, this, &PathSetInteractor::doOnLeaveHandle);
@@ -45,67 +44,55 @@ PathSetInteractor::PathSetInteractor( MEEI* meei, PathSetVisualisation* vis, QSt
 }   // end ctor
 
 
-// public slot
 void PathSetInteractor::doOnEnterHandle( const FV* fv, const vtkProp* p)
 {
-    const PathView::Handle* h = _vis->pathHandle(fv, p);
-    if ( !h)
+    PathView::Handle* h = _vis->pathHandle(fv, p);
+    if ( !h || _drag)
         return;
 
-    _hover = h->pathId();
-    _handle = h->handleId();    // 0 or 1
+    _handle = h;
     FM* fm = fv->data();
 
-    setCaptionInfo( fm, _hover);
-    setCaptionAttachPoint( fm, _hover);
-    _vis->setCaptionsVisible( true);
+    setCaptionInfo( fm, _handle->pathId());
+    _handle->showCaption(true);
+    _vis->showText(fm);
+    viewer()->setCursor(Qt::CrossCursor);
     showStatus( s_msg0, 10000);
     fm->updateRenderers();
 }   // end doOnEnterHandle
 
 
-// public slot
-void PathSetInteractor::doOnLeaveHandle( const FV* fv, const vtkProp* p)
+void PathSetInteractor::doOnLeaveHandle( const FV* fv)
 {
-    if (_hover < 0)
+    if ( !_handle || _drag)
         return;
 
-    const PathView::Handle* h = _vis->pathHandle(fv, p);
-    if ( h && _drag < 0)
+    //if ( _handle && _handle->prop() == p)
+    if ( _handle)
     {
-        _vis->setCaptionsVisible( false);
+        _handle->showCaption(false);
+        viewer()->setCursor(Qt::ArrowCursor);
+        _vis->showText(nullptr);
         showStatus( s_msg1, 10000);
         fv->data()->updateRenderers();
     }   // end if
-    _hover = -1;
+    _handle = nullptr;
 }   // end doOnLeaveHandle
 
 
-// public
 void PathSetInteractor::setCaptionInfo( const FM* fm, int pid)
 {
     const Path* path = fm->paths()->path(pid);
     assert(path);
-    // Set display caption at bottom right
-    _vis->setCaptions( path->name, path->elen, path->psum, int(viewer()->getWidth()) - 10, 10);
+    assert(_handle);
+    _handle->setCaption( QString("%1 ").arg(path->elen, 4, 'f', 1) + FM::LENGTH_UNITS);
+    _vis->setText( fm, pid, int(viewer()->getWidth()) - 10, 10);    // Set display caption at bottom right
 }   // end setCaptionInfo
 
 
-// public
-void PathSetInteractor::setCaptionAttachPoint( const FM* fm, int pid)
-{
-    const Path* path = fm->paths()->path(pid);
-    assert(path);
-    assert(!path->vtxs.empty());
-    const cv::Vec3f attachPoint = path->vtxs[path->vtxs.size()/2];  // Halfway along path
-    _vis->setCaptionAttachPoint( attachPoint);
-}   // end setCaptionAttachPoint
-
-
-// public
 bool PathSetInteractor::moveDragHandle( const cv::Vec3f& hpos)
 {
-    if ( _drag < 0)
+    if ( !_drag)
         return false;
 
     FV *fv = hoverModel();
@@ -114,60 +101,67 @@ bool PathSetInteractor::moveDragHandle( const cv::Vec3f& hpos)
 
     FM* fm = fv->data();
     //fm->lockForWrite();
-    Path* path = fm->paths()->path(_drag);
-    assert(path);
+    assert(_handle);
+    Path* path = fm->paths()->path(_handle->pathId());
     assert(path->vtxs.size() >= 2);
 
-    if ( _handle == 0)
+    if ( _handle->handleId() == 0)
         *path->vtxs.begin() = hpos;
     else
         *path->vtxs.rbegin() = hpos;
     path->recalculate( fm->kdtree());
 
     // Update visualisation over all associated FVs
-    _vis->updatePath( fm, _drag);
-    setCaptionInfo( fm, _drag);
-    setCaptionAttachPoint( fm, _drag);
+    _vis->updatePath( fm, _handle->pathId());
+    setCaptionInfo( fm, _handle->pathId());
 
     //fm->unlock();
     return true;
 }   // end moveDragHandle
 
 
-// public
 void PathSetInteractor::setPathDrag( int pid)
 {
-    _drag = pid;
+    _drag = true;
     _view = hoverModel();
-    viewer()->setCursor(Qt::CrossCursor);
-    _vis->setCaptionsVisible(true);
+    _vis->showText(_view->data());
+    _handle = _vis->pathHandle0(_view, pid);
+    _view->data()->updateRenderers();
 }   // end setPathDrag
 
 
+// private
 bool PathSetInteractor::leftButtonDown( const QPoint& p)
 {
-    if ( _drag >= 0)
+    if ( _drag)
         leftButtonUp(p);
-    if ( _hover >= 0)
-        setPathDrag( _hover);
-    return _drag >= 0;
+    if ( _handle)
+    {
+        _drag = true;
+        _view = hoverModel();
+        _vis->showText(_view->data());
+        _view->data()->updateRenderers();
+    }   // end if
+    return _drag;
 }   // end leftButtonDown
 
 
-bool PathSetInteractor::leftButtonUp( const QPoint& p)
+// private
+bool PathSetInteractor::leftButtonUp( const QPoint&)
 {
-    if ( _drag >= 0)
+    if ( _drag)
     {
-        _vis->setCaptionsVisible(false);
-        viewer()->setCursor(Qt::ArrowCursor);
+        assert( _handle);
+        _drag = false;
+        if ( _meei->prop() != _handle->prop())
+            doOnLeaveHandle( _view);
         emit onChangedData(_view);
     }   // end if
-    _view = hoverModel();
-    _drag = -1;
     return false;
 }   // end leftButtonUp
 
 
+// private
 bool PathSetInteractor::leftDrag( const QPoint& p)
 {
     bool rval = false;
@@ -181,9 +175,11 @@ bool PathSetInteractor::leftDrag( const QPoint& p)
 }   // end leftDrag
 
 
+// private
 bool PathSetInteractor::mouseMove( const QPoint& p) { return leftDrag(p);}
 
 
+// private
 void PathSetInteractor::onEnabledStateChanged( bool v)
 {
     if ( v)

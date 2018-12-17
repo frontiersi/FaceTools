@@ -21,8 +21,7 @@
 #include "BaseVisualisation.h"
 #include "LandmarkSetView.h"
 
-namespace FaceTools {
-namespace Vis {
+namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT LandmarksVisualisation : public BaseVisualisation
 { Q_OBJECT
@@ -65,7 +64,6 @@ private:
     bool hasView( const FV*) const;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

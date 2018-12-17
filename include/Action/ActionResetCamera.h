@@ -33,7 +33,7 @@ public:
     void addViewer( FaceModelViewer* v) { _viewers.push_back(v);}
 
 private slots:
-    bool testEnabled( const QPoint* mc=nullptr) const override { return true;}
+    bool testEnabled( const QPoint*) const override { return true;}
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(CAMERA_CHANGE);}
 

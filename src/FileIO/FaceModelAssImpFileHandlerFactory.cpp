@@ -34,7 +34,7 @@ FaceModelAssImpFileHandler* FaceModelAssImpFileHandlerFactory::make( const QStri
 {
     const std::string ext = qext.toLower().toStdString();
     if ( assimp.getAvailable().count(ext) == 0)
-        return NULL;
+        return nullptr;
 
     if ( !assimp.enableFormat( ext)) // Enable using provided file extension
     {

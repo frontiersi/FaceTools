@@ -22,8 +22,7 @@
 #include <OBJExporter.h>    // RModelIO
 #include "FaceModelFileHandler.h"
 
-namespace FaceTools {
-namespace FileIO {
+namespace FaceTools { namespace FileIO {
 
 class FaceTools_EXPORT FaceModelOBJFileHandler : public FaceModelFileHandler
 { Q_OBJECT
@@ -37,8 +36,8 @@ public:
 
     QString error() const override { return _err;}
 
-    FaceModel* read( const QString& filepath) override;
-    bool write( const FaceModel*, const QString&) override;
+    FM* read( const QString& filepath) override;
+    bool write( const FM*, const QString&) override;
 
 private:
     RModelIO::AssetImporter _importer;
@@ -47,7 +46,6 @@ private:
     QString _err;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

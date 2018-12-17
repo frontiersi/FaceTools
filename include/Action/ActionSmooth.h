@@ -20,8 +20,7 @@
 
 #include "FaceAction.h"
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionSmooth : public FaceAction
 { Q_OBJECT
@@ -40,7 +39,6 @@ private:
     double _maxc;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+} }   // end namespace
 
 #endif

@@ -17,7 +17,6 @@
 
 #include <ActionLoadDirFaceModels.h>
 #include <FaceModelManager.h>
-#include <QFileDialog>
 using FaceTools::Action::ActionLoadDirFaceModels;
 using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
@@ -26,9 +25,15 @@ using FaceTools::FVS;
 
 
 ActionLoadDirFaceModels::ActionLoadDirFaceModels( const QString& dn, const QIcon& ico, QWidget *p)
-    : FaceAction( dn, ico), _loadHelper(p)
+    : FaceAction( dn, ico), _loadHelper(p), _dialog( new QFileDialog(p, tr("Select directory containing models")))
 {
     setAsync(true);
+
+    _dialog->setViewMode(QFileDialog::Detail);
+    _dialog->setFileMode(QFileDialog::Directory);
+    _dialog->setOption(QFileDialog::ShowDirsOnly);
+    _dialog->setOption(QFileDialog::DontUseNativeDialog);
+    _dialog->setOption(QFileDialog::DontUseCustomDirectoryIcons);
 }   // end ctor
 
 
@@ -41,10 +46,10 @@ bool ActionLoadDirFaceModels::testEnabled( const QPoint*) const
 
 bool ActionLoadDirFaceModels::doBeforeAction( FVS&, const QPoint&)
 {
-    QString dname = QFileDialog::getExistingDirectory( _loadHelper.parent(),
-                                                       tr("Select directory containing models"), "",
-                                                       QFileDialog::ShowDirsOnly);
-    QDir qdir(dname); // Get list of filenames from directory
+    if ( !_dialog->exec())
+        return false;
+
+    QDir qdir = _dialog->directory();
     QStringList fnames = qdir.entryList( _loadHelper.createSimpleImportFilters());
     std::for_each( std::begin(fnames), std::end(fnames), [&](QString& fn){ fn = QDir::cleanPath( qdir.filePath(fn));});
     return _loadHelper.setFilteredFilenames( fnames) > 0;

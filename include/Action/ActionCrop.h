@@ -29,7 +29,7 @@ public:
     ActionCrop( const QString& dname, const QIcon&, ActionRadialSelect*, QProgressBar* pb=nullptr); // Async if pb not null
 
 private slots:
-    bool testEnabled( const QPoint* mc=nullptr) const override;
+    bool testEnabled( const QPoint*) const override;
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(GEOMETRY_CHANGE);}
 

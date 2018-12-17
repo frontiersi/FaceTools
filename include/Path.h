@@ -24,7 +24,6 @@
 
 #include "FaceTools_Export.h"
 #include <ObjModelKDTree.h>
-#include <ObjModelGeodesicPathFinder.h>
 #include <opencv2/opencv.hpp>
 #include <boost/property_tree/ptree.hpp>
 typedef boost::property_tree::ptree PTree;
@@ -38,13 +37,14 @@ struct FaceTools_EXPORT Path
 
     // Set path endpoints on the model surface and recalculate
     // path and both path lengths using the given KD-tree.
-    void recalculate( RFeatures::ObjModelKDTree::Ptr);
+    // If no path could be found, return false.
+    bool recalculate( const RFeatures::ObjModelKDTree*);
 
     int id;
-    float elen;                     // Cached straight line distance (l2-norm between path end-points)
-    float psum;                     // Cached path sum
-    std::vector<cv::Vec3f> vtxs;    // The path vertices 
-    std::string name;               // Name of this path (if given)
+    double elen;                // Cached straight line distance (l2-norm between path end-points)
+    double psum;                // Cached path sum
+    std::list<cv::Vec3f> vtxs;  // The path vertices 
+    std::string name;           // Name of this path (if given)
 };  // end class
 
 

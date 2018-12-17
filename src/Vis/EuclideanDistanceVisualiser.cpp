@@ -74,6 +74,50 @@ void EuclideanDistanceVisualiser::fixTransform( const FV *fv)
 }   // end fixTransform
 
 
+namespace {
+
+void highlight( vtkActor* actor, bool v)
+{
+    assert(actor);
+    vtkProperty* prop = actor->GetProperty();
+    if ( v)
+    {
+        prop->SetLineWidth(7.0);
+        prop->SetColor(1.0,1.0,1.0);
+        prop->SetOpacity(1.0);
+    }   // end if
+    else
+    {
+        prop->SetLineWidth(4.0);
+        prop->SetColor(0.6,0.6,0.7);
+        prop->SetOpacity(0.5);
+    }   // end else
+}   // end highlight
+
+}   // end namespace
+
+void EuclideanDistanceVisualiser::setHighlighted( const FM* fm)
+{
+    for ( auto& p : _actor0)
+        highlight( p.second, false);
+    for ( auto& p : _actor1)
+        highlight( p.second, false);
+
+    if ( fm)
+    {
+        for ( const FV* fv : fm->fvs())
+            if ( _actor0.count(fv) > 0)
+                highlight( _actor0.at(fv), true);
+        if ( _bilat)
+        {
+            for ( const FV* fv : fm->fvs())
+                if ( _actor1.count(fv) > 0)
+                    highlight( _actor1.at(fv), true);
+        }   // end if
+    }   // end if
+}   // end setHighlighted
+
+
 // private
 void EuclideanDistanceVisualiser::apply( FV *fv, FaceLateral lA, FaceLateral lB,
                                          std::unordered_map<const FV*, vtkActor*>& actors)
@@ -85,11 +129,12 @@ void EuclideanDistanceVisualiser::apply( FV *fv, FaceLateral lA, FaceLateral lB,
     vtkProperty* property = actor->GetProperty();
     property->SetRepresentationToWireframe();
     property->SetRenderLinesAsTubes(false);
-    property->SetLineWidth(7.0);
-    property->SetColor(1,1,1);
+
     property->SetAmbient( 1);
-    property->SetDiffuse( 1);
+    property->SetDiffuse( 0);
     property->SetSpecular(0);
+    highlight( actor, false);
+    actor->SetPickable(false);
 
     fv->viewer()->add( actor);
 }   // end apply
@@ -146,6 +191,7 @@ void EuclideanDistanceVisualiser::clear( FV *fv, std::unordered_map<const FV*, v
     {
         FMV* viewer = fv->viewer();
         viewer->remove( actors.at(fv));
+        actors.at(fv)->Delete();
         actors.erase(fv);
     }   // end if
 }   // end clear

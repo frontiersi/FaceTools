@@ -29,7 +29,7 @@ public:
     static Ptr create();
 
     // Translates path endpoints to be incident with surface and recalculates the paths.
-    void recalculate( RFeatures::ObjModelKDTree::Ptr);
+    void recalculate( const RFeatures::ObjModelKDTree*);
 
     // Create a new path with first handle at given position returning its ID.
     int addPath( const cv::Vec3f&);

@@ -25,7 +25,7 @@ if(EXISTS "${INCLUDE_DIR}/template")
     install( DIRECTORY "${INCLUDE_DIR}/template" DESTINATION "include")
 endif()
 
-install( FILES "${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME}Config.cmake" DESTINATION "cmake")
-install( FILES "${PROJECT_SOURCE_DIR}/cmake/Macros.cmake" DESTINATION "cmake")
+install( FILES "${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME}Config.cmake" DESTINATION "lib/cmake")
+install( FILES "${PROJECT_SOURCE_DIR}/cmake/Macros.cmake" DESTINATION "lib/cmake")
 
 include("cmake/LinkTargets.cmake")

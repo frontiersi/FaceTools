@@ -16,17 +16,40 @@
  ************************************************************************/
 
 #include <FaceTools.h>
+#include <OffscreenModelViewer.h>   // RVTK
 #include <FaceShapeLandmarks2DDetector.h>
 #include <FaceModelViewer.h>
 #include <LandmarksManager.h>
 #include <FaceModel.h>
 #include <Transformer.h>        // RFeatures
-#include <ImageGrabber.h>       // RVTK
-#include <VtkActorCreator.h>    // RVTK
 #include <algorithm>
 #include <FaceView.h>
 using namespace RFeatures;
 using namespace FaceTools::Landmark;
+
+
+size_t FaceTools::findCommonLandmarks( std::vector<int>& lmks, const FMS& fms)
+{
+    IntIntMap lmkCounts;  // Collect all landmarks over all models
+    for ( const FM* fm : fms)
+    {
+        fm->lockForRead();
+        for ( int id : fm->landmarks()->ids())
+            lmkCounts[id] += 1;
+        fm->unlock();
+    }   // end for
+
+    // Keep only those landmarks that every model has.
+    lmks.clear();
+    const int n = int(fms.size());
+    for ( const auto& p : lmkCounts)
+    {
+        if ( p.second == n)
+            lmks.push_back(p.first);
+    }   // end for
+
+    return lmks.size();
+}   // end findCommonLandmarks
 
 
 bool FaceTools::hasCentreLandmarks( const LandmarkSet& lmks)
@@ -80,7 +103,7 @@ ObjModel::Ptr FaceTools::createFromVertices( const cv::Mat_<cv::Vec3f>& vrow)
 ObjModel::Ptr FaceTools::createFromSubset( const ObjModel* smod, const IntSet& vidxs)
 {
     assert(smod);
-    ObjModel::Ptr omod = ObjModel::create( smod->getSpatialPrecision());
+    ObjModel::Ptr omod = ObjModel::create( smod->spatialPrecision());
     std::for_each( std::begin(vidxs), std::end(vidxs), [&](int vidx){ omod->addVertex( smod->vtx(vidx));});
     return omod;
 }   // end createFromSubset
@@ -91,7 +114,7 @@ ObjModel::Ptr FaceTools::createFromTransformedSubset( const ObjModel* smod, cons
 {
     assert(smod);
     const RFeatures::Transformer transformer(T);
-    ObjModel::Ptr omod = ObjModel::create( smod->getSpatialPrecision());
+    ObjModel::Ptr omod = ObjModel::create( smod->spatialPrecision());
     for ( int vidx : vidxs)
     {
         cv::Vec3f v = smod->vtx(vidx);
@@ -113,7 +136,7 @@ ObjModel::Ptr FaceTools::makeFlattened( const ObjModel* m, std::unordered_map<in
         fmap->clear();
     const IntSet& vidxs = m->getVertexIds();
     int nvidx;
-    ObjModel::Ptr fmod = ObjModel::create( m->getSpatialPrecision());
+    ObjModel::Ptr fmod = ObjModel::create( m->spatialPrecision());
     for ( int vidx : vidxs)
     {
         cv::Vec3f v = m->vtx(vidx);
@@ -125,34 +148,6 @@ ObjModel::Ptr FaceTools::makeFlattened( const ObjModel* m, std::unordered_map<in
     // fmod is now a flattened version
     return fmod;
 }   // end makeFlattened
-
-
-RVTK::Viewer::Ptr FaceTools::makeOffscreenViewer( size_t sqdims, float rng, const ObjModel* model)
-{
-    // Initialise the viewer
-    RVTK::Viewer::Ptr viewer = RVTK::Viewer::create(true/*offscreen*/);
-    viewer->setSize( sqdims, sqdims);
-    viewer->setCamera( RFeatures::CameraParams( cv::Vec3f( 0, 0, rng)));    // Default camera for detecting orientation
-    viewer->renderer()->UseFXAAOn();
-
-    // Create the actor
-    vtkSmartPointer<vtkTexture> texture;
-    RVTK::VtkActorCreator ac;
-    vtkSmartPointer<vtkActor> actor = ac.generateActor( model, texture);
-
-    // Add the actor to the viewer
-    viewer->addActor( actor);
-    viewer->resetClippingRange();
-    viewer->updateRender();
-    return viewer;
-}   // end createOffscreenViewer
-
-
-cv::Mat_<cv::Vec3b> FaceTools::snapshot( RVTK::Viewer::Ptr v)
-{
-    RVTK::ImageGrabber ig(*v);
-    return ig.colour();
-}   // end snapshot
 
 
 void FaceTools::updateRenderers( const FMS& fms)
@@ -178,22 +173,49 @@ cv::Vec3f FaceTools::toSurface( const ObjModelKDTree* kdt, const cv::Vec3f& v)
 }   // end toSurface
 
 
-cv::Vec3f FaceTools::moveTo( const ObjModelKDTree* kdt, const cv::Vec3f& s, const cv::Vec3f& v)
+cv::Vec3f FaceTools::toTarget( const ObjModelKDTree* kdt, const cv::Vec3f& s, const cv::Vec3f& t)
 {
-    int notused;
-    cv::Vec3f fv;
     const RFeatures::ObjModelSurfacePointFinder spfinder( kdt->model());
     int vidx = kdt->find(s);
-    spfinder.find( v, vidx, notused, fv);
+    int notused;
+    cv::Vec3f fv;
+    spfinder.find( t, vidx, notused, fv);
     return fv;
-}   // end moveTo
+}   // end toTarget
 
 
-cv::Vec3f FaceTools::findDeepestPoint( const ObjModelKDTree* kdt, const cv::Vec3f& p0, const cv::Vec3f& p1, double *dout)
+bool FaceTools::findPath( const ObjModelKDTree* kdt, const cv::Vec3f& p0, const cv::Vec3f& p1, std::list<cv::Vec3f>& pts)
+{
+    using namespace RFeatures;
+
+    const ObjModel *model = kdt->model();
+    const ObjModelSurfacePointFinder spfinder( model);
+    int v0i = kdt->find(p0);
+    int v1i = kdt->find(p1);
+    int sT, fT;
+    cv::Vec3f v0 = p0;
+    cv::Vec3f v1 = p1;
+    spfinder.find( p0, v0i, sT, v0);
+    spfinder.find( p1, v1i, fT, v1);
+
+    pts.clear();
+    SurfaceCurveFinder scfinder( model);
+    bool foundPath = scfinder.findPath( v0, sT, v1, fT, pts);
+    if ( !foundPath)
+    {
+        pts.clear();
+        foundPath = scfinder.findPath( v1, fT, v0, sT, pts);
+        pts.reverse();
+    }   // end if
+
+    return foundPath;
+}   // end findPath
+
+
+cv::Vec3f FaceTools::findDeepestPoint2( const ObjModelKDTree* kdt, const cv::Vec3f& p0, const cv::Vec3f& p1, double *dout)
 {
     using namespace RFeatures;
     const ObjModel *model = kdt->model();
-
     DijkstraShortestPathFinder spfinder( kdt->model());
     const int v0 = kdt->find(p0);
     const int v1 = kdt->find(p1);
@@ -226,4 +248,50 @@ cv::Vec3f FaceTools::findDeepestPoint( const ObjModelKDTree* kdt, const cv::Vec3
         *dout = maxd;
 
     return model->vtx(bv);
+}   // end findDeepestPoint2
+
+
+cv::Vec3f FaceTools::findDeepestPoint( const ObjModelKDTree* kdt, const cv::Vec3f& p0, const cv::Vec3f& p1, double *dout)
+{
+    std::list<cv::Vec3f> pts;
+    const bool foundPath = findPath( kdt, p0, p1, pts);
+    if ( !foundPath)
+    {
+        std::cerr << "[WARNING] FaceTools::findDeepestPoint: Failed to find path using SurfaceCurveFinder - using DijkstraShortestPathFinder instead." << std::endl;
+        return findDeepestPoint2(kdt, p0, p1, dout);
+    }   // end if
+
+    cv::Vec3f u;
+    cv::normalize( p1 - p0, u);
+
+    double maxd = 0;
+    cv::Vec3f dp;   // Deepest point
+    for ( const cv::Vec3f& p : pts)
+    {
+        const cv::Vec3f dv = p - p0;
+        const double h = cv::norm(dv);
+        const double theta = acos( double(dv.dot(u))/h);
+        const double o = h*sin(theta);
+        if ( o >= maxd)
+        {
+            maxd = o;
+            dp = p;
+        }   // end if
+    }   // end for
+
+    if ( dout)
+        *dout = maxd;
+
+    return dp;
 }   // end findDeepestPoint
+
+
+cv::Mat_<cv::Vec3b> FaceTools::makeThumbnail( const FM* fm, const cv::Size& dims, float d)
+{
+    RVTK::OffscreenModelViewer omv( dims, 1);
+    omv.setModel( fm->info()->cmodel());
+    cv::Vec3f cpos = (d * fm->orientation().nvec()) + fm->centre();
+    CameraParams cam( cpos, fm->centre(), fm->orientation().uvec(), 30);
+    omv.setCamera( cam);
+    return omv.snapshot();
+}   // end makeThumbnail

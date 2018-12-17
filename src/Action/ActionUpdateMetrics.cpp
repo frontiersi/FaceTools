@@ -17,17 +17,20 @@
 
 #include <ActionUpdateMetrics.h>
 #include <MetricCalculatorManager.h>
+#include <PhenotypeManager.h>
 #include <FaceModel.h>
 #include <FaceView.h>
 #include <algorithm>
 using FaceTools::Action::ActionUpdateMetrics;
 using FaceTools::Action::FaceAction;
-using FaceTools::Metric::MCSet;
 using FaceTools::Metric::MC;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
 using FaceTools::FM;
 using MCM = FaceTools::Metric::MetricCalculatorManager;
+using FaceTools::Metric::PhenotypeManager;
+using FaceTools::Metric::Phenotype;
+using FaceTools::Metric::MC;
 
 
 ActionUpdateMetrics::ActionUpdateMetrics()
@@ -40,29 +43,45 @@ ActionUpdateMetrics::ActionUpdateMetrics()
 }   // end ctor
 
 
+
 // Ready if at least one of the metrics can be calculated
 bool ActionUpdateMetrics::testReady( const FV* fv)
 {
-    const FM* fm = fv->data();
-    bool okay = false;
     for ( MC::Ptr mc : MCM::metrics())
     {
-        if ( mc->isAvailable(fm))
-        {
-            okay = true;
-            break;
-        }   // end if
+        if ( mc->canCalculate(fv->data()))
+            return true;
     }   // end for
-    return okay;
+    return false;
 }   // end testReady
 
 
 bool ActionUpdateMetrics::doAction( FVS& fvs, const QPoint&)
 {
-    for ( FM* fm : fvs.models())
+    std::cerr << " --- Recalculating metrics and testing for phenotype presence (demographics ignored) ---" << std::endl;
+
+    FMS fms = fvs.models();   // Copy out
+    for ( FM* fm : fms)
     {
-        const MCSet& mcs = MCM::metrics();
-        std::for_each( std::begin(mcs), std::end(mcs), [=](MC::Ptr mc){ mc->calculate(fm);});
+        // Recalculate all metrics
+        for ( MC::Ptr mc : MCM::metrics())
+        {
+            if ( mc->canCalculate(fm))
+                mc->calculate(fm);
+        }   // end for
+
+        // Test presence of phenotypes
+        fm->clearPhenotypes();
+        for ( int hid : PhenotypeManager::ids())
+        {
+            Phenotype::Ptr hpo = PhenotypeManager::phenotype(hid);
+            if ( hpo->isPresent( &fm->metrics(), &fm->metricsL(), &fm->metricsR()))
+                fm->addPhenotype(hid);
+        }   // end for
     }   // end for
+
+    fvs.clear();
+    fvs.insert(fms);
+
     return true;
 }   // end doAction

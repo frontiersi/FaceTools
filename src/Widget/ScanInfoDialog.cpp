@@ -17,28 +17,52 @@
 
 #include <ScanInfoDialog.h>
 #include <ui_ScanInfoDialog.h>
+#include <MetricCalculatorManager.h>
 #include <FaceModel.h>
 #include <QImageTools.h>
 #include <QPushButton>
 #include <cmath>
 #include <cassert>
 using FaceTools::Widget::ScanInfoDialog;
+using FaceTools::Metric::MetricCalculatorManager;
 using FaceTools::FM;
 using FaceTools::Sex;
 
 
+// Never allow automatic insertion!
+class EthnicityValidator : public QValidator
+{ public:
+    EthnicityValidator( QObject* o) : QValidator(o) {}
+    QValidator::State validate( QString&, int&) const override { return QValidator::Invalid;}
+};  // end EthnicityValidator
+
+
+
 ScanInfoDialog::ScanInfoDialog(QWidget *parent) :
-    QDialog(parent), ui(new Ui::ScanInfoDialog), _model(nullptr)
+    QDialog(parent), _ui(new Ui::ScanInfoDialog), _model(nullptr)
 {
-    ui->setupUi(this);
-    connect( ui->buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked, this, &ScanInfoDialog::doOnApply);
+    _ui->setupUi(this);
+    connect( _ui->buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked, this, &ScanInfoDialog::doOnApply);
     set(nullptr);
+
+    _ui->ethnicityComboBox->addItem("N/A");
+    _ethnicities.insert( "n/a");
+    for ( const QString& ethn : MetricCalculatorManager::ethnicities())
+        addEthnicityToComboBox( ethn);
+    _ui->ethnicityComboBox->setCurrentIndex(0);
+    _ui->ethnicityComboBox->setEditable(true);
+    _ui->ethnicityComboBox->setValidator( new EthnicityValidator(_ui->ethnicityComboBox));
+
+    _ui->sexComboBox->addItem( toLongSexString( FEMALE_SEX | MALE_SEX));    // Used for intersex
+    _ui->sexComboBox->addItem( toLongSexString( FEMALE_SEX));
+    _ui->sexComboBox->addItem( toLongSexString( MALE_SEX));
+    _ui->sexComboBox->setCurrentIndex(0);
 }   // end ctor
 
 
 ScanInfoDialog::~ScanInfoDialog()
 {
-    delete ui;
+    delete _ui;
 }   // end dtor
 
 
@@ -47,86 +71,121 @@ void ScanInfoDialog::set( FM* fm)
     if ( fm == _model && fm && fm->isSaved())
         return;
 
-    setAge( 0);
-    setSex( UNKNOWN_SEX);
-    setEthnicity("");
-    setProvenance("");
-    setRemarks("");
-    ui->numVerticesLabel->setText("");
-    ui->numPolygonsLabel->setText("");
-
     _model = fm;
-    if (fm)
-    {
-        setAge( fm->age());
-        setSex( fm->sex());
-        setEthnicity( fm->ethnicity());
-        setCaptureDate( fm->captureDate());
-        setProvenance( fm->source());
-        setRemarks( fm->description());
-        const RFeatures::ObjModel* cmodel = fm->info()->cmodel();
-        ui->numVerticesLabel->setText(QString("%1 vertices  ").arg(cmodel->getNumVertices()));
-        ui->numPolygonsLabel->setText(QString("%1 polygons  ").arg(cmodel->getNumFaces()));
-    }   // end if
-
-    setThumbnail();
-    ui->buttonBox->button(QDialogButtonBox::Apply)->setEnabled(fm != nullptr);
-    ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(fm != nullptr);
+    reset();
 }   // end set
 
 
+// private
+QString ScanInfoDialog::addEthnicityToComboBox( QString eth)
+{
+    if ( eth.isEmpty())
+        eth = "N/A";
+    QString lethn = eth.toLower();
+    if ( _ethnicities.count( lethn) == 0)
+    {
+         _ethnicities.insert(lethn);
+
+         // Find where in the combo box to insert
+         const int n = _ui->ethnicityComboBox->count();
+         int i = 1;
+         for ( i = 1; i < n; ++i)
+         {
+            QString e = _ui->ethnicityComboBox->itemText(i);
+            if ( e >= eth)
+                break;
+         }  // end for
+        _ui->ethnicityComboBox->insertItem( i, eth);
+    }   // end if
+    return eth;
+}   // end addEthnicityToComboBox
+
+
+// private
+void ScanInfoDialog::reset()
+{
+    setAge( 0);
+    _ui->sexComboBox->setCurrentText( toLongSexString( FEMALE_SEX | MALE_SEX));
+    _ui->ethnicityComboBox->setCurrentText("N/A");
+    _ui->captureDateEdit->setDate( QDate::currentDate());
+    _ui->sourceLineEdit->clear();
+    _ui->remarksTextEdit->clear();
+    _ui->numVerticesLabel->clear();
+    _ui->numPolygonsLabel->clear();
+    _ui->imageLabel->clear();
+
+    if (_model)
+    {
+        setAge( _model->age());
+        _ui->sexComboBox->setCurrentText( toLongSexString( _model->sex()));
+        _ui->ethnicityComboBox->setCurrentText( addEthnicityToComboBox( _model->ethnicity()));
+        _ui->captureDateEdit->setDate( _model->captureDate());
+        _ui->sourceLineEdit->setText( _model->source());
+        _ui->remarksTextEdit->setPlainText( _model->description());
+        const RFeatures::ObjModel* cmodel = _model->info()->cmodel();
+        _ui->numVerticesLabel->setText(QString("%1 vertices  ").arg(cmodel->getNumVertices()));
+        _ui->numPolygonsLabel->setText(QString("%1 polygons  ").arg(cmodel->getNumFaces()));
+    }   // end if
+
+    _ui->buttonBox->button(QDialogButtonBox::Apply)->setEnabled(_model != nullptr);
+    _ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(_model != nullptr);
+}   // end reset
+
+
+// private
 double ScanInfoDialog::age() const
 {
-    double yrs = ui->yearsSpinBox->value();
-    double mths = ui->monthsSpinBox->value();
+    double yrs = _ui->yearsSpinBox->value();
+    double mths = _ui->monthsSpinBox->value();
     return yrs + mths/12;
 }   // end age
-
-std::string ScanInfoDialog::ethnicity() const { return ui->ethnicityLineEdit->text().toStdString();}
-Sex ScanInfoDialog::sex() const { return static_cast<Sex>(ui->sexComboBox->currentIndex());}
-QDate ScanInfoDialog::captureDate() const { return ui->captureDateEdit->date();}
-
-std::string ScanInfoDialog::source() const { return ui->sourceLineEdit->text().toStdString();}
-std::string ScanInfoDialog::description() const { return ui->remarksTextEdit->toPlainText().toStdString();}
 
 
 // private
 void ScanInfoDialog::setAge( double a)
 {
     const double yrs = floor(a);
-    ui->yearsSpinBox->setValue(static_cast<int>(yrs));
+    _ui->yearsSpinBox->setValue(static_cast<int>(yrs));
     const double mths = floor( 12.0 * (a - yrs));
-    ui->monthsSpinBox->setValue(static_cast<int>(mths));
+    _ui->monthsSpinBox->setValue(static_cast<int>(mths));
 }   // end setAge
 
 
-void ScanInfoDialog::setSex( Sex s) { ui->sexComboBox->setCurrentIndex( static_cast<int16_t>(s));}
-void ScanInfoDialog::setEthnicity( const std::string& e) { ui->ethnicityLineEdit->setText(e.c_str());}
-void ScanInfoDialog::setCaptureDate( const QDate& d) { ui->captureDateEdit->setDate(d);}
-void ScanInfoDialog::setProvenance( const std::string& t) { ui->sourceLineEdit->setText( t.c_str());}
-void ScanInfoDialog::setRemarks( const std::string& t) { ui->remarksTextEdit->setPlainText( t.c_str());}
-
-
-void ScanInfoDialog::setThumbnail()
+// public
+void ScanInfoDialog::setThumbnail( const cv::Mat_<cv::Vec3b>& img)
 {
-    const size_t I = static_cast<size_t>( std::min<int>( ui->imageLabel->size().height(), ui->imageLabel->size().width()));
-    QImage thumbnail;
+    QImage qimg;
     if ( _model)
-        thumbnail = QTools::copyOpenCV2QImage( _model->thumbnail(I));
-    ui->imageLabel->setPixmap( QPixmap::fromImage(thumbnail));
+    {
+        //cv::Mat_<cv::Vec3b> img = FaceTools::makeThumbnail( _model, I);
+        qimg = QTools::copyOpenCV2QImage( img);
+    }   // end if
+    _ui->imageLabel->setPixmap( QPixmap::fromImage(qimg));
 }   // end setThumbnail
+
+
+// public
+int ScanInfoDialog::minThumbDims() const
+{
+    return std::min<int>( _ui->imageLabel->size().height(), _ui->imageLabel->size().width());
+}   // end minThumbDims
 
 
 void ScanInfoDialog::doOnApply()
 {
     assert(_model != nullptr);
-
     _model->setAge(age());
-    _model->setEthnicity(ethnicity());
-    _model->setSex(sex());
-    _model->setCaptureDate(captureDate());
-    _model->setSource(source());
-    _model->setDescription(description());
+    _model->setEthnicity("");
+    QString ethn = _ui->ethnicityComboBox->currentText();
+    if ( ethn != "N/A")
+    {
+        _model->setEthnicity(ethn);
+        addEthnicityToComboBox(ethn);
+    }   // end if
+    _model->setSex( fromLongSexString(_ui->sexComboBox->currentText()));
+    _model->setCaptureDate( _ui->captureDateEdit->date());
+    _model->setSource( _ui->sourceLineEdit->text());
+    _model->setDescription( _ui->remarksTextEdit->toPlainText());
 
     if ( !_model->isSaved())
         emit onUpdated(_model);
@@ -142,6 +201,6 @@ void ScanInfoDialog::accept()
 
 void ScanInfoDialog::reject()
 {
-    set(_model);
+    reset();
     this->hide();
 }   // end reject

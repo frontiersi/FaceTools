@@ -17,6 +17,8 @@
 
 #include <FaceActionManager.h>
 #include <FaceModelManager.h>
+#include <ActionVisualise.h>
+#include <BoundingVisualisation.h>
 #include <FaceModelViewer.h>
 #include <ModelSelector.h>
 #include <FaceModel.h>
@@ -46,6 +48,7 @@ FaceActionManager::FaceActionManager( FMV* viewer)
     : QObject(), _interactions( new ViewerInteractionManager( viewer))
 {
     ModelSelector::create( this, viewer);
+    addAction( new ActionVisualise( &_bvis));
 }   // end ctor
 
 
@@ -86,7 +89,7 @@ QAction* FaceActionManager::addAction( FaceAction* fa)
             connect( interactor, &MVI::onChangedData, this, &FaceActionManager::doOnChangedData);
         }   // end if
 
-        emit addedAction( fa);
+        emit addedAction(fa);
     }   // end if
     return fa->qaction();
 }   // end addAction
@@ -97,7 +100,6 @@ void FaceActionManager::doOnChangedData( FV* fv)
 {
     fv->data()->setSaved(false);
     doOnSelected( fv, true);    // Already selected so fine to do
-    emit onUpdateSelected( fv->data());
 }   // end doOnChangedData
 
 
@@ -157,7 +159,7 @@ void FaceActionManager::doOnActionFinished( EventSet evs, FVS workSet, bool)
         // Update the ready state for all actions using the currently selected FaceView (not the worked on set).
         FV* sel = ModelSelector::selected(); // May be null!
         std::for_each(std::begin(_actions), std::end(_actions), [=](FaceAction* a){ a->resetReady( sel);});
-        emit onUpdateSelected( sel ? sel->data() : nullptr);
+        emit onUpdateSelected( sel ? sel->data() : nullptr, sel);       // Ensure clients know to update status of selected post-action
         _mutex.unlock();
     }   // end else
 
@@ -221,12 +223,13 @@ void FaceActionManager::processFinishedAction( FaceAction* sact, EventSet &evs, 
 }   // end processFinishedAction
 
 
-// private
 void FaceActionManager::doOnSelected( FV* fv, bool v)
 {
-    std::for_each(std::begin(_actions), std::end(_actions), [=](FaceAction* a){ a->setReady(fv,v);});
+    for ( FaceAction* act : _actions)
+        act->setReady(fv, v);
+
     fv->data()->updateRenderers();
-    emit onUpdateSelected( fv->data());
+    emit onUpdateSelected( fv->data(), v);
 }   // end setReady
 
 

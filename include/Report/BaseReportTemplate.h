@@ -32,7 +32,7 @@ public:
 
     QString getDisplayName() const override { return _dname;}
 
-    bool isAvailable( const FaceModel*) const override { return true;}
+    bool isAvailable( const FM*) const override { return true;}
 
     // Return the title of the report
     virtual std::string reportTitle() const { return "";}
@@ -43,13 +43,13 @@ public:
     // Create and return the figure inserter for the given figure index.
     // Provide the temporary directory in which U3D models should be exported to.
     virtual RModelIO::LaTeXU3DInserter::Ptr createFigure( size_t,
-                                                const std::string&, // Temporary directory in which to construct U3D models
-                                                const FaceModel*,   // The model itself
+                                                const QString&,             // Temporary directory in which to construct U3D models
+                                                const RFeatures::ObjModel*, // The model itself
                                                 const RFeatures::CameraParams&) // The camera parameters to the model
                                                 { return nullptr;}
 
     // Destroy any cached data relating to the given FaceModel.
-    virtual void purge( const FaceModel*){}
+    virtual void purge( const FM*){}
 
 private:
     const QString _dname;

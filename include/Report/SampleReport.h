@@ -31,8 +31,8 @@ public:
     std::string reportTitle() const override { return "Sample Report";}
     size_t figureCount() const override { return 1;}
 
-    RModelIO::LaTeXU3DInserter::Ptr createFigure( size_t idx, const std::string&,
-                                                  const FaceModel*, const RFeatures::CameraParams&) override;
+    RModelIO::LaTeXU3DInserter::Ptr createFigure( size_t idx, const QString&,
+                  const RFeatures::ObjModel*, const RFeatures::CameraParams&) override;
 
 private:
 };  // end class

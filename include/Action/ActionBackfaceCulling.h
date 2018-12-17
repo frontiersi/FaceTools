@@ -29,7 +29,7 @@ public:
     ActionBackfaceCulling( const QString& dname="Backface Culling", const QIcon& ico=QIcon());
 
 private slots:
-    bool testReady( const Vis::FV*) override;
+    bool testEnabled( const QPoint*) const override { return ready1();}
     bool doAction( FVS&, const QPoint&) override;
     //void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(VIEW_CHANGE);}
 };  // end class

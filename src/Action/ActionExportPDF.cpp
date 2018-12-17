@@ -28,7 +28,6 @@
 #include <QFile>
 
 #include <boost/filesystem.hpp>
-#include <boost/system/error_code.hpp>
 #include <fstream>
 #include <cassert>
 using FaceTools::Action::ActionExportPDF;
@@ -65,7 +64,7 @@ bool ActionExportPDF::isAvailable()
 
 // public
 ActionExportPDF::ActionExportPDF( BaseReportTemplate* t, const QIcon& icon, const QString& email, QWidget* p, QProgressBar* pb)
-    : FaceAction( t->getDisplayName(), icon), _template(t), _parent(p)
+    : FaceAction( t->getDisplayName(), icon), _template(t), _parent(p), _cmodel(nullptr)
 {
     // Default author info
     if ( !email.isEmpty())
@@ -83,6 +82,7 @@ bool ActionExportPDF::testEnabled( const QPoint*) const { return ready1() && isA
 // Get the save filepath for the report
 bool ActionExportPDF::doBeforeAction( FVS& fvs, const QPoint&)
 {
+    progress(0.0f);
     assert( fvs.size() == 1);
     const FV* fv = fvs.first();
     std::string fname = FileIO::FMM::filepath( fv->data());
@@ -96,7 +96,7 @@ bool ActionExportPDF::doBeforeAction( FVS& fvs, const QPoint&)
     fileDialog.setDefaultSuffix( "pdf");
     fileDialog.selectFile( outfile);
     fileDialog.setAcceptMode( QFileDialog::AcceptSave);
-    //fileDialog.setOption( QFileDialog::DontUseNativeDialog);
+    fileDialog.setOption( QFileDialog::DontUseNativeDialog);
 
     QStringList fileNames;
     if ( fileDialog.exec())
@@ -104,73 +104,73 @@ bool ActionExportPDF::doBeforeAction( FVS& fvs, const QPoint&)
     fileDialog.close();
 
     _pdffile = "";
+    _cmodel = nullptr;
+    _cam = RFeatures::CameraParams();
     if ( !fileNames.empty())
     {
-        // Set the output file and try to remove what's already there (if anything)
-        _pdffile = fileNames.first().toStdString();
-        boost::system::error_code errCode;
-        if ( boost::filesystem::exists( _pdffile))
-        {
-            if ( !boost::filesystem::remove( _pdffile, errCode))
-            {
-                _err = errCode.message();
-                _pdffile = "";
-            }   // end if
-        }   // end if
+        _cmodel = fv->data()->info()->cmodel();
+        _cam = fv->viewer()->getCamera();
+        _pdffile = fileNames.first();
     }   // end if
 
-    return !_pdffile.empty();
+    return !_pdffile.isEmpty();
 }   // end doBeforeAction
 
 
 bool ActionExportPDF::doAction( FVS& fvs, const QPoint&)
 {
     assert( fvs.size() == 1);
-    const FV* fv = fvs.first();
     _err = "";
 
     QTemporaryDir tdir;
     //tdir.setAutoRemove(false);    // Uncomment for debug purposes
     if ( !tdir.isValid())
     {
-        _err = "Unable to open temporary directory for report generation!";
+        _err = tr("Unable to open temporary directory for report generation!");
         return false;
     }   // end if
 
-    progress(0.0f);
-
     QFile logo( _logoFile);
-    const std::string logopath = tdir.filePath( "logo.pdf").toStdString();
-    if ( logo.copy( logopath.c_str()))
+    const QString logopath = tdir.filePath( "logo.pdf");
+    if ( logo.copy( logopath))
         std::cerr << "[INFO] FaceTools::Action::ActionExportPDF::doAction: Saved logo to ";
     else
         std::cerr << "[ERROR] FaceTools::Action::ActionExportPDF::doAction: Error saving logo to ";
-    std::cerr << "'" << logopath << "'" << std::endl;
+    std::cerr << "'" << logopath.toStdString() << "'" << std::endl;
 
     std::cerr << "[INFO] FaceTools::Action::ActionExportPDF::doAction: Creating U3D based figure(s)..." << std::endl;
-    const std::string texpath = tdir.filePath( "report.tex").toStdString();   // File location where LaTeX being written
+    const QString texpath = tdir.filePath( "report.tex");   // File location where LaTeX being written
     // Figure references need to be stored until after PDF generation since LaTeXU3DInserter destructor
     // will remove delete U3D instances from the filesystem.
+    progress(0.1f);
     std::vector<FigIns> figs;
-    if ( !writeLaTeX( fv->data(), fv->viewer()->getCamera(), tdir.path().toStdString(), texpath, logopath, figs))
-        _err = "Failed to create '" + texpath + "' for LaTeX parsing!";
+    if ( !writeLaTeX( _cmodel, _cam, tdir.path(), texpath, logopath, figs))
+        _err = tr("Failed to create '") + texpath + tr("' for LaTeX parsing!");
     else
     {
         std::cerr << "[INFO] FaceTools::Action::ActionExportPDF::doAction: Generating PDF from LaTeX..." << std::endl;
         PDFGenerator pdfgen(false);
-        const bool genOk = pdfgen( texpath, true);
+        const bool genOk = pdfgen( texpath.toStdString(), true);
         if ( !genOk)
-            _err = "Failed to generate PDF!";
+            _err = tr("Failed to generate PDF!");
         else
         {
+            QFile pdffile(_pdffile);
+            if ( pdffile.exists() && !pdffile.remove())
+            {
+                _err = tr("Cannot overwrite destination file!");
+                _pdffile = "";
+            }   // end if
+
             // Copy the created pdf to the requested location.
             QFile outfile( tdir.filePath( "report.pdf"));
-            outfile.copy( _pdffile.c_str());
+            outfile.copy( _pdffile);
         }   // end else
     }   // endelse
 
+    _cmodel = nullptr;
     progress(1.0f);
-    return _err.empty();
+    return _err.isEmpty();
 }   // end doAction
 
 
@@ -178,13 +178,14 @@ void ActionExportPDF::doAfterAction( EventSet& cs, const FVS&, bool v)
 {
     if ( !v)
     {
-        QMessageBox::warning( _parent, tr("PDF Export Error!"), tr( _err.c_str()));
-        std::cerr << _err << std::endl;
+        QMessageBox::warning( _parent, tr("PDF Export Error!"), _err);
+        std::cerr << _err.toStdString() << std::endl;
     }   // end if
     else 
     {
-        std::cerr << "[INFO] FaceTools::Action::ActionExportPDF::doAfterAction: Created PDF at '" << _pdffile << "'" << std::endl;
-        QMessageBox::information( _parent, tr("Created PDF"), tr( (std::string("Created PDF at '") + _pdffile + "'").c_str()));
+
+        std::cerr << "[INFO] FaceTools::Action::ActionExportPDF::doAfterAction: Created PDF at '" << _pdffile.toStdString() << "'" << std::endl;
+        QMessageBox::information( _parent, tr("Created PDF"), tr( "Created PDF at '") + _pdffile + ("'"));
         cs.insert(REPORT_CREATED);
     }   // end if
     _pdffile = "";
@@ -195,18 +196,18 @@ void ActionExportPDF::purge( const FaceModel* fm) { _template->purge(fm);}
 
 
 // private
-bool ActionExportPDF::writeLaTeX( const FaceModel* fm,
+bool ActionExportPDF::writeLaTeX( const RFeatures::ObjModel* model,
                                   const RFeatures::CameraParams& cam,
-                                  const std::string& tmpdir,
-                                  const std::string& texfile,
-                                  const std::string& logopath,
+                                  const QString& tmpdir,
+                                  const QString& texfile,
+                                  const QString& logopath,
                                   std::vector<FigIns>& figs)
 {
     std::string ainfo = _author.toStdString();
     std::ofstream os;
     try
     {
-        os.open( texfile.c_str(), std::ios::out);
+        os.open( texfile.toStdString(), std::ios::out);
         os << "\\documentclass{article}" << std::endl;
         os << "\\listfiles" << std::endl;   // Do this to see in the .log file which packages are used
         os << "\\usepackage[textwidth=20cm,textheight=24cm]{geometry}" << std::endl;
@@ -224,7 +225,7 @@ bool ActionExportPDF::writeLaTeX( const FaceModel* fm,
         os << "\\renewcommand{\\footrulewidth}{0pt}" << std::endl;
         os << "\\setlength\\headheight{80.0pt}" << std::endl;
         os << "\\addtolength{\\textheight}{-80.0pt}" << std::endl;
-        os << "\\rhead{\\includegraphics[width=0.5\\textwidth]{" << logopath << "}}" << std::endl;
+        os << "\\rhead{\\includegraphics[width=0.5\\textwidth]{" << logopath.toStdString() << "}}" << std::endl;
         os << "\\lhead{" << std::endl;
         os << "\\Large " << _template->reportTitle() << " \\\\" << std::endl;
         os << "\\large \\today \\\\" << std::endl;
@@ -243,7 +244,7 @@ bool ActionExportPDF::writeLaTeX( const FaceModel* fm,
         const float progVal = 0.9f/nfigs;
         for ( size_t i = 0; i < nfigs; ++i)
         {
-            FigIns fig = _template->createFigure( i, tmpdir, fm, cam);
+            FigIns fig = _template->createFigure( i, tmpdir, model, cam);
             if ( fig)
             {
                 figs.push_back(fig);    // Store until after PDF generated so U3D figure not prematurely deleted from filesystem.
@@ -259,12 +260,12 @@ bool ActionExportPDF::writeLaTeX( const FaceModel* fm,
     }   // end try
     catch ( const std::exception& e)
     {
-        std::cerr << "[EXCEPTION!] Exception writing to file " << texfile << std::endl;
+        std::cerr << "[EXCEPTION!] Exception writing to file " << texfile.toStdString() << std::endl;
         std::cerr << e.what() << std::endl;
-        _err = "Unable to write report template at '" + texfile + "'!";
+        _err = tr("Unable to write report template at '") + texfile + tr("'!");
     }   // end catch
     os.close();
-    return _err.empty();
+    return _err.isEmpty();
 }   // end writeLaTeX
 
 

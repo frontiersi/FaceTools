@@ -28,7 +28,7 @@ class FaceTools_EXPORT ActionSetOpacity : public FaceAction
 { Q_OBJECT
 public:
     // Display name will be used for spin box widget's tool tip.
-    ActionSetOpacity( const QString& dname, double maxOpacityOnOverlap=0.5, double minOpacity=0.1, QWidget* parent=nullptr);
+    ActionSetOpacity( const QString& dname, double maxOpacityOnOverlap=0.7, double minOpacity=0.1, QWidget* parent=nullptr);
 
     QWidget* getWidget() const override { return _opacitySpinBox;}
 
@@ -46,6 +46,7 @@ private slots:
 private:
     double _maxOpacityOnOverlap;
     QDoubleSpinBox *_opacitySpinBox;
+    FMV* _viewer;
 };  // end class
 
 }   // end namespace

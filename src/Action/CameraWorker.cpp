@@ -34,7 +34,7 @@ CameraWorker::CameraWorker( FaceModelViewer* v, size_t fps, double hs, double vs
       _ABS_MAX_H_RADS(hmax * CV_PI/180),
       _ABS_MAX_V_RADS(vmax * CV_PI/180),
       _cp( _viewer->getCamera()),
-      _timer(NULL),
+      _timer(nullptr),
       _hdiff(0), _vdiff(0),
       _hangle(0), _vangle(0)
 {
@@ -49,7 +49,7 @@ void CameraWorker::start()
     stop(); // Ensure stopped
     _cp = _viewer->getCamera(); // The base camera
 
-    qint64 mspf =  qint64(1000.0/_fps);
+    const int mspf =  static_cast<int>(1000.0/_fps);
     _hdiff = 2.0*mspf*_ABS_MAX_H_RADS/(_hs * 1000);
     _vdiff = 2.0*mspf*_ABS_MAX_V_RADS/(_vs * 1000);
 
@@ -66,7 +66,7 @@ void CameraWorker::stop()
 {
     if ( _timer)
         delete _timer;
-    _timer = NULL;
+    _timer = nullptr;
 }   // end stop
 
 

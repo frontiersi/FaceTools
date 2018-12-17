@@ -28,7 +28,7 @@ namespace Report {
 class FaceTools_EXPORT ReportInterface : public QTools::PluginInterface
 { Q_OBJECT
 public:
-    virtual bool isAvailable( const FaceModel*) const = 0;  // If the data for this report are available.
+    virtual bool isAvailable( const FM*) const = 0;  // If the data for this report are available.
 };  // end class
 
 }   // end namespace

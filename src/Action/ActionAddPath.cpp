@@ -26,31 +26,32 @@ using FaceTools::Action::ActionAddPath;
 using FaceTools::Action::ActionEditPaths;
 using FaceTools::Action::EventSet;
 using FaceTools::Interactor::PathSetInteractor;
+using FaceTools::Vis::PathSetVisualisation;
 using FaceTools::FVS;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
 
 
 ActionAddPath::ActionAddPath( const QString& dn, const QIcon& ico, ActionEditPaths* e)
-    : FaceAction( dn, ico), _editor(e)
+    : FaceAction( dn, ico),
+      _vis( static_cast<PathSetVisualisation*>(e->visualisation())),
+      _interactor( e->interactor())
 {
 }   // end ctor
 
 
 bool ActionAddPath::testEnabled( const QPoint*) const
 {
-    const bool g = _editor->interactor()->hoverPathId() < 0;
-    const FV* fv = _editor->interactor()->hoverModel();
-    return isReady(fv) && g;
+    const FV* fv = _interactor->hoverModel();
+    return isReady(fv) && _interactor->hoverPathId() < 0;
 }   // end testEnabled
 
 
 bool ActionAddPath::doAction( FVS& fvs, const QPoint& p)
 {
-    assert(_editor);
     FV* fv = fvs.first();
     assert(fv);
-    assert( _editor->interactor()->hoverModel() == fv);
+    assert( _interactor->hoverModel() == fv);
     fvs.clear();
 
     FM* fm = fv->data();
@@ -64,12 +65,13 @@ bool ActionAddPath::doAction( FVS& fvs, const QPoint& p)
         fm->setSaved(false);
         //fm->unlock();
         fvs.insert( fm);
-        _editor->interactor()->setPathDrag( pid);
 
+        _vis->refresh(fm);
+        _interactor->setPathDrag( pid);
         // The point used to set the initial handle is not
         // necessarily where the mouse cursor is now.
         if ( fv->projectToSurface( fv->viewer()->mouseCoords(), hpos))
-            _editor->interactor()->moveDragHandle( hpos);
+            _interactor->moveDragHandle( hpos);
     }   // end if
 
     return pid >= 0;

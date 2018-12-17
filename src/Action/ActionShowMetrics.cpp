@@ -17,74 +17,118 @@
 
 #include <ActionShowMetrics.h>
 #include <MetricCalculatorManager.h>
+#include <PhenotypeManager.h>
 #include <MetricVisualiser.h>
-#include <ModelSelector.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <algorithm>
 using FaceTools::Action::ActionShowMetrics;
 using FaceTools::Action::FaceAction;
-using FaceTools::Interactor::MEEI;
 using FaceTools::Interactor::MetricsInteractor;
+using FaceTools::Metric::MetricSet;
 using FaceTools::Metric::MCSet;
 using FaceTools::Metric::MC;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
 using FaceTools::FM;
 using MCM = FaceTools::Metric::MetricCalculatorManager;
+using FaceTools::Widget::ChartDialog;
+using FaceTools::Widget::MetricsDialog;
+using FaceTools::Widget::PhenotypesDialog;
+using FaceTools::Action::ModelSelector;
+using FaceTools::Metric::PhenotypeManager;
+using FaceTools::Metric::Phenotype;
 
 
-ActionShowMetrics::ActionShowMetrics( const QString& dn, const QIcon& ico, const MEEI* meei)
-    : FaceAction( dn, ico), _interactor(meei)
+ActionShowMetrics::ActionShowMetrics( const QString& dn, const QIcon& ico, QWidget *parent)
+    : FaceAction( dn, ico),
+      _mdialog( new MetricsDialog( parent)),
+      _cdialog( new ChartDialog( parent)),
+      _pdialog( new PhenotypesDialog( parent))
 {
     setCheckable( true, false);
-    ProcessFlagPredicate pfp = [this](const FVS&){ return this->isChecked();};
-    setRespondToEvent( METADATA_CHANGE, pfp);
-    setRespondToEvent( GEOMETRY_CHANGE, pfp);
-    setRespondToEvent( LANDMARKS_ADD, pfp);
-    setRespondToEvent( LANDMARKS_CHANGE, pfp);
 
-    connect( &_interactor, &MetricsInteractor::onEnterMetric, this, &ActionShowMetrics::doOnEnterMetric);
-    connect( &_interactor, &MetricsInteractor::onLeaveMetric, this, &ActionShowMetrics::doOnLeaveMetric);
+    TestFVSTrue pfp = [this](const FVS&){ return this->isChecked();};
+    setRespondToEvent( METRICS_CHANGE, pfp);
 
-    for ( MC::Ptr mc : MCM::vmetrics())
-        connect( &*mc, &MC::updated, this, &ActionShowMetrics::doOnMetricUpdated);
+    for ( MC::Ptr mc : MCM::metrics())
+        connect( &*mc, &MC::updated, this, &ActionShowMetrics::doOnMetricUpdated);  // E.g. whether metric is hidden, name change etc.
+
+    for ( MC::Ptr mc : MCM::metrics())
+        connect( &*mc, &MC::activated, this, &ActionShowMetrics::doOnMetricActivated);
+
+    connect( _mdialog, &MetricsDialog::onShowChart, this, &ActionShowMetrics::doOnShowChart);
+    connect( _mdialog, &MetricsDialog::onEthnicityIgnored, _cdialog, &ChartDialog::doOnSetEthnicityIgnored);
+    connect( _mdialog, &MetricsDialog::onShowPhenotypes, this, &ActionShowMetrics::doOnShowPhenotypes);
+    connect( _mdialog, &MetricsDialog::onShowingPhenotypes, _pdialog, &PhenotypesDialog::doOnShowPhenotypes);
+
+    _mdialog->setShowMetricsAction(qaction());
 }   // end ctor
 
 
-// private slot
-void ActionShowMetrics::doOnMetricUpdated()
+void ActionShowMetrics::setShowScanInfoAction( QAction* a) { _mdialog->setShowScanInfoAction(a);}
+
+
+namespace {
+void showDialog( QDialog *dialog)
 {
-    MC* mc = qobject_cast<MC*>(sender());
+    dialog->show();
+    dialog->raise();
+    dialog->activateWindow();
+}   // end showDialog
+}   // end namespace
+
+
+void ActionShowMetrics::doOnShowChart() { showDialog( _cdialog);}
+void ActionShowMetrics::doOnShowPhenotypes() { showDialog( _pdialog);}
+
+
+void ActionShowMetrics::doOnMetricActivated()
+{
+    MC::Ptr pmc = MCM::previousActiveMetric();  // Previous active metric
+    if ( pmc)
+    {
+        pmc->visualiser()->showText(nullptr);   // Remove text of old active from all views
+        pmc->visualiser()->setHighlighted(nullptr);
+    }   // end if
+
+    FM* fm = nullptr;
+    if ( ModelSelector::selected())
+        fm = ModelSelector::selected()->data();
+
+    MC::Ptr amc = MCM::activeMetric();           // Newly active metric
+    if ( fm)    // Set and show active metric's text for the given model (views).
+    {
+        amc->visualiser()->setHighlighted( fm);
+        amc->visualiser()->updateText( fm);
+        amc->visualiser()->showText( fm);
+        fm->updateRenderers();
+    }   // end if
+}   // end doOnMetricActivated
+
+
+void ActionShowMetrics::doOnMetricUpdated( int mid)
+{
+    MC::Ptr mc = MCM::metric(mid);
+
     for ( FM* fm : _vmodels) // Update mc's visualiser on all currently visualised models.
     {
         const FVS& fvs = fm->fvs();
         std::for_each( std::begin(fvs), std::end(fvs), [=](FV* fv){ fv->remove(mc->visualiser());});
-        if ( isChecked() && mc->isVisible())
-            std::for_each( std::begin(fvs), std::end(fvs), [=](FV* fv){ fv->apply(mc->visualiser());});
     }   // end for
+
+    if ( isChecked() && mc->isVisible())
+    {
+        for ( FM* fm : _vmodels) // Update mc's visualiser on all currently visualised models.
+        {
+            const FVS& fvs = fm->fvs();
+            std::for_each( std::begin(fvs), std::end(fvs), [=](FV* fv){ fv->apply(mc->visualiser());});
+        }   // end for
+    }   // end if
+
     FaceTools::updateRenderers( _vmodels);
 }   // end doOnMetricUpdated
 
-
-// private slot
-void ActionShowMetrics::doOnEnterMetric( const FV* fv, int mid)
-{
-    MC::Ptr mc = MCM::metric(mid);
-    mc->visualiser()->updateCaptions( fv->data());
-    mc->visualiser()->setCaptionsVisible( true);
-    fv->data()->updateRenderers();
-    emit onEnterMetric( mid);
-}   // end doOnEnterMetric
-
-
-// private slot
-void ActionShowMetrics::doOnLeaveMetric( const FV* fv, int mid)
-{
-    MC::Ptr mc = MCM::metric(mid);
-    mc->visualiser()->setCaptionsVisible( false);
-    fv->data()->updateRenderers();
-}   // end doOnLeaveMetric
 
 
 bool ActionShowMetrics::testIfCheck( const FV* fv) const
@@ -101,11 +145,12 @@ bool ActionShowMetrics::testIfCheck( const FV* fv) const
 
 
 namespace {
-bool canVisualiseAny( const FaceTools::Metric::MetricSet& mset)
+bool canVisualiseAny( const MetricSet& mset)
 {
     for ( int id : mset.ids())
     {
-        if ( MCM::metric(id)->visualiser() != nullptr)
+        MC::Ptr mc = MCM::metric(id);
+        if ( mc->visualiser())
             return true;
     }   // end for
     return false;
@@ -115,7 +160,6 @@ bool canVisualiseAny( const FaceTools::Metric::MetricSet& mset)
 
 bool ActionShowMetrics::testReady( const FV* fv)
 {
-    assert(fv);
     const FM* fm = fv->data();
     // Ready only if the model has metrics set that can be visualised
     fm->lockForRead();
@@ -127,11 +171,26 @@ bool ActionShowMetrics::testReady( const FV* fv)
 }   // end testReady
 
 
-bool ActionShowMetrics::doAction( FVS& fvsin, const QPoint&)
+void ActionShowMetrics::tellReady( const FV* fv, bool isready)
 {
-    assert(fvsin.size() == 1);
-    FV* fv = fvsin.first();
-    FM* fm = fv->data();
+    if ( _cdialog->isVisible())
+        _cdialog->refresh();
+    _mdialog->setDetectedOnlyEnabled(fv && isready);
+}   // end tellReady
+
+
+bool ActionShowMetrics::testEnabled( const QPoint*) const { return ready1();}
+
+
+bool ActionShowMetrics::doAction( FVS& fvs, const QPoint&)
+{
+    if ( !ModelSelector::selected())
+        return false;
+
+    fvs.clear();
+    FM* fm = ModelSelector::selected()->data();
+    fvs.insert(fm);
+
     purge( fm); // Remove all visualisers initially
 
     size_t numShownMetrics = 0;
@@ -145,8 +204,8 @@ bool ActionShowMetrics::doAction( FVS& fvsin, const QPoint&)
             if ( mc->isVisible())  // Skip if not selected to be visualised
             {
                 numShownMetrics++;
-                const FVS& fvs = fm->fvs();
-                std::for_each( std::begin(fvs), std::end(fvs), [=](FV* fv){ fv->apply( mc->visualiser());});
+                for ( FV* f : fm->fvs())
+                    f->apply( mc->visualiser());
             }   // end if
         }   // end for
     }   // end if
@@ -155,10 +214,12 @@ bool ActionShowMetrics::doAction( FVS& fvsin, const QPoint&)
     if ( isChecked() && numShownMetrics == 0)
         setChecked(false);
 
-    // Prevent deselection of the selected view until no longer showing metrics
-    // since repicking the model will be disabled.
-    fv->setPickable(!isChecked());
-    ModelSelector::setSelectEnabled( !isChecked());
+    // Ensure the metrics dialog is always shown when the metrics are.
+    if ( isChecked())
+        showDialog(_mdialog);
+
+    _mdialog->doOnRefreshMatched();
+    doOnMetricActivated();
 
     return true;
 }   // end doAction
@@ -166,9 +227,14 @@ bool ActionShowMetrics::doAction( FVS& fvsin, const QPoint&)
 
 void ActionShowMetrics::purge( const FM* fm)
 {
-    const MCSet& mcs = MCM::vmetrics();
-    const FVS& fvs = fm->fvs();
-    for ( FV* fv : fvs)
-        std::for_each( std::begin(mcs), std::end(mcs), [=](MC::Ptr mc){ fv->remove( mc->visualiser());});
+    for ( FV* fv : fm->fvs())
+    {
+        for ( MC::Ptr mc : MCM::vmetrics())
+        {
+            fv->remove( mc->visualiser());
+            mc->visualiser()->purge(fv);
+        }   // end for
+    }   // end for
     _vmodels.erase(const_cast<FM*>(fm));
+    _cdialog->refresh();
 }   // end purge

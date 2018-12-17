@@ -19,27 +19,26 @@
 #define FACE_TOOLS_ACTION_ALIGN_LANDMARKS_H
 
 /**
- * Aligns models with landmarks sharing the same names. Requires a minimum of three landmarks with same names.
+ * Aligns models with landmarks sharing the same names using Procrustes superimposition.
+ * Requires a minimum of three landmarks with same names.
  */
 
 #include "FaceAction.h"
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionAlignLandmarks : public FaceAction
 { Q_OBJECT
 public:
     // Async if pb not NULL
-    ActionAlignLandmarks( const QString& dname="Align Landmarks", const QIcon& icon=QIcon(), QProgressBar* pb=NULL);
+    ActionAlignLandmarks( const QString& dname="Align Landmarks", const QIcon& icon=QIcon(), QProgressBar* pb=nullptr);
 
 protected slots:
-    bool testEnabled( const QPoint* mc=nullptr) const override;
+    bool testEnabled( const QPoint*) const override;
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(AFFINE_CHANGE);}
 };  // end class
 
-}   // end namespace
-}   // end namespace
+} }   // end namespace
 
 #endif

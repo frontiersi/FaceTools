@@ -32,7 +32,7 @@ namespace FaceTools {
 class FaceTools_EXPORT ModelViewer : public QWidget
 { Q_OBJECT
 public:
-    ModelViewer( QWidget* parent=NULL, bool useFloodLights=false);
+    ModelViewer( QWidget* parent=nullptr, bool useFloodLights=false);
     virtual ~ModelViewer();
 
     // Interactor::ModelViewerInteractor (MVI) calls the protected attach and detach functions. Multiple different
@@ -58,9 +58,6 @@ public:
     QPoint mapToGlobal( const QPoint& p) const { return _qviewer->mapToGlobal(p);}
 
     void setSize( const cv::Size&);
-
-    void addToLayout( QLayout*);
-    void removeFromLayout( QLayout*);
 
     void show();
     void hide();
@@ -105,6 +102,7 @@ public:
     // Add or remove a prop.
     void add( vtkProp*);
     void remove( vtkProp*);
+    void clear();   // Clear all props
 
     // Set the legend title and colours lookup table for the scalar legend.
     void setLegend( const std::string& title, vtkLookupTable*);
@@ -115,7 +113,7 @@ public:
     cv::Vec3f project( const cv::Point&) const;         // Project to world coords.
     cv::Vec3f project( const QPoint&) const;            // Project to world coords.
 
-    // Return the prop under the given coords or NULL if none pointed at.
+    // Return the prop under the given coords or null if none pointed at.
     const vtkProp* getPointedAt( const cv::Point2f&) const;
     const vtkProp* getPointedAt( const cv::Point&) const;
     const vtkProp* getPointedAt( const QPoint&) const;
@@ -134,10 +132,10 @@ public:
     void fitCamera( double radius); // Adjust FoV to fit an object of given radius AT CURRENT DISTANCE
     void setCamera( const RFeatures::CameraParams&);
     // Set the camera using vectors (normal is towards the camera).
-    void setCamera( const cv::Vec3f& focus, const cv::Vec3f& normal, const cv::Vec3f& upvector, float camRng=650.0f);
+    void setCamera( const cv::Vec3f& focus, const cv::Vec3f& normal, const cv::Vec3f& upvector, double camRng=650.0);
     void setFocus( const cv::Vec3f&);
     RFeatures::CameraParams getCamera() const;
-    float cameraDistance() const;   // Distance between position and focus
+    double cameraDistance() const;   // Distance between position and focus
 
     size_t getWidth() const;    // Return the width of the viewport in pixels
     size_t getHeight() const;   // Return the height of the viewport in pixels

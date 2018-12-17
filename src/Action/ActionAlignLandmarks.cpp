@@ -17,9 +17,11 @@
 
 #include <ActionAlignLandmarks.h>
 #include <FaceModelViewer.h>
+#include <FaceTools.h>
 #include <FaceModel.h>
 #include <algorithm>
 #include <ObjModelAligner.h>
+#include <Transformer.h>
 using FaceTools::Action::ActionAlignLandmarks;
 using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
@@ -28,6 +30,7 @@ using FaceTools::FMS;
 using FaceTools::Vis::FV;
 using FaceTools::Landmark::LandmarkSet;
 using FaceTools::FM;
+using RFeatures::ObjModel;
 
 namespace {
 
@@ -62,43 +65,57 @@ size_t findSharedLandmarksModels( FMS& fms, const LandmarkSet::Ptr& lmks)
 }   // end findSharedLandmarksModels
 
 
-// For each of these models, look at the source landmarks, and remove from lmset those that don't appear.
-size_t findCommonLandmarks( IntSet& lmset, const FMS& fms)
+// Make an ObjModel from the subset of landmarks of lmks given by clmks and correspond the added vertex IDs to the originating landmark IDs.
+ObjModel::Ptr makeModelFromLandmarks( const LandmarkSet::Ptr& lmks, const std::vector<int>& clmks)
 {
-    IntSet remset;
-    for ( const FM* fm : fms)
-    {
-        fm->lockForRead();
-        LandmarkSet::Ptr tlmks = fm->landmarks();
-        for ( int id : lmset)
-        {
-            if ( !tlmks->has(id))
-                remset.insert(id);  // Flag for removal - landmark not present in this model.
-        }   // end for
-        fm->unlock();
-    }   // end for
-    // Remove the flagged landmark names
-    lmset.erase( remset.begin(), remset.end());
-    return lmset.size();
-}   // end findCommonLandmarks
-
-
-// Make an ObjModel from the subset of landmarks of lmks given by lmset.
-RFeatures::ObjModel::Ptr makeModelFromLandmarks( const LandmarkSet::Ptr& lmks, const IntSet& lmset)
-{
-    RFeatures::ObjModel::Ptr lmodel = RFeatures::ObjModel::create();
-    for ( int id : lmset)
+    ObjModel::Ptr mod = ObjModel::create();
+    for ( int id : clmks)
     {
         if ( LDMKS_MAN::landmark(id)->isBilateral())
         {
-            lmodel->addVertex( *lmks->pos(id, FaceTools::FACE_LATERAL_LEFT));
-            lmodel->addVertex( *lmks->pos(id, FaceTools::FACE_LATERAL_RIGHT));
+            mod->addVertex( *lmks->pos(id, FaceTools::FACE_LATERAL_LEFT));
+            mod->addVertex( *lmks->pos(id, FaceTools::FACE_LATERAL_RIGHT));
         }   // end if
         else
-            lmodel->addVertex( *lmks->pos(id, FaceTools::FACE_LATERAL_MEDIAL));
+            mod->addVertex( *lmks->pos(id, FaceTools::FACE_LATERAL_MEDIAL));
     }   // end for
-    return lmodel;
+    return mod;
 }   // end makeModelFromLandmarks
+
+
+ObjModel::Ptr makeMeanLandmarksModel( const std::vector<ObjModel::Ptr>& lms, double &rms)
+{
+    assert(lms.size() > 0);
+
+    ObjModel::Ptr nm = ObjModel::create();
+
+    // For each vertex from the provided models, set the new landmark vertex as the mean from all the models.
+    const double nfactor = 1.0 / static_cast<int>(lms.size());
+    const int n = static_cast<int>((*lms.begin())->getNumVertices());
+    for ( int vidx = 0; vidx < n; ++vidx)   // Okay to do this since all vertex IDs [0,n-1] will be present
+    {
+        cv::Vec3d v(0,0,0);
+        for ( ObjModel::Ptr m : lms)
+            v += m->vtx(vidx);
+        v *= nfactor;
+        nm->addVertex(v);
+    }   // end for
+
+    // Calculate the new root mean square error of displacement
+    rms = 0;
+    for ( int vidx = 0; vidx < n; ++vidx)
+    {
+        const cv::Vec3f& mv = nm->vtx(vidx);
+        for ( ObjModel::Ptr m : lms)
+        {
+            const cv::Vec3f& v = m->vtx(vidx);
+            rms += double(powf(v[0] - mv[0],2) + powf(v[1] - mv[1],2) + powf(v[2] - mv[2],2));
+        }   // end for
+    }   // end for
+    rms = sqrt( rms / (n*int(lms.size())));
+
+    return nm;
+}   // end makeMeanLandmarksModel
 
 }   // end namespace
 
@@ -141,35 +158,70 @@ bool ActionAlignLandmarks::doAction( FVS& rset, const QPoint&)
 {
     assert(rset.size() == 1);
     FV* fv = rset.first();
-    FM* sfm = fv->data();
-    rset.erase(fv); // Won't actually do work on the source FaceView!
+    FM* sfm = fv->data();   // Source model
 
     // Find the landmarks common across all models in the viewer.
-    sfm->lockForRead();
-    IntSet lmset = sfm->landmarks()->ids();  // Initially all (copy out)
-    sfm->unlock();
+    std::vector<int> clmks;
     FMS fms = fv->viewer()->attached().models();
-    fms.erase(sfm); // Erase the source
-    const size_t ncommon = findCommonLandmarks( lmset, fms);
+    const size_t ncommon = findCommonLandmarks( clmks, fms);
     assert(ncommon >= 3);   // Otherwise this shouldn't have been enabled!
     if ( ncommon < 3)
         return false;
 
-    // Create the source model to align against
-    RFeatures::ObjModel::Ptr lmodel = makeModelFromLandmarks( sfm->landmarks(), lmset);
-    RFeatures::ObjModelAligner::Ptr aligner = RFeatures::ObjModelAligner::create( lmodel);
+    const size_t n = fms.size();
 
-    // Look at the other models and align to the source
+    // Create the initial sets of common landmarks models associated with each FaceModel
+    ObjModel::Ptr mlmks;    // Will be the "mean" landmark model updated at each iteration.
+    std::vector<ObjModel::Ptr> lmodels, olmodels;   // lmodels is updated while olmodels holds a copy of the original.
+    std::vector<FM*> fmodels;
     for ( FM* fm : fms)
     {
-        fm->lockForWrite();
-        RFeatures::ObjModel::Ptr m0 = makeModelFromLandmarks( fm->landmarks(), lmset);
-        cv::Matx44d T = aligner->calcTransform( m0.get());
-        fm->transform(T);
+        fmodels.push_back(fm);
+        fm->lockForRead();
+        ObjModel::Ptr mod = makeModelFromLandmarks( fm->landmarks(), clmks);
+        fm->unlock();
+        lmodels.push_back( mod);
+        olmodels.push_back( ObjModel::copy(mod.get()));
+        if ( fm == sfm) // Ensure the first target landmark model to superimpose against is from the selected FaceModel.
+            mlmks = mod;
+    }   // end for
+
+    double tol = 0.0001;
+    double rms = DBL_MAX;
+    double rmsDelta = DBL_MAX;
+    while ( rmsDelta >= tol)
+    {
+        RFeatures::ObjModelProcrustesSuperimposition aligner( mlmks.get());
+
+        // Align each of landmark models to the mean landmark model.
+        for ( size_t i = 0; i < n; ++i)
+        {
+            ObjModel::Ptr mod = lmodels.at(i);
+            cv::Matx44d T = aligner.calcTransform( mod.get());    // Calculate the transform to the source landmark model
+            // Transform this landmark model to be superimposed against the current mean landmark model.
+            RFeatures::Transformer transformer(T);
+            transformer.transform(mod);
+        }   // end for
+
+        rmsDelta = rms;
+        mlmks = makeMeanLandmarksModel( lmodels, rms);
+        rmsDelta -= rms;
+        std::cerr << "RMS: " << rms << " (delta = " << rmsDelta << ")" << std::endl;
+    }   // end while
+
+    // Calculate the transforms using the final mean landmark model created and the original untransformed landmark models.
+    RFeatures::ObjModelProcrustesSuperimposition aligner( mlmks.get());
+
+    rset.clear();
+    for ( size_t i = 0; i < n; ++i)
+    {
+        ObjModel::Ptr lmod = olmodels.at(i);
+        cv::Matx44d T = aligner.calcTransform( lmod.get());
+        FM* fm = fmodels[i];
+        fm->transform( T);
         // Set the FaceViews adjusted as a result
         for ( auto* f : fm->fvs())
             rset.insert(f);    // Worked on this view!
-        fm->unlock();
     }   // end for
 
     return true;

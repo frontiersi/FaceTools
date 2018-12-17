@@ -20,6 +20,7 @@
 #include <VtkTools.h>       // RVTK
 #include <vtkProperty.h>
 #include <vtkTextProperty.h>
+#include <vtkTextActor.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkMapper.h>
 #include <algorithm>
@@ -39,9 +40,10 @@ void SphereView::init()
     _caption->GetCaptionTextProperty()->SetFontFamilyToCourier();
     _caption->GetCaptionTextProperty()->SetFontSize(21);
     _caption->GetCaptionTextProperty()->SetColor( 1,1,1);
-    //_caption->GetCaptionTextProperty()->SetUseTightBoundingBox(true);
+    _caption->GetCaptionTextProperty()->SetUseTightBoundingBox(true);
     _caption->SetVisibility(false);
     _caption->SetPickable(false);
+    _caption->GetTextActor()->SetTextScaleModeToNone();
 
     _actor = new VtkScalingActor( _source);
 }   // end init
@@ -119,12 +121,8 @@ void SphereView::setColour( double r, double g, double b) { _actor->setColour(r,
 void SphereView::setColour( const double c[]) { _actor->setColour(c);}
 const double* SphereView::colour() const { return _actor->colour();}
 
-void SphereView::setCaption( const std::string& lname)
-{
-    _caption->SetCaption( lname.c_str());
-    _caption->SetPosition2( lname.size() * 0.015, 0.05);
-    //_caption->SetHeight(0.05);
-}   // end setCaption
+void SphereView::setCaption( const std::string& lname) { _caption->SetCaption( lname.c_str());}
+void SphereView::setCaption( const QString& lname) { setCaption(lname.toStdString());}
 
 
 std::string SphereView::caption() const

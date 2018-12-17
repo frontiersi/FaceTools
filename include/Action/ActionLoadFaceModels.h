@@ -20,6 +20,7 @@
 
 #include "FaceAction.h"
 #include <LoadFaceModelsHelper.h>
+#include <QFileDialog>
 
 namespace FaceTools { namespace Action {
 
@@ -39,6 +40,7 @@ protected slots:
 
 private:
     FileIO::LoadFaceModelsHelper _loadHelper;
+    QFileDialog *_dialog;
 };  // end class
 
 }}   // end namespace

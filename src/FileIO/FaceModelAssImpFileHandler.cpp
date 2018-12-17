@@ -35,7 +35,7 @@ FaceModelAssImpFileHandler::FaceModelAssImpFileHandler( RModelIO::AssetImporter*
 FaceModel* FaceModelAssImpFileHandler::read( const QString& qfname)
 {
     _err = "";
-    FaceModel* fm = NULL;
+    FaceModel* fm = nullptr;
     const std::string fname = qfname.toStdString();
     RFeatures::ObjModel::Ptr model = _importer->load(fname);
     if ( model)

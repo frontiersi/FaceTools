@@ -15,22 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionComponentSelect.h>
-#include <FaceTools.h>
-#include <FaceModelViewer.h>
-using FaceTools::Action::ActionComponentSelect;
-using FaceTools::Action::ActionVisualise;
-using FaceTools::Vis::BoundingVisualisation;
-using FaceTools::Interactor::MEEI;
-using FaceTools::Vis::FV;
+#include <MetricData.h>
+#include <LandmarksManager.h>
+#include <FaceModel.h>
+#include <sstream>
+using FaceTools::Metric::MetricData;
+using FaceTools::Metric::MCTI;
+using FaceTools::Landmark::LandmarkSet;
+using FaceTools::FM;
+using FaceTools::FaceLateral;
 
 
-ActionComponentSelect::ActionComponentSelect( MEEI* meei)
-    : ActionVisualise( _vis = new BoundingVisualisation)
-{
-    //connect( meei, &MEEI::onEnterComponent, [=](auto fv, int c){ _vis->setHighlighted( fv, c, true); fv->viewer()->updateRender();});
-    //connect( meei, &MEEI::onLeaveComponent, [=](auto fv, int c){ _vis->setHighlighted( fv, c, false); fv->viewer()->updateRender();});
-}   // end ctor
+MetricData::MetricData()
 
 
-ActionComponentSelect::~ActionComponentSelect() { delete _vis;}
+void MetricData::setSource( const std::string& s) { _source = s;}
+void MetricData::setNote( const std::string& n) { _note = n;}
+void MetricData::setEthnicities( const std::string& d) { _ethnicities = d;}
+void MetricData::setSex( FaceTools::Sex s) { _sex = s;}
+void MetricData::setRSD( size_t, rlib::RSD::Ptr rsd) { _rsd = rsd;}

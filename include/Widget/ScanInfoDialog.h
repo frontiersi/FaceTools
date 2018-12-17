@@ -20,6 +20,7 @@
 
 #include <FaceTypes.h>
 #include <QDialog>
+#include <QValidator>
 
 namespace Ui { class ScanInfoDialog;}
 
@@ -29,18 +30,14 @@ namespace Widget {
 class FaceTools_EXPORT ScanInfoDialog : public QDialog
 { Q_OBJECT
 public:
-    explicit ScanInfoDialog(QWidget *parent = nullptr);
+    explicit ScanInfoDialog( QWidget *parent=nullptr);
     ~ScanInfoDialog() override;
 
     void set( FM*);
+    const FM* get() const { return _model;}
 
-    double age() const; // Normalised to decimal e.g. 12 years 8 months as 12.(8/12) = 12.6666...
-    std::string ethnicity() const;
-    QDate captureDate() const;
-    Sex sex() const;
-
-    std::string source() const;
-    std::string description() const;
+    int minThumbDims() const;
+    void setThumbnail( const cv::Mat_<cv::Vec3b>&);
 
 signals:
     void onUpdated( FM*);   // On updated data on FaceModel
@@ -51,16 +48,14 @@ public slots:
     void doOnApply();
 
 private:
-    Ui::ScanInfoDialog *ui;
+    Ui::ScanInfoDialog *_ui;
     FM *_model;
+    QStringSet _ethnicities;
 
+    void reset();
     void setAge( double);   // Sets years and months from decimal
-    void setSex( Sex);
-    void setEthnicity( const std::string&);
-    void setCaptureDate( const QDate&);
-    void setProvenance( const std::string&);
-    void setRemarks( const std::string&);
-    void setThumbnail();
+    double age() const;     // Normalised to decimal e.g. 12 years 8 months as 12.(8/12) = 12.6666...
+    QString addEthnicityToComboBox( QString);
 };  // end class
 
 }   // end namespace

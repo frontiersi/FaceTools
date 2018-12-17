@@ -30,7 +30,7 @@ public:
 
     // Get the ID of the path associated with the handle being hovered over (if any).
     // Returns -1 if no handle hovered over. Use hoverModel() to get associated model.
-    int hoverPathId() const { return _hover;}
+    int hoverPathId() const { return _handle ? _handle->pathId() : -1;}
     Vis::FV* hoverModel() const { return _meei->model();}
 
     void setPathDrag( int pid);
@@ -39,7 +39,7 @@ public:
 
 public slots:
     void doOnEnterHandle( const Vis::FV*, const vtkProp*);
-    void doOnLeaveHandle( const Vis::FV*, const vtkProp*);
+    void doOnLeaveHandle( const Vis::FV*);
 
 private:
     bool leftButtonDown( const QPoint&) override;
@@ -50,14 +50,12 @@ private:
 
     MEEI *_meei;
     Vis::PathSetVisualisation *_vis;
-    int _drag;  // Path currently being dragged
-    int _hover; // Path hovered over
-    int _handle;// Handle hovered over or being dragged (0|1) - only valid if _hover >= 0 or _drag >= 0
+    bool _drag; // True if path currently being dragged
+    Vis::PathView::Handle* _handle;
     Vis::FV* _view;
 
     static const QString s_msg0;
     static const QString s_msg1;
-    void setCaptionAttachPoint( const FM*, int);
 };  // end class
 
 }}   // end namespace
