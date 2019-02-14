@@ -307,7 +307,8 @@ if(WITH_QT)     # Qt5
     if(NOT IS_DIRECTORY ${Qt5_DIR})
         message( FATAL_ERROR "Can't find Qt5! Set environment variable QT5 to the location of the library!")
     endif()
-    set( QT_INSTALLER_FRAMEWORK "$ENV{QT5}/../../Tools/QtInstallerFramework/3.0/bin")
+    # set( QT_INSTALLER_FRAMEWORK "$ENV{QT5}/../../Tools/QtInstallerFramework/3.0/bin")
+    file( TO_CMAKE_PATH "$ENV{QT5}/../../Tools/QtInstallerFramework/3.0/bin" QT_INSTALLER_FRAMEWORK)
     set( QT_INF_BINARY_CREATOR "${QT_INSTALLER_FRAMEWORK}/binarycreator${CMAKE_EXECUTABLE_SUFFIX}")
     set( QT_INF_REPO_GEN "${QT_INSTALLER_FRAMEWORK}/repogen${CMAKE_EXECUTABLE_SUFFIX}")
 
@@ -323,6 +324,7 @@ if(WITH_QT)     # Qt5
     add_definitions( ${Qt5Sql_DEFINITIONS})
     add_definitions( ${Qt5Svg_DEFINITIONS})
     set( QT_LIBRARIES Qt5::Core Qt5::Widgets Qt5::Sql Qt5::Svg Qt5::Charts)
+
     message( STATUS "Qt5:        ${Qt5_DIR}")
 endif()
 
