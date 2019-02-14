@@ -57,6 +57,7 @@ private slots:
     void doOnSetCurrentMetric( int);   // Pass in metric ID
     void doOnClickedFlipCombosButton();
     void doOnEthnicityIgnored();
+    void doOnClickedMatchButton();
 
 private:
     Ui::MetricsDialog *_ui;

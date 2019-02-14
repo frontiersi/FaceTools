@@ -85,7 +85,7 @@ MetricsDialog::MetricsDialog(QWidget *parent) :
     connect( _ui->showPhenotypesButton, &QToolButton::clicked, this, &MetricsDialog::onShowPhenotypes);
     connect( _ui->flipButton, &QToolButton::clicked, this, &MetricsDialog::doOnClickedFlipCombosButton);
 
-    connect( _ui->matchedCheckBox, &QCheckBox::clicked, this, &MetricsDialog::refresh);
+    connect( _ui->matchedCheckBox, &QCheckBox::clicked, this, &MetricsDialog::doOnClickedMatchButton);
     connect( _ui->ignoreEthnicityCheckBox, &QCheckBox::clicked, this, &MetricsDialog::doOnEthnicityIgnored);
 
     //_ui->table->setColumnHidden(IDNT_COL, true);
@@ -482,6 +482,14 @@ void MetricsDialog::refresh()
             populateSyndromes( IntSet());   // Empty set
     }   // end if
 }   // end refresh
+
+
+void MetricsDialog::doOnClickedMatchButton()
+{
+    if ( !_ui->matchedCheckBox->isChecked())
+        _ui->hpoComboBox->setCurrentIndex(0);   // Any phenotype
+    refresh();
+}   // end doOnClickedMatchButton
 
 
 void MetricsDialog::doOnEthnicityIgnored()
