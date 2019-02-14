@@ -20,7 +20,6 @@
 
 #include <FaceTypes.h>
 #include "MetricSet.h"
-#include <QTextStream>
 #include <sol.hpp>
 
 namespace FaceTools { namespace Metric {
@@ -69,6 +68,7 @@ public:
     // measurements meet the criteria for this phenotype.
     bool isDemographicMatch( const FM*) const;
 
+    ~Phenotype();
 private:
     int _id;
     QString _name;
@@ -81,7 +81,6 @@ private:
     sol::function _determine;
 
     Phenotype();
-    ~Phenotype();
     Phenotype( const Phenotype&) = delete;
     Phenotype& operator=( const Phenotype&) = delete;
 };  // end class

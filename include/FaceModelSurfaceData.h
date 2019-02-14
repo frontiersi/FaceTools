@@ -33,34 +33,35 @@ class FaceTools_EXPORT FaceModelSurfaceData : public QObject
 public:
     static FaceModelSurfaceData* get();   // Get the singleton instance.
 
-    // Returns the SurfaceData for the given FaceModel or writing - encapsulates a read lock.
-    static SurfaceData::RPtr rdata( const FaceModel*);
+    // Returns the SurfaceData for the given FM or writing - encapsulates a read lock.
+    static SurfaceData::RPtr rdata( const FM*);
 
     // Returns true iff computed data are available for the given model
     // and an exclusive write lock over the data may be taken. Returns false
     // if the data are not available or if the background calculation thread
     // is yet to finish (and lock has not been released).
-    bool isAvailable( const FaceModel *fm) const;
+    static bool isAvailable( const FM* fm);
 
     // Calculate surface data for the given model. If the data aren't present, a new
     // calculation thread is created and started in the background. Signal onCalculated
     // is fired when calculation completes. Does not block.
-    void calculate( FaceModel*);
+    static void calculate( FM*);
 
-    // Remove all data associated with the given FaceModel.
+    // Remove all data associated with the given FM.
     // Returns true on success or if data don't exist for the model.
     // Returns false if waiting for the background processing thread to
     // complete timed out and purge failed.
-    bool purge( const FaceModel*, unsigned long waitMsecs=ULONG_MAX);
+    static bool purge( const FM*, unsigned long waitMsecs=ULONG_MAX);
 
     // Returns the SurfaceData for writing - encapsulates a write lock.
-    static SurfaceData::WPtr wdata( const FaceModel*);
+    static SurfaceData::WPtr wdata( const FM*);
 
 signals:
-    void onCalculated( const FaceModel*);   // Fires when surface data available for the given model.
+    void onCalculated( const FM*);   // Fires when surface data available for the given model.
 
 private:
-    std::unordered_map<const FaceModel*, SurfaceDataWorker*> _data;
+    std::unordered_map<const FM*, SurfaceDataWorker*> _data;
+    static std::unordered_map<const FM*, SurfaceDataWorker*>& data();
     static std::shared_ptr<FaceModelSurfaceData> s_ptr;
     FaceModelSurfaceData(){}
     ~FaceModelSurfaceData() override;

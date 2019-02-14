@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACETOOLS_WIDGET_METRICS_TABLE_HEADER_H
-#define FACETOOLS_WIDGET_METRICS_TABLE_HEADER_H
+#ifndef FACETOOLS_WIDGET_CHECK_ALL_TABLE_HEADER_H
+#define FACETOOLS_WIDGET_CHECK_ALL_TABLE_HEADER_H
 
 #include <FaceTypes.h>
 #include <QtGui>
@@ -24,10 +24,10 @@
 
 namespace FaceTools { namespace Widget {
 
-class FaceTools_EXPORT MetricsTableHeader : public QHeaderView
+class FaceTools_EXPORT CheckAllTableHeader : public QHeaderView
 { Q_OBJECT
 public:
-    explicit MetricsTableHeader( QWidget *parent = nullptr);
+    explicit CheckAllTableHeader( QWidget *parent = nullptr);
 
 public slots:
     void setAllChecked( bool);

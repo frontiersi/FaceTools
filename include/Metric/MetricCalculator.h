@@ -8,6 +8,7 @@
 #include <MetricCalculatorTypeInterface.h>
 #include <GrowthData.h>
 #include <MetricSet.h>
+#include <Landmark.h>
 #include <QtCharts/QChart>
 
 namespace FaceTools { namespace Metric {
@@ -23,29 +24,29 @@ public:
     // Load from file. On error, return null.
     static Ptr load( const QString& filepath);
 
-    static Ptr create( MCTI::Ptr);
+    void setType( MCT* mct) { _mct = mct;}
+    MCT* type() const { return _mct;}
 
-    void setType( MCTI::Ptr mcti) { _mcti = mcti;}
-    MCTI::Ptr type() const { return _mcti;}
+    int id() const { return _id;}
+    const QString& name() const { return _name;}
+    const QString& description() const { return _desc;}
+    size_t numDecimals() const { return _ndps;}
+    QString category() const { return _mct->category();}
+    size_t dims() const { return _dims;}
+    bool isBilateral() const { return !_lmks1.empty();}
 
-    int id() const { return _mcti->id();}
-    const QString& name() const { return _mcti->name();}
-    QString category() const { return _mcti->category();}
-    const QString& description() const { return _mcti->description();}
-    size_t dims() const { return _mcti->dims();}
-    size_t numDecimals() const { return _mcti->numDecimals();}
-    bool isBilateral() const { return _mcti->isBilateral();}
-
-    Vis::MetricVisualiser *visualiser() const { return _mcti->visualiser();}
+    Vis::MetricVisualiser *visualiser() const { return _mct->visualiser();}
 
     // Whether or not this metric should be visible (true by default).
-    void setVisible( bool v) { _visible = v && _mcti->visualiser() != nullptr;}
-    bool isVisible() const { return _mcti && _mcti->visualiser() && _visible;}
+    void setVisible( bool v) { _visible = v && _mct->visualiser() != nullptr;}
+    bool isVisible() const { return _mct && _mct->visualiser() && _visible;}
 
     // Returns the age mapping interval range and sets out parameters if not null with min and max age values.
     double addSeriesToChart( QtCharts::QChart*, const GrowthData*, double *xmin=nullptr, double *xmax=nullptr) const;
 
     void addGrowthData( GrowthData*);
+
+    bool hasGrowthData() const { return !_gdata.empty();}
 
     const GrowthData* growthData( const QString& ethnicity, int8_t sex) const;
 
@@ -68,15 +69,20 @@ public:
     bool calculate( FM*) const;
 
     void signalUpdated() { emit updated( id());}  // Simply fire the updated signal passing this metric's id.
-    void setActive() { emit activated( id());}    // Tell others that this metric is the currently active one.
+    void setSelected() { emit selected( id());}    // Tell others that this metric is the currently active one.
 
 signals:
     void updated( int);
-    void activated( int);
+    void selected( int);
 
 private:
-    MCTI::Ptr _mcti;
+    MCT* _mct;
     bool _visible;
+    int _id;
+    size_t _ndps, _dims;
+    QString _name, _desc;
+    Landmark::LmkList _lmks0, _lmks1;
+
     std::unordered_map<QString, MetricGrowthData> _gdata;   // Keyed by source
     std::unordered_set<GrowthData*> _agd;                   // All added growth data
     std::unordered_map<QString, QStringSet> _ethnicities;   // Keyed by source
@@ -84,9 +90,8 @@ private:
     QString _csrc;  // The current source to use (first added if not changed)
     QString _deth;  // The default ethnicity (first added)
 
-    MetricValue calcMetricValue( const FM* fm, FaceLateral) const;
+    MetricValue calcMetricValue( const FM* fm, const Landmark::LmkList&) const;
     MetricCalculator();
-    explicit MetricCalculator( MCTI::Ptr);
     ~MetricCalculator();
 };  // end class
 

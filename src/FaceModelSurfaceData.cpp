@@ -21,7 +21,7 @@
 using FaceTools::FaceModelSurfaceData;
 using FaceTools::SurfaceDataWorker;
 using FaceTools::SurfaceData;
-using FaceTools::FaceModel;
+using FaceTools::FM;
 
 std::shared_ptr<FaceModelSurfaceData> FaceModelSurfaceData::s_ptr(nullptr);  // static definition
 
@@ -33,19 +33,28 @@ FaceModelSurfaceData* FaceModelSurfaceData::get()
     return s_ptr.get();
 }   // end get
 
-// public static
-SurfaceData::RPtr FaceModelSurfaceData::rdata( const FaceModel* fm)
+
+// private static
+std::unordered_map<const FM*, SurfaceDataWorker*>& FaceModelSurfaceData::data()
 {
-    assert( get()->_data.count(fm) > 0);
-    return get()->_data.at(fm)->readLock();
+    assert( s_ptr);
+    return s_ptr->_data;
+}   // end data
+
+
+// public static
+SurfaceData::RPtr FaceModelSurfaceData::rdata( const FM* fm)
+{
+    assert( data().count(fm) > 0);
+    return data().at(fm)->readLock();
 }   // end rdata
 
 
 // public static
-SurfaceData::WPtr FaceModelSurfaceData::wdata( const FaceModel* fm)
+SurfaceData::WPtr FaceModelSurfaceData::wdata( const FM* fm)
 {
-    assert( get()->_data.count(fm) > 0);
-    return get()->_data.at(fm)->writeLock();
+    assert( data().count(fm) > 0);
+    return data().at(fm)->writeLock();
 }   // end wdata
 
 
@@ -54,63 +63,60 @@ FaceModelSurfaceData::~FaceModelSurfaceData()
 {
     while ( !_data.empty())
     {
-        const FaceModel* fm = _data.begin()->first;
+        const FM* fm = _data.begin()->first;
         if ( !purge( fm, 1000)) // Wait 1 second to purge
         {
-            if ( QThread::currentThread() != _data.at(fm)->thread())
-            {
-                std::cerr << "[WARNING] FaceTools::FaceModelSurfaceData::dtor: TERMINATING THREAD!" << std::endl;
-                _data.at(fm)->thread()->terminate();
-            }   // end if
+            qWarning( "TERMINATING THREAD!");
+            _data.at(fm)->terminate();
             purge(fm);
         }   // end if
     }   // end while
 }   // end dtor
 
 
-// public
-bool FaceModelSurfaceData::isAvailable( const FaceModel* fm) const
+// public static
+bool FaceModelSurfaceData::isAvailable( const FM* fm)
 {
-    return _data.count(fm) > 0 && !_data.at(fm)->working;
+    return data().count(fm) > 0 && !data().at(fm)->working;
 }   // end isAvailable
 
 
-// public
-void FaceModelSurfaceData::calculate( FaceModel* fm)
+// public static
+void FaceModelSurfaceData::calculate( FM* fm)
 {
-    if ( _data.count(fm) == 0)
+    if ( data().count(fm) == 0)
     {
-        SurfaceDataWorker* sdw = _data[fm] = new SurfaceDataWorker(fm);
-        connect( sdw, &SurfaceDataWorker::onCalculated, this, &FaceModelSurfaceData::onCalculated);
-        sdw->calculate();
+        SurfaceDataWorker* sdw = data()[fm] = new SurfaceDataWorker(fm);
+        connect( sdw, &SurfaceDataWorker::onCalculated, get(), &FaceModelSurfaceData::onCalculated);
+        sdw->start();   // Returns immediately
     }   // end if
 }   // end calculate
 
 
-// public
-bool FaceModelSurfaceData::purge( const FaceModel* fm, unsigned long wmsecs)
+// public static
+bool FaceModelSurfaceData::purge( const FM* fm, unsigned long wmsecs)
 {
-    if ( _data.count(fm) == 0)
+    if ( data().count(fm) == 0)
         return true;
 
     // It's possible that _data.at(fm) is locked for writing - so wait until that thread is done if so.
-    if ( !_data.at(fm)->lock.tryLockForWrite())
+    if ( !data().at(fm)->lock.tryLockForWrite())
     {
         // Wait for thread to finish
-        if ( !_data.at(fm)->thread()->wait(wmsecs))
+        if ( !data().at(fm)->wait(wmsecs))
         {
-            std::cerr << "[WARNING] FaceTools::FaceModelSurfaceData::purge: Wait for thread to finish timed out!" << std::endl;
+            qWarning( "Wait for thread to finish timed out!");
             return false;
         }   // end if
-        if ( !_data.at(fm)->lock.tryLockForWrite())  // Try again - absolutely should work this time!
+        if ( !data().at(fm)->lock.tryLockForWrite())  // Try again - absolutely should work this time!
         {
-            std::cerr << "[ERROR] FaceTools::FaceModelSurfaceData::purge: Waited for thread to finish, but couldn't acquire write lock!" << std::endl;
+            qWarning( "Waited for thread to finish, but couldn't acquire write lock!");
             return false;
         }   // end if
     }   // end if
 
-    _data.at(fm)->lock.unlock();
-    delete _data.at(fm);
-    _data.erase(fm);
+    data().at(fm)->lock.unlock();
+    delete data().at(fm);
+    data().erase(fm);
     return true;
 }   // end purge

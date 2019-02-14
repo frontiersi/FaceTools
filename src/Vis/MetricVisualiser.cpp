@@ -22,6 +22,7 @@
 #include <MetricValue.h>
 #include <vtkProperty.h>
 #include <vtkTextProperty.h>
+#include <QDebug>
 #include <sstream>
 #include <iomanip>
 using FaceTools::Vis::BaseVisualisation;
@@ -95,7 +96,11 @@ void MetricVisualiser::showText( const FM* fm)
             if ( _texts.count(fv) > 0)
                 _texts.at(fv)->SetVisibility(true);
         }   // end for
+        fm->updateRenderers();
     }   // end if
+
+    for ( auto& p : _texts)
+        p.first->viewer()->updateRender();
 }   // end showText
 
 
@@ -109,14 +114,14 @@ void MetricVisualiser::updateText( const FM* fm)
     MC::Ptr mc = MCM::metric(_id);
     if ( !mc->isBilateral())
     {
-        mv = fm->metrics().get( _id);
+        mv = fm->cmetrics().get( _id);
         if (!mv)
             return;
     }   // end if
     else
     {
-        mvl = fm->metricsL().get( _id);
-        mvr = fm->metricsR().get( _id);
+        mvl = fm->cmetricsL().get( _id);
+        mvr = fm->cmetricsR().get( _id);
         if ( !mvl || !mvr)
             return;
     }   // end else
@@ -151,9 +156,13 @@ void MetricVisualiser::updateText( const FM* fm)
         }   // end else
     }   // end for
 
-    const Metric::GrowthData* gd = mc->growthData(fm);
     oss << "\nZ-score" << (dims > 1 ? "s: " : ": ");    // Z-scores on line below
-    if ( !gd)
+
+    const Metric::GrowthData* gd = mc->growthData(fm);
+
+    if ( !mc->hasGrowthData())
+        oss << " N/A (no growth curve data)";
+    else if ( !gd)
         oss << " N/A (sex mismatch)";
     else
     {

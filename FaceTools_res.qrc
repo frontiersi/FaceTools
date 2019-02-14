@@ -25,6 +25,7 @@
     <file alias="MODEL_INFO">res/icons/icons8-identification-documents-30.png</file>
     <file alias="BELOW">res/icons/icons8-below-48.png</file>
     <file alias="ABOVE">res/icons/icons8-above-48.png</file>
+    <file alias="SAVE_AS">res/icons/icons8-save_as.png</file>
 </qresource>
 </RCC>
 

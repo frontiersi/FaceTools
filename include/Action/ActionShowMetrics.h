@@ -46,9 +46,10 @@ protected slots:
 
 private slots:
     void doOnMetricUpdated(int);
-    void doOnMetricActivated();
-    void doOnShowChart();
-    void doOnShowPhenotypes();
+    void doOnSetSelectedMetric();
+    void doOnShowChartDialog();
+    void doOnShowPhenotypesDialog();
+    bool doOnRefresh();
 
 private:
     Widget::MetricsDialog *_mdialog;

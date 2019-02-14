@@ -68,12 +68,30 @@ cv::Vec3f findMSO( const ObjModelKDTree* kdt, cv::Vec3f v, const cv::Vec3f& p)
 }   // end findMSO
 
 
+void setLandmarksPair( const QString& ch, const cv::Vec3f& v0, const cv::Vec3f& v1, LandmarkSet& lms, const IntSet& ulmks)
+{
+    if ( ulmks.count( LDMKS_MAN::landmark(ch)->id()) > 0)
+    {
+        lms.set( ch, v0, FACE_LATERAL_LEFT);
+        lms.set( ch, v1, FACE_LATERAL_RIGHT);
+    }   // end if
+}   // setLandmarksPair
+
+
+void setLandmark( const QString& ch, const cv::Vec3f& v, LandmarkSet& lms, const IntSet& ulmks)
+{
+    if ( ulmks.count( LDMKS_MAN::landmark(ch)->id()) > 0)
+        lms.set( ch, v);
+}   // setLandmark
+
+
 // Project detected points to landmarks
 void setLandmarks( const OffscreenModelViewer& vwr,
                    const std::vector<bool>& foundVec,
                    const std::vector<cv::Point2f>& cpts,
                    const ObjModelKDTree* kdt,
-                   LandmarkSet& lms)
+                   LandmarkSet& lms,
+                   const IntSet& ulmks)
 {
     const size_t np = foundVec.size();
     assert( np == cpts.size());
@@ -166,6 +184,16 @@ void setLandmarks( const OffscreenModelViewer& vwr,
     std::cerr << " * Detecting [MND]" << std::endl;
     cv::Vec3f mnd = toS( kdt, se + 0.5f*( cv::Vec3f( prn[0], prn[1] + 5, prn[2] + 10) - se));
 
+    // Maxillofrontale
+    std::cerr << " * Detecting [MF] L" << std::endl;
+    cv::Vec3f lref0 = toS( kdt, 0.5f * (g + len));
+    cv::Vec3f lref1 = toS( kdt, 0.5f * (mnd + len));
+    const cv::Vec3f lmf = toD( kdt, lref0, lref1, nullptr);
+    std::cerr << " * Detecting [MF] R" << std::endl;
+    cv::Vec3f rref0 = toS( kdt, 0.5f * (g + ren));
+    cv::Vec3f rref1 = toS( kdt, 0.5f * (mnd + ren));
+    const cv::Vec3f rmf = toD( kdt, rref0, rref1, nullptr);
+
     // Subnasale
     std::cerr << " * Detecting [SN]" << std::endl;
     cv::Vec3f sn = toS( kdt, vpts[33]);
@@ -223,63 +251,33 @@ void setLandmarks( const OffscreenModelViewer& vwr,
         sn = toD( kdt, lsbal, rsbal, nullptr);
     }   // end for
 
-    lms.set( Landmark::PI,   lpi,   FACE_LATERAL_LEFT);
-    lms.set( Landmark::PI,   rpi,   FACE_LATERAL_RIGHT);
-    lms.set( Landmark::PS,   lps,   FACE_LATERAL_LEFT);
-    lms.set( Landmark::PS,   rps,   FACE_LATERAL_RIGHT);
-    lms.set( Landmark::EN,   len,   FACE_LATERAL_LEFT);
-    lms.set( Landmark::EX,   lex,   FACE_LATERAL_LEFT);
-    lms.set( Landmark::EN,   ren,   FACE_LATERAL_RIGHT);
-    lms.set( Landmark::EX,   rex,   FACE_LATERAL_RIGHT);
-    lms.set( Landmark::P,    lp,    FACE_LATERAL_LEFT);
-    lms.set( Landmark::P,    rp,    FACE_LATERAL_RIGHT);
-    lms.set( Landmark::MSO,  lmso,  FACE_LATERAL_LEFT);
-    lms.set( Landmark::MSO,  rmso,  FACE_LATERAL_RIGHT);
-    lms.set( Landmark::SE,   se);
-    lms.set( Landmark::G,    g);
-    lms.set( Landmark::N,    n);
-    lms.set( Landmark::PRN,  prn);
-    lms.set( Landmark::MND,  mnd);
-    lms.set( Landmark::SN,   sn);
-    lms.set( Landmark::AC,   lac,   FACE_LATERAL_LEFT);
-    lms.set( Landmark::AC,   rac,   FACE_LATERAL_RIGHT);
-    lms.set( Landmark::AL,   lal,   FACE_LATERAL_LEFT);
-    lms.set( Landmark::AL,   ral,   FACE_LATERAL_RIGHT);
-    lms.set( Landmark::CPH,  lcph,  FACE_LATERAL_LEFT);
-    lms.set( Landmark::CPH,  rcph,  FACE_LATERAL_RIGHT);
-    lms.set( Landmark::SBAL, lsbal, FACE_LATERAL_LEFT);
-    lms.set( Landmark::SBAL, rsbal, FACE_LATERAL_RIGHT);
-
     // Cheilion
     std::cerr << " * Detecting [CH] L" << std::endl;
-    lms.set( Landmark::CH, toS( kdt, vpts[48]), FACE_LATERAL_LEFT);
+    const cv::Vec3f lch = toS( kdt, vpts[48]);
     std::cerr << " * Detecting [CH] R" << std::endl;
-    lms.set( Landmark::CH, toS( kdt, vpts[54]), FACE_LATERAL_RIGHT);
+    const cv::Vec3f rch = toS( kdt, vpts[54]);
 
     // Labiale superius
     std::cerr << " * Detecting [LS]" << std::endl;
-    lms.set( Landmark::LS, toS( kdt, vpts[51]));
+    const cv::Vec3f ls = toS( kdt, vpts[51]);
 
     // Labiale inferius
     std::cerr << " * Detecting [LI]" << std::endl;
-    lms.set( Landmark::LI, toS( kdt, 1.0f/3 * (vpts[56] + vpts[57] + vpts[58])));
+    const cv::Vec3f li = toS( kdt, 1.0f/3 * (vpts[56] + vpts[57] + vpts[58]));
 
+    // Sublabiale
+    std::cerr << " * Detecting [SL]" << std::endl;
+    const float hmw = static_cast<float>(cv::norm(lch - rch)/2);   // Half mouth width
+    const cv::Vec3f sl = toD( kdt, li, toS(kdt, cv::Vec3f(li[0], li[1]-hmw, li[2])), nullptr);
+
+    // Stomion inferius/superius
     std::cerr << " * Detecting [STS]" << std::endl;
+    cv::Vec3f sts = toS( kdt, 1.0f/3 * (vpts[65] + vpts[66] + vpts[67]));
     std::cerr << " * Detecting [STI]" << std::endl;
-    // Stomion inferius/superius. Detector can get confused with the placement of these points,
-    // so see which one is lower and make inferius.
-    const cv::Vec3f s0 = toS( kdt, 1.0f/3 * (vpts[65] + vpts[66] + vpts[67]));
-    const cv::Vec3f s1 = toS( kdt, 1.0f/3 * (vpts[61] + vpts[62] + vpts[63]));
-    if ( s0[1] < s1[1])
-    {
-        lms.set( Landmark::STI, s0);
-        lms.set( Landmark::STS, s1);
-    }   // end if
-    else
-    {
-        lms.set( Landmark::STI, s1);
-        lms.set( Landmark::STS, s0);
-    }   // end else
+    cv::Vec3f sti = toS( kdt, 1.0f/3 * (vpts[61] + vpts[62] + vpts[63]));
+    // Detector can confuse placement of stomion inferius/superius, so check relative heights.
+    if ( sts[1] < sti[1])
+        std::swap( sts, sti);
 
     //lms.set( L_UPP_VERM, vpts[49]
     //lms.set( R_UPP_VERM, vpts[53]
@@ -289,6 +287,31 @@ void setLandmarks( const OffscreenModelViewer& vwr,
     // MOUTH OPENING
     //lms.set( MOUTH_OPEN_0, vpts[60]
     //lms.set( MOUTH_OPEN_4, vpts[64]
+
+    setLandmarksPair( Landmark::PI,   lpi,   rpi,   lms, ulmks);
+    setLandmarksPair( Landmark::PS,   lps,   rps,   lms, ulmks);
+    setLandmarksPair( Landmark::EN,   len,   ren,   lms, ulmks);
+    setLandmarksPair( Landmark::EX,   lex,   rex,   lms, ulmks);
+    setLandmarksPair( Landmark::MSO,  lmso,  rmso,  lms, ulmks);
+    setLandmarksPair( Landmark::P,    lp,    rp,    lms, ulmks);
+    setLandmarksPair( Landmark::AC,   lac,   rac,   lms, ulmks);
+    setLandmarksPair( Landmark::AL,   lal,   ral,   lms, ulmks);
+    setLandmarksPair( Landmark::CPH,  lcph,  rcph,  lms, ulmks);
+    setLandmarksPair( Landmark::SBAL, lsbal, rsbal, lms, ulmks);
+    setLandmarksPair( Landmark::CH,   lch,   rch,   lms, ulmks);
+    setLandmarksPair( Landmark::MF,   lmf,   rmf,   lms, ulmks);
+
+    setLandmark( Landmark::SE,  se,  lms, ulmks);
+    setLandmark( Landmark::G,   g,   lms, ulmks);
+    setLandmark( Landmark::N,   n,   lms, ulmks);
+    setLandmark( Landmark::PRN, prn, lms, ulmks);
+    setLandmark( Landmark::MND, mnd, lms, ulmks);
+    setLandmark( Landmark::SN,  sn,  lms, ulmks);
+    setLandmark( Landmark::LS,  ls,  lms, ulmks);
+    setLandmark( Landmark::LI,  li,  lms, ulmks);
+    setLandmark( Landmark::SL,  sl,  lms, ulmks);
+    setLandmark( Landmark::STS, sts, lms, ulmks);
+    setLandmark( Landmark::STI, sti, lms, ulmks);
 }   // end setLandmarks
 
 }   // end namespace
@@ -321,7 +344,7 @@ bool FaceShapeLandmarks2DDetector::initialise( const std::string& fdat)
 
 
 // public static
-bool FaceShapeLandmarks2DDetector::detect( const OffscreenModelViewer& vwr, const ObjModelKDTree* kdt, LandmarkSet& lms)
+bool FaceShapeLandmarks2DDetector::detect( const OffscreenModelViewer& vwr, const ObjModelKDTree* kdt, LandmarkSet& lms, const IntSet& ulmks)
 {
     if ( s_shapePredictor.num_parts() == 0)
     {
@@ -376,6 +399,6 @@ bool FaceShapeLandmarks2DDetector::detect( const OffscreenModelViewer& vwr, cons
         }   // end else
     }   // end for
 
-    setLandmarks( vwr, foundVec, cpts, kdt, lms);
+    setLandmarks( vwr, foundVec, cpts, kdt, lms, ulmks);
     return nfound == 68;
 }   // end detectFeatures

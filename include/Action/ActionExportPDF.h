@@ -19,31 +19,19 @@
 #define FACE_TOOLS_ACTION_EXPORT_PDF_H
 
 #include "FaceAction.h"
-#include <BaseReportTemplate.h>
+#include <ReportChooserDialog.h>
+#include <Report.h>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionExportPDF : public FaceAction
 { Q_OBJECT
 public:
-    // Initialise PDF export with the locations of pdflatex and IDTVis::FVonverter.
-    static bool init( const std::string& pdflatex, const std::string& idtfConverter);
+    ActionExportPDF( const QString& dname="Create Report", const QIcon& icon=QIcon(), QWidget* parent=nullptr);
 
-    // Returns whether this action is available to use.
-    static bool isAvailable();
-
-    ActionExportPDF( Report::BaseReportTemplate*, const QIcon& icon=QIcon(), const QString& email="",
-                     QWidget* parent=nullptr, QProgressBar* pb=nullptr);  // Is async if pb not null
-    ~ActionExportPDF() override { delete _template;}
-
-    // Set the path to the logo resouce.
-    void setLogoResource( const QString& logo) { _logoFile = logo;}
-
-    // Set author info to be embedded in all reports.
-    void setAuthorInfo( const QString& ainfo) { _author = ainfo;}
-
-    QWidget* getWidget() const override { return _template->getWidget();}
+    // By default, the user is simply asked to save the report. If given a program name here,
+    // the report will be opened in the chosen reader (as a forked process).
+    void setOpenOnSave( const QString& pdfreader) { _pdfreader = pdfreader;}
 
 protected slots:
     bool testReady( const Vis::FV*) override;
@@ -51,27 +39,17 @@ protected slots:
     bool doBeforeAction( FVS&, const QPoint&) override;
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet&, const FVS&, bool) override;
-    void purge( const FaceModel*) override;
 
 private:
-    Report::BaseReportTemplate *_template;
+    Widget::ReportChooserDialog *_dialog;
     QWidget *_parent;
-    QString _logoFile;
-    QString _author;
-
-    const RFeatures::ObjModel *_cmodel;
-    RFeatures::CameraParams _cam;
-    QString _pdffile;
+    Report::Report::Ptr _report;
+    QTemporaryDir _tmpdir;
+    QString _tmpfile;
     QString _err;
-    bool writeLaTeX( const RFeatures::ObjModel*,
-                     const RFeatures::CameraParams&,
-                     const QString&,
-                     const QString&,
-                     const QString&,
-                     std::vector<RModelIO::LaTeXU3DInserter::Ptr>&);
+    QString _pdfreader;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

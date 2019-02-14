@@ -41,12 +41,14 @@ bool ActionOrientCameraToFace::doAction( FVS& fvs, const QPoint&)
     const FV* fv = fvs.first();
     const FM* fm = fv->data();
 
+    double d = _distance;
     fm->lockForRead();
     RFeatures::Orientation on = fm->orientation();  // Copy out the orientation
     if ( !fm->centreSet())
     {
         on.setN(cv::Vec3f(0,0,1));
         on.setU(cv::Vec3f(0,1,0));
+        d = DEFAULT_CAMERA_DISTANCE;    // 650.0f
     }   // end if
     cv::Vec3f focus = fm->centre();
     fm->unlock();
@@ -56,7 +58,7 @@ bool ActionOrientCameraToFace::doAction( FVS& fvs, const QPoint&)
     on.rotate( transformer.matrix());
 
     // Set the camera as needed.
-    fv->viewer()->setCamera( focus, on.nvec(), on.uvec(), _distance);
+    fv->viewer()->setCamera( focus, on.nvec(), on.uvec(), d);
 
     return true;
 }   // end doAction

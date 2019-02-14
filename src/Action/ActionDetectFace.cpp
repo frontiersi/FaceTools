@@ -32,10 +32,11 @@ using FaceTools::FM;
 using FaceTools::Detect::FaceOrientationDetector;
 using FLD = FaceTools::Detect::FaceShapeLandmarks2DDetector;
 using FD = FaceTools::Detect::FeaturesDetector;
+using FaceTools::Widget::DetectionCheckDialog;
 
 
 ActionDetectFace::ActionDetectFace( const QString& dn, const QIcon& icon, QWidget *parent, QProgressBar* pb)
-    : FaceAction(dn, icon), _parent(parent)
+    : FaceAction(dn, icon), _parent(parent), _cdialog( new DetectionCheckDialog(parent))
 {
     if ( pb)
         setAsync( true, QTools::QProgressUpdater::create(pb));
@@ -51,17 +52,18 @@ bool ActionDetectFace::doBeforeAction( FVS& fvs, const QPoint&)
 {
     assert(fvs.size() == 1);
     FM* fm = fvs.first()->data();
+    fm->lockForRead();
+    _ulmks.clear();
 
-    bool go = true;
-    fm->lockForRead(); // Warn if about to overwrite!
-    if ( !fm->landmarks()->empty())
+    if ( fm->landmarks()->empty())
+        _ulmks = LDMKS_MAN::ids();
+    else // Warn if about to overwrite!
     {
-        static const QString msg = tr("Really reset existing landmark and metric detections?");
-        go = QMessageBox::Yes == QMessageBox::question( _parent, tr("Reset face detection?"), msg,
-                                 QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        if ( _cdialog->open( fm))    // Modal
+            _ulmks = _cdialog->landmarks(); // Copy out
     }   // end if
     fm->unlock();
-    return go;
+    return !_ulmks.empty();
 }   // end doBeforeAction
 
 
@@ -76,7 +78,10 @@ bool ActionDetectFace::doAction( FVS& fvs, const QPoint&)
     const RFeatures::ObjModelKDTree* kdt = fm->kdtree();
     FaceOrientationDetector faceDetector( kdt, 650.0f, 0.3f);
     Landmark::LandmarkSet& lmks = *fm->landmarks();
-    fm->clearLandmarks();
+    fm->clearMeta();
+
+    // Specifiy the set of landmarks to be updated.
+    faceDetector.setLandmarksToUpdate( _ulmks);
 
     if ( faceDetector.detect( lmks))
     {
@@ -92,10 +97,7 @@ bool ActionDetectFace::doAction( FVS& fvs, const QPoint&)
         fvs.insert(fm);
     }   // end if
     else
-    {
         _err = faceDetector.error();
-        fm->clearLandmarks();
-    }   // end else
 
     fm->unlock();
 
@@ -105,8 +107,11 @@ bool ActionDetectFace::doAction( FVS& fvs, const QPoint&)
 
 void ActionDetectFace::doAfterAction( EventSet& cset, const FVS&, bool v)
 {
-    if ( !v) // Warn failure
+    if ( v)
+        cset.insert(FACE_DETECTED);
+    else
         QMessageBox::warning(_parent, tr("Face Detection Failed!"), tr( _err.c_str()));
+
     cset.insert(ORIENTATION_CHANGE);
     cset.insert(LANDMARKS_ADD);
     cset.insert(AFFINE_CHANGE);

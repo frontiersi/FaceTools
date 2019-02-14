@@ -23,7 +23,7 @@
  * and access to FaceModel surface data records.
  */
 
-#include "FaceTools_Export.h"
+#include "FaceTypes.h"
 #include <ObjModelCurvatureMetrics.h>   // RFeatures
 #include <QObject>
 #include <QThread>
@@ -31,12 +31,11 @@
 #include <memory>
 
 namespace FaceTools {
-class FaceModel;
 
 struct FaceTools_EXPORT SurfaceData
 {
-    typedef std::shared_ptr<const SurfaceData> RPtr;
-    typedef std::shared_ptr<SurfaceData> WPtr;
+    using RPtr = std::shared_ptr<const SurfaceData>;
+    using WPtr = std::shared_ptr<SurfaceData>;
 
     RFeatures::ObjModelCurvatureMap::Ptr curvature;
     RFeatures::ObjModelCurvatureMetrics *metrics;
@@ -46,20 +45,27 @@ struct FaceTools_EXPORT SurfaceData
 
 
 // Internally used by FaceModelSurfaceData
-class FaceTools_EXPORT SurfaceDataWorker : public QObject
+class FaceTools_EXPORT SurfaceDataWorker : public QThread
 { Q_OBJECT
 public:
-    explicit SurfaceDataWorker( FaceModel*);
-    ~SurfaceDataWorker();
-    void calculate();
+    explicit SurfaceDataWorker( FM*);
+    ~SurfaceDataWorker() override;
+
     SurfaceData::RPtr readLock();
     SurfaceData::WPtr writeLock();
-    FaceModel *fmodel;
+    FM *fmodel;
     SurfaceData *surfaceData;
     bool working;
     QReadWriteLock lock;
+
 signals:
-    void onCalculated( const FaceModel*);
+    void onCalculated( const FM*);
+
+protected:
+    void run();
+
+private:
+    void reset();
 };  // end class
 
 }   // end namespace

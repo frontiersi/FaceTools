@@ -30,10 +30,11 @@ using FaceTools::Vis::FV;
 using FaceTools::FMV;
 using FaceTools::FM;
 using FaceTools::FaceLateral;
+using FaceTools::Landmark::LmkList;
 
 
-AngleVisualiser::AngleVisualiser( int id, int l0, int lc, int l1, bool b)
-    : MetricVisualiser( id), _l0(l0), _lc(lc), _l1(l1), _bilat(b)
+AngleVisualiser::AngleVisualiser( int id, const LmkList* l0, const LmkList* l1)
+    : MetricVisualiser( id), _lmks0(l0), _lmks1(l1)
 {
 }   // end ctor
 
@@ -157,30 +158,27 @@ void AngleVisualiser::setHighlighted( const FM* fm)
     if ( fm)
     {
         for ( const FV* fv : fm->fvs())
+        {
             if ( _angle0.count(fv) > 0)
                 highlight( _angle0.at(fv), true);
-        if ( _bilat)
-        {
-            for ( const FV* fv : fm->fvs())
-                if ( _angle1.count(fv) > 0)
-                    highlight( _angle1.at(fv), true);
-        }   // end if
+            if ( _angle1.count(fv) > 0)
+                highlight( _angle1.at(fv), true);
+        }   // end for
     }   // end if
 }   // end setHighlighted
 
 
 // private
-void AngleVisualiser::apply( FV *fv, FaceLateral lA, FaceLateral lB, FaceLateral lC,
-                                     std::unordered_map<const FV*, vtkAngleRepresentation3D*>& angles)
+void AngleVisualiser::apply( FV *fv, const LmkList* ll, std::unordered_map<const FV*, vtkAngleRepresentation3D*>& angles)
 {
     const FM* fm = fv->data();
-    cv::Vec3d r0 = *fm->landmarks()->pos(_l0, lA);
-    cv::Vec3d r1 = *fm->landmarks()->pos(_l1, lC);
+    cv::Vec3d r0 = *fm->landmarks()->pos( ll->front());
+    cv::Vec3d r1 = *fm->landmarks()->pos( ll->back());
     cv::Vec3d cp;
     // Set the centre point according to the given landmark, but if it's < 0,
     // the centre point is set as the point on the surface midway between the endpoints.
-    if ( _lc >= 0)
-        cp = *fm->landmarks()->pos(_lc, lB);
+    if ( ll->size() == 3)
+        cp = *fm->landmarks()->pos( ll->at(1));
     else
     {
         const cv::Vec3f mp( 0.5 * (r0 + r1));
@@ -197,43 +195,28 @@ void AngleVisualiser::apply( FV *fv, FaceLateral lA, FaceLateral lB, FaceLateral
 }   // end apply
 
 
+bool AngleVisualiser::isAvailable( const FM* fm) const
+{
+    using SLMK = Landmark::SpecificLandmark;
+    bool b0 = true;
+    if ( _lmks0)
+        b0 = std::all_of( std::begin(*_lmks0), std::end(*_lmks0), [fm]( const SLMK& lm){ return fm->landmarks()->has(lm);});
+    bool b1 = true;
+    if ( _lmks1)
+        b1 = std::all_of( std::begin(*_lmks1), std::end(*_lmks1), [fm]( const SLMK& lm){ return fm->landmarks()->has(lm);});
+    return b0 && b1;
+}   // end isAvailable
+
+
 void AngleVisualiser::apply( FV *fv, const QPoint*)
 {
     const FM* fm = fv->data();
     fm->lockForRead();
     clear(fv); // Ensure removed so can create new actor(s)
-
-    if ( _bilat)
-    {
-        FaceLateral latA0 = FACE_LATERAL_LEFT;
-        FaceLateral latB0 = FACE_LATERAL_LEFT;
-        FaceLateral latC0 = FACE_LATERAL_LEFT;
-        FaceLateral latA1 = FACE_LATERAL_RIGHT;
-        FaceLateral latB1 = FACE_LATERAL_RIGHT;
-        FaceLateral latC1 = FACE_LATERAL_RIGHT;
-
-        assert( LDMKS_MAN::landmark(_l0)->isBilateral());
-        assert( LDMKS_MAN::landmark(_l1)->isBilateral());
-
-        if ( (_lc >= 0) && !LDMKS_MAN::landmark(_lc)->isBilateral())
-        {
-            latB0 = FACE_LATERAL_MEDIAL;
-            latB1 = FACE_LATERAL_MEDIAL;
-        }   // end else if
-
-        apply( fv, latA0, latB0, latC0, _angle0);
-        apply( fv, latA1, latB1, latC1, _angle1);
-    }   // end if
-    else
-    {
-        // Not a bilateral measure, which means that either the landmarks are the same, or that
-        // both of them are not bilateral landmarks.
-        if ( _l0 != _l1)    // Not bilateral, but different landmarks, so must be medial landmarks
-            apply( fv, FACE_LATERAL_MEDIAL, FACE_LATERAL_MEDIAL, FACE_LATERAL_MEDIAL, _angle0);
-        else
-            apply( fv, FACE_LATERAL_LEFT, FACE_LATERAL_MEDIAL, FACE_LATERAL_RIGHT, _angle0); // Same landmark - one actor
-    }   // end else
-
+    if ( _lmks0 && !_lmks0->empty())
+        apply( fv, _lmks0, _angle0);
+    if ( _lmks1 && !_lmks1->empty())
+        apply( fv, _lmks1, _angle1);
     fm->unlock();
     MetricVisualiser::apply( fv, nullptr);
 }   // end apply

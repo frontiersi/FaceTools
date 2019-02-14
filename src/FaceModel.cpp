@@ -127,8 +127,8 @@ bool intersect( const cv::Vec6d& a, const cv::Vec6d& b)
 
 
 FaceModel::FaceModel( RFeatures::ObjModelInfo::Ptr minfo)
-    : _saved(false), _description(""), _source(""),
-      _age(0), _sex(FaceTools::UNKNOWN_SEX), _ethnicity(""), _cdate( QDate::currentDate()),
+    : _saved(false), _notes(""), _source(""), _studyId(""),
+      _age(0), _sex(FaceTools::MALE_SEX | FaceTools::FEMALE_SEX), _ethnicity(""), _cdate( QDate::currentDate()),
       _centreSet(false), _centre(0,0,0)
 {
     assert(minfo);
@@ -139,8 +139,8 @@ FaceModel::FaceModel( RFeatures::ObjModelInfo::Ptr minfo)
 
 
 FaceModel::FaceModel()
-    : _saved(false), _description(""), _source(""),
-      _age(0), _sex(FaceTools::UNKNOWN_SEX), _ethnicity(""), _cdate( QDate::currentDate()),
+    : _saved(false), _notes(""), _source(""), _studyId(""),
+      _age(0), _sex(FaceTools::MALE_SEX | FaceTools::FEMALE_SEX), _ethnicity(""), _cdate( QDate::currentDate()),
       _centreSet(false), _centre(0,0,0)
 {
     _landmarks = LandmarkSet::create();
@@ -157,7 +157,7 @@ bool FaceModel::update( ObjModelInfo::Ptr nfo)
     assert(_minfo);
     if ( !_minfo || !_minfo->is2DManifold())
     {
-        std::cerr << "[ERROR] FaceTools::FaceModel::update: null or non-manifold ObjModelInfo passed in!" << std::endl;
+        qWarning( "null or non-manifold ObjModelInfo passed in!");
         return false;
     }   // end if
 
@@ -294,10 +294,12 @@ void FaceModel::unlock() const { _mutex.unlock();}
 
 bool FaceModel::hasMetaData() const
 {
-    return !_description.isEmpty()
+    return !_notes.isEmpty()
         || !_source.isEmpty()
+        || !_studyId.isEmpty()
         || _age != 0.0
-        || _sex != FaceTools::UNKNOWN_SEX
+        || _sex == FaceTools::MALE_SEX
+        || _sex == FaceTools::FEMALE_SEX
         || !_ethnicity.isEmpty()
         || _cdate != QDate::currentDate()
         || _centreSet
@@ -310,17 +312,16 @@ bool FaceModel::hasMetaData() const
 }   // end hasMetaData
 
 
-void FaceModel::clearLandmarks()
+void FaceModel::clearMeta()
 {
     _orientation = RFeatures::Orientation();
-    _centreSet = false;
-    _centre = cv::Vec3f(0,0,0);
-    _landmarks->clear();
     _metrics.reset();
     _metricsL.reset();
     _metricsR.reset();
+    _centreSet = false;
+    calculateBounds();
     setSaved(false);
-}   // end clearLandmarks
+}   // end clearMeta
 
 
 void FaceModel::updateRenderers() const
@@ -360,3 +361,9 @@ void FaceModel::addPhenotype( int hid)
     if ( _phenotypes.count(hid) == 0)
         _phenotypes.insert(hid);
 }   // end addPhenotype
+
+
+void FaceModel::removePhenotype( int hid)
+{
+    _phenotypes.erase(hid);
+}   // end removePhenotype

@@ -22,6 +22,7 @@
 #include <Orientation.h>
 using FaceTools::Landmark::LandmarkSet;
 using FaceTools::Landmark::Landmark;
+using FaceTools::Landmark::SpecificLandmark;
 using FaceTools::FaceLateral;
 using LDMRK_PAIR = std::pair<int, cv::Vec3f>;
 #include <algorithm>
@@ -52,6 +53,9 @@ bool LandmarkSet::has( int id, FaceLateral lat) const
     }   // end switch
     return hasLmk;
 }   // end has
+
+
+bool LandmarkSet::has( const SpecificLandmark& p) const { return has(p.id, p.lat);}
 
 
 // private
@@ -146,12 +150,9 @@ const cv::Vec3f* LandmarkSet::pos( int id, FaceLateral lat) const
     return &lateral(lat).at(id);
 }   // end pos
 
+const cv::Vec3f* LandmarkSet::pos( const QString& lmcode, FaceLateral lat) const { return pos( LDMKS_MAN::landmark(lmcode)->id(), lat);}
 
-const cv::Vec3f* LandmarkSet::pos( const QString& lmcode, FaceLateral lat) const
-{
-    const int id = LDMKS_MAN::landmark(lmcode)->id(); // Get the id of the pupil landmark
-    return pos( id, lat);
-}   // end pos
+const cv::Vec3f* LandmarkSet::pos( const SpecificLandmark& sl) const { return pos( sl.id, sl.lat);}
 
 
 cv::Vec3f LandmarkSet::eyeVec() const

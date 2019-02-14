@@ -39,7 +39,7 @@ ActionSmooth::ActionSmooth( const QString& dn, const QIcon& ico, QProgressBar* p
 
 bool ActionSmooth::testReady( const FV* fv)
 {
-    return FaceModelSurfaceData::get()->isAvailable(fv->data());
+    return FaceModelSurfaceData::isAvailable(fv->data());
 }   // end testReady
 
 

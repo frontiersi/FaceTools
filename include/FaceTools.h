@@ -22,6 +22,7 @@
 #include "LandmarkSet.h"
 #include "MiscFunctions.h"
 #include <Viewer.h> // RVTK
+#include <QtCharts/QChartView>
 
 namespace FaceTools {
 
@@ -36,6 +37,17 @@ FaceTools_EXPORT cv::Vec3f calcPupil( const Landmark::LandmarkSet& lmks, FaceLat
 
 // Calculate face centre as the midpoint between the nasal root and subnasale.
 FaceTools_EXPORT cv::Vec3f calcFaceCentre( const Landmark::LandmarkSet&);
+
+// Estimate the normal vector using an interative approach that evaluates
+// normals along line segments measured over vertical line segments under the
+// detected positions of the eyes. The left and right positions v0 and v1 should
+// be given by the surface locations of the left and right pupils.
+// After obtaining the normal vector, the up vector is calculated simply
+// as the normalized vector vnorm.cross(v1-v0)
+FaceTools_EXPORT void findNormal( const RFeatures::ObjModelKDTree* kdt,
+                                  const cv::Vec3f& v0,    // Position of left eye
+                                  const cv::Vec3f& v1,    // Position of right eye
+                                  cv::Vec3f& vnorm);      // Output face norm
 
 // Return the point closest to v on the surface of the model.
 FaceTools_EXPORT cv::Vec3f toSurface( const RFeatures::ObjModelKDTree*, const cv::Vec3f& v);
@@ -74,6 +86,8 @@ FaceTools_EXPORT RFeatures::ObjModel::Ptr makeFlattened( const RFeatures::ObjMod
 FaceTools_EXPORT void updateRenderers( const FMS&);
 
 FaceTools_EXPORT cv::Mat_<cv::Vec3b> makeThumbnail( const FM*, const cv::Size& dims, float d);
+
+FaceTools_EXPORT QtCharts::QChart* createChart( const QString& ethn, int8_t sex, size_t d, int mid, const FM*, bool withTitle=true);
 
 }   // end namespace
 

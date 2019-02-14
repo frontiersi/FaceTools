@@ -62,7 +62,7 @@ Phenotype::Ptr Phenotype::load( const QString& fpath)
     }   // end try
     catch ( const sol::error& e)
     {
-        std::cerr << "[WARNING] FaceTools::Metric::Phenotype::load: Unable to load and execute file '" << fpath.toStdString() << "'!" << std::endl;
+        std::cerr << "[WARN] FaceTools::Metric::Phenotype::load: Unable to load and execute file '" << fpath.toStdString() << "'!" << std::endl;
         std::cerr << "\t" << e.what() << std::endl;
     }   // end catch
 
@@ -72,14 +72,14 @@ Phenotype::Ptr Phenotype::load( const QString& fpath)
     auto table = hpo->_lua["hpo"];
     if ( !table.valid())
     {
-        std::cerr << "[WARNING] FaceTools::Metric::Phenotype::load: Missing table 'hpo'!" << std::endl;
+        std::cerr << "[WARN] FaceTools::Metric::Phenotype::load: Missing table 'hpo'!" << std::endl;
         return nullptr;
     }   // end if
 
     hpo->_id = table["id"].get_or(-1);
     if ( hpo->_id < 0)
     {
-        std::cerr << "[WARNING] FaceTools::Metric::Phenotype::load: Invalid ID!" << std::endl;
+        std::cerr << "[WARN] FaceTools::Metric::Phenotype::load: Invalid ID!" << std::endl;
         return nullptr;
     }   // end if
 
@@ -136,11 +136,11 @@ bool Phenotype::isPresent( const MetricSet* mlat, const MetricSet* llat, const M
         if ( result.valid())
             v = result;
         else
-            std::cerr << "[WARNING] FaceTools::Metric::Phenotype::isPresent: Invalid result from function!" << std::endl;
+            std::cerr << "[WARN] FaceTools::Metric::Phenotype::isPresent: Invalid result from function!" << std::endl;
     }   // end try
     catch (const sol::error& e)
     {
-        std::cerr << "[WARNING] FaceTools::Metric::Phenotype::isPresent: Error in determination script!" << std::endl;
+        std::cerr << "[WARN] FaceTools::Metric::Phenotype::isPresent: Error in determination script!" << std::endl;
         std::cerr << "\t" << e.what() << std::endl;
     }   // end catch
 

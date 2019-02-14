@@ -25,12 +25,16 @@ namespace FaceTools { namespace Metric {
 class FaceTools_EXPORT MetricCalculatorTypeRegistry
 {
 public:
-    static void addTemplateType( MCTI*);
-    static void clearTemplateTypes();   // Remove all template types from memory
-    static MCTI::Ptr createFrom( const QString& category, const QString& parameters);
+    static void addMCT( MCT*);
+    static MCT* makeMCT( const QString& category, int id, const Landmark::LmkList*, const Landmark::LmkList*);
 
 private:
-    static std::unordered_map<QString, MCTI*> s_types;
+    static std::shared_ptr<MetricCalculatorTypeRegistry> s_singleton;
+    std::unordered_map<QString, MCT*> _types;
+
+    static std::shared_ptr<MetricCalculatorTypeRegistry> me();
+    MetricCalculatorTypeRegistry(){}
+    ~MetricCalculatorTypeRegistry();
 };  // end class
 
 }}  // end namespaces

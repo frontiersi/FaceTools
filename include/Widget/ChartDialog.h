@@ -18,8 +18,7 @@
 #ifndef FACETOOLS_WIDGET_CHART_DIALOG_H
 #define FACETOOLS_WIDGET_CHART_DIALOG_H
 
-#include <FaceTypes.h>
-#include <QtCharts/QChartView>
+#include <FaceTools.h>
 #include <QDialog>
 
 namespace Ui { class ChartDialog;}
@@ -41,9 +40,9 @@ public slots:
 private slots:
     void doOnUserSelectedEthnicity();
     void doOnUserSelectedSource();
-    void doOnEditData();
-    void doOnSetMetricActive();
+    void doOnSetSelectedMetric();
     void doOnResetChart();
+    void doOnSaveImage();
 
 private:
     Ui::ChartDialog *_ui;

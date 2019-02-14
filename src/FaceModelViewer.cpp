@@ -32,7 +32,7 @@ FaceModelViewer::FaceModelViewer( QWidget *parent) : ModelViewer(parent)
 
 
 void FaceModelViewer::saveScreenshot() const { saveSnapshot();}
-void FaceModelViewer::resetCamera() { resetDefaultCamera( 650.0f);}
+void FaceModelViewer::resetCamera() { resetDefaultCamera( DEFAULT_CAMERA_DISTANCE);}
 
 
 bool FaceModelViewer::attach( FV* fv)

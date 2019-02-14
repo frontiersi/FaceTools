@@ -40,10 +40,10 @@ bool ActionMapSurfaceData::doAction( FVS& rset, const QPoint&)
 {
     for ( FaceModel* fm : rset.models())
     {
-        if ( !FaceModelSurfaceData::get()->isAvailable(fm))
+        if ( !FaceModelSurfaceData::isAvailable(fm))
         {
             fm->lockForRead();
-            FaceModelSurfaceData::get()->calculate(fm);
+            FaceModelSurfaceData::calculate(fm);
         }   // end if
     }   // end for
     return true;
@@ -52,7 +52,7 @@ bool ActionMapSurfaceData::doAction( FVS& rset, const QPoint&)
 
 void ActionMapSurfaceData::purge( const FaceModel* fm)
 {
-    FaceModelSurfaceData::get()->purge(fm);
+    FaceModelSurfaceData::purge(fm);
 }   // end purge
 
 

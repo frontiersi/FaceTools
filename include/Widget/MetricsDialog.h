@@ -43,9 +43,10 @@ signals:
     void onEthnicityIgnored( bool);
     // Emit a refreshed set of phenotype IDs that match to the currently selected model.
     void onShowingPhenotypes( const IntSet&);
+    void onRefreshedMetrics();
 
 public slots:
-    void doOnRefreshMatched();
+    void refresh();
 
 private slots:
     void doOnUserSelectedSyndrome();
@@ -53,7 +54,7 @@ private slots:
     void doOnSetAllChecked(bool);
     void sortOnColumn( int);
     void doOnItemChanged( QTableWidgetItem*);
-    void doOnSetMetricActive( int);   // Pass in metric ID
+    void doOnSetCurrentMetric( int);   // Pass in metric ID
     void doOnClickedFlipCombosButton();
     void doOnEthnicityIgnored();
 
@@ -61,7 +62,7 @@ private:
     Ui::MetricsDialog *_ui;
     std::unordered_map<int, int> _idRows;  // Metric ID --> Row index
     bool _syndromeToPhenotype;  // Track combo box reordering
-    IntSet _dhids;  // Restricted set of phenotype IDs
+    IntSet _mpids;  // Matched set of phenotype IDs
 
     void appendRow( int);
     void populateHPOs( const IntSet&);

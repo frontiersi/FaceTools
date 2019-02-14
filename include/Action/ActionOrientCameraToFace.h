@@ -25,7 +25,7 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionOrientCameraToFace : public FaceAction
 { Q_OBJECT
 public:
-    ActionOrientCameraToFace( const QString& dname="Orient Camera to Face", const QIcon& icon=QIcon(), double d=600., double r=0.);
+    ActionOrientCameraToFace( const QString& dname="Orient Camera to Face", const QIcon& icon=QIcon(), double d=500., double r=0.);
 
     // Set/get the distance in world units to the face centre point
     // for the new position of the camera when transformed.

@@ -31,6 +31,12 @@ protected slots:
     bool testReady( const Vis::FV*) override;
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet& es, const FVS&, bool) override { es.insert(METRICS_CHANGE);}
+
+private slots:
+    void doUpdateMetric(int);
+
+private:
+    bool updateMetric(int);
 };  // end class
 
 }}   // end namespace

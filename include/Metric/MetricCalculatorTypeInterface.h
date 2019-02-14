@@ -18,49 +18,31 @@
 #ifndef FACE_TOOLS_METRIC_METRIC_CALCULATOR_TYPE_INTERFACE_H
 #define FACE_TOOLS_METRIC_METRIC_CALCULATOR_TYPE_INTERFACE_H
 
-/**
- * Represents an N dimensional metric of some sort of calculation over the face.
- * The simplest kind deriving from this is InterlandmarkMetricCalculatorType
- * which is metric of single dimension (a scalar).
- */
-
 #include <FaceTypes.h>
 #include <PluginInterface.h>            // QTools
 #include <MetricVisualiser.h>           // FaceTools::Vis
-#include <RangedScalarDistribution.h>   // rlib
+#include <Landmark.h>
 
 namespace FaceTools { namespace Metric {
 
 class FaceTools_EXPORT MetricCalculatorTypeInterface : public QTools::PluginInterface
 { Q_OBJECT
 public:
-    virtual int id() const = 0;
-    virtual const QString& name() const = 0;            // The individual name of this metric calculator.
-    virtual const QString& description() const = 0;     // Description of this metric calculation.
-    virtual size_t numDecimals() const = 0;             // The nunber of decimals.
+    virtual QString category() const = 0;        // Metric calculator category.
 
-    virtual void setId( int) = 0;
-    virtual void setName( const QString&) = 0;          // Set the name of the particular instance.
-    virtual void setDescription( const QString&) = 0;   // Set the description.
-    virtual void setNumDecimals( size_t) = 0;           // Set the number of decimals to display.
+    virtual Vis::MetricVisualiser* visualiser() = 0;    // Return the visualiser
 
-    virtual QString category() const = 0;               // The category (type) name of this metric calculator.
-    virtual QString params() const = 0;                 // Parameters specifying how this measurement is made.
-    virtual size_t dims() const = 0;                    // Number of dimensions this metric has (defined by category).
-    virtual bool isBilateral() const = 0;               // Is this metic bilateral, or medial/singular only?
+    // Can this metric be calculated for given model and parameters?
+    virtual bool canCalculate( const FM*, const Landmark::LmkList*) const = 0;
 
-    virtual Vis::MetricVisualiser* visualiser() = 0;    // Return the visualisation method.
-    virtual bool canCalculate( const FM*) const = 0;     // Can this metric be calculated for given model?
+    // Measurement(s) against given model for the given landmark parameters.
+    virtual void measure( std::vector<double>&, const FM*, const Landmark::LmkList*) const = 0;
 
-    // Measure for d=dimension-1 against given model for the given face lateral.
-    virtual double measure( size_t d, const FM*, FaceLateral fl=FACE_LATERAL_MEDIAL) const = 0;
-
-    // Make and return a default initialised version of this object configured with given params.
-    using Ptr = std::shared_ptr<MetricCalculatorTypeInterface>;
-    virtual Ptr fromParams( const QString&) const = 0;
+    // Create and return a clone of this object with the given metric parameters.
+    virtual MetricCalculatorTypeInterface* make( int id, const Landmark::LmkList*, const Landmark::LmkList*) const = 0;
 };  // end class
 
-using MCTI = MetricCalculatorTypeInterface;
+using MCT = MetricCalculatorTypeInterface;
 
 }}   // end namespaces
 

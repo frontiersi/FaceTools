@@ -34,7 +34,7 @@ ActionLoadFaceModels::ActionLoadFaceModels( const QString& dn, const QIcon& ico,
     _dialog->setNameFilters(filters);
     _dialog->setViewMode(QFileDialog::Detail);
     _dialog->setFileMode(QFileDialog::ExistingFiles);
-    _dialog->setOption(QFileDialog::DontUseCustomDirectoryIcons);
+    //_dialog->setOption(QFileDialog::DontUseCustomDirectoryIcons);
     _dialog->setOption(QFileDialog::DontUseNativeDialog);
 }   // end ctor
 

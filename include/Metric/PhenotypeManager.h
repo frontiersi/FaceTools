@@ -43,6 +43,9 @@ public:
     // Return reference to the phenotype term with given id or null if doesn't exist.
     static Phenotype::Ptr phenotype( int id) { return _hpos.count(id) > 0 ? _hpos.at(id) : nullptr;}
 
+    // Return a constant reference - only use if sure of id presence!
+    static const Phenotype& cphenotype( int id) { return *_hpos.at(id);}
+
 private:
     static IntSet _ids;
     static QStringList _names;                             // Phenotype names

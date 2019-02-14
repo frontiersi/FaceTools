@@ -1,17 +1,15 @@
 ## FaceTools
 
-The FaceTools library provides the core functionality for the [Cliniface](../../../cliniface/) application.
+The FaceTools library provides core functionality for the [Cliniface](../../../cliniface/) application.
 
 ## Prerequisites
-- [CGAL](http://www.cgal.org/)
 - [dlib](http://dlib.net/)
 - [QuaZip](https://github.com/stachenov/quazip)
-- [rlib](https://github.com/richeytastic/rlib)
-- [rFeatures](https://github.com/richeytastic/rfeatures)
-- [rVTK](https://github.com/richeytastic/rvtk)
-- [rModelIO](https://github.com/richeytastic/rmodelio)
 - [QTools](https://github.com/richeytastic/qtools)
+- [rModelIO](https://github.com/richeytastic/rmodelio)
 - [libbuild](https://github.com/richeytastic/libbuild)
+- [lua](https://www.lua.org)
+- [sol2](https://github.com/ThePhD/sol2)
 
 dlib requires the `shape_predictor_68_face_landmark.dat`. Download from:
 <http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2>

@@ -19,6 +19,7 @@
 #include <QDir>
 #include <QFile>
 #include <QTextStream>
+#include <QDebug>
 #include <iostream>
 #include <cassert>
 using FaceTools::Metric::MetricCalculatorManager;
@@ -32,8 +33,8 @@ MCSet MetricCalculatorManager::_mset;
 MCSet MetricCalculatorManager::_vmset;
 QStringList MetricCalculatorManager::_names;
 QStringList MetricCalculatorManager::_ethnicities;
-int MetricCalculatorManager::_activeMetricId(-1);
-int MetricCalculatorManager::_prevActiveMetricId(-1);
+int MetricCalculatorManager::_cmid(-1);
+int MetricCalculatorManager::_pmid(-1);
 
 
 int MetricCalculatorManager::load( const QString& dname)
@@ -48,7 +49,7 @@ int MetricCalculatorManager::load( const QString& dname)
     QDir mdir( dname);
     if ( !mdir.exists() || !mdir.isReadable())
     {
-        std::cerr << "[WARNING] FaceTools::Metric::MetricCalculatorManager::load: Unable to open directory: " << dname.toStdString() << std::endl;
+        qWarning() << "Unable to open directory: " << dname;
         return -1;
     }   // end if
 
@@ -61,7 +62,7 @@ int MetricCalculatorManager::load( const QString& dname)
         if ( mc)
         {
             if ( _metrics.count(mc->id()) > 0)    // Overwritting an existing MetricCalculator?
-                std::cerr << "[WARNING] FaceTools::Metric:MetricCalculatorManager::load: Overwriting existing MetricCalculator!" << std::endl;
+                qWarning() << "Overwriting existing MetricCalculator!";
             else
             {
                 _names.append(mc->name());
@@ -89,27 +90,27 @@ int MetricCalculatorManager::load( const QString& dname)
         _ethnicities.append(e);
     _ethnicities.sort();
 
-    _prevActiveMetricId = -1;
-    _activeMetricId = *_ids.begin();
+    _pmid = -1;
+    _cmid = *_ids.begin();
     return nloaded;
 }   // end load
 
 
 MC::Ptr MetricCalculatorManager::metric( int id) { return _metrics.count(id) > 0 ? _metrics.at(id) : nullptr;}
 
-MC::Ptr MetricCalculatorManager::activeMetric() { return _metrics.count(_activeMetricId) > 0 ? _metrics.at(_activeMetricId) : nullptr;}
+MC::Ptr MetricCalculatorManager::currentMetric() { return _metrics.count(_cmid) > 0 ? _metrics.at(_cmid) : nullptr;}
 
-MC::Ptr MetricCalculatorManager::previousActiveMetric() { return _metrics.count(_prevActiveMetricId) > 0 ? _metrics.at(_prevActiveMetricId) : nullptr;}
+MC::Ptr MetricCalculatorManager::previousMetric() { return _metrics.count(_pmid) > 0 ? _metrics.at(_pmid) : nullptr;}
 
 
-bool MetricCalculatorManager::setActiveMetric( int mid)
+bool MetricCalculatorManager::setCurrentMetric( int mid)
 {
-    if ( _activeMetricId != mid)
+    if ( _cmid != mid)
     {
         assert( _metrics.count(mid) > 0);
-        _prevActiveMetricId = _activeMetricId;
-        _activeMetricId = mid;
-        _metrics.at(mid)->setActive();  // Cause the active signal on the metric to fire
+        _pmid = _cmid;
+        _cmid = mid;
+        _metrics.at(mid)->setSelected();  // Cause the selected signal on the metric to fire
         return true;
     }   // end if
     return false;

@@ -76,48 +76,53 @@ public:
     PathSet::Ptr paths() const { return _paths;}    // CALL setSaved(false) AFTER UPDATING!
 
     Metric::MetricSet& metrics() { return _metrics;}
-    const Metric::MetricSet& metrics() const { return _metrics;}
+    const Metric::MetricSet& cmetrics() const { return _metrics;}
 
     Metric::MetricSet& metricsL() { return _metricsL;}
-    const Metric::MetricSet& metricsL() const { return _metricsL;}
+    const Metric::MetricSet& cmetricsL() const { return _metricsL;}
 
     Metric::MetricSet& metricsR() { return _metricsR;}
-    const Metric::MetricSet& metricsR() const { return _metricsR;}
+    const Metric::MetricSet& cmetricsR() const { return _metricsR;}
 
     const IntSet& phenotypes() const { return _phenotypes;}
     void clearPhenotypes();
     void addPhenotype( int);
+    void removePhenotype( int);
 
-    // Set/get description of data.
-    void setDescription( const QString& d) { if (_description != d) setSaved(false); _description = d;}
-    const QString& description() const { return _description;}
+    // Set/get image notes.
+    void setNotes( const QString& n) { _notes = n;}
+    const QString& notes() const { return _notes;}
 
     // Set/get source of data.
-    void setSource( const QString& s) { if (_source != s) setSaved(false); _source = s;}
+    void setSource( const QString& s) { _source = s;}
     const QString& source() const { return _source;}
 
+    // Set/get study ID
+    void setStudyId( const QString& s) { _studyId = s;}
+    const QString& studyId() const { return _studyId;}
+
     // Set/get age of individual.
-    void setAge( double a) { if (_age != a) setSaved(false); _age = a;}
+    void setAge( double a) { _age = a;}
     double age() const { return _age;}
 
     // Set/get sex of individual.
-    void setSex( int8_t s) { if (_sex != s) setSaved(false); _sex = s;}
+    void setSex( int8_t s) { _sex = s;}
     int8_t sex() const { return _sex;}
 
     // Set/get ethnicity of individual.
-    void setEthnicity( const QString& t) { if (_ethnicity != t) setSaved(false); _ethnicity = t;}
+    void setEthnicity( const QString& t) { _ethnicity = t;}
     const QString& ethnicity() const { return _ethnicity;}
 
     // Set/get capture date of image.
-    void setCaptureDate( const QDate& d) { if (_cdate != d) setSaved(false); _cdate = d;}
+    void setCaptureDate( const QDate& d) { _cdate = d;}
     const QDate& captureDate() const { return _cdate;}
 
     // Set/get if this model needs saving.
     bool isSaved() const { return _saved;}
     void setSaved( bool s=true) { _saved = s;}
 
-    // Clears orientation, landmarks and metrics.
-    void clearLandmarks();
+    // Clears orientation, metrics, and bounds info.
+    void clearMeta();
 
     // The views associated with this model.
     const FVS& fvs() const { return _fvs;}
@@ -144,8 +149,9 @@ public:
 
 private:
     bool _saved;
-    QString _description;   // Long form description
+    QString _notes;   // Long form description
     QString _source;        // Data source info
+    QString _studyId;       // Study ID info
     double _age;
     int8_t _sex;
     QString _ethnicity;

@@ -15,23 +15,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_REPORT_INTERFACE_H
-#define FACE_TOOLS_REPORT_INTERFACE_H
+#ifndef FACE_TOOLS_METRIC_LINE_ANGLE_METRIC_CALCULATOR_TYPE_H
+#define FACE_TOOLS_METRIC_LINE_ANGLE_METRIC_CALCULATOR_TYPE_H
 
-#include <FaceTypes.h>
-#include <PluginInterface.h>    // QTools
+#include <MetricCalculatorTypeInterface.h>
+#include <AngleVisualiser.h>
 
-namespace FaceTools {
-namespace Report {
+namespace FaceTools { namespace Metric {
 
-// ReportInterface is pure virtual to allow it to be a plugin type.
-class FaceTools_EXPORT ReportInterface : public QTools::PluginInterface
+class FaceTools_EXPORT LineAngleMetricCalculatorType : public MetricCalculatorTypeInterface
 { Q_OBJECT
 public:
-    virtual bool isAvailable( const FM*) const = 0;  // If the data for this report are available.
+    LineAngleMetricCalculatorType( int id=-1, const Landmark::LmkList* l0=nullptr, const Landmark::LmkList* l1=nullptr);
+
+    MCT* make( int id, const Landmark::LmkList*, const Landmark::LmkList*) const override;
+
+    QString category() const override { return "Line Angle";}
+    Vis::MetricVisualiser* visualiser() override { return &_vis;}
+    bool canCalculate( const FM*, const Landmark::LmkList*) const override;
+    void measure( std::vector<double>&, const FM*, const Landmark::LmkList*) const override;
+
+private:
+    Vis::AngleVisualiser _vis;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

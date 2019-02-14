@@ -16,7 +16,7 @@
  ************************************************************************/
 
 #include <MetricsDialog.h>
-#include <MetricsTableHeader.h>
+#include <CheckAllTableHeader.h>
 #include <ui_MetricsDialog.h>
 #include <IntTableWidgetItem.h>
 #include <MetricCalculatorManager.h>
@@ -62,11 +62,11 @@ MetricsDialog::MetricsDialog(QWidget *parent) :
     _ui->table->setColumnCount(5);
     _ui->table->setHorizontalHeaderLabels( QStringList( {"", "ID", "Name", "Category", "Description"}));
 
-    MetricsTableHeader* header = new MetricsTableHeader( _ui->table);
+    CheckAllTableHeader* header = new CheckAllTableHeader( _ui->table);
     _ui->table->setHorizontalHeader(header);
 
-    connect( header, &MetricsTableHeader::allChecked, this, &MetricsDialog::doOnSetAllChecked);
-    connect( header, &MetricsTableHeader::sectionClicked, this, &MetricsDialog::sortOnColumn);
+    connect( header, &CheckAllTableHeader::allChecked, this, &MetricsDialog::doOnSetAllChecked);
+    connect( header, &CheckAllTableHeader::sectionClicked, this, &MetricsDialog::sortOnColumn);
 
     //_ui->table->setSelectionBehavior( QAbstractItemView::SelectRows);
     //_ui->table->setSelectionMode( QAbstractItemView::SingleSelection);
@@ -85,20 +85,21 @@ MetricsDialog::MetricsDialog(QWidget *parent) :
     connect( _ui->showPhenotypesButton, &QToolButton::clicked, this, &MetricsDialog::onShowPhenotypes);
     connect( _ui->flipButton, &QToolButton::clicked, this, &MetricsDialog::doOnClickedFlipCombosButton);
 
-    connect( _ui->matchedCheckBox, &QCheckBox::clicked, this, &MetricsDialog::doOnRefreshMatched);
+    connect( _ui->matchedCheckBox, &QCheckBox::clicked, this, &MetricsDialog::refresh);
     connect( _ui->ignoreEthnicityCheckBox, &QCheckBox::clicked, this, &MetricsDialog::doOnEthnicityIgnored);
 
     //_ui->table->setColumnHidden(IDNT_COL, true);
     header->setStretchLastSection(true);   // Resize width of final column
 
     for ( MC::Ptr mc : MCM::metrics())
-        connect( &*mc, &MC::activated, this, &MetricsDialog::doOnSetMetricActive);
+        connect( &*mc, &MC::selected, this, &MetricsDialog::doOnSetCurrentMetric);
 
+    _ui->table->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     populate();
 
     connect( _ui->table, &QTableWidget::cellClicked, [this]( int rw){ setSelectedRow(rw);});
     connect( _ui->table, &QTableWidget::currentItemChanged, [this]( QTableWidgetItem* item){ setSelectedRow(item->row());});
-    connect( _ui->table, &QTableWidget::itemChanged, this, &MetricsDialog::doOnItemChanged);
+    //connect( _ui->table, &QTableWidget::itemChanged, this, &MetricsDialog::doOnItemChanged);
 }   // end ctor
 
 
@@ -127,6 +128,8 @@ void MetricsDialog::doOnSetAllChecked( bool c)
 {
     const Qt::CheckState cstate = c ? Qt::Checked : Qt::Unchecked;
 
+    disconnect( _ui->table, &QTableWidget::itemChanged, this, &MetricsDialog::doOnItemChanged);
+
     const int nrows = _ui->table->rowCount();
     for ( int i = 0; i < nrows; ++i)
     {
@@ -134,9 +137,13 @@ void MetricsDialog::doOnSetAllChecked( bool c)
         {
             _ui->table->item( i, SHOW_COL)->setCheckState( cstate);
             MC::Ptr mc = MCM::metric( _ui->table->item( i, IDNT_COL)->text().toInt());
-            mc->signalUpdated();
+            mc->setVisible(c);
         }   // end if
     }   // end for
+
+    connect( _ui->table, &QTableWidget::itemChanged, this, &MetricsDialog::doOnItemChanged);
+
+    emit onRefreshedMetrics();
 }   // end doOnSetAllChecked
 
 
@@ -159,18 +166,18 @@ void MetricsDialog::resetIdRowMap()
 }   // end resetIdRowMap
 
 
-void MetricsDialog::doOnSetMetricActive( int mid)
+void MetricsDialog::doOnSetCurrentMetric( int mid)
 {
     assert( _idRows.count(mid) > 0);
     highlightRow( _idRows.at(mid));
-}   // end doOnSetMetricActive
+}   // end doOnSetCurrentMetric
 
 
 void MetricsDialog::highlightRow( int rowid)
 {
     disconnect( _ui->table, &QTableWidget::itemChanged, this, &MetricsDialog::doOnItemChanged);
 
-    MC::Ptr pam = MCM::previousActiveMetric();
+    MC::Ptr pam = MCM::previousMetric();
     if ( pam)
     {
         const int prowid = _idRows.at( pam->id());
@@ -195,7 +202,7 @@ void MetricsDialog::highlightRow( int rowid)
 void MetricsDialog::setSelectedRow( int rowid)
 {
     const int mid = _ui->table->item( rowid, IDNT_COL)->text().toInt();
-    MCM::setActiveMetric( mid); // Will cause the metric to become active which will in turn cause the row highlighting
+    MCM::setCurrentMetric( mid); // Will cause the metric to become active which will in turn call doOnSetMetricActive
 }   // end setSelectedRow
 
 
@@ -206,22 +213,26 @@ void MetricsDialog::doOnItemChanged( QTableWidgetItem* m)
     {
         case SHOW_COL:
             mc->setVisible( m->checkState() == Qt::Checked && !_ui->table->isRowHidden( m->row()));
+            disconnect( &*mc, &MC::selected, this, &MetricsDialog::doOnSetCurrentMetric);
+            qInfo() << "Set selected metric " << mc->id();
+            mc->setSelected();
+            connect( &*mc, &MC::selected, this, &MetricsDialog::doOnSetCurrentMetric);
             break;
+            /*
         case NAME_COL:
-            mc->type()->setName( m->text());
+            mc->setName( m->text());
             break;
         case DESC_COL:
-            mc->type()->setDescription( m->text());
+            mc->setDescription( m->text());
             break;
+            */
     }   // end switch
-    mc->signalUpdated();
 }   // end doOnItemChanged
 
 
 void MetricsDialog::populate()
 {
-    _dhids = HPOMan::ids();
-    populateHPOs( _dhids);
+    populateHPOs( HPOMan::ids());
     populateSyndromes( SynMan::ids());
 
     // Place all the metrics into the table.
@@ -229,13 +240,13 @@ void MetricsDialog::populate()
     for ( int mid : MCM::ids())
         appendRow( mid);
 
-    _ui->table->resizeColumnsToContents();
     sortOnColumn( NAME_COL);
     setSelectedRow( 0);
-
+    _ui->table->resizeColumnsToContents();
+    _ui->table->resizeRowsToContents();
     _ui->table->scrollToTop();
 
-    MetricsTableHeader* header = qobject_cast<MetricsTableHeader*>(_ui->table->horizontalHeader());
+    CheckAllTableHeader* header = qobject_cast<CheckAllTableHeader*>(_ui->table->horizontalHeader());
     header->setAllChecked(true);
 
     doOnClickedFlipCombosButton();
@@ -344,9 +355,9 @@ void MetricsDialog::doOnUserSelectedHPOTerm()
 
     if ( hid >= 0)
         mset = &HPOMan::phenotype(hid)->metrics(); // Metrics just from the selected HPO term
-    else if ( sid < 0)   // Any syndrome too, so use all metrics in the detected set of phenotypes
+    else if ( sid < 0)   // Any syndrome too, so use all metrics in the matched set of phenotypes
     {
-        for ( int h : _dhids)
+        for ( int h : _mpids)
         {
             const IntSet& mset0 = HPOMan::phenotype(h)->metrics();
             smset.insert( mset0.begin(), mset0.end());
@@ -356,7 +367,7 @@ void MetricsDialog::doOnUserSelectedHPOTerm()
     {
         for ( int h : SynMan::syndrome(sid)->hpos()) // Get the HPO ids related to the currently selected syndrome
         {
-            if ( _dhids.count(h) > 0)   // Restrict to only those
+            if ( _mpids.count(h) > 0)   // Restrict to only those
             {
                 const IntSet& mset0 = HPOMan::phenotype(h)->metrics();
                 smset.insert( mset0.begin(), mset0.end());
@@ -367,13 +378,12 @@ void MetricsDialog::doOnUserSelectedHPOTerm()
     // Show/hide the metric table rows according to if the name of the metric is in the set for the selected HPO term.
     int rowCount = _ui->table->rowCount();
     int smid = -1;
-    MC::Ptr pam = MCM::activeMetric();
+    MC::Ptr pam = MCM::currentMetric();
 
     for ( int i = 0; i < rowCount; ++i)
     {
         int mid = _ui->table->item(i, IDNT_COL)->text().toInt();
         MC::Ptr mc = MCM::metric( mid);
-        const bool wasVisible = mc->isVisible();
 
         if ( mset->count(mid) > 0)
         {
@@ -387,9 +397,6 @@ void MetricsDialog::doOnUserSelectedHPOTerm()
             _ui->table->hideRow( i);
             mc->setVisible(false);
         }   // end else
-
-        if ( mc->isVisible() != wasVisible)
-            mc->signalUpdated();
     }   // end for
 
     if ( !_syndromeToPhenotype)
@@ -402,6 +409,8 @@ void MetricsDialog::doOnUserSelectedHPOTerm()
 
     if ( smid >= 0)
         setSelectedRow( _idRows.at(smid));
+
+    emit onRefreshedMetrics();
 }   // end doOnUserSelectedHPOTerm
 
 
@@ -410,34 +419,31 @@ void MetricsDialog::doOnUserSelectedSyndrome()
     if ( _syndromeToPhenotype)
     {
         if ( _ui->syndromesComboBox->count() == 2)
-            _ui->syndromesComboBox->setCurrentIndex(1);
-        const int sid = _ui->syndromesComboBox->currentData().toInt();
-        const IntSet *hset = sid >= 0 ? &SynMan::syndrome(sid)->hpos() : &HPOMan::ids();
-        IntSet rset;
-        for ( int hid : *hset)
-            if ( _dhids.count(hid) > 0)
-                rset.insert(hid);
-        populateHPOs(rset);
-        doOnUserSelectedHPOTerm();
+            _ui->syndromesComboBox->setCurrentIndex(1); // Not 'any' if only two syndromes
+
+        if ( _ui->syndromesComboBox->currentData().toInt() < 0) // Any syndrome
+            _ui->hpoComboBox->setCurrentIndex( 0);  // So any phenotype
+
+        refresh();
     }   // end if
 }   // end doOnUserSelectedSyndrome
 
 
 // public
-void MetricsDialog::doOnRefreshMatched()
+void MetricsDialog::refresh()
 {
     const bool ignoreEthnicity = _ui->ignoreEthnicityCheckBox->isChecked();
 
+    int csid = _ui->syndromesComboBox->currentData().toInt();
+    int cpid = _ui->hpoComboBox->currentData().toInt();
+
     const IntSet* hset = nullptr;
-    int sid = _ui->syndromesComboBox->currentData().toInt();
-    if ( _syndromeToPhenotype && sid >= 0)
-        hset = &SynMan::syndrome(sid)->hpos();
+    if ( _syndromeToPhenotype && csid >= 0)
+        hset = &SynMan::syndrome(csid)->hpos();
     else
         hset = &HPOMan::ids();
 
-    int chid = _ui->hpoComboBox->currentData().toInt();
-
-    _dhids.clear();
+    _mpids.clear();
 
     // Restrict the current set of phenotypes to only those matched on the currently selected model
     if ( _ui->matchedCheckBox->isChecked())
@@ -449,39 +455,39 @@ void MetricsDialog::doOnRefreshMatched()
             if ( fm->phenotypes().count(hid) > 0)
             {
                 if ( ignoreEthnicity || HPOMan::phenotype(hid)->isDemographicMatch( fm))
-                    _dhids.insert(hid);
+                    _mpids.insert(hid);
             }   // end if
         }   // end for
     }   // end if
     else
-        _dhids = *hset;   // Otherwise, it's a straight copy
+        _mpids = *hset; // Straight copy
 
-    if ( _dhids.count(chid) == 0)
-        chid = -1;
+    if ( _mpids.count(cpid) == 0)
+        cpid = -1;
 
-    populateHPOs( _dhids);
+    populateHPOs( _mpids);
 
     // Tell others of matches to phenotypes
-    emit onShowingPhenotypes( _dhids);
+    emit onShowingPhenotypes( _mpids);
 
-    int rowid = chid >= 0 ? _ui->hpoComboBox->findData(chid) : 0;
+    int rowid = cpid >= 0 ? _ui->hpoComboBox->findData(cpid) : 0;
     _ui->hpoComboBox->setCurrentIndex( rowid);
     doOnUserSelectedHPOTerm();
 
     if ( !_syndromeToPhenotype)
     {
-        if ( chid >= 0)
-            populateSyndromes( SynMan::hpoSyndromes(chid));
+        if ( cpid >= 0)
+            populateSyndromes( SynMan::hpoSyndromes(cpid));
         else
             populateSyndromes( IntSet());   // Empty set
     }   // end if
-}   // end doOnRefreshMatched
+}   // end refresh
 
 
 void MetricsDialog::doOnEthnicityIgnored()
 {
     emit onEthnicityIgnored(_ui->ignoreEthnicityCheckBox->isChecked());
-    doOnRefreshMatched();
+    refresh();
 }   // end doOnEthnicityIgnored
 
 
@@ -514,7 +520,7 @@ void MetricsDialog::doOnClickedFlipCombosButton()
     }   // end else
 
     if ( _ui->matchedCheckBox->isChecked())
-        doOnRefreshMatched();
+        refresh();
 
     // Show the tooltip on click.
     QToolTip::showText( _ui->flipButton->mapToGlobal(QPoint()), toolTipText);

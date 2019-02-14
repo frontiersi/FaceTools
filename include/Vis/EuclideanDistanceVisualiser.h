@@ -19,6 +19,7 @@
 #define FACE_TOOLS_VIS_EUCLIDEAN_DISTANCE_VISUALISER_H
 
 #include <MetricVisualiser.h>
+#include <Landmark.h>
 #include <vtkActor.h>
 
 namespace FaceTools { namespace Vis {
@@ -26,13 +27,12 @@ namespace FaceTools { namespace Vis {
 class FaceTools_EXPORT EuclideanDistanceVisualiser : public MetricVisualiser
 { Q_OBJECT
 public:
-    // If bilat is true, this visualisation will create two separate line actors
-    // to reflect the fact that at least one of {lmkA,lmkB} is a bilateral landmark.
-    EuclideanDistanceVisualiser( int id, int lmkA, int lmkB, bool bilat=false);
+    EuclideanDistanceVisualiser( int id, const Landmark::LmkList* l0=nullptr, const Landmark::LmkList* l1=nullptr);
 
     bool belongs( const vtkProp*, const FV*) const override;
     void pokeTransform( const FV*, const vtkMatrix4x4*) override;
     void fixTransform( const FV*) override;
+    bool isAvailable( const FM*) const override;
 
     void apply( FV*, const QPoint* mc=nullptr) override;
     void clear( FV*) override;
@@ -42,13 +42,12 @@ public:
     void setHighlighted( const FM* fm=nullptr) override;
 
 private:
-    const int _lmkA;
-    const int _lmkB;
-    const bool _bilat;
+    const Landmark::LmkList* _lmks0;
+    const Landmark::LmkList* _lmks1;
     std::unordered_map<const FV*, vtkActor*> _actor0;
     std::unordered_map<const FV*, vtkActor*> _actor1;
 
-    void apply( FV*, FaceLateral, FaceLateral, std::unordered_map<const FV*, vtkActor*>&);
+    void apply( FV*, const Landmark::LmkList*, std::unordered_map<const FV*, vtkActor*>&);
     void clear( FV*, std::unordered_map<const FV*, vtkActor*>&);
 };  // end class
 

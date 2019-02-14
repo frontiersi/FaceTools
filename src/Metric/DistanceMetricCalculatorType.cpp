@@ -16,118 +16,40 @@
  ************************************************************************/
 
 #include <DistanceMetricCalculatorType.h>
-#include <LandmarksManager.h>
 #include <FaceModel.h>
+#include <algorithm>
 #include <sstream>
 using FaceTools::Metric::DistanceMetricCalculatorType;
-using FaceTools::Metric::MCTI;
+using FaceTools::Metric::MCT;
 using FaceTools::Landmark::LandmarkSet;
+using FaceTools::Landmark::LmkList;
 using FaceTools::FM;
-using FaceTools::FaceLateral;
 
 
-const QString DistanceMetricCalculatorType::s_cat("Distance");
+DistanceMetricCalculatorType::DistanceMetricCalculatorType( int id, const LmkList* l0, const LmkList* l1)
+    : _vis(id, l0, l1) {}
 
 
-DistanceMetricCalculatorType::DistanceMetricCalculatorType()
-    : _id(-1), _bilat(false), _lA(-1), _lB(-1), _edv( -1, -1, -1), _ndps(0) {}
-
-
-// private
-DistanceMetricCalculatorType::DistanceMetricCalculatorType( int lA, int lB, bool b)
-    : _id(-1), _bilat(b), _lA(lA), _lB(lB), _edv( -1, lA, lB, b), _ndps(0)
+MCT* DistanceMetricCalculatorType::make( int id, const LmkList* l0, const LmkList* l1) const
 {
-}   // end ctor
+    return new DistanceMetricCalculatorType(id, l0, l1);
+}   // end make
 
 
-QString DistanceMetricCalculatorType::params() const
+bool DistanceMetricCalculatorType::canCalculate( const FM* fm, const LmkList* ll) const
 {
-    return (QString("%1").arg(_lA) + " " + QString("%1").arg(_lB));
-}   // end params
-
-
-MCTI::Ptr DistanceMetricCalculatorType::fromParams( const QString& prms) const
-{
-    std::istringstream iss(prms.toStdString());
-    std::string cA, cB;
-    iss >> cA;
-    cB = cA;
-    if ( iss.good())
-        iss >> cB;
-
-    if ( !LDMKS_MAN::hasCode(cA) || !LDMKS_MAN::hasCode(cB))
-    {
-        std::cerr << "[WARNING] FaceTools::Metric::DistanceMetricCalculatorType::fromParams: "
-                  << "Landmarks " << cA << " and/or " << cB << " not found!" << std::endl;
-        return nullptr;
-    }   // end if
-
-    FaceTools::Landmark::Landmark* lmkA = LDMKS_MAN::landmark(cA);
-    FaceTools::Landmark::Landmark* lmkB = LDMKS_MAN::landmark(cB);
-
-    // Non-bilateral landmarks CANNOT be the same since this denotes a point.
-    if ( lmkA == lmkB && !lmkA->isBilateral() && !lmkB->isBilateral())
-    {
-        std::cerr << "[WARNING] FaceTools::Metric::DistanceMetricCalculatorType::fromParams: "
-                  << "Cannot create interlandmark distance calculator for landmark if it's non-bilateral!" << std::endl;
-        return nullptr;
-    }   // end if
-
-    // If lA and lB are the same, the measurement cannot be bilateral even if the landmarks are.
-    const bool bilat = (lmkA != lmkB) && (lmkA->isBilateral() || lmkB->isBilateral());
-    return MCTI::Ptr( new DistanceMetricCalculatorType( lmkA->id(), lmkB->id(), bilat));
-}   // end fromParams
-
-
-void DistanceMetricCalculatorType::setId( int id) { _id = id; _edv.setMetricId(_id);}
-void DistanceMetricCalculatorType::setName( const QString& nm) { _name = nm;}
-void DistanceMetricCalculatorType::setDescription( const QString& ds) { _desc = ds;}
-void DistanceMetricCalculatorType::setNumDecimals( size_t ndps) { _ndps = ndps;}
-
-
-bool DistanceMetricCalculatorType::canCalculate( const FM* fm) const
-{
+    using SLmk = FaceTools::Landmark::SpecificLandmark;
     LandmarkSet::Ptr lmks = fm->landmarks();
-    return lmks->has(_lA) && lmks->has(_lB);
+    if ( ll->size() != 2)
+        return false;
+    return std::all_of( std::begin(*ll), std::end(*ll), [lmks]( const SLmk& p){ return lmks->has(p);});
 }   // end canCalculate
 
 
-double DistanceMetricCalculatorType::measure( size_t, const FM* fm, FaceLateral lat) const
+void DistanceMetricCalculatorType::measure( std::vector<double>& dvals, const FM* fm, const LmkList* ll) const
 {
-    assert( canCalculate(fm));
+    assert( canCalculate(fm, ll));
     LandmarkSet::Ptr lmks = fm->landmarks();
-
-    FaceLateral latA = lat;
-    FaceLateral latB = lat;
-
-    if ( isBilateral())
-    {
-        if ( lat == FACE_LATERAL_MEDIAL)
-        {
-            std::cerr << "[ERROR] FaceTools::Metric::DistanceMetricCalculatorType::measure: Must specify left or right lateral for bilateral measure!" << std::endl;
-            assert(false);
-        }   // end if
-
-        latA = LDMKS_MAN::landmark(_lA)->isBilateral() ? lat : FACE_LATERAL_MEDIAL;
-        latB = LDMKS_MAN::landmark(_lB)->isBilateral() ? lat : FACE_LATERAL_MEDIAL;
-        assert( latA != FACE_LATERAL_MEDIAL || latB != FACE_LATERAL_MEDIAL);    // Must be true of wouldn't be a bilateral measurement
-    }   // end if
-    else
-    {
-        // If not a bilateral measure, then either both landmarks must be medial,
-        // or the landmarks must be the same.
-        if ( lat != FACE_LATERAL_MEDIAL)
-        {
-            std::cerr << "[ERROR] FaceTools::Metric::DistanceMetricCalculatorType::measure: Cannot specify face lateral for non-bilateral measure!" << std::endl;
-            assert(false);
-        }   // end if
-
-        if ( _lA == _lB)
-        {
-            latA = FACE_LATERAL_LEFT;
-            latB = FACE_LATERAL_RIGHT;
-        }   // end if
-    }   // end else
-
-    return cv::norm( *lmks->pos(_lA, latA) - *lmks->pos(_lB, latB));
+    dvals.resize(1);
+    dvals[0] = cv::norm( *lmks->pos(ll->front()) - *lmks->pos(ll->back()));
 }   // end measure

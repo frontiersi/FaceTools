@@ -21,8 +21,7 @@
 #include "FaceAction.h"
 #include <ModelMoveInteractor.h>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionToggleCameraActorInteraction : public FaceAction
 { Q_OBJECT
@@ -39,7 +38,6 @@ private:
     Interactor::ModelMoveInteractor _interactor;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

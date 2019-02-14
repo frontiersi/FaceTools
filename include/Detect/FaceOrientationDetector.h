@@ -39,6 +39,10 @@ public:
     // with the distance formula rng * e/d.
     FaceOrientationDetector( const RFeatures::ObjModelKDTree* kdt, float rng=700.0f, float d=0.30f);
 
+    // Update only the landmarks with the given IDs.
+    // If left as default, allows all landmarks to be updated.
+    void setLandmarksToUpdate( const IntSet& ul=COMPLETE_INT_SET);
+
     // Detect and place into the given landmarks set the detected features of the face and set orientation.
     bool detect( Landmark::LandmarkSet&);
 
@@ -60,19 +64,9 @@ private:
     float _orng, _dfact;
     cv::Vec3f _nvec, _v0, _v1;
     std::string _err;
+    IntSet _ulmks;
 };  // end class
 
-
-// Estimate the normal vector using an interative approach that evaluates
-// normals along line segments measured over vertical line segments under the
-// detected positions of the eyes. The left and right positions v0 and v1 should
-// be given by the surface locations of the left and right pupils.
-// After obtaining the normal vector, the up vector is calculated simply
-// as the normalized vector vnorm.cross(v1-v0)
-FaceTools_EXPORT void findNormal( const RFeatures::ObjModelKDTree* kdt,
-                                  const cv::Vec3f& v0,    // Position of left eye
-                                  const cv::Vec3f& v1,    // Position of right eye
-                                  cv::Vec3f& vnorm);      // Output face norm
 }}   // end namespace
 
 #endif

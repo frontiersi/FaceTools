@@ -64,6 +64,9 @@ int8_t fromSexString( const QString&);
 QString toLongSexString( int8_t);// any of "Unknown", "Female | Male", "Female", "Male"
 int8_t fromLongSexString( const QString&);
 
+static const IntSet EMPTY_INT_SET;      // Useful empty set
+static const IntSet COMPLETE_INT_SET;   // Useful "complete" set
+
 static const char IBAR = '|';
 static const char SC = ';';
 
@@ -129,6 +132,7 @@ enum EventId : int16_t
     NULL_EVENT,
     LOADED_MODEL,       // Can be used to specify that an action should process on load (via FaceAction::addProcessOn).
     CLOSE_MODEL,        // INFORM that one or more models should be closed (actions should not close models themselves).
+    FACE_DETECTED,      // After face has been successfully detected and orientation and landmarks set.
     GEOMETRY_CHANGE,    // Change to underlying geometry of the model.
     SURFACE_DATA_CHANGE,// Change to results of cached calculations on the data (often after response to data change).
     LANDMARKS_CHANGE,   // Change to existing landmark(s).
@@ -149,12 +153,6 @@ using EventSet = std::unordered_set<EventId>;
 using TestFVSTrue = std::function<bool(const FVS&)>;
 
 }   // end namespace (Action)
-
-namespace Report {
-
-class ReportInterface;
-
-}   // end namespace (Report)
 
 namespace Metric {
 
@@ -177,9 +175,6 @@ Q_DECLARE_INTERFACE( FaceTools::Action::FaceActionInterface, FaceToolsPluginFace
 
 #define FaceToolsPluginVisVisualisationInterface_iid "com.github.frontiersi.FaceTools.v3.Vis.VisualisationInterface"
 Q_DECLARE_INTERFACE( FaceTools::Vis::VisualisationInterface, FaceToolsPluginVisVisualisationInterface_iid)
-
-#define FaceToolsPluginReportReportInterface_iid "com.github.frontiersi.FaceTools.v3.Report.ReportInterface"
-Q_DECLARE_INTERFACE( FaceTools::Report::ReportInterface, FaceToolsPluginReportReportInterface_iid)
 
 #define FaceToolsPluginMetricMetricCalculatorTypeInterface_iid "com.github.frontiersi.FaceTools.v3.Metric.MetricCalculatorTypeInterface"
 Q_DECLARE_INTERFACE( FaceTools::Metric::MetricCalculatorTypeInterface, FaceToolsPluginMetricMetricCalculatorTypeInterface_iid)

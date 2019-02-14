@@ -74,7 +74,7 @@ int SyndromeManager::load( const QString& fname)
         int id = QString(recs[0].c_str()).toInt(&ok);
         if ( !ok || id < 0 || _syns.count(id) > 0)
         {
-            std::cerr << "[WARNING] FaceTools::Metric::SyndromeManager::load: Invalid syndrome id read in!" << std::endl;
+            std::cerr << "[WARN] FaceTools::Metric::SyndromeManager::load: Invalid syndrome id read in!" << std::endl;
             continue;
         }   // end else
 

@@ -30,6 +30,7 @@ namespace FaceTools {
 
 using FVFlags = std::unordered_map<const Vis::FV*, bool>;
 
+static const float DEFAULT_CAMERA_DISTANCE = 650.0f;
 
 class FaceTools_EXPORT FaceModelViewer : public ModelViewer
 { Q_OBJECT

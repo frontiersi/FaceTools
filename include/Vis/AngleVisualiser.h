@@ -19,6 +19,7 @@
 #define FACE_TOOLS_VIS_ANGLE_VISUALISER_H
 
 #include <MetricVisualiser.h>
+#include <Landmark.h>
 #include <vtkAngleRepresentation3D.h>
 
 namespace FaceTools { namespace Vis {
@@ -26,12 +27,12 @@ namespace FaceTools { namespace Vis {
 class FaceTools_EXPORT AngleVisualiser : public MetricVisualiser
 { Q_OBJECT
 public:
-    // If bilat is true, this visualisation will create two separate angle representations.
-    AngleVisualiser( int id, int lmkA, int lmkB, int lmkC, bool bilat=false);
+    AngleVisualiser( int id, const Landmark::LmkList* l0=nullptr, const Landmark::LmkList* l1=nullptr);
 
     bool belongs( const vtkProp*, const FV*) const override;
     void pokeTransform( const FV*, const vtkMatrix4x4*) override;
     void fixTransform( const FV*) override;
+    bool isAvailable( const FM*) const override;
 
     void apply( FV*, const QPoint* mc=nullptr) override;
     void clear( FV*) override;
@@ -41,14 +42,11 @@ public:
     void setHighlighted( const FM* fm=nullptr) override;
 
 private:
-    const int _l0;
-    const int _lc;    // Centre (pivot)
-    const int _l1;
-    const bool _bilat;
-    std::unordered_map<const FV*, vtkAngleRepresentation3D*> _angle0;
-    std::unordered_map<const FV*, vtkAngleRepresentation3D*> _angle1;
+    const Landmark::LmkList* _lmks0;
+    const Landmark::LmkList* _lmks1;
+    std::unordered_map<const FV*, vtkAngleRepresentation3D*> _angle0, _angle1;
 
-    void apply( FV*, FaceLateral, FaceLateral, FaceLateral, std::unordered_map<const FV*, vtkAngleRepresentation3D*>&);
+    void apply( FV*, const Landmark::LmkList*, std::unordered_map<const FV*, vtkAngleRepresentation3D*>&);
     void clear( FV*, std::unordered_map<const FV*, vtkAngleRepresentation3D*>&);
 };  // end class
 

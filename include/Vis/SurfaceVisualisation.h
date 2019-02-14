@@ -26,8 +26,7 @@
 #include "SurfaceDataMapper.h"
 #include <FaceViewSet.h>
 
-namespace FaceTools {
-namespace Vis {
+namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT SurfaceVisualisation : public BaseVisualisation
 { Q_OBJECT
@@ -51,7 +50,6 @@ private:
     FVS _mapped;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

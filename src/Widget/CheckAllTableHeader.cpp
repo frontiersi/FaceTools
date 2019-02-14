@@ -15,10 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <MetricsTableHeader.h>
-using FaceTools::Widget::MetricsTableHeader;
+#include <CheckAllTableHeader.h>
+using FaceTools::Widget::CheckAllTableHeader;
 
-MetricsTableHeader::MetricsTableHeader( QWidget *parent)
+CheckAllTableHeader::CheckAllTableHeader( QWidget *parent)
     : QHeaderView( Qt::Horizontal, parent), _on(false)
 {
     setSectionsClickable(true);
@@ -26,7 +26,7 @@ MetricsTableHeader::MetricsTableHeader( QWidget *parent)
 }   // end ctor
 
 
-void MetricsTableHeader::setAllChecked( bool v)
+void CheckAllTableHeader::setAllChecked( bool v)
 {
     if ( _on != v)
     {
@@ -37,7 +37,7 @@ void MetricsTableHeader::setAllChecked( bool v)
 }   // end setAllChecked
 
 
-void MetricsTableHeader::paintSection( QPainter *painter, const QRect &rect, int lidx) const
+void CheckAllTableHeader::paintSection( QPainter *painter, const QRect &rect, int lidx) const
 {
     painter->save();
     QHeaderView::paintSection( painter, rect, lidx);

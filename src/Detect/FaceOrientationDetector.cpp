@@ -17,8 +17,8 @@
 
 #include <FaceOrientationDetector.h>
 #include <FaceFinder2D.h>
+#include <FaceTools.h>
 #include <LandmarksManager.h>
-#include <DijkstraShortestPathFinder.h> // RFeatures
 #include <ObjModelSurfacePointFinder.h> // RFeatures
 #include <FeatureUtils.h>               // RFeatures
 #include <algorithm>
@@ -26,7 +26,6 @@
 #include <cassert>
 #include <cmath>
 using KDT = RFeatures::ObjModelKDTree;
-using PathFinder = RFeatures::DijkstraShortestPathFinder;
 using RFeatures::ObjModel;
 using RFeatures::Orientation;
 using FaceTools::Detect::FaceFinder2D;
@@ -124,66 +123,7 @@ bool detect2DEyes( const cv::Mat_<byte>& img, cv::Point2f& f0, cv::Point2f& f1)
 }   // end detect2DEyes
 
 
-cv::Vec3f calcMeanNormalBetweenPoints( const ObjModel* model, int v0, int v1)
-{
-    PathFinder pfinder( model);
-    pfinder.setEndPointVertexIndices( v0, v1);
-    std::vector<int> vidxs;
-    pfinder.findShortestPath( vidxs);
-    const int n = int(vidxs.size()) - 1;
-    cv::Vec3f nrm(0,0,0);
-    for ( int i = 0; i < n; ++i)
-    {
-        const IntSet& sfids = model->getSharedFaces( vidxs[size_t(i)], vidxs[size_t(i+1)]);
-        std::for_each( std::begin(sfids), std::end(sfids), [&](int fid){ nrm += model->calcFaceNorm(fid);});
-    }   // end for
-    cv::normalize( nrm, nrm);
-    return nrm;
-}   // end calcMeanNormalBetweenPoints
-
-
-void updateNormal( const KDT* kdt, const cv::Vec3f& v0, int e0, const cv::Vec3f& v1, int e1, cv::Vec3f& nvec)
-{
-    const ObjModel* model = kdt->model();
-
-    // Estimate "down" vector from cross product of base vector with current (inaccurate) face normal.
-    const cv::Vec3f evec = v1 - v0;
-    cv::Vec3f dvec;
-    cv::normalize( evec.cross(nvec), dvec);
-
-    // Find reference locations further down the face from e0 and e1
-    const float pdelta = float(1.0 * cv::norm(evec));
-    const int r0 = kdt->find( v0 + dvec * pdelta);
-    const int r1 = kdt->find( v1 + dvec * pdelta);
-
-    // The final view vector is defined as the mean normal along the path over
-    // the model between the provided points and the shifted points.
-    const cv::Vec3f vv0 = calcMeanNormalBetweenPoints( model, r0, e0);
-    const cv::Vec3f vv1 = calcMeanNormalBetweenPoints( model, r1, e1);
-    cv::normalize( vv0 + vv1, nvec);
-}   // end updateNormal
-
 }   // end namespace
-
-
-// public
-void FaceTools::Detect::findNormal( const KDT* kdt, const cv::Vec3f& v0, const cv::Vec3f& v1, cv::Vec3f& nvec)
-{
-    const int e0 = kdt->find( v0);
-    const int e1 = kdt->find( v1);
-    static const double MIN_DELTA = 1e-8;
-    static const int MAX_TRIES = 12;
-
-    double delta = MIN_DELTA + 1;
-    int tries = 0;
-    while ( fabs(delta) > MIN_DELTA && tries < MAX_TRIES)
-    {
-        const cv::Vec3f invec = nvec;
-        updateNormal( kdt, v0, e0, v1, e1, nvec);
-        delta = cv::norm( nvec - invec);
-        tries++;
-    }   // end while
-}   // end findNormal
 
 
 // public
@@ -191,7 +131,17 @@ FaceOrientationDetector::FaceOrientationDetector( const KDT* kdt, float orng, fl
     : _vwr( cv::Size(400,400), orng), _kdt(kdt), _orng(orng), _dfact(orng/dfact), _nvec(0,0,1)
 {
     _vwr.setModel(kdt->model());
+    setLandmarksToUpdate();
 }   // end ctor
+
+
+void FaceOrientationDetector::setLandmarksToUpdate(const IntSet &ul)
+{
+    if ( &ul == &COMPLETE_INT_SET)
+        _ulmks = LDMKS_MAN::ids();
+    else
+        _ulmks = ul;
+}   // end setLandmarksToUpdate
 
 
 // private
@@ -236,6 +186,7 @@ bool FaceOrientationDetector::detect( LandmarkSet& lmks)
     }   // end if
 
     // Reset orientation and camera
+    _err = "";
     _nvec = cv::Vec3f(0,0,1);
     _v0 = _v1 = cv::Vec3f(0,0,0);
 
@@ -283,7 +234,7 @@ bool FaceOrientationDetector::detect( LandmarkSet& lmks)
 
             i++;
             if ( i < MAX_OALIGN)    // Find a different normal to try a better alignment for eye detection and orientation
-                findNormal( _kdt, _v0, _v1, _nvec);
+                FaceTools::findNormal( _kdt, _v0, _v1, _nvec);
         }   // end if
         else
         {
@@ -317,7 +268,7 @@ bool FaceOrientationDetector::detect( LandmarkSet& lmks)
         setCameraToFace( sdrng); // Set camera to detection range
         //RFeatures::showImage( _vwr.snapshot(), "Pre-detection", true);
 
-        if ( !FLD::detect( _vwr, &*_kdt, lmks))
+        if ( !FLD::detect( _vwr, &*_kdt, lmks, _ulmks))
         {
             _err = "Landmark detection failed!";
             std::cerr << errhead << _err << std::endl;
@@ -329,7 +280,7 @@ bool FaceOrientationDetector::detect( LandmarkSet& lmks)
             _v0 = *lmks.pos( FaceTools::Landmark::P, FACE_LATERAL_LEFT);
             _v1 = *lmks.pos( FaceTools::Landmark::P, FACE_LATERAL_RIGHT);
 
-            findNormal( _kdt, _v0, _v1, _nvec);
+            FaceTools::findNormal( _kdt, _v0, _v1, _nvec);
             cv::normalize( snvec + _nvec, _nvec);
             /*
             setCameraToFace( sdrng);

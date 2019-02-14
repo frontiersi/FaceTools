@@ -42,13 +42,14 @@ namespace {
 void writeFaceModel( const FM* fm, const std::string& objfname, PTree& rnode)
 {
     const std::string relfname = boost::filesystem::path( objfname).filename().string(); // Relative filepath
-    rnode.put( "objfilename", relfname);
-    rnode.put( "description", fm->description().toStdString());
-    rnode.put( "source", fm->source().toStdString());
-    rnode.put( "age", fm->age());
-    rnode.put( "sex", FaceTools::toSexString(fm->sex()).toStdString());
-    rnode.put( "ethnicity", fm->ethnicity().toStdString());
-    rnode.put( "capture_date", fm->captureDate().toString().toStdString());
+    rnode.put( "ObjFilename", relfname);
+    rnode.put( "Notes", fm->notes().toStdString());
+    rnode.put( "Source", fm->source().toStdString());
+    rnode.put( "StudyId", fm->studyId().toStdString());
+    rnode.put( "Age", fm->age());
+    rnode.put( "Sex", FaceTools::toSexString(fm->sex()).toStdString());
+    rnode.put( "Ethnicity", fm->ethnicity().toStdString());
+    rnode.put( "CaptureDate", fm->captureDate().toString().toStdString());
 
     PTree& onode = rnode.put("Orientation", "");
     onode << fm->orientation();
@@ -60,9 +61,9 @@ void writeFaceModel( const FM* fm, const std::string& objfname, PTree& rnode)
     fm->paths()->write( rnode.put("Paths", ""));
 
     PTree& mgrps = rnode.put("MetricGroups", "");
-    mgrps.add("Frontal", "") << fm->metrics();
-    mgrps.add("LeftLateral", "") << fm->metricsL();
-    mgrps.add("RightLateral", "") << fm->metricsR();
+    mgrps.add("Frontal", "") << fm->cmetrics();
+    mgrps.add("LeftLateral", "") << fm->cmetricsL();
+    mgrps.add("RightLateral", "") << fm->cmetricsR();
 
     PTree& hpos = rnode.put("CriteriaMatchedPhenotypes", "");
     for ( int hid : fm->phenotypes())
@@ -79,20 +80,48 @@ void writeFaceModel( const FM* fm, const std::string& objfname, PTree& rnode)
 FM* readFaceModel( const PTree& rnode, std::string& objfilename)
 {
     FM* fm = new FM;
-    objfilename = rnode.get<std::string>( "objfilename");  // Without path info
+
+    if ( rnode.count("objfilename") > 0)
+        objfilename = rnode.get<std::string>( "objfilename");  // Without path info
+    else if ( rnode.count("ObjFilename") > 0)
+        objfilename = rnode.get<std::string>( "ObjFilename");  // Without path info
 
     if ( rnode.count("description") > 0)
-        fm->setDescription( rnode.get<std::string>( "description").c_str());
+        fm->setNotes( rnode.get<std::string>( "description").c_str());
+    else if ( rnode.count("Description") > 0)
+        fm->setNotes( rnode.get<std::string>( "Description").c_str());
+    else if ( rnode.count("Notes") > 0)
+        fm->setNotes( rnode.get<std::string>( "Notes").c_str());
+
     if ( rnode.count("source") > 0)
         fm->setSource( rnode.get<std::string>( "source").c_str());
+    else if ( rnode.count("Source") > 0)
+        fm->setSource( rnode.get<std::string>( "Source").c_str());
+
+    if ( rnode.count("studyid") > 0)
+        fm->setStudyId( rnode.get<std::string>( "studyid").c_str());
+    else if ( rnode.count("StudyId") > 0)
+        fm->setStudyId( rnode.get<std::string>( "StudyId").c_str());
+
     if ( rnode.count("age") > 0)
         fm->setAge( rnode.get<double>("age"));
+    else if ( rnode.count("Age") > 0)
+        fm->setAge( rnode.get<double>("Age"));
+
     if ( rnode.count("sex") > 0)
         fm->setSex( FaceTools::fromSexString( rnode.get<std::string>("sex").c_str()));
+    else if ( rnode.count("Sex") > 0)
+        fm->setSex( FaceTools::fromSexString( rnode.get<std::string>("Sex").c_str()));
+
     if ( rnode.count("ethnicity") > 0)
         fm->setEthnicity( rnode.get<std::string>( "ethnicity").c_str());
+    else if ( rnode.count("Ethnicity") > 0)
+        fm->setEthnicity( rnode.get<std::string>( "Ethnicity").c_str());
+
     if ( rnode.count("capture_date") > 0)
         fm->setCaptureDate( QDate::fromString( rnode.get<std::string>( "capture_date").c_str()));
+    else if ( rnode.count("CaptureDate") > 0)
+        fm->setCaptureDate( QDate::fromString( rnode.get<std::string>( "CaptureDate").c_str()));
 
     if ( rnode.count("Orientation") > 0)
     {
@@ -181,7 +210,7 @@ FM* FaceModelXMLFileHandler::read( const QString& sfname)
             std::cerr << "[WARNING] FaceTools::FileIO::FaceModelXMLFileHandler::read: Lower version of XML file being read!" << std::endl;
 
         const std::string filedesc = faces.get<std::string>( "description");
-        std::cerr << "[STATUS] FaceTools::FileIO::FaceModelXMLFileHandler::read: Reading file with description \""
+        std::cerr << "[INFO] FaceTools::FileIO::FaceModelXMLFileHandler::read: Reading file with description \""
                   << filedesc << "\"" << std::endl;
 
         const PTree& records = faces.get_child( "FaceModels");
@@ -225,7 +254,7 @@ FM* FaceModelXMLFileHandler::read( const QString& sfname)
         RModelIO::AssetImporter importer(true,true);
         importer.enableFormat(fext);
         const std::string objfile = dir.filePath( objfilename.c_str()).toStdString();
-        std::cerr << "[STATUS] FaceTools::FileIO::FaceModelXMLFileHandler::read: Loading model from \"" << objfile << "\"" << std::endl;
+        std::cerr << "[INFO] FaceTools::FileIO::FaceModelXMLFileHandler::read: Loading model from \"" << objfile << "\"" << std::endl;
         RFeatures::ObjModel::Ptr model = importer.load( objfile);   // Doesn't merge materials or clean!
         if ( !model)
         {
@@ -306,7 +335,6 @@ bool FaceModelXMLFileHandler::write( const FM* fm, const QString& sfname)
         RModelIO::OBJExporter exporter;
         const std::string modfile = boost::filesystem::path(xmlfile).replace_extension( "obj").string();
         const RFeatures::ObjModel* model = fm->info()->cmodel();
-        std::cerr << "[STATUS] FaceTools::FileIO::FaceModelXMLFileHandler::write: Exporting model to " << modfile << std::endl;
         if ( !exporter.save( model, modfile))
         {
             _err = exporter.err().c_str();
@@ -314,7 +342,7 @@ bool FaceModelXMLFileHandler::write( const FM* fm, const QString& sfname)
             return false;
         }   // end if
 
-        std::cerr << "[STATUS] FaceTools::FileIO::FaceModelXMLFileHandler::write: Exported object to " << modfile << std::endl;
+        std::cerr << "[INFO] FaceTools::FileIO::FaceModelXMLFileHandler::write: Exported object to " << modfile << std::endl;
 
         // Export jpeg thumbnail of model.
         const std::string thumbfile = boost::filesystem::path(xmlfile).replace_extension( "jpg").string();
@@ -336,7 +364,7 @@ bool FaceModelXMLFileHandler::write( const FM* fm, const QString& sfname)
         boost::property_tree::write_xml( ofs, tree);
         ofs.close();
 
-        std::cerr << "[STATUS] FaceTools::FileIO::FaceModelXMLFileHandler::write: Exported meta-data to " << xmlfile << std::endl;
+        std::cerr << "[INFO] FaceTools::FileIO::FaceModelXMLFileHandler::write: Exported meta-data to " << xmlfile << std::endl;
 
         // Finally, zip up the contents of the directory into sfname.
         if ( !JlCompress::compressDir( sfname, dir.path(), true/*recursively pack subdirs*/))

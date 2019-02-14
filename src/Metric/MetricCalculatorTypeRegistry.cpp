@@ -20,50 +20,59 @@
 #include <iostream>
 #include <cassert>
 using FaceTools::Metric::MetricCalculatorTypeRegistry;
-using FaceTools::Metric::MCTI;
+using FaceTools::Metric::MCT;
 using FaceTools::Metric::MC;
+using FaceTools::Landmark::LmkList;
 
-std::unordered_map<QString, MCTI*> MetricCalculatorTypeRegistry::s_types;
+std::shared_ptr<MetricCalculatorTypeRegistry> MetricCalculatorTypeRegistry::s_singleton;
 
-
-void MetricCalculatorTypeRegistry::addTemplateType( MCTI* mcti)
+// static
+std::shared_ptr<MetricCalculatorTypeRegistry> MetricCalculatorTypeRegistry::me()
 {
-    QString cat = mcti->category().toLower();
-    if ( s_types.count(cat) > 0)
+    if ( !s_singleton)
+        s_singleton = std::shared_ptr<MetricCalculatorTypeRegistry>( new MetricCalculatorTypeRegistry, [](MetricCalculatorTypeRegistry* d){ delete d;});
+    return s_singleton;
+}   // end me
+
+
+// static
+void MetricCalculatorTypeRegistry::addMCT( MCT* mct)
+{
+    QString cat = mct->category().toLower();
+    if ( me()->_types.count(cat) > 0)
     {
-        std::cerr << "[WARNING] FaceTools::Metric::MetricCalculatorTypeRegistry::addTemplateType: Overwriting existing template!" << std::endl;
-        delete s_types.at(cat);
+        std::cerr << "[WARN] FaceTools::Metric::MetricCalculatorTypeRegistry::add: Overwriting existing!" << std::endl;
+        delete me()->_types.at(cat);
     }   // end if
-    s_types[cat] = mcti;
-}   // end addTemplateType
+    me()->_types[cat] = mct;
+}   // end addMCT
 
 
-void MetricCalculatorTypeRegistry::clearTemplateTypes()
+// private
+MetricCalculatorTypeRegistry::~MetricCalculatorTypeRegistry()
 {
-    for ( auto p : s_types)
+    for ( auto p : _types)
         delete p.second;
-    s_types.clear();
-}   // end clearTemplateTypes
+    _types.clear();
+}   // end dtor
 
 
-MCTI::Ptr MetricCalculatorTypeRegistry::createFrom( const QString& acat, const QString& prms)
+MCT* MetricCalculatorTypeRegistry::makeMCT( const QString& acat, int id,
+                                            const LmkList* lmks0, const LmkList* lmks1)
 {
+    static const std::string werr = "[WARN] FaceTools::Metric::MetricCalculatorTypeRegistry::get: ";
     if ( LDMKS_MAN::count() == 0)
     {
-        std::cerr << "[WARNING] FaceTools::Metric::MetricCalculatorTypeRegistry::createFrom: "
-                  << "Load some landmarks first!" << std::endl;
+        std::cerr << werr << "Load some landmarks first!" << std::endl;
         return nullptr;
     }   // end if
 
     const QString cat = acat.toLower();
-    if ( s_types.count(cat) == 0)
+    if ( me()->_types.count(cat) == 0)
     {
-        std::cerr << "[WARNING] FaceTools::Metric::MetricCalculatorTypeRegistry::createFrom: "
-                  << "Required category '" << cat.toStdString() << "' not present!" << std::endl;
+        std::cerr << werr << "Required category '" << cat.toStdString() << "' not present!" << std::endl;
         return nullptr;
     }   // end if
 
-    MCTI::Ptr mcti = s_types.at(cat)->fromParams(prms);
-    assert( mcti != nullptr);
-    return mcti;
-}   // end createFrom
+    return me()->_types.at(cat)->make( id, lmks0, lmks1);
+}   // end makeMCT

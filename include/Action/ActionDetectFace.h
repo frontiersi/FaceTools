@@ -19,6 +19,7 @@
 #define FACE_TOOLS_ACTION_DETECT_FACE_H
 
 #include "FaceAction.h"
+#include <DetectionCheckDialog.h>
 
 namespace FaceTools { namespace Action {
 
@@ -36,7 +37,9 @@ protected slots:
 
 private:
     QWidget *_parent;
+    Widget::DetectionCheckDialog *_cdialog;
     std::string _err;
+    IntSet _ulmks;
 };  // end class
 
 }}   // end namespace

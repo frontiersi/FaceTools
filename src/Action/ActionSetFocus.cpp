@@ -28,7 +28,8 @@ using FaceTools::Vis::FV;
 
 
 // public
-ActionSetFocus::ActionSetFocus( const QString& dn) : FaceAction( dn)
+ActionSetFocus::ActionSetFocus( const QString& dn, const QIcon& icon)
+    : FaceAction( dn, icon)
 {
 }   // end ctor
 

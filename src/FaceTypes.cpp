@@ -54,7 +54,7 @@ QString FaceTools::toLongSexString( int8_t s)
     if ( s & FaceTools::MALE_SEX)
         mstr = "Male";
     if ( !mstr.isEmpty() && !fstr.isEmpty())
-        estr = " | ";
+        estr = " / ";
     return fstr + estr + mstr;
 }   // end namespace
 

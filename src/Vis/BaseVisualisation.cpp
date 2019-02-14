@@ -58,6 +58,8 @@ BaseVisualisation::~BaseVisualisation()
 }   // end dtor
 
 
+bool BaseVisualisation::isAvailable( const FV* fv, const QPoint*) const { return isAvailable(fv->data());}
+
 void TextureVisualisation::apply( FV* fv, const QPoint*) { fv->setTextured(true);}
 void TextureVisualisation::clear( FV* fv) { fv->setTextured(false); }
 bool TextureVisualisation::belongs( const vtkProp *p, const FV* fv) const { return fv->actor() == p;}

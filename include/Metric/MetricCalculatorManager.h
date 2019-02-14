@@ -52,15 +52,15 @@ public:
     // Return the metric calculator with given id or null if it doesn't exist.
     static MC::Ptr metric( int);
 
-    // Return the currently active metric (null if none yet loaded).
-    static MC::Ptr activeMetric();
+    // Return the currently selected metric (null if none yet loaded).
+    static MC::Ptr currentMetric();
 
-    // Return the metric active prior to the currently active one (null if none prior).
-    static MC::Ptr previousActiveMetric();
+    // Return the metric selected prior to the currently selected one (null if none prior).
+    static MC::Ptr previousMetric();
 
     // Set the current metric - firing it's activated signal if different from the existing activated.
-    // Returns true only if a new metric was activated (false if mid same as currently active).
-    static bool setActiveMetric( int mid);
+    // Returns true only if a new metric was activated (false if mid same as currently selected).
+    static bool setCurrentMetric( int mid);
 
 private:
     static IntSet _ids;
@@ -69,8 +69,8 @@ private:
     static MCSet _vmset;
     static QStringList _names;
     static QStringList _ethnicities;
-    static int _activeMetricId;
-    static int _prevActiveMetricId;
+    static int _cmid;
+    static int _pmid;
 };  // end class
 
 }}  // end namespaces

@@ -17,6 +17,7 @@
 
 #include <ActionCopyViewer.h>
 #include <ModelSelector.h>
+#include <BaseVisualisation.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <FaceView.h>
@@ -27,6 +28,7 @@ using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
 using FaceTools::FMV;
 using FaceTools::Vis::FV;
+using FaceTools::Vis::BaseVisualisation;
 using FaceTools::FVS;
 using FaceTools::FM;
 
@@ -64,9 +66,12 @@ bool ActionCopyViewer::doAction( FVS& fvs, const QPoint&)
         FV* nfv = Action::ModelSelector::addFaceView( fm, _tviewer); // Create the new FV from the underlying data.
         fm->unlock();
 
-        // Copy over visualisations
-        for ( auto vl : cfv->visualisations())
-            nfv->apply(vl);
+        // Copy over visualisations where possible
+        for ( BaseVisualisation* vl : cfv->visualisations())
+        {
+            if ( vl->isAvailable(nfv->data()))
+                nfv->apply(vl);
+        }   // end for
 
         Action::ModelSelector::setSelected( nfv, true); // Select the new FV
         fvs.insert(nfv);

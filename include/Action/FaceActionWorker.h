@@ -34,10 +34,12 @@ class FaceTools_EXPORT FaceActionWorker : public QThread
 { Q_OBJECT
 public:
     FaceActionWorker( FaceAction*, FaceViewSet*, const QPoint&);
-    void run() override;
 
 signals:
     void workerFinished(bool);
+
+protected:
+    void run() override;
 
 private:
     FaceAction* _worker;

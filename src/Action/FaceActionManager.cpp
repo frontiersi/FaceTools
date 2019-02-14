@@ -21,6 +21,7 @@
 #include <BoundingVisualisation.h>
 #include <FaceModelViewer.h>
 #include <ModelSelector.h>
+#include <U3DCache.h>
 #include <FaceModel.h>
 #include <FaceView.h>
 #include <QApplication>
@@ -60,7 +61,7 @@ FaceActionManager::~FaceActionManager()
 {
     // We delete the actions in this manner because there's a chance that an action
     // within its destructor could do something weird like calling process.
-    while ( _actions.empty())
+    while ( !_actions.empty())
     {
         FaceAction* fa = *_actions.begin();
         fa->disconnect(this);
@@ -126,7 +127,7 @@ void FaceActionManager::doOnActionStarting()
 
     // Disable actions upon an action starting.
     // TODO Only disable actions that need to address the same data as the action that's just started.
-    std::for_each(std::begin(_actions), std::end(_actions), [](FaceAction* a){ a->setEnabled(false);});
+    //std::for_each(std::begin(_actions), std::end(_actions), [](FaceAction* a){ a->setEnabled(false);});
     _mutex.unlock();
 }   // end doOnActionStarting
 
@@ -170,6 +171,8 @@ void FaceActionManager::doOnActionFinished( EventSet evs, FVS workSet, bool)
 // private
 void FaceActionManager::processFinishedAction( FaceAction* sact, EventSet &evs, FVS &workSet)
 {
+    FMS fms = workSet.models();   // Copy out
+
     if ( evs.count(LOADED_MODEL))
     {
         evs.insert(GEOMETRY_CHANGE);
@@ -179,7 +182,6 @@ void FaceActionManager::processFinishedAction( FaceAction* sact, EventSet &evs, 
     else if ( evs.count(CLOSE_MODEL) > 0)
     {
         FMVS avwrs;
-        const FMS& fms = workSet.models(); // Copy out the models
         for ( FM* fm : fms)
         {
             // Consolidate set of viewers within which this model's views are shown for after close.
@@ -196,8 +198,6 @@ void FaceActionManager::processFinishedAction( FaceAction* sact, EventSet &evs, 
     }   // end if
     else if ( !evs.empty())   // Cause actions to respond to change events
     {
-        FMS fms = workSet.models();   // Copy out
-
         // Purge actions due to received change events (not the sending action)
         _actions.erase(sact);
         for ( FaceAction* act : _actions)
@@ -212,7 +212,11 @@ void FaceActionManager::processFinishedAction( FaceAction* sact, EventSet &evs, 
         if ( evs.count(GEOMETRY_CHANGE) > 0)
         {
             workSet.clear();
-            std::for_each( std::begin(fms), std::end(fms), [&](const FM* fm){ workSet.insert(fm);});
+            for ( const FM* fm : fms)
+            {
+                workSet.insert(fm);
+                U3DCache::purge(fm);    // The U3D model will need to be updated too!
+            }   // end for
             std::for_each( std::begin(workSet), std::end(workSet), [](FV* fv){ fv->reset();});
         }   // end if
     }   // end else if
@@ -236,7 +240,7 @@ void FaceActionManager::doOnSelected( FV* fv, bool v)
 // private
 void FaceActionManager::close( FM* fm)
 {
-    std::cerr << "[INFO] FaceTools::Action::FaceActionManager::close: closing model " << fm << std::endl;
+    qInfo( "Closing model %p", static_cast<void*>(fm));
     fm->lockForWrite();
     //const FVS& fvs = fm->fvs();
     for ( FaceAction* a : _actions)

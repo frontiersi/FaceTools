@@ -27,6 +27,22 @@
 
 namespace FaceTools { namespace Landmark {
 
+struct SpecificLandmark
+{
+    int id;
+    FaceLateral lat;
+};  // end struct
+
+using LmkList = std::vector<Landmark::SpecificLandmark>;
+
+// Read in landmark parameters from the given string returning 0 if the string
+// was invalid, 1 if only the first landmark list is set (non-bilateral) or
+// 2 if both landmark lists are set on return (bilateral).
+int fromParams( const QString&, Landmark::LmkList&, Landmark::LmkList&);
+
+QString toParams( const Landmark::LmkList&);
+
+
 class FaceTools_EXPORT Landmark
 {
 public:

@@ -18,11 +18,6 @@
 #ifndef FACE_TOOLS_METRIC_DISTANCE_METRIC_CALCULATOR_TYPE_H
 #define FACE_TOOLS_METRIC_DISTANCE_METRIC_CALCULATOR_TYPE_H
 
-/**
- * A new InterlandmarkMetricCalculatorType should be created for each
- * kind of interlandmark measurement needed.
- */
-
 #include <MetricCalculatorTypeInterface.h>
 #include <EuclideanDistanceVisualiser.h>
 
@@ -31,40 +26,17 @@ namespace FaceTools { namespace Metric {
 class FaceTools_EXPORT DistanceMetricCalculatorType : public MetricCalculatorTypeInterface
 { Q_OBJECT
 public:
-    DistanceMetricCalculatorType();    // Required for setting as template type in MetricCalculatorTypeRegistry.
+    DistanceMetricCalculatorType( int id=-1, const Landmark::LmkList* l0=nullptr, const Landmark::LmkList* l1=nullptr);
 
-    int id() const override { return _id;}
-    const QString& name() const override { return _name;}
-    const QString& description() const override { return _desc;}
-    size_t numDecimals() const override { return _ndps;}
+    MCT* make( int id, const Landmark::LmkList*, const Landmark::LmkList*) const override;
 
-    void setId( int id) override;
-    void setName( const QString&) override;
-    void setDescription( const QString&) override;
-    void setNumDecimals( size_t) override;
-
-    QString category() const override { return s_cat;}
-    QString params() const override;
-    size_t dims() const override { return 1;}
-    bool isBilateral() const override { return _bilat;}
-
-    Vis::MetricVisualiser* visualiser() override { return &_edv;}
-    bool canCalculate( const FM*) const override;
-
-    double measure( size_t, const FM*, FaceLateral) const override;
-
-    MCTI::Ptr fromParams( const QString& params) const override;
+    QString category() const override { return "Distance";}
+    Vis::MetricVisualiser* visualiser() override { return &_vis;}
+    bool canCalculate( const FM*, const Landmark::LmkList*) const override;
+    void measure( std::vector<double>&, const FM*, const Landmark::LmkList*) const override;
 
 private:
-    static const QString s_cat;
-    int _id;
-    bool _bilat;
-    QString _name, _desc;
-    int _lA, _lB;
-    Vis::EuclideanDistanceVisualiser _edv;
-    size_t _ndps;
-
-    DistanceMetricCalculatorType( int lmA, int lmB, bool);
+    Vis::EuclideanDistanceVisualiser _vis;
 };  // end class
 
 }}   // end namespaces

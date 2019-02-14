@@ -16,7 +16,110 @@
  ************************************************************************/
 
 #include <Landmark.h>
+#include <LandmarksManager.h>
 using FaceTools::Landmark::Landmark;
+using FaceTools::Landmark::LmkList;
+
+int FaceTools::Landmark::fromParams( const QString& prms, LmkList& ll0, LmkList& ll1)
+{
+    ll0.clear();
+    ll1.clear();
+
+    IntSet lids;    // Store bilateral landmarks referenced to see if we need to populate ll1 as well
+
+    std::istringstream iss( prms.toStdString());
+    std::string tok;
+    while ( iss.good())
+    {
+        iss >> tok;
+        if ( tok.empty())
+            continue;
+
+        SpecificLandmark slmk;
+        slmk.lat = FACE_LATERAL_MEDIAL;
+        std::string code = tok;
+
+        if ( tok[0] == 'L')
+        {
+            code = tok.substr(1);
+            slmk.lat = FACE_LATERAL_LEFT;
+        }   // end if
+        else if ( tok[0] == 'R')
+        {
+            code = tok.substr(1);
+            slmk.lat = FACE_LATERAL_RIGHT;
+        }   // end else if
+
+        if ( !LDMKS_MAN::landmark( code))   // Invalid landmark ID!
+        {
+            std::cerr << "[WARNING] FaceTools::Landmark::fromParams: Unknown landmark code " << code << std::endl;
+            return 0;
+        }   // end if
+
+        Landmark* lmk = LDMKS_MAN::landmark(code);
+        const int id = lmk->id();
+        slmk.id = id;
+
+        if ( lmk->isBilateral())
+        {
+            if ( slmk.lat == FACE_LATERAL_MEDIAL)
+                slmk.lat = lids.count(id) == 0 ? FACE_LATERAL_LEFT : FACE_LATERAL_RIGHT;
+
+            if (lids.count(id) == 0)
+                lids.insert(id);
+            else
+                lids.erase(id);
+        }   // end if
+        else
+        {
+            if ( slmk.lat != FACE_LATERAL_MEDIAL)
+            {
+                std::cerr << "[WARNING] FaceTools::Landmark::fromParams: Non-bilateral landmark with lateral qualifier!" << std::endl;
+                slmk.lat = FACE_LATERAL_MEDIAL;
+            }   // end if
+        }   // end else
+
+        ll0.push_back(slmk);
+    }   // end while
+
+    if ( !lids.empty())
+    {
+        for ( const auto& lmk : ll0)
+        {
+            auto olmk = lmk;
+            if ( lmk.lat != FACE_LATERAL_MEDIAL)
+                olmk.lat = lmk.lat == FACE_LATERAL_LEFT ? FACE_LATERAL_RIGHT : FACE_LATERAL_LEFT;
+            ll1.push_back(olmk);
+        }   // end for
+    }   // end if
+
+    int nset = 0;
+    if ( !ll0.empty())
+    {
+        nset = 1;
+        if ( !ll1.empty())
+            nset = 2;
+    }   // end if
+
+    return nset;
+}   // end fromParams
+
+
+QString FaceTools::Landmark::toParams( const LmkList& ll)
+{
+    QStringList prms;
+    for ( const auto& l : ll)
+    {
+        QString q("%1");
+        if ( l.lat == FACE_LATERAL_LEFT)
+            q = "L%1";
+        else if ( l.lat == FACE_LATERAL_RIGHT)
+            q = "R%1";
+        prms.append( q.arg( LDMKS_MAN::landmark(l.id)->code().toLower()));
+    }   // end for
+    return prms.join(' ');
+}   // end toParams
+
 
 Landmark::Landmark() : _id(-1) {}
 

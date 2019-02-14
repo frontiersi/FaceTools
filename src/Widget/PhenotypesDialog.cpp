@@ -68,15 +68,18 @@ PhenotypesDialog::PhenotypesDialog(QWidget *parent) :
     connect( _ui->table, &QTableWidget::cellClicked, this, &PhenotypesDialog::highlightRow);
     connect( _ui->table, &QTableWidget::currentItemChanged, [this]( QTableWidgetItem* item){ highlightRow(item->row());});
 
+    _ui->table->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+
     // Initial populate
     _dhids = HPOMan::ids();
     for ( int hid : _dhids)
         appendRow( hid);
+
     populateSyndromes( SynMan::ids());
-    _ui->table->resizeColumnsToContents();
     sortOnColumn( NAME_COL);
     _ui->table->setCurrentCell(0,0);
-
+    _ui->table->resizeColumnsToContents();
+    _ui->table->resizeRowsToContents();
     _ui->table->setFocus();
     _ui->table->scrollToTop();
 }   // end ctor
@@ -126,7 +129,7 @@ void PhenotypesDialog::highlightRow( int rowid)
     _chid = -1;
     _ui->remarksTextEdit->clear();
     _ui->criteriaTextEdit->clear();
-    _ui->synonymsLineEdit->clear();
+    _ui->synonymsTextEdit->clear();
 
     if ( rowid >= 0)
     {
@@ -141,7 +144,7 @@ void PhenotypesDialog::highlightRow( int rowid)
         Phenotype::Ptr hpo = HPOMan::phenotype( _chid);
         _ui->remarksTextEdit->setPlainText( hpo->remarks());
         _ui->criteriaTextEdit->setPlainText( hpo->criteria());
-        _ui->synonymsLineEdit->setText( hpo->synonyms().join("; "));
+        _ui->synonymsTextEdit->setPlainText( hpo->synonyms().join("; "));
     }   // end if
 }   // end highlightRow
 

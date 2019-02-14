@@ -109,6 +109,7 @@ void ScanInfoDialog::reset()
     _ui->ethnicityComboBox->setCurrentText("N/A");
     _ui->captureDateEdit->setDate( QDate::currentDate());
     _ui->sourceLineEdit->clear();
+    _ui->studyIdLineEdit->clear();
     _ui->remarksTextEdit->clear();
     _ui->numVerticesLabel->clear();
     _ui->numPolygonsLabel->clear();
@@ -121,7 +122,8 @@ void ScanInfoDialog::reset()
         _ui->ethnicityComboBox->setCurrentText( addEthnicityToComboBox( _model->ethnicity()));
         _ui->captureDateEdit->setDate( _model->captureDate());
         _ui->sourceLineEdit->setText( _model->source());
-        _ui->remarksTextEdit->setPlainText( _model->description());
+        _ui->studyIdLineEdit->setText( _model->studyId());
+        _ui->remarksTextEdit->setPlainText( _model->notes());
         const RFeatures::ObjModel* cmodel = _model->info()->cmodel();
         _ui->numVerticesLabel->setText(QString("%1 vertices  ").arg(cmodel->getNumVertices()));
         _ui->numPolygonsLabel->setText(QString("%1 polygons  ").arg(cmodel->getNumFaces()));
@@ -174,18 +176,60 @@ int ScanInfoDialog::minThumbDims() const
 void ScanInfoDialog::doOnApply()
 {
     assert(_model != nullptr);
-    _model->setAge(age());
-    _model->setEthnicity("");
+
+    if ( fabs(_model->age() - age()) > 0.0001)
+    {
+        _model->setAge(age());
+        _model->setSaved(false);
+    }   // end if
+
     QString ethn = _ui->ethnicityComboBox->currentText();
     if ( ethn != "N/A")
+        addEthnicityToComboBox(ethn);
+    else if ( ethn == "N/A")
+        ethn = "";
+
+    if ( ethn != _model->ethnicity())
     {
         _model->setEthnicity(ethn);
-        addEthnicityToComboBox(ethn);
+        _model->setSaved(false);
     }   // end if
-    _model->setSex( fromLongSexString(_ui->sexComboBox->currentText()));
-    _model->setCaptureDate( _ui->captureDateEdit->date());
-    _model->setSource( _ui->sourceLineEdit->text());
-    _model->setDescription( _ui->remarksTextEdit->toPlainText());
+
+    const int8_t sex = fromLongSexString(_ui->sexComboBox->currentText());
+    if ( sex != _model->sex())
+    {
+        _model->setSex( sex);
+        _model->setSaved(false);
+    }   // end if
+
+    const QDate date = _ui->captureDateEdit->date();
+    if ( date != _model->captureDate())
+    {
+        _model->setCaptureDate(date);
+        _model->setSaved(false);
+    }   // end if
+
+    const QString src = _ui->sourceLineEdit->text();
+    const QString sid = _ui->studyIdLineEdit->text();
+    const QString rem = _ui->remarksTextEdit->toPlainText();
+
+    if ( _model->source() != src)
+    {
+        _model->setSource( src);
+        _model->setSaved( false);
+    }   // end if
+
+    if ( _model->studyId() != sid)
+    {
+        _model->setStudyId( sid);
+        _model->setSaved(false);
+    }   // end if
+
+    if ( _model->notes() != rem)
+    {
+        _model->setNotes(rem);
+        _model->setSaved(false);
+    }   // end if
 
     if ( !_model->isSaved())
         emit onUpdated(_model);

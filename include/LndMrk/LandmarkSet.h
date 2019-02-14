@@ -54,6 +54,9 @@ public:
     // Alternative usage takes a landmark code.
     const cv::Vec3f* pos( const QString& lmcode, FaceLateral=FACE_LATERAL_MEDIAL) const;
 
+    // Another alternative.
+    const cv::Vec3f* pos( const SpecificLandmark&) const;
+
     // Convenience function to return the interpupil difference vector (from left to right eye),
     // or the zero vector if landmarks not available.
     cv::Vec3f eyeVec() const;
@@ -73,6 +76,7 @@ public:
     // Set membership tests
     bool has( int id) const { return _ids.count(id) > 0;}
     bool has( int id, FaceLateral) const;   // Landmark with given id present for the given lateral?
+    bool has( const SpecificLandmark&) const;
     bool hasName( const QString& n) const { return _names.count(n) > 0;}
     bool hasCode( const QString& c) const { return _codes.count(c) > 0;}
 

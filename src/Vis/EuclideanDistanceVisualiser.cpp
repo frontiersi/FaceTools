@@ -28,15 +28,12 @@ using FaceTools::Vis::FV;
 using FaceTools::FMV;
 using FaceTools::FM;
 using FaceTools::FaceLateral;
+using FaceTools::Landmark::LmkList;
 
 
-EuclideanDistanceVisualiser::EuclideanDistanceVisualiser( int id, int lA, int lB, bool b)
-    : MetricVisualiser( id), _lmkA(lA), _lmkB(lB), _bilat(b)
+EuclideanDistanceVisualiser::EuclideanDistanceVisualiser( int id, const LmkList* l0, const LmkList* l1)
+    : MetricVisualiser( id), _lmks0(l0), _lmks1(l1)
 {
-#ifndef NDEBUG
-    if ( _bilat)
-        assert( (lA != lB) && (LDMKS_MAN::landmark(lA)->isBilateral() || LDMKS_MAN::landmark(lB)->isBilateral()));
-#endif
 }   // end ctor
 
 
@@ -106,24 +103,40 @@ void EuclideanDistanceVisualiser::setHighlighted( const FM* fm)
     if ( fm)
     {
         for ( const FV* fv : fm->fvs())
+        {
             if ( _actor0.count(fv) > 0)
                 highlight( _actor0.at(fv), true);
-        if ( _bilat)
-        {
-            for ( const FV* fv : fm->fvs())
-                if ( _actor1.count(fv) > 0)
-                    highlight( _actor1.at(fv), true);
-        }   // end if
+            if ( _actor1.count(fv) > 0)
+                highlight( _actor1.at(fv), true);
+        }   // end for
     }   // end if
 }   // end setHighlighted
 
 
+bool EuclideanDistanceVisualiser::isAvailable( const FM* fm) const
+{
+    using SLMK = Landmark::SpecificLandmark;
+    bool b0 = true;
+    if ( _lmks0)
+        b0 = std::all_of( std::begin(*_lmks0), std::end(*_lmks0), [fm]( const SLMK& lm){ return fm->landmarks()->has(lm);});
+    bool b1 = true;
+    if ( _lmks1)
+        b1 = std::all_of( std::begin(*_lmks1), std::end(*_lmks1), [fm]( const SLMK& lm){ return fm->landmarks()->has(lm);});
+    return b0 && b1;
+}   // end isAvailable
+
+
 // private
-void EuclideanDistanceVisualiser::apply( FV *fv, FaceLateral lA, FaceLateral lB,
-                                         std::unordered_map<const FV*, vtkActor*>& actors)
+void EuclideanDistanceVisualiser::apply( FV *fv, const LmkList* ll, std::unordered_map<const FV*, vtkActor*>& actors)
 {
     const FM* fm = fv->data();
-    const std::vector<cv::Vec3f> vtxs = { *fm->landmarks()->pos(_lmkA, lA), *fm->landmarks()->pos(_lmkB, lB)};
+
+    //std::cerr << "EDV::apply " << id() << std::endl;
+    assert( ll);
+    assert( !ll->empty());
+    assert( fm->landmarks()->pos(ll->front()) != nullptr);
+    assert( fm->landmarks()->pos(ll->back()) != nullptr);
+    const std::vector<cv::Vec3f> vtxs = { *fm->landmarks()->pos(ll->front()), *fm->landmarks()->pos(ll->back())};
 
     vtkActor* actor = actors[fv] = RVTK::VtkActorCreator::generateLineActor( vtxs);
     vtkProperty* property = actor->GetProperty();
@@ -145,40 +158,10 @@ void EuclideanDistanceVisualiser::apply( FV *fv, const QPoint*)
     const FM* fm = fv->data();
     fm->lockForRead();
     clear(fv); // Ensure removed so can create new line actor(s)
-
-    if ( _bilat)
-    {
-        FaceLateral latA0 = FACE_LATERAL_LEFT;
-        FaceLateral latB0 = FACE_LATERAL_LEFT;
-        FaceLateral latA1 = FACE_LATERAL_RIGHT;
-        FaceLateral latB1 = FACE_LATERAL_RIGHT;
-
-        // Check if either of the landmarks AREN'T bilateral. Note that they can't BOTH
-        // be non-bilateral, or this visualisation wouldn't be bilateral in the first place.
-        if ( !LDMKS_MAN::landmark(_lmkA)->isBilateral())
-        {
-            latA0 = FACE_LATERAL_MEDIAL;
-            latA1 = FACE_LATERAL_MEDIAL;
-        }   // end if
-        else if ( !LDMKS_MAN::landmark(_lmkB)->isBilateral())
-        {
-            latB0 = FACE_LATERAL_MEDIAL;
-            latB1 = FACE_LATERAL_MEDIAL;
-        }   // end else if
-
-        apply( fv, latA0, latB0, _actor0);
-        apply( fv, latA1, latB1, _actor1);
-    }   // end if
-    else
-    {
-        // Not a bilateral measure, which means that either the landmarks are the same, or that
-        // both of them are not bilateral landmarks.
-        if ( _lmkA != _lmkB)    // Not bilateral, but different landmarks, so must be medial landmarks
-            apply( fv, FACE_LATERAL_MEDIAL, FACE_LATERAL_MEDIAL, _actor0);
-        else
-            apply( fv, FACE_LATERAL_LEFT, FACE_LATERAL_RIGHT, _actor0); // Same landmark - one actor
-    }   // end else
-
+    if ( _lmks0 && _lmks0->size() == 2)
+        apply( fv, _lmks0, _actor0);
+    if ( _lmks1 && _lmks1->size() == 2)
+        apply( fv, _lmks1, _actor1);
     fm->unlock();
     MetricVisualiser::apply( fv, nullptr);
 }   // end apply

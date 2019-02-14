@@ -54,7 +54,7 @@ int PhenotypeManager::load( const QString& sdir)
     QDir hdir( sdir);
     if ( !hdir.exists() || !hdir.isReadable())
     {
-        std::cerr << "[WARNING] FaceTools::Metric::PhenotypeManager::load: Unable to open directory: " << sdir.toStdString() << std::endl;
+        std::cerr << "[WARN] FaceTools::Metric::PhenotypeManager::load: Unable to open directory: " << sdir.toStdString() << std::endl;
         return -1;
     }   // end if
 
@@ -65,7 +65,7 @@ int PhenotypeManager::load( const QString& sdir)
         Phenotype::Ptr hpo = Phenotype::load( hdir.absoluteFilePath(fname));
         if ( !hpo)
         {
-            std::cerr << "[WARNING] FaceTools::Metric::PhenotypeManager::load: Error loading Lua script " << fname.toStdString() << std::endl;
+            std::cerr << "[WARN] FaceTools::Metric::PhenotypeManager::load: Error loading Lua script " << fname.toStdString() << std::endl;
             continue;
         }   // end else
 

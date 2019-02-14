@@ -44,7 +44,7 @@ void MetricsInteractor::doOnEnterProp( const FV* fv, const vtkProp* p)
     if ( vis && fv == ModelSelector::selected())
     {
         setEnabled(false);  // Prevent interactor from responding to a possible change in prop
-        MCM::setActiveMetric( vis->metricId());
+        //MCM::setActiveMetric( vis->metricId());
         setEnabled(true);
     }   // end if
 }   // end doOnEnterProp

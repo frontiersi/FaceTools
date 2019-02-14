@@ -29,21 +29,24 @@ ActionResetCamera::ActionResetCamera( const QString& dn, const QIcon& ico, FMV *
 {
     if ( mv)
         addViewer(mv);
+    setRespondToEvent( VIEWER_CHANGE);
 }   // end ctor
 
 
 bool ActionResetCamera::doAction( FVS &fvs, const QPoint&)
 {
-    if ( _viewers.empty())
+    FMVS vwrs = fvs.dviewers();
+    for ( FMV* fmv : vwrs)
+        fmv->resetCamera();
+
+    for ( FMV* fmv : _viewers)
     {
-        FMVS vwrs = fvs.dviewers();
-        for ( FMV* v : vwrs)
-            v->resetCamera();
-    }   // end if
-    else
-    {
-        std::for_each( std::begin(_viewers), std::end(_viewers), [](FMV* v){ v->resetCamera();});
-        std::for_each( std::begin(_viewers), std::end(_viewers), [](FMV* v){ v->updateRender();});
-    }   // end else
+        if ( fmv->attached().empty())
+        {
+            fmv->resetCamera();
+            fmv->updateRender();
+        }   // end if
+    }   // end for
+
     return true;
 }   // end doAction

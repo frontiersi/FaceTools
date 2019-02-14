@@ -20,6 +20,7 @@
 #include <FaceModel.h>
 #include <MiscFunctions.h>
 #include <QtCharts/QSplineSeries>
+#include <QDebug>
 #include <cassert>
 #include <fstream>
 #include <boost/algorithm/string.hpp>
@@ -29,19 +30,15 @@ using FaceTools::Metric::MetricValue;
 using FaceTools::Metric::DimensionStat;
 using FaceTools::Metric::GrowthData;
 using FaceTools::Metric::MetricSet;
-using FaceTools::Metric::MCTI;
+using FaceTools::Metric::MCT;
 using FaceTools::FM;
 using FaceTools::FaceLateral;
+using FaceTools::Landmark::LmkList;
 
 
 namespace {
 static const QStringSet EMPTY_QSTRING_SET;
 }   // end namespace
-
-MetricCalculator::Ptr MetricCalculator::create( MCTI::Ptr mcti)
-{
-    return Ptr( new MetricCalculator( mcti), [](MetricCalculator* d){ delete d;});
-}   // end create
 
 
 MetricCalculator::Ptr MetricCalculator::load( const QString &fpath)
@@ -57,7 +54,7 @@ MetricCalculator::Ptr MetricCalculator::load( const QString &fpath)
     }   // end try
     catch ( const sol::error& e)
     {
-        std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: Unable to load and execute file '" << fpath.toStdString() << "'!" << std::endl;
+        std::cerr << "[WARN] FaceTools::Metric::MetricCalculator::load: Unable to load and execute file '" << fpath.toStdString() << "'!" << std::endl;
         std::cerr << "\t" << e.what() << std::endl;
     }   // end catch
 
@@ -67,13 +64,13 @@ MetricCalculator::Ptr MetricCalculator::load( const QString &fpath)
     auto table = lua["mc"];
     if ( !table.valid())
     {
-        std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: Lua file has no global member named mc!" << std::endl;
+        std::cerr << "[WARN] FaceTools::Metric::MetricCalculator::load: Lua file has no global member named mc!" << std::endl;
         return nullptr;
     }   // end if
 
     if ( !table["stats"].valid())
     {
-        std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: stats member is not a table!" << std::endl;
+        std::cerr << "[WARN] FaceTools::Metric::MetricCalculator::load: stats member is not a table!" << std::endl;
         return nullptr;
     }   // end if
 
@@ -89,23 +86,29 @@ MetricCalculator::Ptr MetricCalculator::load( const QString &fpath)
 
     if ( id < 0 || name.isEmpty() || ndps < 0 || catg.isEmpty() || prms.isEmpty() || ndims <= 0)
     {
-        std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: incomplete metric metadata!" << std::endl;
+        std::cerr << "[WARN] FaceTools::Metric::MetricCalculator::load: incomplete metric metadata!" << std::endl;
         return nullptr;
     }   // end if
 
-    MCTI::Ptr mcti = MetricCalculatorTypeRegistry::createFrom( catg, prms);
-    if ( !mcti)
+    mc->_id = id;
+    mc->_name = name;
+    mc->_desc = desc;
+    mc->_ndps = static_cast<size_t>(ndps);
+    mc->_dims = static_cast<size_t>(ndims);
+
+    // Set the landmark parameters
+    if ( Landmark::fromParams( prms, mc->_lmks0, mc->_lmks1) == 0)
+        return nullptr;
+
+    MCT* mct = MetricCalculatorTypeRegistry::makeMCT( catg, id, &mc->_lmks0, &mc->_lmks1);
+    if ( !mct)
     {
-        std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: Invalid category or parameters for metric " << id << ":" << std::endl;
+        std::cerr << "[WARN] FaceTools::Metric::MetricCalculator::load: Invalid category or parameters for metric " << id << ":" << std::endl;
         std::cerr << "\t" << catg.toStdString() << "; " << prms.toStdString() << std::endl;
         return nullptr;
     }   // end if
 
-    mc->setType(mcti);
-    mcti->setId(id);
-    mcti->setName(name);
-    mcti->setDescription(desc);
-    mcti->setNumDecimals(static_cast<size_t>(ndps));
+    mc->setType(mct);
 
     // Read in the growth data
     sol::table stats = table["stats"];
@@ -113,7 +116,7 @@ MetricCalculator::Ptr MetricCalculator::load( const QString &fpath)
     {
         if ( !stats[i].valid())
         {
-            std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: stats member is not a table for metric " << id << "!" << std::endl;
+            std::cerr << "[WARN] FaceTools::Metric::MetricCalculator::load: stats member is not a table for metric " << id << "!" << std::endl;
             continue;
         }   // end if
 
@@ -128,25 +131,25 @@ MetricCalculator::Ptr MetricCalculator::load( const QString &fpath)
 
         if ( ethn.isEmpty())
         {
-            std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: distribution ethnicity not specified for metric " << id << "!" << std::endl;
+            std::cerr << "[WARN] FaceTools::Metric::MetricCalculator::load: distribution ethnicity not specified for metric " << id << "!" << std::endl;
             continue;
         }   // end if
 
         if ( sexs.isEmpty())
         {
-            std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: distribution sexs not specified for metric " << id << "!" << std::endl;
+            std::cerr << "[WARN] FaceTools::Metric::MetricCalculator::load: distribution sexs not specified for metric " << id << "!" << std::endl;
             continue;
         }   // end if
 
         if ( srcs.isEmpty())
         {
-            std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: distribution source not specified for metric " << id << "!" << std::endl;
+            std::cerr << "[WARN] FaceTools::Metric::MetricCalculator::load: distribution source not specified for metric " << id << "!" << std::endl;
             continue;
         }   // end if
 
         if ( !dist["data"].valid())
         {
-            std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: Distribution data member is not a table for metric " << id << "!" << std::endl;
+            std::cerr << "[WARN] FaceTools::Metric::MetricCalculator::load: Distribution data member is not a table for metric " << id << "!" << std::endl;
             continue;
         }   // end if
 
@@ -154,7 +157,7 @@ MetricCalculator::Ptr MetricCalculator::load( const QString &fpath)
         const int tdims = int( data.size());
         if ( tdims != ndims)
         {
-            std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: number of dimensions mismatch in growth data for metric " << id << "!" << std::endl;
+            std::cerr << "[WARN] FaceTools::Metric::MetricCalculator::load: number of dimensions mismatch in growth data for metric " << id << "!" << std::endl;
             continue;
         }   // end if
 
@@ -164,7 +167,7 @@ MetricCalculator::Ptr MetricCalculator::load( const QString &fpath)
         {
             if ( !data[j].valid())
             {
-                std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: data dimension is not a table for metric " << id << "!" << std::endl;
+                std::cerr << "[WARN] FaceTools::Metric::MetricCalculator::load: data dimension is not a table for metric " << id << "!" << std::endl;
                 continue;
             }   // end if
 
@@ -175,14 +178,14 @@ MetricCalculator::Ptr MetricCalculator::load( const QString &fpath)
             {
                 if ( !dimj[k].valid())
                 {
-                    std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: distribution dimension datapoint is not a table for metric " << id << "!" << std::endl;
+                    std::cerr << "[WARN] FaceTools::Metric::MetricCalculator::load: distribution dimension datapoint is not a table for metric " << id << "!" << std::endl;
                     continue;
                 }   // end if
 
                 sol::table dp = dimj[k];
                 if ( dp.size() != 3 || !dp[1].valid() || !dp[2].valid() || !dp[3].valid())
                 {
-                    std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::load: distribution dimension datapoints must be numberic 3-tuples for metric " << id << "!" << std::endl;
+                    std::cerr << "[WARN] FaceTools::Metric::MetricCalculator::load: distribution dimension datapoints must be numberic 3-tuples for metric " << id << "!" << std::endl;
                     continue;
                 }   // end if
 
@@ -213,18 +216,18 @@ MetricCalculator::Ptr MetricCalculator::load( const QString &fpath)
 }   // end load
 
 
-MetricCalculator::MetricCalculator( MCTI::Ptr mcti)
-    : _mcti(mcti), _visible(false) {}
-
 MetricCalculator::MetricCalculator()
-    : _mcti(nullptr), _visible(false) {}
+    : _mct(nullptr), _visible(false), _id(-1), _ndps(0), _dims(0) {}
 
 
 MetricCalculator::~MetricCalculator()
 {
-    for ( GrowthData* gd : _agd) delete gd;
+    for ( GrowthData* gd : _agd)
+        delete gd;
     _gdata.clear();
     _agd.clear();
+    if ( _mct)
+        delete _mct;
 }   // end dtor
 
 
@@ -245,7 +248,9 @@ const GrowthData* MetricCalculator::growthData( const QString& ethn, int8_t sex)
     if ( sdata->count( sex) == 0)
         return nullptr;
 
-    return sdata->at( sex);
+    const GrowthData* gd = sdata->at( sex);
+    assert( gd->source() == _csrc);
+    return gd;
 }   // end growthData
 
 
@@ -261,7 +266,7 @@ const GrowthData* MetricCalculator::growthData( const FM* fm) const
 
 bool MetricCalculator::canCalculate( const FM* fm) const
 {
-    return _mcti->canCalculate(fm);
+    return _mct->canCalculate(fm, &_lmks0);
 }   // end canCalculate
 
 
@@ -269,7 +274,13 @@ void MetricCalculator::addGrowthData( GrowthData* gd)
 {
     const QString src = gd->source();
     const QString eth = gd->ethnicity().toLower();
+
     _gdata[src][eth][gd->sex()] = gd;
+    if ( int8_t( FaceTools::MALE_SEX) & gd->sex())
+        _gdata[src][eth][FaceTools::MALE_SEX] = gd;
+    if ( int8_t(FaceTools::FEMALE_SEX) & gd->sex())
+        _gdata[src][eth][FaceTools::FEMALE_SEX] = gd;
+
     _agd.insert(gd);
     _ethnicities[src].insert(gd->ethnicity());
     _sources.insert(src);
@@ -281,7 +292,7 @@ void MetricCalculator::addGrowthData( GrowthData* gd)
 
 
 // private
-MetricValue MetricCalculator::calcMetricValue( const FM* fm, FaceLateral faceLat) const
+MetricValue MetricCalculator::calcMetricValue( const FM* fm, const LmkList& llst) const
 {
     MetricValue mv( id());
 
@@ -293,9 +304,12 @@ MetricValue MetricCalculator::calcMetricValue( const FM* fm, FaceLateral faceLat
         mv.setSex( gd->sex());
     }   // end if
 
+    std::vector<double> dvals;
+    _mct->measure( dvals, fm, &llst); // Facial measurement at dimension i
     for ( size_t i = 0; i < dims(); ++i)
     {
-        DimensionStat dstat( _mcti->measure( i, fm, faceLat)); // Facial measurement at dimension i
+        DimensionStat dstat( dvals[i]);
+
         if ( gd)
         {
             rlib::RSD::Ptr rsd = gd->rsd(i);
@@ -317,7 +331,8 @@ bool MetricCalculator::setSource( const QString& src)
 {
     if ( !src.isEmpty() && _sources.count(src) == 0)
     {
-        std::cerr << "[WARNING] FaceTools::Metric::MetricCalculator::setSource: requested source \"" << src.toStdString() << "\" is not available!" << std::endl;
+        std::cerr << "[WARN] FaceTools::Metric::MetricCalculator::setSource: requested source \""
+                  << src.toStdString() << "\" is not available!" << std::endl;
         return false;
     }   // end if
     _csrc = src;
@@ -336,18 +351,17 @@ const QStringSet& MetricCalculator::ethnicities() const
 bool MetricCalculator::calculate( FM* fm) const
 {
     using namespace FaceTools::Metric;
-    if ( _mcti)
+    if ( _mct)
     {
-        if ( _mcti->isBilateral())
+        if ( isBilateral())
         {
-            fm->metricsL().set( calcMetricValue( fm, FACE_LATERAL_LEFT));
-            fm->metricsR().set( calcMetricValue( fm, FACE_LATERAL_RIGHT));
+            fm->metricsL().set( calcMetricValue( fm, _lmks0));
+            fm->metricsR().set( calcMetricValue( fm, _lmks1));
         }   // end if
         else
-            fm->metrics().set( calcMetricValue( fm, FACE_LATERAL_MEDIAL));
+            fm->metrics().set( calcMetricValue( fm, _lmks0));
     }   // end if
-
-    return _mcti != nullptr;
+    return _mct != nullptr;
 }   // end calculate
 
 
@@ -359,7 +373,7 @@ double MetricCalculator::addSeriesToChart( QtCharts::QChart *chart, const Growth
     double x0 = DBL_MAX;
     double x1 = -DBL_MAX;
 
-    const size_t ndims = _mcti->dims();
+    const size_t ndims = dims();
     for ( size_t d = 0; d < ndims; ++d)
     {
         QSplineSeries *mseries = new QSplineSeries;

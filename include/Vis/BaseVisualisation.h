@@ -41,7 +41,7 @@ public:
     const QKeySequence* getShortcut() const override { return _keys;}
 
     bool isAvailable( const FM*) const override { return true;}
-    bool isAvailable( const FV*, const QPoint*) const override { return true;}
+    bool isAvailable( const FV*, const QPoint*) const override;
 
     // Visualisations that are toggled (default) can be turned on and off as layers over the base view.
     // A non-toggled visualisation is mutually exclusive wrt any other non-toggled visualisation.

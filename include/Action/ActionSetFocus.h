@@ -20,13 +20,12 @@
 
 #include "FaceAction.h"
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionSetFocus : public FaceAction
 { Q_OBJECT
 public:
-    explicit ActionSetFocus( const QString& dname);
+    ActionSetFocus( const QString& dname, const QIcon& icon=QIcon());
 
 protected slots:
     bool testEnabled( const QPoint*) const override;
@@ -34,7 +33,6 @@ protected slots:
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(CAMERA_CHANGE);}
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

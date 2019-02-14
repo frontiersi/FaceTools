@@ -29,13 +29,13 @@ public:
     explicit MetricVisualiser( int);    // Supply the associated metric ID
     ~MetricVisualiser() override;
 
-    int metricId() const { return _id;}
-    void setMetricId( int id) { _id = id;}
+    int id() const { return _id;}
 
     /*
     bool belongs( const vtkProp*, const FV*) const;
     void pokeTransform( const FV*, const vtkMatrix4x4*) override;
     void fixTransform( const FV*) override;
+    bool isAvailable( const FM*) const override;
     */
 
     void apply( FV*, const QPoint*) override;

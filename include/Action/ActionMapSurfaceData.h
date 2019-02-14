@@ -20,8 +20,7 @@
 
 #include "FaceAction.h"
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionMapSurfaceData : public FaceAction
 { Q_OBJECT
@@ -34,7 +33,6 @@ protected slots:
     void doOnCalculated( const FaceModel*);
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

@@ -17,6 +17,7 @@
 
 #include <ActionMoveViewer.h>
 #include <ModelSelector.h>
+#include <BaseVisualisation.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <FaceView.h>
@@ -25,6 +26,7 @@
 using FaceTools::Action::ActionMoveViewer;
 using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
+using FaceTools::Vis::BaseVisualisation;
 using FaceTools::Vis::FV;
 using FaceTools::FMVS;
 using FaceTools::FMV;
@@ -59,12 +61,15 @@ bool ActionMoveViewer::doAction( FVS &fvs, const QPoint&)
         if ( _tviewer->get(fm))
             Action::ModelSelector::removeFaceView( _tviewer->get(fm));
 
-        // If the target viewer has other FaceViews, they are applied to the FaceView being moved in.
+        // If the target viewer has other FaceViews, they are applied to the FaceView being moved in (if possible)
         if ( !_tviewer->attached().empty())
         {
             const FV* tfv = _tviewer->attached().first();
-            for ( auto vl : tfv->visualisations())
-                fv->apply(vl);
+            for ( BaseVisualisation* vl : tfv->visualisations())
+            {
+                if ( vl->isAvailable(fv->data()))
+                    fv->apply(vl);
+            }   // end for
         }   // end if
 
         fv->setViewer(_tviewer);    // Attach to target viewer (detaches from source)

@@ -23,6 +23,9 @@
 #include <QPushButton>
 #include <QtCharts/QScatterSeries>
 #include <QtCharts/QValueAxis>
+#include <QFileDialog>
+#include <QDebug>
+#include <QMessageBox>
 #include <cassert>
 #include <cmath>
 using FaceTools::Widget::ChartDialog;
@@ -44,18 +47,20 @@ ChartDialog::ChartDialog( QWidget *parent) :
 
     _cview->setRenderHint( QPainter::Antialiasing);
     setWindowTitle( parent->windowTitle() + " | Metric Growth Chart");
-    resize( 850, 500);
+
+    assert( MCM::count() > 0);
+    doOnSetSelectedMetric();
 
     connect( _ui->sourceComboBox, QOverload<int>::of(&QComboBox::activated), this, &ChartDialog::doOnUserSelectedSource);
     connect( _ui->ethnicityComboBox, QOverload<int>::of(&QComboBox::activated), this, &ChartDialog::doOnUserSelectedEthnicity);
     connect( _ui->sexComboBox, QOverload<int>::of(&QComboBox::activated), this, &ChartDialog::doOnResetChart);
     connect( _ui->dimensionSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &ChartDialog::doOnResetChart);
-    connect( _ui->editDataButton, &QPushButton::clicked, this, &ChartDialog::doOnEditData);
+    //connect( _ui->editDataButton, &QPushButton::clicked, this, &ChartDialog::doOnEditData);
 
-    assert( MCM::count() > 0);
+    connect( _ui->saveImageButton, &QToolButton::clicked, this, &ChartDialog::doOnSaveImage);
+
     for ( MC::Ptr mc : MCM::metrics())
-        connect( &*mc, &MC::activated, this, &ChartDialog::doOnSetMetricActive);
-    doOnSetMetricActive();
+        connect( &*mc, &MC::selected, this, &ChartDialog::doOnSetSelectedMetric);
 }   // end ctor
 
 
@@ -70,13 +75,11 @@ void ChartDialog::refresh()
         const QString& e = fm->ethnicity();
         const int8_t s = fm->sex();
 
-        MC::Ptr mc = MCM::activeMetric();
+        MC::Ptr mc = MCM::currentMetric();
         if ( mc && mc->ethnicities().count(e) > 0)
-        {
             _ui->ethnicityComboBox->setCurrentText(e);
-            if ( mc->growthData(e, s))
-                _ui->sexComboBox->setCurrentText( toLongSexString(s));
-        }   // end if
+        if ( mc->growthData(e, s))
+            _ui->sexComboBox->setCurrentText( toLongSexString(s));
     }   // end if
 
     doOnResetChart();
@@ -91,7 +94,7 @@ void ChartDialog::doOnSetEthnicityIgnored(bool v)
 
 
 // private
-void ChartDialog::doOnSetMetricActive()
+void ChartDialog::doOnSetSelectedMetric()
 {
     populateSources();
     populateEthnicites();
@@ -105,7 +108,7 @@ void ChartDialog::doOnSetMetricActive()
 void ChartDialog::populateSources()
 {
     _ui->sourceComboBox->clear();
-    MC::Ptr mc = MCM::activeMetric();
+    MC::Ptr mc = MCM::currentMetric();
     assert(mc);
     QStringList slst;
     for ( const QString& s : mc->sources())
@@ -124,11 +127,8 @@ void ChartDialog::populateSources()
 void ChartDialog::populateEthnicites()
 {
     _ui->ethnicityComboBox->clear();
-    MC::Ptr mc = MCM::activeMetric();
+    MC::Ptr mc = MCM::currentMetric();
     assert(mc);
-
-    const QString src = _ui->sourceComboBox->currentText();
-    mc->setSource(src);
 
     QStringList elst;
     for ( const QString& e : mc->ethnicities())
@@ -146,7 +146,7 @@ void ChartDialog::populateEthnicites()
 void ChartDialog::populateSexs()
 {
     _ui->sexComboBox->clear();
-    MC::Ptr mc = MCM::activeMetric();
+    MC::Ptr mc = MCM::currentMetric();
     assert(mc);
 
     const QString ethn = _ui->ethnicityComboBox->currentText();
@@ -161,13 +161,13 @@ void ChartDialog::populateSexs()
     }   // end else
 
     _ui->sexComboBox->setEnabled( _ui->sexComboBox->count() > 1);
-}   // end populateSex
+}   // end populateSexs
 
 
 // private
 void ChartDialog::populateDimensions()
 {
-    const int ndims = static_cast<int>( MCM::activeMetric()->dims());
+    const int ndims = static_cast<int>( MCM::currentMetric()->dims());
     _ui->dimensionSpinBox->setMaximum( ndims);
     _ui->dimensionSpinBox->setValue(1);
     _ui->dimensionSpinBox->setEnabled( ndims > 1);
@@ -190,15 +190,14 @@ const FM* ChartDialog::isDemographic() const
 
 
 // private
-void ChartDialog::doOnEditData()
-{
-    ; // TODO
-}   // end doOnEditData
-
-
-// private
 void ChartDialog::doOnUserSelectedSource()
 {
+    MC::Ptr mc = MCM::currentMetric();
+    assert(mc);
+    const QString src = _ui->sourceComboBox->currentText();
+    mc->setSource(src);
+    mc->signalUpdated();
+
     populateEthnicites();
     doOnUserSelectedEthnicity();
 }   // end doOnUserSelectedSource
@@ -208,119 +207,63 @@ void ChartDialog::doOnUserSelectedSource()
 void ChartDialog::doOnUserSelectedEthnicity()
 {
     populateSexs();
-    doOnResetChart();
+    refresh();
 }   // end doOnUserSelectedEthnicity
-
-
-namespace {
-
-QtCharts::QScatterSeries* createMetricPoint( double age, double val, const QString& title, const QColor& c)
-{
-    using namespace QtCharts;
-    QScatterSeries *dpoints = new QScatterSeries;
-    dpoints->setName( title);
-    dpoints->setMarkerShape(QScatterSeries::MarkerShapeCircle);
-    dpoints->setMarkerSize(10);
-    dpoints->setColor(c);
-    dpoints->append( age, val);
-    return dpoints;
-}   // end createMetricPoint
-
-}   // end namespace
 
 
 // private
 void ChartDialog::doOnResetChart()
 {
-    using namespace QtCharts;
-    QChart *chart = new QChart;
-    _cview->setChart(chart);
-
-    QString ethn = _ui->ethnicityComboBox->currentText();
+    const QString ethn = _ui->ethnicityComboBox->currentText();
     const int8_t sex = fromLongSexString(_ui->sexComboBox->currentText());
+    const size_t d = static_cast<size_t>(_ui->dimensionSpinBox->value() - 1);   // Dimension to display
+    const MC::Ptr mc = MCM::currentMetric();
+    assert( mc);
+    const int mid = mc->id();
+    const FM* fm = isDemographic();
 
-    const size_t d = static_cast<size_t>(_ui->dimensionSpinBox->value() - 1);   // The selected dimension to display
-    assert( d >= 0);
-
-    MC::Ptr mc = MCM::activeMetric();
-    assert(mc);
-
-    const GrowthData* gd = mc->growthData( ethn, sex);
-    if ( gd)
+    QtCharts::QChart *chart = nullptr;
+    if ( !(chart = FaceTools::createChart( ethn, sex, d, mid, fm)))
     {
-        double xmin = 0;
-        double xmax = 0;
-        mc->addSeriesToChart( chart, gd, &xmin, &xmax);
+        chart = new QtCharts::QChart;
 
-        const FM* fm;
-        if ( (fm = isDemographic()))
-        {
-            const double age = fm->age();
-            xmin = std::min<double>(xmin, age);
-            xmax = std::max<double>(xmax, age);
-
-            if ( mc->isBilateral())
-            {
-                const MetricValue *mvl = fm->metricsL().get( mc->id());
-                const MetricValue *mvr = fm->metricsR().get( mc->id());
-
-                if ( mvl)
-                    chart->addSeries( createMetricPoint( age, mvl->value(d), "Subject (Left)", Qt::blue));
-
-                if ( mvl && mvr) // Create a mean data point
-                {
-                    double val = 0.5 * (mvl->value(d) + mvr->value(d));
-                    chart->addSeries( createMetricPoint( age, val, "Subject (Mean)", Qt::red));
-                }   // end if
-
-                if ( mvr)
-                    chart->addSeries( createMetricPoint( age, mvr->value(d), "Subject (Right)", Qt::darkGreen));
-            }   // end if
-            else
-            {
-                const MetricValue *mv = fm->metrics().get( mc->id());
-                if ( mv)
-                    chart->addSeries( createMetricPoint( age, mv->value(d), "Subject", Qt::red));
-            }   // end else
-        }   // end if
-
-        chart->createDefaultAxes();
-
-        QValueAxis* xaxis = new QValueAxis;
-        xaxis->setLabelFormat( "%d");
-        xaxis->setRange( xmin, xmax);
-        int nyears = (int(xmax) - int(xmin));   // TODO make xtick count change on resizing of window
-        xaxis->setTickCount( nyears + 1);
-        chart->setAxisX( xaxis);
-
-        chart->legend()->setAlignment(Qt::AlignRight);
-        chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
-
-        chart->setDropShadowEnabled(false);
-        chart->axisX()->setTitleText( "Age (yrs)");
-        chart->axisY()->setTitleText( QString("Distance (%1)").arg(FM::LENGTH_UNITS));
+        QString title = mc->name();
+        if ( mc->dims() > 1)    // Specify which dimension of the metric is being shown
+            title += QString( " (Dimension %1)").arg(d);
+        QString src = "<big><em>No growth curve data available.</em></big>";
+        chart->setTitle( QString("<center><big><b>%1</b></big><br>%2</center>").arg( title, src));
     }   // end if
 
-    QString title = mc->name();
-    if ( mc->dims() > 1)    // Specify which dimension of the metric is being shown
-        title += QString( "(Dimension %1)").arg(d);
-
-    QString demog, src;
-    if ( !gd)
-        demog = "No growth curve data!";
-    else
-    {
-        if ( !gd->ethnicity().isEmpty())
-            demog = gd->ethnicity() + "; ";
-        demog += toLongSexString( static_cast<Sex>(gd->sex()));
-
-        src = "<em>" + gd->source();
-        if ( !gd->note().isEmpty())
-            src += "<br>" + gd->note();
-        if ( gd->n() > 0)
-            src += QString("; N=%1").arg(gd->n());
-        src += "</em>";
-    }   // end else
-
-    chart->setTitle( QString("<center><big><b>%1</b> (%2)</big><br>%3</center>").arg( title, demog, src));
+    _cview->setChart(chart);
 }   // end doOnResetChart
+
+
+// private
+void ChartDialog::doOnSaveImage()
+{
+    QFileDialog fdialog( (QWidget*)parent());
+    fdialog.setWhatsThis( tr("Save image as..."));
+    fdialog.setFileMode( QFileDialog::AnyFile);
+    fdialog.setNameFilter( "Image Files (*.jpg *.jpeg *.png *.gif *.bmp)");
+    fdialog.selectFile( "chart.png");
+    fdialog.setAcceptMode( QFileDialog::AcceptSave);
+    fdialog.setOption( QFileDialog::DontUseNativeDialog);
+
+    QStringList fnames;
+    if ( fdialog.exec())
+        fnames = fdialog.selectedFiles();
+
+    QString imgpath;
+    if ( !fnames.empty())
+    {
+        imgpath = fnames.first();
+        if ( QFile::exists(imgpath))
+            QFile::remove(imgpath);
+    }   // end if
+
+    QPixmap pixmap( _cview->size());
+    static_cast<QWidget*>(_cview)->render( &pixmap);
+
+    if ( !imgpath.isEmpty() && !pixmap.save(imgpath))
+        QMessageBox::warning( (QWidget*)parent(), tr("Save Error!"), tr("Unable to save to file ") + imgpath);
+}   // end doOnSaveImage

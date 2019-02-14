@@ -50,8 +50,10 @@ include_directories( ${PROJECT_BINARY_DIR}) # Req. for generated Qt form headers
 
 set( FORMS
     "${FORMS_DIR}/ChartDialog.ui"
+    "${FORMS_DIR}/DetectionCheckDialog.ui"
     "${FORMS_DIR}/MetricsDialog.ui"
     "${FORMS_DIR}/PhenotypesDialog.ui"
+    "${FORMS_DIR}/ReportChooserDialog.ui"
     "${FORMS_DIR}/ScanInfoDialog.ui"
     )
 
@@ -87,6 +89,7 @@ set( QOBJECTS
     #"${INCLUDE_ACTION_DIR}/ActionRenameLandmark.h"
     "${INCLUDE_ACTION_DIR}/ActionRenamePath.h"
     "${INCLUDE_ACTION_DIR}/ActionResetCamera.h"
+    "${INCLUDE_ACTION_DIR}/ActionResetDetection.h"
     "${INCLUDE_ACTION_DIR}/ActionRotateModel.h"
     "${INCLUDE_ACTION_DIR}/ActionSaveScreenshot.h"
     "${INCLUDE_ACTION_DIR}/ActionSaveFaceModels.h"
@@ -116,6 +119,7 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/FaceActionGroup.h"
     "${INCLUDE_ACTION_DIR}/FaceActionManager.h"
     "${INCLUDE_ACTION_DIR}/FaceActionWorker.h"
+    "${INCLUDE_ACTION_DIR}/U3DCache.h"
 
     "${INCLUDE_FILEIO_DIR}/FaceModelAssImpFileHandler.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelFileHandler.h"
@@ -124,14 +128,14 @@ set( QOBJECTS
     "${INCLUDE_FILEIO_DIR}/FaceModelU3DFileHandler.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelXMLFileHandler.h"
 
-    "${INCLUDE_METRIC_DIR}/AngleMetricCalculatorType.h"
+    "${INCLUDE_METRIC_DIR}/CircularityMetricCalculatorType.h"
+    "${INCLUDE_METRIC_DIR}/CurvatureMetricCalculatorType.h"
     "${INCLUDE_METRIC_DIR}/DistanceMetricCalculatorType.h"
+    "${INCLUDE_METRIC_DIR}/LineAngleMetricCalculatorType.h"
     "${INCLUDE_METRIC_DIR}/MetricCalculatorTypeInterface.h"
     "${INCLUDE_METRIC_DIR}/MetricCalculator.h"
 
-    "${INCLUDE_REPORT_DIR}/BaseReportTemplate.h"
-    "${INCLUDE_REPORT_DIR}/ReportInterface.h"
-    "${INCLUDE_REPORT_DIR}/SampleReport.h"
+    "${INCLUDE_REPORT_DIR}/Report.h"
 
     "${INCLUDE_VIS_DIR}/AngleVisualiser.h"
     "${INCLUDE_VIS_DIR}/BaseVisualisation.h"
@@ -143,8 +147,9 @@ set( QOBJECTS
     "${INCLUDE_VIS_DIR}/MetricVisualiser.h"
     "${INCLUDE_VIS_DIR}/OutlinesVisualisation.h"
     "${INCLUDE_VIS_DIR}/PathSetVisualisation.h"
-    "${INCLUDE_VIS_DIR}/VisualisationInterface.h"
+    "${INCLUDE_VIS_DIR}/RegionVisualiser.h"
     "${INCLUDE_VIS_DIR}/SurfaceVisualisation.h"
+    "${INCLUDE_VIS_DIR}/VisualisationInterface.h"
 
     "${INCLUDE_INT_DIR}/ContextMenuInteractor.h"
     "${INCLUDE_INT_DIR}/FaceHoveringInteractor.h"
@@ -160,9 +165,11 @@ set( QOBJECTS
     "${INCLUDE_INT_DIR}/ViewerInteractionManager.h"
 
     "${INCLUDE_WIDGET_DIR}/ChartDialog.h"
+    "${INCLUDE_WIDGET_DIR}/CheckAllTableHeader.h"
+    "${INCLUDE_WIDGET_DIR}/DetectionCheckDialog.h"
     "${INCLUDE_WIDGET_DIR}/MetricsDialog.h"
-    "${INCLUDE_WIDGET_DIR}/MetricsTableHeader.h"
     "${INCLUDE_WIDGET_DIR}/PhenotypesDialog.h"
+    "${INCLUDE_WIDGET_DIR}/ReportChooserDialog.h"
     "${INCLUDE_WIDGET_DIR}/ScanInfoDialog.h"
 
     "${INCLUDE_DIR}/FaceModelSurfaceData.h"
@@ -207,6 +214,8 @@ set( INCLUDE_FILES
     "${INCLUDE_METRIC_DIR}/PhenotypeManager.h"
     "${INCLUDE_METRIC_DIR}/Syndrome.h"
     "${INCLUDE_METRIC_DIR}/SyndromeManager.h"
+
+    "${INCLUDE_REPORT_DIR}/ReportManager.h"
 
     "${INCLUDE_VIS_DIR}/BoundingView.h"
     "${INCLUDE_VIS_DIR}/LandmarkSetView.h"
@@ -266,6 +275,7 @@ set( SRC_FILES
     #${SRC_ACTION_DIR}/ActionRenameLandmark
     ${SRC_ACTION_DIR}/ActionRenamePath
     ${SRC_ACTION_DIR}/ActionResetCamera
+    ${SRC_ACTION_DIR}/ActionResetDetection
     ${SRC_ACTION_DIR}/ActionRotateModel
     ${SRC_ACTION_DIR}/ActionSaveScreenshot
     ${SRC_ACTION_DIR}/ActionSetFocus
@@ -294,6 +304,7 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/FaceActionManager
     ${SRC_ACTION_DIR}/FaceActionWorker
     ${SRC_ACTION_DIR}/ModelSelector
+    ${SRC_ACTION_DIR}/U3DCache
 
     ${SRC_DETECT_DIR}/FaceFinder2D
     ${SRC_DETECT_DIR}/FaceOrientationDetector
@@ -327,11 +338,13 @@ set( SRC_FILES
     ${SRC_LNDMRK_DIR}/LandmarkSet
     ${SRC_LNDMRK_DIR}/LandmarksManager
 
-    ${SRC_METRIC_DIR}/AngleMetricCalculatorType
+    ${SRC_METRIC_DIR}/CircularityMetricCalculatorType
+    ${SRC_METRIC_DIR}/CurvatureMetricCalculatorType
     ${SRC_METRIC_DIR}/DistanceMetricCalculatorType
     ${SRC_METRIC_DIR}/Gene
     ${SRC_METRIC_DIR}/GeneManager
     ${SRC_METRIC_DIR}/GrowthData
+    ${SRC_METRIC_DIR}/LineAngleMetricCalculatorType
     ${SRC_METRIC_DIR}/MetricCalculatorTypeRegistry
     ${SRC_METRIC_DIR}/MetricCalculatorManager
     ${SRC_METRIC_DIR}/MetricCalculator
@@ -342,7 +355,8 @@ set( SRC_FILES
     ${SRC_METRIC_DIR}/Syndrome
     ${SRC_METRIC_DIR}/SyndromeManager
 
-    ${SRC_REPORT_DIR}/SampleReport
+    ${SRC_REPORT_DIR}/Report
+    ${SRC_REPORT_DIR}/ReportManager
 
     ${SRC_VIS_DIR}/AngleVisualiser
     ${SRC_VIS_DIR}/BaseVisualisation
@@ -359,15 +373,18 @@ set( SRC_FILES
     ${SRC_VIS_DIR}/PathView
     ${SRC_VIS_DIR}/PathSetView
     ${SRC_VIS_DIR}/PathSetVisualisation
+    ${SRC_VIS_DIR}/RegionVisualiser
     ${SRC_VIS_DIR}/SphereView
     ${SRC_VIS_DIR}/SurfaceDataMapper
     ${SRC_VIS_DIR}/SurfaceVisualisation
 
     ${SRC_WIDGET_DIR}/ChartDialog
+    ${SRC_WIDGET_DIR}/CheckAllTableHeader
+    ${SRC_WIDGET_DIR}/DetectionCheckDialog
     ${SRC_WIDGET_DIR}/IntTableWidgetItem
     ${SRC_WIDGET_DIR}/MetricsDialog
-    ${SRC_WIDGET_DIR}/MetricsTableHeader
     ${SRC_WIDGET_DIR}/PhenotypesDialog
+    ${SRC_WIDGET_DIR}/ReportChooserDialog
     ${SRC_WIDGET_DIR}/ScanInfoDialog
 
     ${SRC_DIR}/CurvatureSpeedFunctor

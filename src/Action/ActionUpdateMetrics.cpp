@@ -20,8 +20,10 @@
 #include <PhenotypeManager.h>
 #include <FaceModel.h>
 #include <FaceView.h>
+#include <QDebug>
 #include <algorithm>
 using FaceTools::Action::ActionUpdateMetrics;
+using FaceTools::Action::ModelSelector;
 using FaceTools::Action::FaceAction;
 using FaceTools::Metric::MC;
 using FaceTools::Vis::FV;
@@ -40,8 +42,11 @@ ActionUpdateMetrics::ActionUpdateMetrics()
     setRespondToEvent( LANDMARKS_ADD);
     setRespondToEvent( LANDMARKS_CHANGE);
     setRespondToEvent( METADATA_CHANGE);
-}   // end ctor
+    setRespondToEvent( SURFACE_DATA_CHANGE);
 
+    for ( MC::Ptr mc : MCM::metrics())
+        connect( &*mc, &MC::updated, this, &ActionUpdateMetrics::doUpdateMetric);
+}   // end ctor
 
 
 // Ready if at least one of the metrics can be calculated
@@ -58,30 +63,66 @@ bool ActionUpdateMetrics::testReady( const FV* fv)
 
 bool ActionUpdateMetrics::doAction( FVS& fvs, const QPoint&)
 {
-    std::cerr << " --- Recalculating metrics and testing for phenotype presence (demographics ignored) ---" << std::endl;
+    if ( !ModelSelector::selected())
+        return false;
 
-    FMS fms = fvs.models();   // Copy out
-    for ( FM* fm : fms)
+    qDebug( " --- Acquiring metrics and testing phenotypes (demographics ignored) ---");
+
+    // Recalculate all metrics
+    FM *fm = ModelSelector::selected()->data();
+    fm->clearPhenotypes();
+
+    for ( MC::Ptr mc : MCM::metrics())
     {
-        // Recalculate all metrics
-        for ( MC::Ptr mc : MCM::metrics())
-        {
-            if ( mc->canCalculate(fm))
-                mc->calculate(fm);
-        }   // end for
+        if ( mc->canCalculate(fm))
+            mc->calculate(fm);
+    }   // end for
 
-        // Test presence of phenotypes
-        fm->clearPhenotypes();
-        for ( int hid : PhenotypeManager::ids())
-        {
-            Phenotype::Ptr hpo = PhenotypeManager::phenotype(hid);
-            if ( hpo->isPresent( &fm->metrics(), &fm->metricsL(), &fm->metricsR()))
-                fm->addPhenotype(hid);
-        }   // end for
+    for ( int pid : PhenotypeManager::ids())
+    {
+        Phenotype::Ptr pt = PhenotypeManager::phenotype(pid);
+        if ( pt->isPresent( &fm->cmetrics(), &fm->cmetricsL(), &fm->cmetricsR()))
+            fm->addPhenotype(pid);
     }   // end for
 
     fvs.clear();
-    fvs.insert(fms);
-
+    fvs.insert( fm);
     return true;
 }   // end doAction
+
+
+void ActionUpdateMetrics::doUpdateMetric( int mid)
+{
+    if ( !updateMetric(mid))
+        return;
+
+    EventSet cset;
+    cset.insert( METRICS_CHANGE);
+    FVS fvs;
+    fvs.insert(ModelSelector::selected());
+    emit reportFinished( cset, fvs, true);
+}   // end doUpdateMetric
+
+
+bool ActionUpdateMetrics::updateMetric( int mid)
+{
+    if ( !ModelSelector::selected())
+        return false;
+
+    FM *fm = ModelSelector::selected()->data();
+    MC::Ptr mc = MCM::metric(mid);
+    if ( mc->canCalculate(fm))
+    {
+        mc->calculate(fm);
+
+        // Retest presence of associated phenotypes
+        for ( int pid : PhenotypeManager::metricPhenotypeIds(mid))
+        {
+            fm->removePhenotype(pid);
+            Phenotype::Ptr pt = PhenotypeManager::phenotype(pid);
+            if ( pt->isPresent( &fm->cmetrics(), &fm->cmetricsL(), &fm->cmetricsR()))
+                fm->addPhenotype(pid);
+        }   // end for
+    }   // end if
+    return true;
+}   // end updateMetric

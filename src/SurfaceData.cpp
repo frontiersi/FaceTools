@@ -116,34 +116,44 @@ void createSurfaceData( SurfaceData* sd, const FaceModel* fm)
 
 
 SurfaceDataWorker::SurfaceDataWorker( FaceModel* fm)
-    : fmodel(fm), surfaceData( new SurfaceData), working(false)
+    : fmodel(fm), surfaceData( nullptr), working(false)
 {
 }   // end ctor
 
 SurfaceDataWorker::~SurfaceDataWorker()
 {
-    delete surfaceData->metrics;
-    delete surfaceData;
+    lock.lockForWrite();
+    reset();
+    lock.unlock();
 }   // end dtor
 
 
-void SurfaceDataWorker::calculate()
+void SurfaceDataWorker::reset()
 {
-    working = true;
-    lock.lockForWrite();
+    if ( surfaceData)
+    {
+        delete surfaceData->metrics;
+        delete surfaceData;
+    }   // end if
+    surfaceData = nullptr;
+    working = false;
+}   // end reset
 
-    // Create SurfaceData via a worker thread
-    QThread *wthread = QThread::create( [&](){ createSurfaceData( surfaceData, fmodel);});
-    moveToThread( wthread);
-    connect( wthread, &QThread::finished, [&](){
-            moveToThread( QApplication::instance()->thread());
-            working = false;
-            lock.unlock();
-            emit onCalculated(fmodel);
-            });
-    connect( wthread, &QThread::finished, wthread, &QObject::deleteLater);
-    wthread->start();
-}   // end calculate
+
+void SurfaceDataWorker::run()
+{
+    lock.lockForWrite();
+    reset();
+    working = true;
+
+    surfaceData = new SurfaceData;
+    createSurfaceData( surfaceData, fmodel);
+
+    working = false;
+    lock.unlock();
+
+    emit onCalculated( fmodel);
+}   // end run
 
 
 SurfaceData::RPtr SurfaceDataWorker::readLock()
