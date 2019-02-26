@@ -22,21 +22,10 @@
 #include "LandmarkSet.h"
 #include "MiscFunctions.h"
 #include <Viewer.h> // RVTK
+#include <Orientation.h>    // RFeatures
 #include <QtCharts/QChartView>
 
 namespace FaceTools {
-
-FaceTools_EXPORT size_t findCommonLandmarks( std::vector<int>& lmkIds, const FMS&);
-
-// Are the nasal root and subnasale landmarks present?
-FaceTools_EXPORT bool hasCentreLandmarks( const Landmark::LandmarkSet&);
-
-// Calculate pupil as mean of palpebral superius/inferius and (endo/exo)canthion.
-// Does NOT ensure that the point is placed on the model surface!
-FaceTools_EXPORT cv::Vec3f calcPupil( const Landmark::LandmarkSet& lmks, FaceLateral lat);
-
-// Calculate face centre as the midpoint between the nasal root and subnasale.
-FaceTools_EXPORT cv::Vec3f calcFaceCentre( const Landmark::LandmarkSet&);
 
 // Estimate the normal vector using an interative approach that evaluates
 // normals along line segments measured over vertical line segments under the

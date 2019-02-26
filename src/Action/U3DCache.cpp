@@ -90,7 +90,9 @@ void U3DCache::run()
 
     // Ensure that the model is in standard position:
     qInfo( "Transforming model to standard position");
-    cv::Matx44d tmat = RFeatures::toStandardPosition( _fm->orientation().nvec(), _fm->orientation().uvec(), _fm->centre());
+    const cv::Vec3f centre = _fm->centre();
+    const RFeatures::Orientation on = _fm->orientation();
+    cv::Matx44d tmat = RFeatures::toStandardPosition( on.nvec(), on.uvec(), centre);
     RFeatures::Transformer transformer( tmat);
     transformer.transform( model);
 

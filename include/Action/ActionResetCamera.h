@@ -21,8 +21,7 @@
 #include "FaceAction.h"
 #include <FaceModelViewer.h>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionResetCamera : public FaceAction
 { Q_OBJECT
@@ -41,7 +40,6 @@ private:
     std::vector<FaceModelViewer*> _viewers;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

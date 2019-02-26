@@ -25,7 +25,7 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionMoveViewer : public FaceAction
 { Q_OBJECT
 public:
-    // If a source viewer is set (can be NULL), this action will only be enabled for
+    // If a source viewer is set (can be null), this action will only be enabled for
     // the subset of the selected Vis::FVs that are in the source viewer.
     ActionMoveViewer( FMV* target, FMV* source, const QString&, const QIcon&);
 

@@ -21,6 +21,7 @@
 #include <Landmark.h>
 #include <LandmarksManager.h>
 #include <ObjModelKDTree.h>
+#include <Orientation.h>
 #include <boost/property_tree/ptree.hpp>
 using PTree = boost::property_tree::ptree;
 
@@ -57,9 +58,48 @@ public:
     // Another alternative.
     const cv::Vec3f* pos( const SpecificLandmark&) const;
 
+    // Return the position of some random medial landmark if one exists, else null.
+    const cv::Vec3f* posSomeMedial() const;
+
     // Convenience function to return the interpupil difference vector (from left to right eye),
     // or the zero vector if landmarks not available.
     cv::Vec3f eyeVec() const;
+
+    // Calculate the right vector from all pairs of lateral landmarks.
+    cv::Vec3f rightVec() const;
+
+    // Calculate the up vector as l2norm( superiorMean - inferiorMean).
+    cv::Vec3f upVec() const;
+
+    // Calculate the normal vector as rightVec X upVec.
+    cv::Vec3f normVec() const;
+
+    // Calculate and return orientation (normVec and upVec, but more efficiently calculated).
+    RFeatures::Orientation orientation() const;
+
+    // Get the mean position of the landmarks in the superior (top face) group.
+    // The superior group consists of the 10 landmarks:
+    // Mid-supraorbital (LR)
+    // Glabella
+    // Exocanthion (LR)
+    // Endocanthion (LR)
+    // Nasion
+    // Sellion
+    // Mid-nasal Dorsum
+    cv::Vec3f superiorMean() const;
+
+    // Get the mean position of the landmarks in the inferior (bottom face) group.
+    // The inferior landmark group consists of the 10 landmarks:
+    // Alar Curvature Point (LR)
+    // Christa Philtri (LR)
+    // Cheilion (LR)
+    // Labiale Superius
+    // Labiale Inferius
+    // Stomion (mean of Superius and Inferius)
+    // Sublabiale
+    cv::Vec3f inferiorMean() const;
+
+    cv::Vec3f fullMean() const; // Simply (superiorMean + inferiorMean)/2
 
     // Add translation vector v to specified landmark (returns false if landmark not present).
     bool translate( int id, FaceLateral, const cv::Vec3f&);

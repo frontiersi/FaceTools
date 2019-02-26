@@ -28,8 +28,7 @@
 #include <LoopSelectVisualisation.h>
 #include <RadialSelectInteractor.h>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionRadialSelect : public ActionVisualise
 { Q_OBJECT
@@ -62,7 +61,6 @@ private:
     void updateVis( const FaceModel*);
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

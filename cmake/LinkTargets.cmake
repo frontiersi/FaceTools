@@ -43,7 +43,8 @@ if(WITH_TINYXML)
 endif()
 
 if(WITH_BOOST)
-    target_link_libraries( ${PROJECT_NAME} Boost::regex Boost::random Boost::thread Boost::filesystem Boost::system)
+    #target_link_libraries( ${PROJECT_NAME} Boost::regex Boost::random Boost::thread Boost::filesystem Boost::system)
+    target_link_libraries( ${PROJECT_NAME} ${Boost_LIBRARIES})
 endif()
 
 if(WITH_OPENCV)
@@ -55,7 +56,8 @@ if(WITH_VTK)
 endif()
 
 if(WITH_QT)
-    target_link_libraries( ${PROJECT_NAME} ${QT_LIBRARIES})
+    #target_link_libraries( ${PROJECT_NAME} ${QT_LIBRARIES})
+    target_link_libraries( ${PROJECT_NAME} Qt5::Widgets Qt5::Charts Qt5::Svg)
 endif()
 
 if(WITH_CGAL)

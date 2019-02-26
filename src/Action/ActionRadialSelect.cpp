@@ -102,7 +102,8 @@ bool ActionRadialSelect::doAction( FVS& fvs, const QPoint& mc)
     assert(fvs.size() == 1);
     const FV* fv = fvs.first();
     const FM* fm = fv->data();
-    cv::Vec3f cpos = _rsels.count(fm) > 0 ? centre(fm) : fm->findClosestSurfacePoint( fm->centre());
+    const cv::Vec3f cn = fm->centre();
+    cv::Vec3f cpos = _rsels.count(fm) > 0 ? centre(fm) : fm->findClosestSurfacePoint( cn);
 
     fm->lockForRead();
 

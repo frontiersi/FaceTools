@@ -20,8 +20,7 @@
 
 #include "FaceModelAssImpFileHandler.h"
 
-namespace FaceTools {
-namespace FileIO {
+namespace FaceTools { namespace FileIO {
 
 class FaceTools_EXPORT FaceModelAssImpFileHandlerFactory
 {
@@ -36,7 +35,6 @@ private:
     static RModelIO::AssetImporter assimp;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

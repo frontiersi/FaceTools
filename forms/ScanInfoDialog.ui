@@ -56,7 +56,7 @@
            </property>
            <property name="minimumSize">
             <size>
-             <width>140</width>
+             <width>150</width>
              <height>0</height>
             </size>
            </property>
@@ -92,7 +92,7 @@
            </property>
            <property name="minimumSize">
             <size>
-             <width>140</width>
+             <width>150</width>
              <height>0</height>
             </size>
            </property>
@@ -122,7 +122,7 @@
            </property>
            <property name="minimumSize">
             <size>
-             <width>140</width>
+             <width>150</width>
              <height>0</height>
             </size>
            </property>
@@ -158,7 +158,7 @@
             </size>
            </property>
            <property name="text">
-            <string>Age at Capture</string>
+            <string>Date of Birth</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -166,58 +166,24 @@
           </widget>
          </item>
          <item>
-          <widget class="QSpinBox" name="yearsSpinBox">
+          <widget class="QDateEdit" name="dobDateEdit">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
            <property name="minimumSize">
             <size>
-             <width>65</width>
+             <width>150</width>
              <height>0</height>
             </size>
            </property>
-           <property name="maximumSize">
-            <size>
-             <width>65</width>
-             <height>16777215</height>
-            </size>
+           <property name="displayFormat">
+            <string>dd MMMM yyyy</string>
            </property>
-           <property name="suffix">
-            <string> yrs</string>
-           </property>
-           <property name="value">
-            <number>16</number>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QSpinBox" name="monthsSpinBox">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>77</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>77</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="suffix">
-            <string> mths</string>
-           </property>
-           <property name="maximum">
-            <number>11</number>
+           <property name="calendarPopup">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
@@ -240,7 +206,7 @@
             </size>
            </property>
            <property name="text">
-            <string>Ancestry / Ethnicity  </string>
+            <string>Ethnicity  </string>
            </property>
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>

@@ -127,7 +127,7 @@ void FaceActionManager::doOnActionStarting()
 
     // Disable actions upon an action starting.
     // TODO Only disable actions that need to address the same data as the action that's just started.
-    //std::for_each(std::begin(_actions), std::end(_actions), [](FaceAction* a){ a->setEnabled(false);});
+    std::for_each(std::begin(_actions), std::end(_actions), [](FaceAction* a){ a->setEnabled(false);});
     _mutex.unlock();
 }   // end doOnActionStarting
 
@@ -187,6 +187,7 @@ void FaceActionManager::processFinishedAction( FaceAction* sact, EventSet &evs, 
             // Consolidate set of viewers within which this model's views are shown for after close.
             FMVS vwrs = fm->fvs().dviewers();
             avwrs.insert( std::begin(vwrs), std::end(vwrs));
+            qInfo( "Closing model %p", static_cast<void*>(fm));
             close(fm);  // Close the FaceModel and remove its views.
         }   // end for
 
@@ -237,12 +238,10 @@ void FaceActionManager::doOnSelected( FV* fv, bool v)
 }   // end setReady
 
 
-// private
+// public
 void FaceActionManager::close( FM* fm)
 {
-    qInfo( "Closing model %p", static_cast<void*>(fm));
     fm->lockForWrite();
-    //const FVS& fvs = fm->fvs();
     for ( FaceAction* a : _actions)
     {
         a->purge(fm);

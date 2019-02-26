@@ -28,6 +28,10 @@ class FaceTools_EXPORT ActionDetectFace : public FaceAction
 public:
     ActionDetectFace( const QString& dname, const QIcon& icon, QWidget *parent=nullptr, QProgressBar* pb=nullptr);
 
+    // Returns an empty string on success, otherwise the nature of the error.
+    // If ulmks is null, all landmarks are updated, otherwise just the set pointed to.
+    static std::string redetectLandmarks( FM*, const IntSet* ulmks=nullptr);
+
 protected slots:
     bool testReady( const Vis::FV*) override;
     bool testEnabled( const QPoint*) const override;

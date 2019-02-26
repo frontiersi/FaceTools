@@ -56,15 +56,19 @@ ActionExportPDF::ActionExportPDF( const QString& nm, const QIcon& icon, QWidget*
 }   // end ctor
 
 
-bool ActionExportPDF::testReady( const FV* fv)
+bool ActionExportPDF::testReady( const FV*)
 {
-    return !fv->data()->landmarks()->empty();
+    //return !fv->data()->landmarks()->empty();
+    return true;    // Allow individual reports to enable/disable themselves
 }   // end testReady
 
 
 // All reports assumed available for the selected model currently.
 // TODO Set reports to check landmarks on face data.
-bool ActionExportPDF::testEnabled( const QPoint*) const { return ready1() && ReportManager::isAvailable();}
+bool ActionExportPDF::testEnabled( const QPoint*) const
+{
+    return ready1() && ReportManager::isAvailable();
+}   // end testEnabled
 
 
 // Get the save filepath for the report
@@ -82,7 +86,7 @@ bool ActionExportPDF::doBeforeAction( FVS& fvs, const QPoint&)
     _tmpfile = "";
     _err = "";
 
-    if ( _dialog->exec() > 0)
+    if ( _dialog->show(fm))
     {
         const QString rname = _dialog->selectedReportName();
         _report = ReportManager::report(rname);

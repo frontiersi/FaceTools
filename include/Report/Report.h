@@ -41,6 +41,9 @@ public:
     const QString& name() const { return _name;}
     const QString& title() const { return _title;}
 
+    // Return true iff this report can be generated for the given model.
+    bool isAvailable( const FM*) const;
+
     // Generate a report for the given model and save to given filename returning true on success.
     // This function may take some time to run so best to run in separate thread and wait
     // for onFinishedGenerate signal to be emitted.
@@ -68,6 +71,7 @@ private:
     QString _name;
     QString _title;
     sol::state _lua;
+    sol::function _available;
     sol::function _content;
 
     const FM* _model;

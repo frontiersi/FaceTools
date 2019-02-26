@@ -58,8 +58,8 @@ bool ActionResetDetection::doAction( FVS& fvs, const QPoint&)
     fm->clearMeta();
     fm->landmarks()->clear();
     // Transform back to original position
-    const RFeatures::Orientation& on = fm->orientation();
-    const cv::Vec3f& c = fm->centre();
+    const RFeatures::Orientation on = fm->initialOrientation();
+    const cv::Vec3f c = fm->initialCentre();
     cv::Matx44d m = RFeatures::toStandardPosition( on.nvec(), on.uvec(), c);
     fm->transform(m);
     fm->unlock();

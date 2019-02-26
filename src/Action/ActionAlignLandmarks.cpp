@@ -34,42 +34,16 @@ using RFeatures::ObjModel;
 
 namespace {
 
-// Check the landmark sets in the given set of models and on return, set fms to
-// only contain those models that share at least three landmarks in common (by name)
-// from the given set of landmarks lmks. Returns the changed size of fms.
-size_t findSharedLandmarksModels( FMS& fms, const LandmarkSet::Ptr& lmks)
-{
-    FMS iset = fms;    // Copy
-    fms.clear();
-    for ( FM* fm : iset)
-    {
-        fm->lockForRead();
-        LandmarkSet::Ptr lfm = fm->landmarks();
-        size_t scount = 0;  // The shared count
-
-        for ( int id : lmks->ids())
-        {
-            if ( lfm->has(id))
-            {
-                scount++;
-                if ( scount == 3)
-                    break;
-            }   // end if
-        }   // end for
-
-        if ( scount == 3)
-            fms.insert(fm);
-        fm->unlock();
-    }   // end for
-    return fms.size();
-}   // end findSharedLandmarksModels
-
-
-// Make an ObjModel from the subset of landmarks of lmks given by clmks and correspond the added vertex IDs to the originating landmark IDs.
-ObjModel::Ptr makeModelFromLandmarks( const LandmarkSet::Ptr& lmks, const std::vector<int>& clmks)
+ObjModel::Ptr makeLandmarksModel( const LandmarkSet::Ptr& lmks)
 {
     ObjModel::Ptr mod = ObjModel::create();
-    for ( int id : clmks)
+
+    // Sort the landmark ids so that the vertices of a landmarks model are always added in the same order.
+    const IntSet& lmids = lmks->ids();
+    std::vector<int> ids( std::begin(lmids), std::end(lmids));
+    std::sort( std::begin(ids), std::end(ids));
+
+    for ( int id : ids)
     {
         if ( LDMKS_MAN::landmark(id)->isBilateral())
         {
@@ -80,7 +54,7 @@ ObjModel::Ptr makeModelFromLandmarks( const LandmarkSet::Ptr& lmks, const std::v
             mod->addVertex( *lmks->pos(id, FaceTools::FACE_LATERAL_MEDIAL));
     }   // end for
     return mod;
-}   // end makeModelFromLandmarks
+}   // end makeLandmarksModel
 
 
 ObjModel::Ptr makeMeanLandmarksModel( const std::vector<ObjModel::Ptr>& lms, double &rms)
@@ -130,8 +104,7 @@ ActionAlignLandmarks::ActionAlignLandmarks( const QString& dn, const QIcon& ico,
 
 bool ActionAlignLandmarks::testEnabled( const QPoint*) const
 {
-    // Enabled only if the selected viewer has other models
-    // and the other models share at least three landmarks in common.
+    // Enabled only if the selected viewer has other models with landmarks.
     const FV* fv = ready1();
     bool ready = false;
     if ( fv && fv->viewer()->attached().size() >= 2)
@@ -139,13 +112,20 @@ bool ActionAlignLandmarks::testEnabled( const QPoint*) const
         FM* fm = fv->data();
         fm->lockForRead();
         LandmarkSet::Ptr lmks = fm->landmarks();
-        if ( lmks->size() >= 3) // Need at least three landmarks on the selected model
+        if ( !lmks->empty())
         {
             // Get the other models from the viewer.
             FMS fms = fv->viewer()->attached().models();
-            fms.erase(fm);  // Remember not to include the source model.
-            // If at least one other model in the viewer with three or more shared landmarks, then enable this action.
-            ready = findSharedLandmarksModels( fms, lmks) > 0;
+            fms.erase(fm);
+            // If at least one other model in the viewer with landmarks, then enable this action.
+            for ( const FM* fm2 : fms)
+            {
+                fm2->lockForRead();
+                ready = !fm2->landmarks()->empty();
+                fm2->unlock();
+                if ( ready)
+                    break;
+            }   // end for
         }   // end if
         fm->unlock();
     }   // end if
@@ -159,14 +139,7 @@ bool ActionAlignLandmarks::doAction( FVS& rset, const QPoint&)
     assert(rset.size() == 1);
     FV* fv = rset.first();
     FM* sfm = fv->data();   // Source model
-
-    // Find the landmarks common across all models in the viewer.
-    std::vector<int> clmks;
     FMS fms = fv->viewer()->attached().models();
-    const size_t ncommon = findCommonLandmarks( clmks, fms);
-    assert(ncommon >= 3);   // Otherwise this shouldn't have been enabled!
-    if ( ncommon < 3)
-        return false;
 
     const size_t n = fms.size();
 
@@ -178,11 +151,11 @@ bool ActionAlignLandmarks::doAction( FVS& rset, const QPoint&)
     {
         fmodels.push_back(fm);
         fm->lockForRead();
-        ObjModel::Ptr mod = makeModelFromLandmarks( fm->landmarks(), clmks);
+        ObjModel::Ptr mod = makeLandmarksModel( fm->landmarks());
         fm->unlock();
         lmodels.push_back( mod);
         olmodels.push_back( ObjModel::copy(mod.get()));
-        if ( fm == sfm) // Ensure the first target landmark model to superimpose against is from the selected FaceModel.
+        if ( fm == sfm) // Ensure the first target landmark model to superimpose against is of the selected FaceModel.
             mlmks = mod;
     }   // end for
 

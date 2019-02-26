@@ -18,36 +18,36 @@
 #include <FaceModelAssImpFileHandler.h>
 #include <cassert>
 using FaceTools::FileIO::FaceModelAssImpFileHandler;
-using FaceTools::FaceModel;
+using FaceTools::FM;
 
 // private
 FaceModelAssImpFileHandler::FaceModelAssImpFileHandler( RModelIO::AssetImporter* importer, const QString& qext)
-    : _importer(importer)
+    : _assimp(importer)
 {
     const std::string ext = qext.toLower().toStdString();
-    assert( _importer->getAvailable().count(ext) > 0);
-    _fdesc = _importer->getAvailable().at(ext).c_str();
+    assert( _assimp->getAvailable().count(ext) > 0);
+    _fdesc = _assimp->getAvailable().at(ext).c_str();
     _exts.insert( qext.toLower());
 }   // end ctor
 
 
 // public
-FaceModel* FaceModelAssImpFileHandler::read( const QString& qfname)
+FM* FaceModelAssImpFileHandler::read( const QString& qfname)
 {
     _err = "";
-    FaceModel* fm = nullptr;
+    FM* fm = nullptr;
     const std::string fname = qfname.toStdString();
-    RFeatures::ObjModel::Ptr model = _importer->load(fname);
+    RFeatures::ObjModel::Ptr model = _assimp->load(fname);
     if ( model)
     {
         RFeatures::ObjModelInfo::Ptr minfo = RFeatures::ObjModelInfo::create(model);
         if ( minfo)
-            fm = new FaceModel(minfo);
+            fm = new FM(minfo);
         else
-            _err = tr("Failed to clean object loaded from \"") + fname.c_str() + tr("\"");
+            _err = QString("Failed to clean object loaded from '%1'").arg( qfname);
     }   // end if
     else
-        _err = _importer->err().c_str();
+        _err = _assimp->err().c_str();
     return fm;
 }   // end read
 

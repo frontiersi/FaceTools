@@ -53,6 +53,6 @@ private:
     double _urads;
 };  // end class
 
-} }   // end namespace
+}}   // end namespace
 
 #endif

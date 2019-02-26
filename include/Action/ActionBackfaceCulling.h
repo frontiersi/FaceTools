@@ -20,8 +20,7 @@
 
 #include "FaceAction.h"
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionBackfaceCulling : public FaceAction
 { Q_OBJECT
@@ -30,11 +29,11 @@ public:
 
 private slots:
     bool testEnabled( const QPoint*) const override { return ready1();}
+    bool testIfCheck( const Vis::FV* fv) const override;
     bool doAction( FVS&, const QPoint&) override;
     //void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(VIEW_CHANGE);}
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

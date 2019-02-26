@@ -64,6 +64,8 @@ Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _model(nullptr)
                            "studyId", &FM::studyId,
                            "ethnicity", &FM::ethnicity,
                            "captureDate", &FM::captureDate,
+                           "dateOfBirth", &FM::dateOfBirth,
+                           "hasLandmarks", &FM::hasLandmarks,
                            "metrics", &FM::cmetrics,
                            "metricsL", &FM::cmetricsL,
                            "metricsR", &FM::cmetricsR,
@@ -89,6 +91,25 @@ Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _model(nullptr)
 
 // public
 Report::~Report() {}
+
+
+// public
+bool Report::isAvailable(const FM *fm) const
+{
+    bool available = false;
+    try
+    {
+        sol::function_result result = _available( fm);
+        if ( result.valid())
+            available = result;
+    }   // end try
+    catch (const sol::error& e)
+    {
+        qWarning() << "Lua Error!:" << e.what();
+        available = false;
+    }   // end catch
+    return available;
+}   // end isAvailable
 
 
 // public
@@ -133,11 +154,19 @@ Report::Ptr Report::load( const QString& fpath, QTemporaryDir& tdir)
         return nullptr;
     }   // end else
 
+    if ( sol::optional<sol::function> v = table["available"])
+        report->_available = v.value();
+    else
+    {
+        qWarning() << "Missing 'available' function!";
+        return nullptr;
+    }   // end else
+
     if ( sol::optional<sol::function> v = table["content"])
         report->_content = v.value();
     else
     {
-        qWarning() << "Missing content function!";
+        qWarning() << "Missing 'content' function!";
         return nullptr;
     }   // end else
 
@@ -344,20 +373,16 @@ void writeSvg( const QString& imname, QTextStream& os, const QString& caption)
 // public
 std::string Report::makeScanInfo()
 {
-    const double age = _model->age();
-    const int yrs = static_cast<int>(floor(age));
-    const int mths = static_cast<int>(floor((age - floor(age)) * 12.0));
-
     QString ostr;
     QTextStream os(&ostr);
-    os << " \\textbf{Ancestry:} " << _model->ethnicity() << " \\\\" << endl
-       << "\\textbf{Age:} " << yrs << " years, " << mths << " months" << " \\\\" << endl
-       << "\\textbf{Sex:} " << FaceTools::toLongSexString( _model->sex()) << " \\\\" << endl
-       << "\\textbf{Image Date:} " << _model->captureDate().toString("dd MMMM yyyy") << " \\\\" << endl;
+    os << " \\textbf{Sex:} " << FaceTools::toLongSexString( _model->sex()) << " \\\\" << endl;
+    os << " \\textbf{Ethnicity:} " << _model->ethnicity() << " \\\\" << endl;
+    os << " \\textbf{Birth Date:} " << _model->dateOfBirth().toString("dd MMMM yyyy") << " \\\\" << endl;
+    os << " \\textbf{Image Date:} " << _model->captureDate().toString("dd MMMM yyyy") << " \\\\" << endl;
     if ( !_model->source().isEmpty())
-        os << "\\textbf{Image Source:} " << _model->source() << " \\\\" << endl;
+        os << " \\textbf{Image Source:} " << _model->source() << " \\\\" << endl;
     if ( !_model->studyId().isEmpty())
-        os << "\\textbf{Study Id:} " << _model->studyId() << " \\\\" << endl;
+        os << " \\textbf{Study Id:} " << _model->studyId() << " \\\\" << endl;
 
     return ostr.toStdString();
 }   // end makeScanInfo

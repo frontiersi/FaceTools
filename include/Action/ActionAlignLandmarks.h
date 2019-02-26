@@ -30,7 +30,7 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionAlignLandmarks : public FaceAction
 { Q_OBJECT
 public:
-    // Async if pb not NULL
+    // Async if pb not null.
     ActionAlignLandmarks( const QString& dname="Align Landmarks", const QIcon& icon=QIcon(), QProgressBar* pb=nullptr);
 
 protected slots:
@@ -39,6 +39,6 @@ protected slots:
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(AFFINE_CHANGE);}
 };  // end class
 
-} }   // end namespace
+}}   // end namespace
 
 #endif

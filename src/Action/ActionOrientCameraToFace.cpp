@@ -42,15 +42,14 @@ bool ActionOrientCameraToFace::doAction( FVS& fvs, const QPoint&)
     const FM* fm = fv->data();
 
     double d = _distance;
+    RFeatures::Orientation on(cv::Vec3f(0,0,1), cv::Vec3f(0,1,0));
+    cv::Vec3f focus(0,0,0);
     fm->lockForRead();
-    RFeatures::Orientation on = fm->orientation();  // Copy out the orientation
-    if ( !fm->centreSet())
+    if ( !fm->landmarks()->empty())
     {
-        on.setN(cv::Vec3f(0,0,1));
-        on.setU(cv::Vec3f(0,1,0));
-        d = DEFAULT_CAMERA_DISTANCE;    // 650.0f
+        on = fm->landmarks()->orientation();
+        focus = fm->landmarks()->fullMean();
     }   // end if
-    cv::Vec3f focus = fm->centre();
     fm->unlock();
 
     // Rotate the orientation about its up vector by the set amount.

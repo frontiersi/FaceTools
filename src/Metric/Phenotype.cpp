@@ -156,7 +156,7 @@ bool Phenotype::isDemographicMatch( const FM* fm) const
     for ( int mid : _metrics)
     {
         const GrowthData* gd = MCM::metric(mid)->growthData(fm);
-        if ( gd->ethnicity().toLower() != lethn)
+        if ( !gd || gd->ethnicity().toLower() != lethn)
             return false;
     }   // end for
     return true;

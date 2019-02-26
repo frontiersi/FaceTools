@@ -104,7 +104,7 @@ QString ScanInfoDialog::addEthnicityToComboBox( QString eth)
 // private
 void ScanInfoDialog::reset()
 {
-    setAge( 0);
+    _ui->dobDateEdit->setDate( QDate::currentDate());
     _ui->sexComboBox->setCurrentText( toLongSexString( FEMALE_SEX | MALE_SEX));
     _ui->ethnicityComboBox->setCurrentText("N/A");
     _ui->captureDateEdit->setDate( QDate::currentDate());
@@ -117,7 +117,7 @@ void ScanInfoDialog::reset()
 
     if (_model)
     {
-        setAge( _model->age());
+        _ui->dobDateEdit->setDate( _model->dateOfBirth());
         _ui->sexComboBox->setCurrentText( toLongSexString( _model->sex()));
         _ui->ethnicityComboBox->setCurrentText( addEthnicityToComboBox( _model->ethnicity()));
         _ui->captureDateEdit->setDate( _model->captureDate());
@@ -132,25 +132,6 @@ void ScanInfoDialog::reset()
     _ui->buttonBox->button(QDialogButtonBox::Apply)->setEnabled(_model != nullptr);
     _ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(_model != nullptr);
 }   // end reset
-
-
-// private
-double ScanInfoDialog::age() const
-{
-    double yrs = _ui->yearsSpinBox->value();
-    double mths = _ui->monthsSpinBox->value();
-    return yrs + mths/12;
-}   // end age
-
-
-// private
-void ScanInfoDialog::setAge( double a)
-{
-    const double yrs = floor(a);
-    _ui->yearsSpinBox->setValue(static_cast<int>(yrs));
-    const double mths = floor( 12.0 * (a - yrs));
-    _ui->monthsSpinBox->setValue(static_cast<int>(mths));
-}   // end setAge
 
 
 // public
@@ -177,9 +158,9 @@ void ScanInfoDialog::doOnApply()
 {
     assert(_model != nullptr);
 
-    if ( fabs(_model->age() - age()) > 0.0001)
+    if ( _ui->dobDateEdit->date() <= QDate::currentDate())
     {
-        _model->setAge(age());
+        _model->setDateOfBirth( _ui->dobDateEdit->date());
         _model->setSaved(false);
     }   // end if
 

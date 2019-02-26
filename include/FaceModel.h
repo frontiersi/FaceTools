@@ -23,7 +23,6 @@
 #include "PathSet.h"
 #include "FaceViewSet.h"
 #include <ObjModelTools.h>   // RFeatures
-#include <Orientation.h>
 #include <QReadWriteLock>
 #include <QDate>
 
@@ -63,17 +62,18 @@ public:
     // in 3D that contains all of this model's components.
     const cv::Vec6d& superBounds() const { return _sbounds;}
 
-    // Set/get orientation of the face.
-    void setOrientation( const RFeatures::Orientation &o) { if (_orientation != o) setSaved(false); _orientation = o;}
-    const RFeatures::Orientation& orientation() const { return _orientation;}
+    // Calculate and return the centre of the super bounds.
+    cv::Vec3f superBoundsCentre() const;
 
-    // Set/get "centre" of the face.
-    void setCentre( const cv::Vec3f& c) { if ( _centre != c) setSaved(false); _centre = c; _centreSet = true;}
-    const cv::Vec3f& centre() const { return _centre;}
-    bool centreSet() const { return _centreSet;}    // True iff setCentre has been called.
+    // CALL setSaved(false) AFTER UPDATING!
+    Landmark::LandmarkSet::Ptr landmarks() const { return _landmarks;}
 
-    Landmark::LandmarkSet::Ptr landmarks() const { return _landmarks;}    // CALL setSaved(false) AFTER UPDATING!
-    PathSet::Ptr paths() const { return _paths;}    // CALL setSaved(false) AFTER UPDATING!
+    bool hasLandmarks() const { return !_landmarks->empty();}
+
+    // CALL setSaved(false) AFTER UPDATING!
+    PathSet::Ptr paths() const { return _paths;}
+
+    bool hasPaths() const { return !_paths->empty();}
 
     Metric::MetricSet& metrics() { return _metrics;}
     const Metric::MetricSet& cmetrics() const { return _metrics;}
@@ -101,9 +101,12 @@ public:
     void setStudyId( const QString& s) { _studyId = s;}
     const QString& studyId() const { return _studyId;}
 
-    // Set/get age of individual.
-    void setAge( double a) { _age = a;}
-    double age() const { return _age;}
+    // Get age of individual.
+    double age() const { return double(_dob.daysTo(QDate::currentDate())) / 365.25;}
+
+    // Set/get DoB of individual.
+    void setDateOfBirth( const QDate& d) { _dob = d;}
+    const QDate& dateOfBirth() const { return _dob;}
 
     // Set/get sex of individual.
     void setSex( int8_t s) { _sex = s;}
@@ -145,20 +148,33 @@ public:
     // closest point on the surface using the internal kd-tree.
     double translateToSurface( cv::Vec3f&) const;
 
+    // Set/get initial orientation (defaults to norm <0,0,1> and up <0,1,0>)
+    void setInitialOrientation( const RFeatures::Orientation&);
+    const RFeatures::Orientation& initialOrientation() const { return _iorientation;}
+
+    // Set/get initial centre (defaults to <0,0,0>)
+    void setInitialCentre( const cv::Vec3f&);
+    const cv::Vec3f& initialCentre() const { return _icentre;}
+
+    // Return the centre and orientation of this model.
+    // If landmarks are set, use the orientation and centre return from those,
+    // otherwise use the model's initial centre and orientation.
+    cv::Vec3f centre() const;
+    RFeatures::Orientation orientation() const;
+
     static QString LENGTH_UNITS;
 
 private:
     bool _saved;
-    QString _notes;   // Long form description
-    QString _source;        // Data source info
-    QString _studyId;       // Study ID info
-    double _age;
-    int8_t _sex;
-    QString _ethnicity;
-    QDate _cdate;               // Date of image capture.
-    bool _centreSet;            // If face centre has been set.
-    cv::Vec3f _centre;          // Face "centre"
-    RFeatures::Orientation _orientation;
+    QString _notes;     // Image notes
+    QString _source;    // Image source
+    QString _studyId;   // Study ID info
+    QDate _dob;         // Subject date of birth
+    int8_t _sex;        // Subject sex
+    QString _ethnicity; // Subject ethnicity
+    QDate _cdate;       // Date of image capture
+    cv::Vec3f _icentre;                     // Initial (original) centre
+    RFeatures::Orientation _iorientation;   // Inital (original) orientation
     Landmark::LandmarkSet::Ptr _landmarks;
     PathSet::Ptr _paths;
     Metric::MetricSet _metrics;

@@ -37,12 +37,13 @@ using FaceTools::FM;
 ActionMoveViewer::ActionMoveViewer( FMV *tv, FMV *sv, const QString& dn, const QIcon& ico)
     : FaceAction(dn, ico), _tviewer(tv), _sviewer(sv)
 {
+    assert( _tviewer);
 }   // end ctor
 
 
 bool ActionMoveViewer::testReady( const FV* fv)
 {
-    return _sviewer && _sviewer->isAttached(fv);
+    return _tviewer != fv->viewer() && (!_sviewer || _sviewer->isAttached(fv));
 }   // end testReady
 
 

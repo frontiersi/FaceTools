@@ -20,8 +20,7 @@
 
 #include "FaceAction.h"
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionRotateModel : public FaceAction
 { Q_OBJECT
@@ -36,8 +35,6 @@ private:
     cv::Matx44d _rmat;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif
-

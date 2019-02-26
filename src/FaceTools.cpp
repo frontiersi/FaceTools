@@ -36,61 +36,6 @@ using FaceTools::Metric::GrowthData;
 using FaceTools::Metric::MetricValue;
 
 
-size_t FaceTools::findCommonLandmarks( std::vector<int>& lmks, const FMS& fms)
-{
-    IntIntMap lmkCounts;  // Collect all landmarks over all models
-    for ( const FM* fm : fms)
-    {
-        fm->lockForRead();
-        for ( int id : fm->landmarks()->ids())
-            lmkCounts[id] += 1;
-        fm->unlock();
-    }   // end for
-
-    // Keep only those landmarks that every model has.
-    lmks.clear();
-    const int n = int(fms.size());
-    for ( const auto& p : lmkCounts)
-    {
-        if ( p.second == n)
-            lmks.push_back(p.first);
-    }   // end for
-
-    return lmks.size();
-}   // end findCommonLandmarks
-
-
-bool FaceTools::hasCentreLandmarks( const LandmarkSet& lmks)
-{
-    using namespace FaceTools::Landmark;
-    return lmks.hasCode( SN) && // subnasale
-           lmks.hasCode( EX) && // lateral canthi
-           lmks.hasCode( EN) && // medial canthi
-           lmks.hasCode( PS) && // palpebral superius
-           lmks.hasCode( PI);   // palpebral inferius
-}   // end hasCentreLandmarks
-
-
-cv::Vec3f FaceTools::calcPupil( const LandmarkSet& lmks, FaceLateral lat)
-{
-    assert( lat == FACE_LATERAL_LEFT || lat == FACE_LATERAL_RIGHT);
-    cv::Vec3f v0 = *lmks.pos( EX, lat)
-                 + *lmks.pos( EN, lat)
-                 + *lmks.pos( PS, lat)
-                 + *lmks.pos( PI, lat);
-    v0 *= 1.0f/4;
-    return v0;
-}   // end calcPupil
-
-
-cv::Vec3f FaceTools::calcFaceCentre( const LandmarkSet& lmks)
-{
-    cv::Vec3f v0 = calcPupil( lmks, FACE_LATERAL_LEFT);
-    cv::Vec3f v1 = calcPupil( lmks, FACE_LATERAL_RIGHT);
-    return 0.25f * (v0 + v1) + 0.5f * *lmks.pos( SN);
-}   // end calcFaceCentre
-
-
 namespace {
 
 cv::Vec3f calcMeanNormalBetweenPoints( const ObjModel* model, int v0, int v1)
@@ -362,8 +307,10 @@ cv::Mat_<cv::Vec3b> FaceTools::makeThumbnail( const FM* fm, const cv::Size& dims
 {
     RVTK::OffscreenModelViewer omv( dims, 1);
     omv.setModel( fm->info()->cmodel());
-    cv::Vec3f cpos = (d * fm->orientation().nvec()) + fm->centre();
-    CameraParams cam( cpos, fm->centre(), fm->orientation().uvec(), 30);
+    const cv::Vec3f centre = fm->centre();
+    const RFeatures::Orientation on = fm->orientation();
+    cv::Vec3f cpos = (d * on.nvec()) + centre;
+    CameraParams cam( cpos, centre, on.uvec(), 30);
     omv.setCamera( cam);
     return omv.snapshot();
 }   // end makeThumbnail

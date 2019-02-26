@@ -155,6 +155,65 @@ const cv::Vec3f* LandmarkSet::pos( const QString& lmcode, FaceLateral lat) const
 const cv::Vec3f* LandmarkSet::pos( const SpecificLandmark& sl) const { return pos( sl.id, sl.lat);}
 
 
+const cv::Vec3f* LandmarkSet::posSomeMedial() const
+{
+    if ( _lmksM.empty())
+        return nullptr;
+    return &_lmksM.begin()->second;
+}   // end posSomeMedial
+
+
+cv::Vec3f LandmarkSet::rightVec() const
+{
+    if ( empty())
+        return cv::Vec3f(1,0,0);
+
+    cv::Vec3f rv;
+    for ( const auto& p : _lmksL)
+    {
+        const cv::Vec3f& lpos = p.second;
+        const cv::Vec3f& rpos = _lmksR.at(p.first);
+        // Landmarks further apart laterally will have greater influence
+        // over the determination of this vector.
+        rv += rpos - lpos;
+    }   // end for
+    cv::Vec3f urv;
+    cv::normalize( rv, urv);
+    return urv;
+}   // end rightVec
+
+
+cv::Vec3f LandmarkSet::upVec() const
+{
+    if ( empty())
+        return cv::Vec3f(0,1,0);
+
+    cv::Vec3f uvec;
+    cv::normalize( superiorMean() - inferiorMean(), uvec);
+    return uvec;
+}   // end upVec
+
+
+cv::Vec3f LandmarkSet::normVec() const
+{
+    if ( empty())
+        return cv::Vec3f(0,0,1);
+    cv::Vec3f nvec;
+    cv::normalize( rightVec().cross(upVec()), nvec);
+    return nvec;
+}   // end normVec
+
+
+RFeatures::Orientation LandmarkSet::orientation() const
+{
+    cv::Vec3f uvec = upVec();
+    cv::Vec3f rvec = rightVec();
+    cv::Vec3f nvec;
+    cv::normalize( rvec.cross(uvec), nvec);
+    return RFeatures::Orientation( nvec, uvec);
+}   // end orientation
+
+
 cv::Vec3f LandmarkSet::eyeVec() const
 {
     cv::Vec3f v(0,0,0);
@@ -165,6 +224,54 @@ cv::Vec3f LandmarkSet::eyeVec() const
     }   // end if
     return v;
 }   // end eyeVec
+
+
+cv::Vec3f LandmarkSet::superiorMean() const
+{
+    cv::Vec3f m(0,0,0);
+    if ( hasCode(MSO))
+        m += *pos( MSO, FACE_LATERAL_LEFT) + *pos( MSO, FACE_LATERAL_RIGHT);
+    if ( hasCode(EX))
+        m += *pos(  EX, FACE_LATERAL_LEFT) + *pos(  EX, FACE_LATERAL_RIGHT);
+    if ( hasCode(EN))
+        m += *pos(  EN, FACE_LATERAL_LEFT) + *pos(  EN, FACE_LATERAL_RIGHT);
+    if ( hasCode(G))
+        m += *pos(   G);
+    if ( hasCode(N))
+        m += *pos(   N);
+    if ( hasCode(SE))
+        m += *pos(  SE);
+    if ( hasCode(MND))
+        m += *pos( MND);
+    return m * 1.0f/10;
+}   // end superiorMean
+
+
+cv::Vec3f LandmarkSet::inferiorMean() const
+{
+    cv::Vec3f m(0,0,0);
+    if ( hasCode(AC))
+        m += *pos(  AC, FACE_LATERAL_LEFT) + *pos(  AC, FACE_LATERAL_RIGHT);
+    if ( hasCode(CPH))
+        m += *pos( CPH, FACE_LATERAL_LEFT) + *pos( CPH, FACE_LATERAL_RIGHT);
+    if ( hasCode(CH))
+        m += *pos(  CH, FACE_LATERAL_LEFT) + *pos(  CH, FACE_LATERAL_RIGHT);
+    if ( hasCode(LS))
+        m += *pos(  LS);
+    if ( hasCode(LI))
+        m += *pos(  LI);
+    if ( hasCode(STS))
+        m += (*pos( STS) + *pos( STI)) * 0.5f;
+    if ( hasCode(SL))
+        m += *pos(  SL);
+    return m * 1.0f/10;
+}   // end inferiorMean
+
+
+cv::Vec3f LandmarkSet::fullMean() const
+{
+    return 0.5f*(superiorMean() + inferiorMean());
+}   // end fullMean
 
 
 bool LandmarkSet::translate( int id, FaceLateral lat, const cv::Vec3f& t)

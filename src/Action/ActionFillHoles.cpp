@@ -42,7 +42,7 @@ bool ActionFillHoles::testReady( const FV* fv)
     fm->lockForRead();
     // Ready if there's more than one boundary on any component.
     bool rval = false;
-    const int nc = (int)fm->info()->components().size();
+    const int nc = static_cast<int>(fm->info()->components().size());
     for ( int c = 0; c < nc; ++c)
     {
         if ( fm->info()->components().numComponentBoundaries(c) > 1)
@@ -71,7 +71,7 @@ bool ActionFillHoles::doAction( FVS& rset, const QPoint&)
     while ( filledHole)
     {
         filledHole = false;
-        int nc = (int)fmi->components().size();
+        int nc = static_cast<int>(fmi->components().size());
         for ( int c = 0; c < nc; ++c)
         {
             const IntSet* bidxs = fmi->components().cboundaries(c);

@@ -37,10 +37,12 @@ public:
 
     void setCopyLeftToCentreAction( QAction*);
     void setMoveLeftToCentreAction( QAction*);
+
     void setMoveCentreToLeftAction( QAction*);
     void setCopyCentreToLeftAction( QAction*);
     void setCopyCentreToRightAction( QAction*);
     void setMoveCentreToRightAction( QAction*);
+
     void setMoveRightToCentreAction( QAction*);
     void setCopyRightToCentreAction( QAction*);
 

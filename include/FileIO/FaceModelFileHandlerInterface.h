@@ -21,8 +21,7 @@
 #include <PluginInterface.h>    // QTools
 #include <FaceModel.h>          // FaceTools
 
-namespace FaceTools {
-namespace FileIO {
+namespace FaceTools { namespace FileIO {
 
 // Must be pure virtual to be a plugin interface
 class FaceTools_EXPORT FaceModelFileHandlerInterface : public QTools::PluginInterface
@@ -50,7 +49,6 @@ public:
     virtual bool write( const FaceModel*, const QString& filepath) = 0;  // Must override if canWrite overridden to true
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

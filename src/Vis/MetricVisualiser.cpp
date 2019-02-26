@@ -98,9 +98,6 @@ void MetricVisualiser::showText( const FM* fm)
         }   // end for
         fm->updateRenderers();
     }   // end if
-
-    for ( auto& p : _texts)
-        p.first->viewer()->updateRender();
 }   // end showText
 
 

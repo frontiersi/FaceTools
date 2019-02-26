@@ -19,8 +19,11 @@
 #include <ui_ReportChooserDialog.h>
 #include <U3DCache.h>
 #include <ReportManager.h>
+#include <QListView>
+#include <QStandardItemModel>
 using FaceTools::Widget::ReportChooserDialog;
 using FaceTools::Report::ReportManager;
+using FaceTools::FM;
 
 
 ReportChooserDialog::ReportChooserDialog(QWidget *parent) :
@@ -28,7 +31,6 @@ ReportChooserDialog::ReportChooserDialog(QWidget *parent) :
 {
     _ui->setupUi(this);
     setWindowTitle( parent->windowTitle() + " | Select Report");
-    _ui->reportsComboBox->addItems( ReportManager::names());
 }   // end ctor
 
 
@@ -43,3 +45,36 @@ QString ReportChooserDialog::selectedReportName() const
     return _ui->reportsComboBox->currentText();
 }   // end selectedReportName
 
+
+bool ReportChooserDialog::show( const FM* fm)
+{
+    _ui->reportsComboBox->clear();
+    const QStringList& reportNames = ReportManager::names();
+    for ( const QString& reportName : reportNames)
+    {
+        if ( ReportManager::report(reportName)->isAvailable(fm))
+            _ui->reportsComboBox->addItem(reportName);
+    }   // end for
+    return QDialog::exec() > 0;
+}   // end show
+
+
+/*
+// Hide/show rows in the reports combo box
+void ReportChooserDialog::setRowShown( int row, bool v)
+{
+    QListView* view = qobject_cast<QListView*>(_ui->reportsComboBox->view());
+    Q_ASSERT( view != nullptr);
+    view->setRowHidden( row, !v);
+
+    QStandardItemModel* model = qobject_cast<QStandardItemModel*>(_ui->reportsComboBox->model());
+    Q_ASSERT( model != nullptr);
+    QStandardItem* item = model->item(row);
+    Qt::ItemFlags flags = item->flags();
+    if ( v)
+        flags |= Qt::ItemIsEnabled;
+    else
+        flags &= ~Qt::ItemIsEnabled;
+    item->setFlags(flags);
+}   // end setRowShown
+*/

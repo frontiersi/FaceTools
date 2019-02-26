@@ -67,7 +67,6 @@ void PathSetInteractor::doOnLeaveHandle( const FV* fv)
     if ( !_handle || _drag)
         return;
 
-    //if ( _handle && _handle->prop() == p)
     if ( _handle)
     {
         _handle->showCaption(false);

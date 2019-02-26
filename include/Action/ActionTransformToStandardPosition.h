@@ -30,6 +30,7 @@ public:
                                        ActionOrientCameraToFace* camSetter=nullptr);
 
 private slots:
+    bool testReady( const Vis::FV*) override;
     bool doAction( FVS&, const QPoint&) override;
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(AFFINE_CHANGE);}
 
@@ -37,7 +38,7 @@ private:
     ActionOrientCameraToFace *_camSetter;
 };  // end class
 
-} }   // end namespace
+}}   // end namespace
 
 #endif
 

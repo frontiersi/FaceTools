@@ -1,14 +1,15 @@
-INCDIR = -I /home/rich/ll/lua5/include
-CPP    = g++
-CFLAGS = $(INCDIR) -std=c++14
-LINK   = -L/home/rich/ll/lua5/lib -llua53 \
-		 -ldl \
-		 -Wl,-rpath=/home/rich/ll/lua5/lib
+CPP    = cl
+LOCAL_LIBS = C:\Users\riche\local_libs
+INCDIR = /I $(LOCAL_LIBS)\lua5\include
+LINK   = $(LOCAL_LIBS)\lua5\lib\lua53.lib
+CFLAGS = $(INCDIR) /std:c++14
+TARGET = test.exe
+SOURCES = main.cpp
 
-.cpp.o:
-	$(CPP) $(CFLAGS) -c $< -o $@
+.cpp.obj:
+	$(CPP) $(CFLAGS) /c $< /out:$@
 
-all: test
+all: $(TARGET)
 
-test: main.cpp
-	$(CPP) $(CFLAGS) -o test main.cpp $(LINK)
+$(TARGET): $(SOURCES)
+	$(CPP) $(CFLAGS) /out:$@ $** $(LINK)

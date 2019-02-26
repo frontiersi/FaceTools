@@ -39,7 +39,7 @@ ActionReflect::ActionReflect( const QString& dn, const QIcon& ico, QProgressBar*
 }   // end ctor
 
 
-bool ActionReflect::testReady( const FV* fv) { return fv->data()->centreSet();}
+bool ActionReflect::testReady( const FV* fv) { return !fv->data()->landmarks()->empty();}
 
 
 namespace {
@@ -89,13 +89,13 @@ bool ActionReflect::doAction( FVS& fvs, const QPoint&)
 
     fm->lockForWrite();
 
-    const RFeatures::Orientation& on = fm->orientation();
+    const RFeatures::Orientation& on = fm->landmarks()->orientation();
     RFeatures::ObjModelInfo::Ptr info = fm->info();
     RFeatures::ObjModel::Ptr model = info->model();
 
     cv::Vec3f pvec;
     cv::normalize( on.uvec().cross( on.nvec()), pvec);    // Reflection plane vector (normalized)
-    const cv::Vec3f ppt = fm->centre();                 // Point in reflection plane
+    const cv::Vec3f ppt = fm->landmarks()->fullMean();    // Point in reflection plane
 
     // Reflect the underlying model
     RFeatures::ObjModelReflector reflector( model);

@@ -20,15 +20,16 @@
 
 #include "FaceAction.h"
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionGetComponent : public FaceAction
 { Q_OBJECT
 public:
-    ActionGetComponent( const QString& dname="Get Face Component", const QIcon& icon=QIcon(), QProgressBar* pb=NULL);
+    ActionGetComponent( const QString& dname="Get Face Component", const QIcon& icon=QIcon(), QProgressBar* pb=nullptr);
 
     // TODO Currently requires the nose landmark to get the face but should make generic for any component.
+
+    static bool removeNonFaceComponent( FM*);
 
 private slots:
     bool testReady( const Vis::FV*) override;
@@ -36,7 +37,6 @@ private slots:
     void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(GEOMETRY_CHANGE);}
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

@@ -24,8 +24,7 @@
 
 namespace Ui { class ScanInfoDialog;}
 
-namespace FaceTools {
-namespace Widget {
+namespace FaceTools { namespace Widget {
 
 class FaceTools_EXPORT ScanInfoDialog : public QDialog
 { Q_OBJECT
@@ -53,12 +52,9 @@ private:
     QStringSet _ethnicities;
 
     void reset();
-    void setAge( double);   // Sets years and months from decimal
-    double age() const;     // Normalised to decimal e.g. 12 years 8 months as 12.(8/12) = 12.6666...
     QString addEthnicityToComboBox( QString);
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

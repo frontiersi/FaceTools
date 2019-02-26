@@ -26,7 +26,7 @@ using FaceTools::FileIO::FaceModelAssImpFileHandler;
 
 
 // static definition
-RModelIO::AssetImporter FaceModelAssImpFileHandlerFactory::assimp( true/*load textures*/, true/*fail on non triangles*/);
+RModelIO::AssetImporter FaceModelAssImpFileHandlerFactory::assimp( true/*load textures*/, false/*don't fail on non triangles*/);
 
 
 // public

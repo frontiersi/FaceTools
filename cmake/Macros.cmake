@@ -3,7 +3,7 @@
 # lsuffix set to one of [platform;build type]:
 # .so   [UNIX;SHARED]          d.so  [UNIX;DEBUG,SHARED]
 # .a    [UNIX;STATIC]          d.a   [UNIX;DEBUG,STATIC]
-# .lib  [WIN32;STATIC/SHARED]  d.lib  [WIN32;DEBUG,STATIC/SHARED]
+# .lib  [WIN32;STATIC/SHARED]  d.lib [WIN32;DEBUG,STATIC/SHARED]
 
 
 macro( get_msvc_version _ver)

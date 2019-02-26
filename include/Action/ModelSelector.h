@@ -56,7 +56,6 @@ private:
     static ModelSelector::Ptr _me;
     Interactor::ModelSelectInteractor _msi;
     ModelSelector( FaceActionManager*, FMV*);
-    virtual ~ModelSelector();
 };  // end class
 
 }}   // end namespace

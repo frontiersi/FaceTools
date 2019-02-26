@@ -23,7 +23,7 @@
 using FaceTools::Action::ActionMapSurfaceData;
 using FaceTools::Action::EventSet;
 using FaceTools::FaceModelSurfaceData;
-using FaceTools::FaceModel;
+using FaceTools::FM;
 using FaceTools::FVS;
 
 
@@ -38,27 +38,23 @@ ActionMapSurfaceData::ActionMapSurfaceData()
 
 bool ActionMapSurfaceData::doAction( FVS& rset, const QPoint&)
 {
-    for ( FaceModel* fm : rset.models())
+    for ( FM* fm : rset.models())
     {
         if ( !FaceModelSurfaceData::isAvailable(fm))
-        {
-            fm->lockForRead();
             FaceModelSurfaceData::calculate(fm);
-        }   // end if
     }   // end for
     return true;
 }   // end doAction
 
 
-void ActionMapSurfaceData::purge( const FaceModel* fm)
+void ActionMapSurfaceData::purge( const FM* fm)
 {
     FaceModelSurfaceData::purge(fm);
 }   // end purge
 
 
-void ActionMapSurfaceData::doOnCalculated( const FaceModel* fm)
+void ActionMapSurfaceData::doOnCalculated( const FM* fm)
 {
-    fm->unlock();
     EventSet cset;
     cset.insert( SURFACE_DATA_CHANGE);
     emit reportFinished( cset, fm->fvs(), true);

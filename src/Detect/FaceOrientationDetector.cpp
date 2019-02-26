@@ -167,7 +167,6 @@ float FaceOrientationDetector::orient()
 }   // end orient
 
 
-
 bool FaceOrientationDetector::detect( LandmarkSet& lmks)
 {
     const std::string errhead = "[WARNING] FaceTools::Detect::FaceOrientationDetector::detect: ";
@@ -271,7 +270,7 @@ bool FaceOrientationDetector::detect( LandmarkSet& lmks)
         if ( !FLD::detect( _vwr, &*_kdt, lmks, _ulmks))
         {
             _err = "Landmark detection failed!";
-            std::cerr << errhead << _err << std::endl;
+            std::cerr << errhead << _err;
         }   // end if
         else
         {

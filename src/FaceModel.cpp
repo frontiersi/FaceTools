@@ -49,8 +49,24 @@ cv::Vec6d getComponentBounds( const ObjModel* model, const cv::Vec6i& bounds)
     const cv::Vec3f& ymax = model->vtx(bounds[3]);
     const cv::Vec3f& zmin = model->vtx(bounds[4]);
     const cv::Vec3f& zmax = model->vtx(bounds[5]);
-    return cv::Vec6d( xmin[0], xmax[0], ymin[1], ymax[1], zmin[2], zmax[2]);
+    return cv::Vec6d( double(xmin[0]), double(xmax[0]), double(ymin[1]), double(ymax[1]), double(zmin[2]), double(zmax[2]));
 }   // end getComponentBounds
+
+
+cv::Vec6d calcSuperBounds( const std::vector<cv::Vec6d>& bset)
+{
+    cv::Vec6d bounds(DBL_MAX,-DBL_MAX,DBL_MAX,-DBL_MAX,DBL_MAX,-DBL_MAX);
+    for ( const cv::Vec6d& b : bset)
+    {
+        bounds[0] = std::min(bounds[0], b[0]);  // xmin
+        bounds[1] = std::max(bounds[1], b[1]);  // xmax
+        bounds[2] = std::min(bounds[2], b[2]);  // ymin
+        bounds[3] = std::max(bounds[3], b[3]);  // ymax
+        bounds[4] = std::min(bounds[4], b[4]);  // zmin
+        bounds[5] = std::max(bounds[5], b[5]);  // zmax
+    }   // end for
+    return bounds;
+}   // end calcSuperBounds
 
 
 /*
@@ -83,7 +99,6 @@ std::vector<cv::Vec3d> toPoints( const cv::Vec6d& bds)
     pts[7] = cv::Vec3d( bds[0], bds[2], bds[5]); // Left, bottom, front
     return pts;
 }   // end toPoints
-*/
 
 
 // Find and return index to largest rectangular volume from the given vector of bounds.
@@ -104,6 +119,8 @@ int findLargest( const std::vector<cv::Vec6d>& bounds)
     }   // end for
     return int(j);
 }   // end findLargest
+
+*/
 
 
 
@@ -128,8 +145,8 @@ bool intersect( const cv::Vec6d& a, const cv::Vec6d& b)
 
 FaceModel::FaceModel( RFeatures::ObjModelInfo::Ptr minfo)
     : _saved(false), _notes(""), _source(""), _studyId(""),
-      _age(0), _sex(FaceTools::MALE_SEX | FaceTools::FEMALE_SEX), _ethnicity(""), _cdate( QDate::currentDate()),
-      _centreSet(false), _centre(0,0,0)
+      _dob( QDate::currentDate()), _sex(FaceTools::MALE_SEX | FaceTools::FEMALE_SEX), _ethnicity(""), _cdate( QDate::currentDate()),
+      _icentre(0,0,0)
 {
     assert(minfo);
     _landmarks = LandmarkSet::create();
@@ -140,8 +157,8 @@ FaceModel::FaceModel( RFeatures::ObjModelInfo::Ptr minfo)
 
 FaceModel::FaceModel()
     : _saved(false), _notes(""), _source(""), _studyId(""),
-      _age(0), _sex(FaceTools::MALE_SEX | FaceTools::FEMALE_SEX), _ethnicity(""), _cdate( QDate::currentDate()),
-      _centreSet(false), _centre(0,0,0)
+      _dob( QDate::currentDate()), _sex(FaceTools::MALE_SEX | FaceTools::FEMALE_SEX), _ethnicity(""), _cdate( QDate::currentDate()),
+      _icentre(0,0,0)
 {
     _landmarks = LandmarkSet::create();
     _paths = PathSet::create();
@@ -171,12 +188,12 @@ bool FaceModel::update( ObjModelInfo::Ptr nfo)
 void FaceModel::transform( const cv::Matx44d& m)
 {
     assert(_minfo);
-    _orientation.rotate( m);    // Just use the rotation sub-matrix
     _landmarks->transform(m);   // Transform the landmarks
     _paths->transform(m);       // Transform the paths
     RFeatures::Transformer transformer(m);
-    transformer.transform( _minfo->model()); // Adjust vertices of the model in-place
-    transformer.transform( _centre);    // Transform the centre point in-place
+    transformer.transform( _minfo->model());        // Adjust vertices of the model in-place
+    transformer.transform( _icentre);               // Transform the original centre point
+    _iorientation.rotate(m);                        // Transform the original orientation vectors
 
     _minfo->rebuildInfo();
 
@@ -204,6 +221,26 @@ void FaceModel::pokeTransform( vtkMatrix4x4* m)
     for ( BaseVisualisation* vis : vlayers)
         std::for_each( std::begin(_fvs), std::end(_fvs), [=]( Vis::FV* fv){ vis->pokeTransform( fv, m);});
 }   // end pokeTransform
+
+
+void FaceModel::setInitialCentre(const cv::Vec3f &c) { _icentre = c;}
+void FaceModel::setInitialOrientation(const RFeatures::Orientation &o) { _iorientation = o;}
+
+
+cv::Vec3f FaceModel::centre() const
+{
+    if (_landmarks->empty())
+        return _icentre;
+    return _landmarks->fullMean();
+}   // end centre
+
+
+RFeatures::Orientation FaceModel::orientation() const
+{
+    if ( _landmarks->empty())
+        return _iorientation;
+    return _landmarks->orientation();
+}   // end orientation
 
 
 // private
@@ -235,24 +272,19 @@ cv::Vec3f FaceModel::findClosestSurfacePoint( const cv::Vec3f& v) const
 }   // end findClosestSurfacePoint
 
 
-namespace {
-
-cv::Vec6d calcSuperBounds( const std::vector<cv::Vec6d>& bset)
+// private
+void FaceModel::calculateBounds()
 {
-    cv::Vec6d bounds(DBL_MAX,-DBL_MAX,DBL_MAX,-DBL_MAX,DBL_MAX,-DBL_MAX);
-    for ( const cv::Vec6d& b : bset)
-    {
-        bounds[0] = std::min(bounds[0], b[0]);  // xmin
-        bounds[1] = std::max(bounds[1], b[1]);  // xmax
-        bounds[2] = std::min(bounds[2], b[2]);  // ymin
-        bounds[3] = std::max(bounds[3], b[3]);  // ymax
-        bounds[4] = std::min(bounds[4], b[4]);  // zmin
-        bounds[5] = std::max(bounds[5], b[5]);  // zmax
-    }   // end for
-    return bounds;
-}   // end calcSuperBounds
+    assert(_minfo);
+    // Get the bounds for each of the model's components
+    const RFeatures::ObjModelComponentFinder& components = _minfo->components();
+    const size_t nc = components.size();
+    _cbounds.resize(nc);
+    for ( size_t c = 0; c < nc; ++c)
+        _cbounds[c] = getComponentBounds( _minfo->cmodel(), *components.componentBounds(int(c)));
 
-}   // end namespace
+    _sbounds = calcSuperBounds( _cbounds);
+}   // end calculateBounds
 
 
 // private
@@ -266,26 +298,6 @@ void FaceModel::updateMeta()
 }   // end updateMeta
 
 
-// private
-void FaceModel::calculateBounds()
-{
-    assert(_minfo);
-    // Get the bounds for each of the model's components
-    const RFeatures::ObjModelComponentFinder& components = _minfo->components();
-    const size_t nc = components.size();
-    _cbounds.resize(nc);
-    for ( size_t c = 0; c < nc; ++c)
-        _cbounds[c] = getComponentBounds( _minfo->cmodel(), *components.componentBounds(int(c)));
-
-    if ( !centreSet())
-    {   // calculate centre of largest component.
-        const cv::Vec6d& bd = _cbounds[ size_t(findLargest( _cbounds))];
-        _centre = cv::Vec3f( float(bd[0] + bd[1])/2, float(bd[2] + bd[3])/2, float(bd[4] + bd[5])/2);
-    }   // end if
-
-    _sbounds = calcSuperBounds( _cbounds);
-}   // end calculateBounds
-
 
 void FaceModel::lockForWrite() { _mutex.lockForWrite();}
 void FaceModel::lockForRead() const { _mutex.lockForRead();}
@@ -297,13 +309,11 @@ bool FaceModel::hasMetaData() const
     return !_notes.isEmpty()
         || !_source.isEmpty()
         || !_studyId.isEmpty()
-        || _age != 0.0
+        || _dob != QDate::currentDate()
         || _sex == FaceTools::MALE_SEX
         || _sex == FaceTools::FEMALE_SEX
         || !_ethnicity.isEmpty()
         || _cdate != QDate::currentDate()
-        || _centreSet
-        || _orientation != RFeatures::Orientation()
         || !_landmarks->empty()
         || !_paths->empty()
         || !_metrics.empty()
@@ -312,13 +322,19 @@ bool FaceModel::hasMetaData() const
 }   // end hasMetaData
 
 
+cv::Vec3f FaceModel::superBoundsCentre() const
+{
+    return cv::Vec3f( 0.5f * float(_sbounds[0] + _sbounds[1]),
+                      0.5f * float(_sbounds[2] + _sbounds[3]),
+                      0.5f * float(_sbounds[4] + _sbounds[5]));
+}   // end superBoundsCentre
+
+
 void FaceModel::clearMeta()
 {
-    _orientation = RFeatures::Orientation();
     _metrics.reset();
     _metricsL.reset();
     _metricsR.reset();
-    _centreSet = false;
     calculateBounds();
     setSaved(false);
 }   // end clearMeta

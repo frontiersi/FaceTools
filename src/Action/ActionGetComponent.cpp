@@ -17,15 +17,15 @@
 
 #include <ActionGetComponent.h>
 #include <FaceShapeLandmarks2DDetector.h>   // FaceTools::Landmarks
-#include <FaceModel.h>
 #include <ObjModelCopier.h> // RFeatures
+#include <FaceModel.h>
 #include <cassert>
 using FaceTools::Action::ActionGetComponent;
 using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
 using FaceTools::FVS;
 using FaceTools::Vis::FV;
-using FaceTools::FaceModel;
+using FaceTools::FM;
 using FaceTools::Landmark::LandmarkSet;
 
 
@@ -39,10 +39,10 @@ ActionGetComponent::ActionGetComponent( const QString& dn, const QIcon& ico, QPr
 
 bool ActionGetComponent::testReady( const FV* fv)
 {
-    const FaceModel* fm = fv->data();
+    const FM* fm = fv->data();
     fm->lockForRead();
     const LandmarkSet::Ptr lmks = fm->landmarks();
-    const bool rval = lmks->hasCode( Landmark::PRN) && fm->info()->components().size() > 1;
+    const bool rval = (lmks->posSomeMedial() != nullptr) && fm->info()->components().size() > 1;
     fm->unlock();
     return rval;
 }   // end testReady
@@ -50,50 +50,58 @@ bool ActionGetComponent::testReady( const FV* fv)
 
 bool ActionGetComponent::doAction( FVS& rset, const QPoint&)
 {
-    bool success = true;
-    using namespace RFeatures;
-    const FaceModelSet& fms = rset.models();
-    for ( FaceModel* fm : fms)
-    {
-        fm->lockForRead();
-        const LandmarkSet::Ptr lmks = fm->landmarks();
-        int svidx = fm->kdtree()->find( *lmks->pos( Landmark::PRN));
-
-        ObjModelInfo::Ptr info = fm->info();
-        int fidx = *info->cmodel()->getFaceIds(svidx).begin();    // Get a polygon attached to this vertex
-
-        // Find which of the components of the model has this polygon as a member
-        int foundC = -1;
-        int nc = int(info->components().size());
-        for ( int c = 0; c < nc; ++c)
-        {
-            const IntSet* fids = info->components().componentPolygons(c);
-            if ( fids->count(fidx) > 0)
-            {
-                foundC = c;
-                break;
-            }   // end if
-        }   // end for
-
-        assert(foundC >= 0);
-        const IntSet* cfids = info->components().componentPolygons(foundC);
-        assert( cfids);
-        ObjModelCopier copier( info->cmodel());
-        std::for_each( std::begin(*cfids), std::end(*cfids), [&](int fid){ copier.addTriangle(fid);});
-        fm->unlock();
-
-        ObjModelInfo::Ptr ninfo = ObjModelInfo::create( copier.getCopiedModel());
-        assert( ninfo);
-        if ( !ninfo)
-        {
-            std::cerr << "[ERROR] FaceTools::ActionGetComponent::doAction: Unable to create new model from component!" << std::endl;
-            success = false;
-            continue;
-        }   // end if
-
-        fm->lockForWrite();
-        fm->update( ninfo);
-        fm->unlock();
-    }   // end for
-    return success;
+    const FMS& fms = rset.models();
+    for ( FM* fm : fms)
+        removeNonFaceComponent( fm);
+    return true;
 }   // end doAction
+
+
+bool ActionGetComponent::removeNonFaceComponent( FM* fm)
+{
+    using namespace RFeatures;
+    fm->lockForRead();
+    const LandmarkSet::Ptr lmks = fm->landmarks();
+    if ( lmks->posSomeMedial() == nullptr)
+    {
+        fm->unlock();
+        return false;
+    }   // end if
+
+    int svidx = fm->kdtree()->find( *lmks->posSomeMedial());
+
+    ObjModelInfo::Ptr info = fm->info();
+    int fidx = *info->cmodel()->getFaceIds(svidx).begin();    // Get a polygon attached to this vertex
+
+    // Find which of the components of the model has this polygon as a member
+    int foundC = -1;
+    int nc = int(info->components().size());
+    for ( int c = 0; c < nc; ++c)
+    {
+        const IntSet* fids = info->components().componentPolygons(c);
+        if ( fids->count(fidx) > 0)
+        {
+            foundC = c;
+            break;
+        }   // end if
+    }   // end for
+
+    assert(foundC >= 0);
+    const IntSet* cfids = info->components().componentPolygons(foundC);
+    assert( cfids);
+
+    // Copy out this component
+    ObjModelCopier copier( info->cmodel());
+    std::for_each( std::begin(*cfids), std::end(*cfids), [&](int fid){ copier.addTriangle(fid);});
+    fm->unlock();
+
+    ObjModelInfo::Ptr ninfo = ObjModelInfo::create( copier.getCopiedModel());
+    assert( ninfo);
+
+    // Update the FaceModel as the new object.
+    fm->lockForWrite();
+    fm->update( ninfo);
+    fm->unlock();
+
+    return true;
+}   // end removeNonFaceComponent

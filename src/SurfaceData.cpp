@@ -147,7 +147,9 @@ void SurfaceDataWorker::run()
     working = true;
 
     surfaceData = new SurfaceData;
+    fmodel->lockForRead();
     createSurfaceData( surfaceData, fmodel);
+    fmodel->unlock();
 
     working = false;
     lock.unlock();

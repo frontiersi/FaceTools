@@ -18,17 +18,9 @@
 #ifndef FACE_TOOLS_SURFACE_DATA_H
 #define FACE_TOOLS_SURFACE_DATA_H
 
-/**
- * A globally accessible static instance that manages computations
- * and access to FaceModel surface data records.
- */
-
 #include "FaceTypes.h"
-#include <ObjModelCurvatureMetrics.h>   // RFeatures
-#include <QObject>
-#include <QThread>
 #include <QReadWriteLock>
-#include <memory>
+#include <QThread>
 
 namespace FaceTools {
 

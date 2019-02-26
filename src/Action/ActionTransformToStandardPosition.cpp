@@ -36,14 +36,27 @@ ActionTransformToStandardPosition::ActionTransformToStandardPosition( const QStr
 }   // end ctor
 
 
+bool ActionTransformToStandardPosition::testReady( const FV* fv)
+{
+    using namespace RFeatures;
+    const FM* fm = fv->data();
+    fm->lockForRead();
+    cv::Vec3f centre = fm->centre();
+    Orientation on = fm->orientation();
+    fm->unlock();
+    static const double MINF = 0.00000001;
+    return (l2sq( centre) > MINF) || (l2sq( on.nvec() - cv::Vec3f(0,0,1)) > MINF) || (l2sq( on.uvec() - cv::Vec3f(0,1,0)) > MINF);
+}   // end testReady
+
+
 bool ActionTransformToStandardPosition::doAction( FVS& fvs, const QPoint&)
 {
     assert(fvs.size() == 1);
     FM* fm = fvs.first()->data();
 
     fm->lockForWrite();
-    const cv::Vec3f& c = fm->centre();
-    const RFeatures::Orientation& on = fm->orientation();
+    cv::Vec3f c = fm->centre();
+    RFeatures::Orientation on = fm->orientation();
     cv::Matx44d m = RFeatures::toStandardPosition( on.nvec(), on.uvec(), c);
 
     /*

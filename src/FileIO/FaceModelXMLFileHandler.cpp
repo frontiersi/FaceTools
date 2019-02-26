@@ -46,19 +46,22 @@ void writeFaceModel( const FM* fm, const std::string& objfname, PTree& rnode)
     rnode.put( "Notes", fm->notes().toStdString());
     rnode.put( "Source", fm->source().toStdString());
     rnode.put( "StudyId", fm->studyId().toStdString());
-    rnode.put( "Age", fm->age());
+    rnode.put( "DateOfBirth", fm->dateOfBirth().toString().toStdString());
     rnode.put( "Sex", FaceTools::toSexString(fm->sex()).toStdString());
     rnode.put( "Ethnicity", fm->ethnicity().toStdString());
     rnode.put( "CaptureDate", fm->captureDate().toString().toStdString());
 
-    PTree& onode = rnode.put("Orientation", "");
-    onode << fm->orientation();
-
-    if ( fm->centreSet())
-        RFeatures::putNamedVertex( rnode, "Centre", fm->centre());
+    rnode.put("OriginalOrientation", "") << fm->initialOrientation();
+    RFeatures::putVertex( rnode.put("OriginalCentre", ""), fm->initialCentre());
 
     fm->landmarks()->write( rnode.put("Landmarks", ""));
     fm->paths()->write( rnode.put("Paths", ""));
+
+    if ( !fm->landmarks()->empty())
+    {
+        rnode.put("DetectedOrientation", "") << fm->landmarks()->orientation();
+        RFeatures::putVertex( rnode.put("DetectedCentre", ""), fm->landmarks()->fullMean());
+    }   // end if
 
     PTree& mgrps = rnode.put("MetricGroups", "");
     mgrps.add("Frontal", "") << fm->cmetrics();
@@ -86,68 +89,81 @@ FM* readFaceModel( const PTree& rnode, std::string& objfilename)
     else if ( rnode.count("ObjFilename") > 0)
         objfilename = rnode.get<std::string>( "ObjFilename");  // Without path info
 
+    QString notes;
     if ( rnode.count("description") > 0)
-        fm->setNotes( rnode.get<std::string>( "description").c_str());
+        notes = rnode.get<std::string>( "description").c_str();
     else if ( rnode.count("Description") > 0)
-        fm->setNotes( rnode.get<std::string>( "Description").c_str());
+        notes = rnode.get<std::string>( "Description").c_str();
     else if ( rnode.count("Notes") > 0)
-        fm->setNotes( rnode.get<std::string>( "Notes").c_str());
+        notes = rnode.get<std::string>( "Notes").c_str();
+    fm->setNotes(notes);
 
+    QString src;
     if ( rnode.count("source") > 0)
-        fm->setSource( rnode.get<std::string>( "source").c_str());
+        src = rnode.get<std::string>( "source").c_str();
     else if ( rnode.count("Source") > 0)
-        fm->setSource( rnode.get<std::string>( "Source").c_str());
+        src = rnode.get<std::string>( "Source").c_str();
+    fm->setSource(src);
 
+    QString sid;
     if ( rnode.count("studyid") > 0)
-        fm->setStudyId( rnode.get<std::string>( "studyid").c_str());
+        sid = rnode.get<std::string>( "studyid").c_str();
     else if ( rnode.count("StudyId") > 0)
-        fm->setStudyId( rnode.get<std::string>( "StudyId").c_str());
+        sid = rnode.get<std::string>( "StudyId").c_str();
+    fm->setStudyId(sid);
 
-    if ( rnode.count("age") > 0)
-        fm->setAge( rnode.get<double>("age"));
-    else if ( rnode.count("Age") > 0)
-        fm->setAge( rnode.get<double>("Age"));
-
-    if ( rnode.count("sex") > 0)
-        fm->setSex( FaceTools::fromSexString( rnode.get<std::string>("sex").c_str()));
-    else if ( rnode.count("Sex") > 0)
-        fm->setSex( FaceTools::fromSexString( rnode.get<std::string>("Sex").c_str()));
-
-    if ( rnode.count("ethnicity") > 0)
-        fm->setEthnicity( rnode.get<std::string>( "ethnicity").c_str());
-    else if ( rnode.count("Ethnicity") > 0)
-        fm->setEthnicity( rnode.get<std::string>( "Ethnicity").c_str());
-
+    QDate cdate = QDate::currentDate();
     if ( rnode.count("capture_date") > 0)
-        fm->setCaptureDate( QDate::fromString( rnode.get<std::string>( "capture_date").c_str()));
+        cdate = QDate::fromString( rnode.get<std::string>( "capture_date").c_str());
     else if ( rnode.count("CaptureDate") > 0)
-        fm->setCaptureDate( QDate::fromString( rnode.get<std::string>( "CaptureDate").c_str()));
+        cdate = QDate::fromString( rnode.get<std::string>( "CaptureDate").c_str());
+    fm->setCaptureDate( cdate);
 
-    if ( rnode.count("Orientation") > 0)
+    cv::Vec3f icentre(0,0,0);
+    if ( RFeatures::getNamedVertex( rnode, "OriginalCentre", icentre))
+        fm->setInitialCentre(icentre);
+
+    RFeatures::Orientation iorientation( cv::Vec3f(0,0,1), cv::Vec3f(0,1,0));
+    if ( rnode.count("OriginalOrientation") > 0)
     {
-        RFeatures::Orientation on;
-        rnode.get_child("Orientation") >> on;
-        fm->setOrientation(on);
+        rnode.get_child("OriginalOrientation") >> iorientation;
+        fm->setInitialOrientation( iorientation);
     }   // end if
 
-    cv::Vec3f c(0,0,0); // Get the centre if in the file
-    bool gotcentre = RFeatures::getNamedVertex( rnode, "Centre", c);
+    double age = 0.0;   // Only use age if DateOfBirth not present in XML
+    if ( rnode.count("age") > 0)
+        age = rnode.get<double>("age");
+    else if ( rnode.count("Age") > 0)
+        age = rnode.get<double>("Age");
+
+    QDate dob = QDate::currentDate();
+    if ( rnode.count("DateOfBirth") > 0)
+        dob = QDate::fromString( rnode.get<std::string>( "DateOfBirth").c_str());
+
+    // If no date of birth given, find it as the capture date minus the age (assumed given)
+    if ( dob == QDate::currentDate())
+        dob = cdate.addDays(qint64( -age * 365.25));
+
+    fm->setDateOfBirth( dob);
+
+    int8_t sex = FaceTools::UNKNOWN_SEX;
+    if ( rnode.count("sex") > 0)
+        sex = FaceTools::fromSexString( rnode.get<std::string>("sex").c_str());
+    else if ( rnode.count("Sex") > 0)
+        sex = FaceTools::fromSexString( rnode.get<std::string>("Sex").c_str());
+    fm->setSex(sex);
+
+    QString ethn;
+    if ( rnode.count("ethnicity") > 0)
+        ethn = rnode.get<std::string>( "ethnicity").c_str();
+    else if ( rnode.count("Ethnicity") > 0)
+        ethn = rnode.get<std::string>( "Ethnicity").c_str();
+    fm->setEthnicity(ethn);
 
     // Read in the landmarks
     FaceTools::Landmark::LandmarkSet::Ptr lmks = fm->landmarks();
     if ( rnode.count("Landmarks") > 0)
         lmks->read( rnode.get_child("Landmarks"));
-
-    // Calculate the centre from the landmarks if unable to retrieve from the file
-    if (!gotcentre && FaceTools::hasCentreLandmarks( *lmks))
-    {
-        c = FaceTools::calcFaceCentre( *lmks);
-        gotcentre = true;
-    }   // end if
-
-    // Set the centre if read or calculated, otherwise it'll just be the middle of the largest component.
-    if ( gotcentre)
-        fm->setCentre(c);
 
     // Read in the saved paths
     if ( rnode.count("Paths") > 0)

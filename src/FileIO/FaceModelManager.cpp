@@ -20,6 +20,7 @@
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <FileIO.h> // rlib
+#include <QDebug>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <cassert>
@@ -86,7 +87,7 @@ bool FaceModelManager::write( FM* fm, std::string* fpath)
         }   // end else
     }   // end if
 
-    std::cerr << "[INFO] FaceTools::FileIO::FaceModelManager::write: Writing out file \"" << savefilepath << "\"" << std::endl;
+    qInfo() << QString( "Writing out file '%1'").arg( savefilepath.c_str());
 
     _err = "";  // Reset the error
     FaceModelFileHandler* fileio = _fhmap.getSaveInterface( savefilepath);
@@ -128,11 +129,11 @@ FM* FaceModelManager::read( const std::string& fname)
     if ( _mfiles.count(fname) > 0)
     {
         _err = "File \"" + fname + "\" already open!";
-        std::cerr << "[STATUS] FaceTools::FileIO::FaceModelManager::read: Model already loaded!" << std::endl;
+        qInfo() << "Model already loaded!";
         return nullptr;
     }   // end if
 
-    std::cerr << "[INFO] FaceTools::FileIO::FaceModelManager::read: Reading in file \"" << fname << "\"" << std::endl;
+    qDebug() << QString("Reading in file '%1'").arg(fname.c_str());
 
     FaceModelFileHandler* fileio = nullptr;
     FM* fm = nullptr;
@@ -171,8 +172,8 @@ void FaceModelManager::close( FM* fm)
 {
     assert(_models.count(fm) > 0);
     if ( !fm->isSaved())
-        std::cerr << "[WARNING] FaceTools::FileIO::FaceModelManager::close: Model is unsaved!" << std::endl;
-    std::cerr << "[INFO] FaceTools::FileIO::FaceModelManager::close: closing model " << fm << std::endl;
+        qWarning() << QString( "Model '%1' is unsaved!").arg(filepath(fm).c_str());
+    qInfo() << QString( "Closing '%1'").arg(filepath(fm).c_str());
     _mfiles.erase(_mdata.at(fm));
     _models.erase(fm);
     _mdata.erase(fm);

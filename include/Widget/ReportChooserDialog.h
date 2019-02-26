@@ -33,8 +33,11 @@ public:
 
     QString selectedReportName() const;
 
+    bool show( const FM*);
+
 private:
     Ui::ReportChooserDialog *_ui;
+    //void setRowShown( int, bool);
 };  // end class
 
 }}  // end namespaces

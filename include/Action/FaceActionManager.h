@@ -35,6 +35,8 @@ public:
     void addViewer( FMV*);
     QAction* addAction( FaceAction*);       // Return added action's QAction if added okay (duplicates not allowed).
 
+    void close( FM*);
+
 signals:
     void addedAction( FaceAction*);
     void onUpdateSelected( FM*, bool);
@@ -55,7 +57,6 @@ private:
     Vis::BoundingVisualisation _bvis;
 
     void processFinishedAction( FaceAction*, EventSet&, FVS&);
-    void close( FM*);
 
     FaceActionManager( const FaceActionManager&) = delete;
     void operator=( const FaceActionManager&) = delete;

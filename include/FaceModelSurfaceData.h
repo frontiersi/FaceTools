@@ -24,7 +24,6 @@
  */
 
 #include "SurfaceData.h"
-#include <memory>
 
 namespace FaceTools {
 

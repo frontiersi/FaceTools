@@ -17,6 +17,7 @@
 
 #include <FaceModelOBJFileHandler.h>
 #include <AssetImporter.h>  // RModelIO
+#include <QDebug>
 #include <iomanip>
 using FaceTools::FileIO::FaceModelOBJFileHandler;
 using FaceTools::FM;
@@ -42,10 +43,10 @@ FM* FaceModelOBJFileHandler::read( const QString& fname)
         if ( minfo)
             fm = new FM(minfo);
         else
-            _err = ("Failed to clean object loaded from \"" + fname.toStdString() + "\"").c_str();
+            _err = QString("Failed to clean '%1'").arg( fname);
     }   // end if
     else
-        _err = ("Failed to load object from \"" + fname.toStdString() + "\"").c_str();
+        _err = QString("Failed to load '%1'").arg(fname);
     return fm;
 }   // end read
 
@@ -55,13 +56,11 @@ bool FaceModelOBJFileHandler::write( const FM* fm, const QString& qfname)
     _err = "";
     const std::string fname = qfname.toStdString();
     const RFeatures::ObjModel* model = fm->info()->cmodel();
-    std::cerr << "[STATUS] FaceTools::FileIO::FaceModelOBJFileHandler::write: Saving model to \"" << fname << "\"" << std::endl;
-    if ( _exporter.save( model, fname))
-        std::cerr << "[STATUS] FaceTools::FileIO::FaceModelOBJFileHandler::write: Saved model to \"" << fname << "\"" << std::endl;
-    else
+    qInfo() << QString("Saving to '%1'").arg(qfname);
+    if ( !_exporter.save( model, fname))
     {
         _err = _exporter.err().c_str();
-        std::cerr << "[ERROR] FaceTools::FileIO::FaceModelOBJFileHandler::write: " << _err.toStdString() << std::endl;
+        qWarning() << _err;
     }   // end else
     return _err.isEmpty();
 }   // end save

@@ -43,30 +43,27 @@ LandmarksInteractor::LandmarksInteractor( MEEI* meei, LandmarksVisualisation* vi
 // private slot
 void LandmarksInteractor::doOnEnterLandmark( const FV* fv, const vtkProp* p)
 {
-    int lm = _vis->landmarkId( fv, p, _lat);
-    if ( lm < 0)
-        return;
-
-    _hover = lm;
-    FM* fm = fv->data();
-    _vis->setLandmarkHighlighted( fm, lm, _lat, true);
-    viewer()->setCursor(Qt::CrossCursor);
-    fm->updateRenderers();
+    _hover = _vis->landmarkId( fv, p, _lat);
+    // Ignore other landmarks if dragging one already
+    if ( _drag < 0 && _hover >= 0)
+    {
+        FM* fm = fv->data();
+        _vis->setLandmarkHighlighted( fm, _hover, _lat, true);
+        viewer()->setCursor(Qt::CrossCursor);
+        fm->updateRenderers();
+    }   // end if
 }   // end doOnEnterLandmark
 
 
 // private slot
 void LandmarksInteractor::doOnLeaveLandmark( const FV* fv, const vtkProp* p)
 {
-    if ( _hover < 0)
-        return;
-
-    const int lm = _vis->landmarkId( fv, p, _lat);
-    FM* fm = fv->data();
-    if ( _drag < 0 && lm >= 0)
+    _hover = _vis->landmarkId( fv, p, _lat);
+    if ( _drag < 0)
     {
-        viewer()->setCursor(Qt::ArrowCursor);
+        FM* fm = fv->data();
         _vis->setLandmarkHighlighted( fm, _hover, _lat, false);
+        viewer()->setCursor(Qt::ArrowCursor);
         fm->updateRenderers();
     }   // end if
     _hover = -1;
@@ -92,11 +89,15 @@ bool LandmarksInteractor::leftButtonUp( const QPoint&)
 {
     if ( _drag >= 0)
     {
-        _vis->setLandmarkHighlighted( _view->data(), _drag, _lat, false);
+        if ( _hover < 0)
+        {
+            _vis->setLandmarkHighlighted( _view->data(), _drag, _lat, false);
+            viewer()->setCursor(Qt::ArrowCursor);
+        }   // end if
+        _drag = -1;
         emit onChangedData(_view);
     }   // end if
-    _view = hoverModel();
-    _drag = -1;
+    //_view = hoverModel();
     return false;
 }   // end leftButtonUp
 

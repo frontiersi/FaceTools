@@ -54,6 +54,7 @@ bool ActionDetectFace::doBeforeAction( FVS& fvs, const QPoint&)
     FM* fm = fvs.first()->data();
     fm->lockForRead();
     _ulmks.clear();
+    _err = "";
 
     if ( fm->landmarks()->empty())
         _ulmks = LDMKS_MAN::ids();
@@ -72,7 +73,16 @@ bool ActionDetectFace::doAction( FVS& fvs, const QPoint&)
     assert(fvs.size() == 1);
     FM* fm = fvs.first()->data();
     fvs.clear();
+    _err = redetectLandmarks( fm, &_ulmks);
+    if ( _err.empty())
+        fvs.insert(fm);
+    return _err.empty();
+}   // end doAction
 
+
+// public static
+std::string ActionDetectFace::redetectLandmarks( FM* fm, const IntSet *ulmks)
+{
     fm->lockForWrite();
 
     const RFeatures::ObjModelKDTree* kdt = fm->kdtree();
@@ -81,28 +91,23 @@ bool ActionDetectFace::doAction( FVS& fvs, const QPoint&)
     fm->clearMeta();
 
     // Specifiy the set of landmarks to be updated.
-    faceDetector.setLandmarksToUpdate( _ulmks);
+    if ( ulmks)
+        faceDetector.setLandmarksToUpdate( *ulmks);
 
+    std::string errstr = "";
     if ( faceDetector.detect( lmks))
     {
-        auto on = faceDetector.orientation();
-        fm->setOrientation( on);
-        //std::cerr << "[INFO] FaceTools::Action::ActionDetectFace: Detected orientation (norm, up) " << on << std::endl;
-        //std::cerr << "[INFO] FaceTools::Action::ActionDetectFace: Landmarks detection range set to " << faceDetector.detectRange() << std::endl;
-
-        const cv::Vec3f c = FaceTools::calcFaceCentre( lmks);
-        fm->setCentre( c);
-        cv::Matx44d m = RFeatures::toStandardPosition( on.nvec(), on.uvec(), c);
+        const RFeatures::Orientation on = lmks.orientation();
+        const cv::Vec3f centre = lmks.fullMean();
+        cv::Matx44d m = RFeatures::toStandardPosition( on.nvec(), on.uvec(), centre);
         fm->transform(m);
-        fvs.insert(fm);
     }   // end if
     else
-        _err = faceDetector.error();
+        errstr = faceDetector.error();
 
     fm->unlock();
-
-    return _err.empty();
-}   // end doAction
+    return errstr;
+}   // end redetectLandmarks
 
 
 void ActionDetectFace::doAfterAction( EventSet& cset, const FVS&, bool v)

@@ -55,7 +55,6 @@ public:
     static bool isOpen( const std::string&);
 
     // Load in a model (returning null on fail). Also returns null if model already open.
-    // Also causes signal loadedModel() to fire.
     static FM* read( const std::string&);
 
     // Get the nature of the error if read returns null or write returns false.
