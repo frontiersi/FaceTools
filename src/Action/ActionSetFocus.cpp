@@ -47,7 +47,12 @@ bool ActionSetFocus::doBeforeAction( Event)
 {
     bool go = false;
     if ( MS::isViewSelected())
-        go = MS::selectedView()->isPointOnFace( primedMousePos());
+    {
+        QPoint mpos = primedMousePos();
+        if ( mpos.x() < 0)
+            mpos = MS::mousePos();
+        go = MS::selectedView()->isPointOnFace( mpos);
+    }   // end if
     return go;
 }   // end doBeforeAction
 
@@ -56,7 +61,10 @@ void ActionSetFocus::doAction( Event)
 {
     FV* fv = MS::selectedView();
     cv::Vec3f nf;
-    fv->projectToSurface( primedMousePos(), nf);
+    QPoint mpos = primedMousePos();
+    if ( mpos.x() < 0)
+        mpos = MS::mousePos();
+    fv->projectToSurface( mpos, nf);
     setFocus( fv->viewer(), nf);
     emit onEvent( Event::CAMERA_CHANGE);
 }   // end doAction

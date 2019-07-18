@@ -108,10 +108,10 @@ void UndoState::restore() const
         if ( _egrp.has(Event::CONNECTIVITY_CHANGE))
             _fm->_manifolds = _backm._manifolds;
 
-        if ( _backm._landmarks)
+        if ( _egrp.has(Event::GEOMETRY_CHANGE) || _egrp.has(Event::LANDMARKS_CHANGE) || _egrp.has(Event::FACE_DETECTED))
             _fm->_landmarks = _backm._landmarks;
 
-        if ( _backm._paths)
+        if ( _egrp.has(Event::GEOMETRY_CHANGE) || _egrp.has(Event::PATHS_CHANGE))
             _fm->_paths = _backm._paths;
 
         if ( _egrp.has(Event::METADATA_CHANGE))
