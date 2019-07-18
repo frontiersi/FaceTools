@@ -18,9 +18,9 @@
 #include <FaceModelFileHandler.h>
 #include <cassert>
 using FaceTools::FileIO::FaceModelFileHandler;
-using FaceTools::FaceModel;
+using FaceTools::FM;
 
-FaceModel* FaceModelFileHandler::read( const QString&)
+FM* FaceModelFileHandler::read( const QString&)
 {
     if ( canRead())
     {
@@ -28,11 +28,11 @@ FaceModel* FaceModelFileHandler::read( const QString&)
         assert(false);
         exit(-1);
     }   // end if
-    return NULL;
+    return nullptr;
 }   // end read
 
 
-bool FaceModelFileHandler::write( const FaceModel*, const QString&)
+bool FaceModelFileHandler::write( const FM*, const QString&)
 {
     if ( canWrite())
     {

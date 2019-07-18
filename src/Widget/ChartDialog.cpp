@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,8 @@
 #include <MetricCalculatorManager.h>
 #include <ModelSelector.h>
 #include <FaceModel.h>
+#include <Ethnicities.h>
+#include <Chart.h>
 #include <QPushButton>
 #include <QtCharts/QScatterSeries>
 #include <QtCharts/QValueAxis>
@@ -30,218 +32,236 @@
 #include <cmath>
 using FaceTools::Widget::ChartDialog;
 using FaceTools::Metric::MetricCalculatorManager;
-using FaceTools::Metric::MetricValue;
 using FaceTools::Metric::GrowthData;
+using GDS = FaceTools::Metric::GrowthDataSources;
 using FaceTools::Metric::MC;
-using FaceTools::FM;
-using FaceTools::Sex;
-using FaceTools::Action::ModelSelector;
 using MCM = FaceTools::Metric::MetricCalculatorManager;
+using MS = FaceTools::Action::ModelSelector;
 
 
 ChartDialog::ChartDialog( QWidget *parent) :
-    QDialog(parent), _ui(new Ui::ChartDialog), _cview( new QtCharts::QChartView), _ignEthn(false)
+    QDialog(parent), _ui(new Ui::ChartDialog),
+    _cview( new QtCharts::QChartView)
 {
     _ui->setupUi(this);
-    _ui->frame->layout()->addWidget( _cview);
+    setWindowTitle( parent->windowTitle() + " | Metric Growth Curves");
 
+    setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+    setParent( parent, windowFlags() & ~Qt::WindowStaysOnTopHint);
+
+    _ui->frame->layout()->addWidget( _cview);
     _cview->setRenderHint( QPainter::Antialiasing);
-    setWindowTitle( parent->windowTitle() + " | Metric Growth Chart");
 
     assert( MCM::count() > 0);
-    doOnSetSelectedMetric();
 
-    connect( _ui->sourceComboBox, QOverload<int>::of(&QComboBox::activated), this, &ChartDialog::doOnUserSelectedSource);
-    connect( _ui->ethnicityComboBox, QOverload<int>::of(&QComboBox::activated), this, &ChartDialog::doOnUserSelectedEthnicity);
-    connect( _ui->sexComboBox, QOverload<int>::of(&QComboBox::activated), this, &ChartDialog::doOnResetChart);
-    connect( _ui->dimensionSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &ChartDialog::doOnResetChart);
-    //connect( _ui->editDataButton, &QPushButton::clicked, this, &ChartDialog::doOnEditData);
-
-    connect( _ui->saveImageButton, &QToolButton::clicked, this, &ChartDialog::doOnSaveImage);
-
-    for ( MC::Ptr mc : MCM::metrics())
-        connect( &*mc, &MC::selected, this, &ChartDialog::doOnSetSelectedMetric);
+    connect( _ui->sexComboBox, QOverload<int>::of(&QComboBox::activated), this, &ChartDialog::_doOnUserSelectedSex);
+    connect( _ui->ethnicityComboBox, QOverload<int>::of(&QComboBox::activated), this, &ChartDialog::_doOnUserSelectedEthnicity);
+    connect( _ui->sourceComboBox, QOverload<int>::of(&QComboBox::activated), this, &ChartDialog::_updateChart);
+    connect( _ui->dimensionSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &ChartDialog::_updateChart);
+    connect( _ui->saveImageButton, &QToolButton::clicked, this, &ChartDialog::_doOnSaveImage);
 }   // end ctor
 
 
 ChartDialog::~ChartDialog() { delete _ui;}
 
 
-void ChartDialog::refresh()
-{
-    if ( ModelSelector::selected())
-    {
-        const FM* fm = ModelSelector::selected()->data();
-        const QString& e = fm->ethnicity();
-        const int8_t s = fm->sex();
-
-        MC::Ptr mc = MCM::currentMetric();
-        if ( mc && mc->ethnicities().count(e) > 0)
-            _ui->ethnicityComboBox->setCurrentText(e);
-        if ( mc->growthData(e, s))
-            _ui->sexComboBox->setCurrentText( toLongSexString(s));
-    }   // end if
-
-    doOnResetChart();
-}   // end setDemographic
-
-
-void ChartDialog::doOnSetEthnicityIgnored(bool v)
-{
-    _ignEthn = v;
-    refresh();
-}   // end doOnSetEthnicityIgnored
-
-
-// private
-void ChartDialog::doOnSetSelectedMetric()
-{
-    populateSources();
-    populateEthnicites();
-    populateSexs();
-    populateDimensions();
-    refresh();
-}   // end doOnSetMetricActive
-
-
-// private
-void ChartDialog::populateSources()
-{
-    _ui->sourceComboBox->clear();
-    MC::Ptr mc = MCM::currentMetric();
-    assert(mc);
-    QStringList slst;
-    for ( const QString& s : mc->sources())
-        slst.append(s);
-
-    slst.sort();
-    for ( const QString& s : slst)
-        _ui->sourceComboBox->addItem(s);
-
-    _ui->sourceComboBox->setCurrentText( mc->source());
-    _ui->sourceComboBox->setEnabled( _ui->sourceComboBox->count() > 1);
-}   // end populateSources
-
-
-// private
-void ChartDialog::populateEthnicites()
-{
-    _ui->ethnicityComboBox->clear();
-    MC::Ptr mc = MCM::currentMetric();
-    assert(mc);
-
-    QStringList elst;
-    for ( const QString& e : mc->ethnicities())
-        elst.append(e);
-
-    elst.sort();
-    for ( const QString& e : elst)
-        _ui->ethnicityComboBox->addItem(e);
-
-    _ui->ethnicityComboBox->setEnabled( _ui->ethnicityComboBox->count() > 1);
-}   // end populateEthnicity
-
-
-// private
-void ChartDialog::populateSexs()
+void ChartDialog::_populateSexs( int ethn)
 {
     _ui->sexComboBox->clear();
-    MC::Ptr mc = MCM::currentMetric();
-    assert(mc);
+    _ui->sexComboBox->setEnabled( false);
 
-    const QString ethn = _ui->ethnicityComboBox->currentText();
-    if ( mc->growthData( ethn, int8_t(FEMALE_SEX | MALE_SEX)))
-        _ui->sexComboBox->addItem( toLongSexString( FEMALE_SEX | MALE_SEX));
-    else
+    const GDS& gds = MCM::currentMetric()->compatibleSources();
+    std::unordered_set<int8_t> sexs;
+    for ( GrowthData::CPtr gd : gds)
     {
-        if ( mc->growthData( ethn, FEMALE_SEX))
-            _ui->sexComboBox->addItem( toLongSexString( FEMALE_SEX));
-        if ( mc->growthData( ethn, MALE_SEX))
-            _ui->sexComboBox->addItem( toLongSexString( MALE_SEX));
-    }   // end else
+        //if ( ethn == 0 || Ethnicities::belongs( gd->ethnicity(), ethn))
+        if ( ethn == 0 || gd->ethnicity() == ethn)
+        {
+            sexs.insert(gd->sex());
+            if ( sexs.size() == 3)
+                break;
+        }   // end if
+    }   // end for
+
+    if ( sexs.count(FEMALE_SEX | MALE_SEX) > 0)
+        _ui->sexComboBox->addItem( toLongSexString(FEMALE_SEX | MALE_SEX), FEMALE_SEX | MALE_SEX);
+    if ( sexs.count(FEMALE_SEX) > 0)
+        _ui->sexComboBox->addItem( toLongSexString(FEMALE_SEX), FEMALE_SEX);
+    if ( sexs.count(MALE_SEX) > 0)
+        _ui->sexComboBox->addItem( toLongSexString(MALE_SEX), MALE_SEX);
 
     _ui->sexComboBox->setEnabled( _ui->sexComboBox->count() > 1);
-}   // end populateSexs
+}   // end _populateSexs
 
 
-// private
-void ChartDialog::populateDimensions()
+void ChartDialog::_populateEthnicities( int8_t sex)
 {
-    const int ndims = static_cast<int>( MCM::currentMetric()->dims());
-    _ui->dimensionSpinBox->setMaximum( ndims);
-    _ui->dimensionSpinBox->setValue(1);
-    _ui->dimensionSpinBox->setEnabled( ndims > 1);
-}   // end populateDimensions
+    _ui->ethnicityComboBox->clear();
+    _ui->ethnicityComboBox->setEnabled(false);
+
+    const GDS& gds = MCM::currentMetric()->compatibleSources();
+    std::unordered_set<int> eset;
+    for ( GrowthData::CPtr gd : gds)
+    {
+        if ( sex == UNKNOWN_SEX || gd->sex() == sex)
+            eset.insert( gd->ethnicity());
+    }   // end for
+
+    QStringList elst;
+    std::unordered_map<QString, int> emap;
+    for ( int e : eset)
+    {
+        const QString& en = Ethnicities::name(e);
+        if ( emap.count(en) == 0)
+        {
+            emap[en] = e;
+            elst << en;
+        }   // end if
+    }   // end for
+
+    elst.sort();
+    for ( const QString& en : elst)
+        _ui->ethnicityComboBox->addItem( en, emap[en]);
+    _ui->ethnicityComboBox->setEnabled(  _ui->ethnicityComboBox->count() > 1);
+}   // end _populateEthnicities
 
 
-// private
-const FM* ChartDialog::isDemographic() const
-{
-    if ( !ModelSelector::selected())
-        return nullptr;
-
-    const FM* fm = ModelSelector::selected()->data();
-    const int8_t ssex = fromLongSexString( _ui->sexComboBox->currentText());
-    // Ethnicity must match exactly unless ignoring ethnicity
-    const bool ethnicityMatch = _ignEthn || (fm->ethnicity() == _ui->ethnicityComboBox->currentText());
-    const bool match = ethnicityMatch && (( ssex == int8_t(FEMALE_SEX | MALE_SEX)) || ( fm->sex() == ssex));
-    return match ? fm : nullptr;
-}   // end isDemographic
-
-
-// private
-void ChartDialog::doOnUserSelectedSource()
+void ChartDialog::_doOnUserSelectedSex()
 {
     MC::Ptr mc = MCM::currentMetric();
+    _populateEthnicities( _selectedSex());
+    _setEthnicity();
+    _populateSources();
+    _updateChart();
+}   // end _doOnUserSelectedSex
+
+
+void ChartDialog::_doOnUserSelectedEthnicity()
+{
+    MC::Ptr mc = MCM::currentMetric();
+    _populateSexs( _selectedEthnicity());
+    _setSex();
+    _populateSources();
+    _updateChart();
+}   // end _doOnUserSelectedEthnicity
+
+
+void ChartDialog::refreshMetricOrModel()
+{
+    _populateDimensions();
+    MC::Ptr mc = MCM::currentMetric();
     assert(mc);
-    const QString src = _ui->sourceComboBox->currentText();
-    mc->setSource(src);
-    mc->signalUpdated();
+    _populateSexs( UNKNOWN_SEX);
+    _populateEthnicities( 0);
+    _setSex();
+    _setEthnicity();
+    _populateSources();
+    _populateSources();
+    _updateChart();
+}   // end refreshMetricOrModel
 
-    populateEthnicites();
-    doOnUserSelectedEthnicity();
-}   // end doOnUserSelectedSource
 
-
-// private
-void ChartDialog::doOnUserSelectedEthnicity()
+void ChartDialog::_populateSources()
 {
-    populateSexs();
-    refresh();
-}   // end doOnUserSelectedEthnicity
+    _ui->sourceComboBox->clear();
+    _ui->sourceComboBox->setEnabled(false);
+    MC::Ptr mc = MCM::currentMetric();
+    assert(mc);
 
+    GDS gds = mc->matchingGrowthData( _selectedSex(), _selectedEthnicity(), true);
+    QStringList slst;
+    for ( GrowthData::CPtr gd : gds)
+        slst.append( gd->source());
+    slst.sort();
+    _ui->sourceComboBox->addItems(slst);
 
-// private
-void ChartDialog::doOnResetChart()
-{
-    const QString ethn = _ui->ethnicityComboBox->currentText();
-    const int8_t sex = fromLongSexString(_ui->sexComboBox->currentText());
-    const size_t d = static_cast<size_t>(_ui->dimensionSpinBox->value() - 1);   // Dimension to display
-    const MC::Ptr mc = MCM::currentMetric();
-    assert( mc);
-    const int mid = mc->id();
-    const FM* fm = isDemographic();
-
-    QtCharts::QChart *chart = nullptr;
-    if ( !(chart = FaceTools::createChart( ethn, sex, d, mid, fm)))
+    if ( _ui->sourceComboBox->count() > 0)
     {
-        chart = new QtCharts::QChart;
-
-        QString title = mc->name();
-        if ( mc->dims() > 1)    // Specify which dimension of the metric is being shown
-            title += QString( " (Dimension %1)").arg(d);
-        QString src = "<big><em>No growth curve data available.</em></big>";
-        chart->setTitle( QString("<center><big><b>%1</b></big><br>%2</center>").arg( title, src));
+        int idx = 0;
+        // Use the metric's current source if possible.
+        if ( mc->currentGrowthData() != nullptr)
+        {
+            idx = _ui->sourceComboBox->findText( mc->currentGrowthData()->source());
+            if ( idx < 0)
+                idx = 0;
+        }   // end if
+        _ui->sourceComboBox->setCurrentIndex(idx);
     }   // end if
 
-    _cview->setChart(chart);
-}   // end doOnResetChart
+    _ui->sourceComboBox->setEnabled( _ui->sourceComboBox->count() > 1);
+}   // end _populateSources
 
 
-// private
-void ChartDialog::doOnSaveImage()
+void ChartDialog::_populateDimensions()
 {
-    QFileDialog fdialog( (QWidget*)parent());
+    MC::Ptr mc = MCM::currentMetric();
+    const int ndims = static_cast<int>( mc->dims());
+    _ui->dimensionSpinBox->setMaximum( ndims);
+    _ui->dimensionSpinBox->setValue(1);
+    _ui->dimensionSpinBox->setEnabled( mc->currentGrowthData() && ndims > 1);
+}   // end _populateDimensions
+
+
+int8_t ChartDialog::_selectedSex() const { return int8_t( _ui->sexComboBox->currentData().toInt() & 0xff);}
+int ChartDialog::_selectedEthnicity() const { return _ui->ethnicityComboBox->currentData().toInt();}
+QString ChartDialog::_selectedSource() const { return _ui->sourceComboBox->currentText();}
+
+
+// Set ethnicity to the current growth data if possible or the top of the list if not found.
+void ChartDialog::_setEthnicity()
+{
+    MC::Ptr mc = MCM::currentMetric();
+    const int ethn = mc && mc->currentGrowthData() ? mc->currentGrowthData()->ethnicity() : 0;
+    if ( _ui->ethnicityComboBox->count() > 0)
+        _ui->ethnicityComboBox->setCurrentIndex( std::max( 0, _ui->ethnicityComboBox->findData( ethn)));
+}   // end _setEthnicity
+
+
+// Set sex to the current growth data if possible or the top of the list if not found.
+void ChartDialog::_setSex()
+{
+    MC::Ptr mc = MCM::currentMetric();
+    const int8_t sex = mc && mc->currentGrowthData() ? mc->currentGrowthData()->sex() : UNKNOWN_SEX;
+    if ( _ui->sexComboBox->count() > 0)
+        _ui->sexComboBox->setCurrentIndex( std::max( 0, _ui->sexComboBox->findData( sex)));
+}   // end _setSex
+
+
+void ChartDialog::_updateChart()
+{
+    MC::Ptr mc = MCM::currentMetric();
+    GrowthData::CPtr ngd = mc->growthData( _selectedSex(), _selectedEthnicity(), _selectedSource());
+
+    if ( ngd)
+    {
+        const size_t d = static_cast<size_t>(_ui->dimensionSpinBox->value() - 1);   // Dimension to display
+        Metric::Chart* chart = new Metric::Chart( ngd, d, MS::selectedModel());
+        chart->addTitle( mc->name());
+        _cview->setChart( chart);
+    }   // end if
+    else
+    {
+        static const QString src0 = "No growth curve data available.";
+        QString src = src0;
+        QtCharts::QChart* chart = new QtCharts::QChart;
+        chart->setTitle( QString("<center><big><b>%1</b><br><em>%2</em></big></center>").arg( mc->name(), src));
+        _cview->setChart(chart);
+    }   // end else
+
+    _ui->saveImageButton->setEnabled( ngd != nullptr);
+
+    if ( mc->currentGrowthData() != ngd)
+    {
+        mc->setCurrentGrowthData( ngd);
+        emit onGrowthDataChanged();
+    }   // end if
+}   // end _updateChart
+
+
+void ChartDialog::_doOnSaveImage()
+{
+    QWidget* prnt = static_cast<QWidget*>(parent());
+    QFileDialog fdialog( prnt);
     fdialog.setWhatsThis( tr("Save image as..."));
     fdialog.setFileMode( QFileDialog::AnyFile);
     fdialog.setNameFilter( "Image Files (*.jpg *.jpeg *.png *.gif *.bmp)");
@@ -265,5 +285,5 @@ void ChartDialog::doOnSaveImage()
     static_cast<QWidget*>(_cview)->render( &pixmap);
 
     if ( !imgpath.isEmpty() && !pixmap.save(imgpath))
-        QMessageBox::warning( (QWidget*)parent(), tr("Save Error!"), tr("Unable to save to file ") + imgpath);
-}   // end doOnSaveImage
+        QMessageBox::warning( prnt, tr("Save Error!"), tr("Unable to save to file ") + imgpath);
+}   // end _doOnSaveImage

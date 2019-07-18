@@ -32,6 +32,7 @@
 using FaceTools::ModelViewer;
 using RFeatures::CameraParams;
 using FaceTools::Interactor::MVI;
+using FaceTools::Interactor::MouseHandler;
 using QTools::VtkViewerInteractorManager;
 using QTools::InteractionMode;
 
@@ -52,23 +53,14 @@ void ModelViewer::enableFloodLights( bool enable)
 // public
 bool ModelViewer::floodLightsEnabled() const { return _floodLightsEnabled;}
 
-void ModelViewer::showAxes( bool enable) { _axes->setVisible(enable);}
-bool ModelViewer::legendShown() const { return _scalarLegend->isVisible();}
-bool ModelViewer::axesShown() const { return _axes->isVisible();}
 void ModelViewer::updateRender() { _qviewer->updateRender();}
-void ModelViewer::showLegend( bool enable) { _scalarLegend->setVisible(enable); }
 
 
 // public
 ModelViewer::ModelViewer( QWidget* parent, bool floodFill)
-    : QWidget(parent), _qviewer( nullptr), _scalarLegend(nullptr), _axes(nullptr),
-      _floodLightsEnabled(floodFill)
+    : QWidget(parent), _qviewer( nullptr), _floodLightsEnabled(floodFill)
 {
     _qviewer = new QTools::VtkActorViewer(this);
-    _scalarLegend = new RVTK::ScalarLegend( _qviewer->GetInteractor());
-    _axes = new RVTK::Axes( _qviewer->GetInteractor());
-    showAxes(false);
-    showLegend(false);
     enableFloodLights( _floodLightsEnabled);
 
     setLayout(new QVBoxLayout);
@@ -78,62 +70,14 @@ ModelViewer::ModelViewer( QWidget* parent, bool floodFill)
 
 
 // public
-ModelViewer::~ModelViewer()
-{
-    delete _axes;
-    delete _scalarLegend;
-    delete _qviewer;
-}   // end dtor
+ModelViewer::~ModelViewer() { delete _qviewer;}
 
 
-// public
-bool ModelViewer::isAttached( MVI* iface) const
-{
-    bool attached = _interactors.count(iface) > 0;
-#ifndef NDEBUG
-    if (attached)
-    {
-        assert( iface->viewer() == this);
-        assert(_qviewer->isAttached(iface));
-    }   // end if
-    else
-    {
-        assert( iface->viewer() != this);
-        assert(!_qviewer->isAttached(iface));
-    }   // end else
-#endif
-    return attached;
-}   // end isAttached
-
-
-size_t ModelViewer::transferInteractors( ModelViewer *tv)
-{
-    if ( tv == this)
-        return 0;
-    std::unordered_set<MVI*> cinteractors = _interactors;   // Copy out since moving
-    for ( MVI* mvi : cinteractors)
-        mvi->setViewer(tv);
-    return cinteractors.size();
-}   // end transferInteractors
-
-
-// protected (called by MVI from calls to MVI::setViewer())
-bool ModelViewer::attach( MVI* iface)
-{
-    bool ok = _qviewer->attach(iface);
-    if ( ok)
-        _interactors.insert(iface);
-    return ok;
-}   // end attach
-
-
-bool ModelViewer::detach( MVI* iface)
-{
-    bool ok = _qviewer->detach(iface);
-    if ( ok)
-        _interactors.erase(iface);
-    return ok;
-}   // end detach
+// protected
+bool ModelViewer::attach( MVI* v) { return _qviewer->attach( v);}
+bool ModelViewer::detach( MVI* v) { return _qviewer->detach( v);}
+bool ModelViewer::attach( MouseHandler* v) { return _qviewer->attach( v);}
+bool ModelViewer::detach( MouseHandler* v) { return _qviewer->detach( v);}
 
 
 // public
@@ -146,11 +90,59 @@ cv::Vec3f ModelViewer::project( const cv::Point2f& p) const { return _qviewer->p
 cv::Vec3f ModelViewer::project( const cv::Point& p) const { return _qviewer->pickWorldPosition( p);}
 void ModelViewer::setCursor( QCursor cursor) { _qviewer->setCursor(cursor);}
 
+void ModelViewer::setBackgroundColour( const QColor& c)
+{
+    vtkRenderer* ren = _qviewer->getRenderer();
+    ren->SetBackground( c.redF(), c.greenF(), c.blueF());
+}   // end setBackgroundColour
+
+
+QColor ModelViewer::backgroundColour() const
+{
+    vtkRenderer* ren = _qviewer->getRenderer();
+    QColor c;
+    c.setRedF( ren->GetBackground()[0]);
+    c.setGreenF( ren->GetBackground()[1]);
+    c.setBlueF( ren->GetBackground()[2]);
+    return c;
+}   // end backgroundColour
+
+
 void ModelViewer::add( vtkProp* prop) { if ( prop) _qviewer->add(prop);}
 void ModelViewer::remove( vtkProp* prop) { if ( prop) _qviewer->remove(prop);}
 void ModelViewer::clear() { _qviewer->clear();}
 
-void ModelViewer::setCamera( const CameraParams& cp) { _qviewer->setCamera( cp);}
+
+void ModelViewer::setCamera( const CameraParams& cp)
+{
+    _qviewer->setCamera( cp);
+    refreshClippingPlanes();
+}   // end setCamera
+
+
+void ModelViewer::refreshClippingPlanes()
+{
+    vtkCamera* vcamera = getRenderer()->GetActiveCamera();
+    double cmin, cmax;  // Get the min and max clipping ranges
+    vcamera->GetClippingRange( cmin, cmax);
+    const CameraParams cp = camera();
+    /*
+    std::cerr << "Clipping plane range min --> max: " << cmin << " --> " << cmax << std::endl;
+    std::cerr << "  Camera position:  " << cp.pos << std::endl;
+    std::cerr << "  Camera focus:     " << cp.focus << std::endl;
+    */
+    const double pfdelta = cv::norm(cp.focus - cp.pos);
+    //std::cerr << "  Position - Focus: " << pfdelta << std::endl;
+    // If the distance between the camera position and the focus is less than 2% the
+    // distance to the near clipping plane, then make the near clipping plane closer.
+    cmin = 0.01 * cmax;
+    const double ctol =  2*cmin > pfdelta ? 0.00001 : 0.01;
+    getRenderer()->SetNearClippingPlaneTolerance(ctol);
+    getRenderer()->ResetCameraClippingRange();
+    updateRender();
+}   // end refreshClippingPlanes
+
+
 size_t ModelViewer::getWidth() const { return _qviewer->getWidth();}
 size_t ModelViewer::getHeight() const { return _qviewer->getHeight();}
 bool ModelViewer::saveSnapshot() const { return QTools::saveImage( _qviewer->getColourImg());}
@@ -210,25 +202,13 @@ bool ModelViewer::calcSurfacePosition( const vtkProp *prop, const cv::Point2f& p
 
 
 // public
-void ModelViewer::setLegend( const std::string& ltitle, vtkLookupTable* table)
-{
-    _scalarLegend->setTitle( ltitle);
-    _scalarLegend->setLookupTable( table);
-}   // end setLegend
-
-
-CameraParams ModelViewer::getCamera() const
-{
-    CameraParams cp;
-    _qviewer->getCamera( cp);
-    return cp;
-}   // end getCamera
+CameraParams ModelViewer::camera() const { return _qviewer->camera();}
 
 
 void ModelViewer::resetDefaultCamera( float camRng)
 {
     // Set initial camera params
-    CameraParams cp = getCamera();
+    CameraParams cp = camera();
     cp.fov = 30;
     cp.up = cv::Vec3f(0,1,0);
     cp.focus = cv::Vec3f(0,0,0);
@@ -240,7 +220,7 @@ void ModelViewer::resetDefaultCamera( float camRng)
 
 double ModelViewer::cameraDistance() const
 {
-    CameraParams cp = getCamera();
+    CameraParams cp = camera();
     return cv::norm( cp.pos - cp.focus);
 }   // end cameraDistance
 
@@ -253,18 +233,37 @@ void ModelViewer::setCamera( const cv::Vec3f& focus, const cv::Vec3f& nvec, cons
 }   // end setCamera
 
 
-void ModelViewer::setFocus( const cv::Vec3f& focus)
+void ModelViewer::setCamera( const cv::Vec3f& foc, const cv::Vec3f& pos)
 {
-    CameraParams cp = getCamera();
-    cp.focus = focus;
+    CameraParams cp = camera();
+    cp.focus = foc;
+    cp.pos = pos;
+    // Ensure up vector remains orthogonal to position - focus
+    cv::Vec3f cvec, uvec;
+    cv::normalize( cp.pos - cp.focus, cvec);
+    cv::normalize( cp.up, uvec);
+    const cv::Vec3f rvec = cvec.cross(uvec);
+    cp.up = rvec.cross(cvec);
     setCamera( cp);
-}   // end setFocus
+}   // end setCamera
+
+
+void ModelViewer::setCameraFocus(const cv::Vec3f &foc)
+{
+    setCamera( foc, camera().pos);
+}   // end setCameraFocus
+
+
+void ModelViewer::setCameraPosition(const cv::Vec3f &pos)
+{
+    setCamera( camera().focus, pos);
+}   // end setCameraPosition
 
 
 void ModelViewer::fitCamera( double radius)
 {
     // Set new field of view based on params.faceCropRadius unless custom field of view set
-    CameraParams cp = getCamera();
+    CameraParams cp = camera();
     const double crng = cv::norm(cp.focus - cp.pos);
     cp.fov = atan2( radius, crng) * 360.0/CV_PI;
     setCamera(cp);

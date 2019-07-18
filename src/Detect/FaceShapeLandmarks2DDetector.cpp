@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +33,6 @@
 using FaceTools::Detect::FaceShapeLandmarks2DDetector;
 using FaceTools::Landmark::LandmarkSet;
 using RVTK::OffscreenModelViewer;
-using RFeatures::ObjModelKDTree;
 
 
 namespace {
@@ -57,14 +56,14 @@ auto toT = FaceTools::toTarget;
 auto toD = FaceTools::findDeepestPoint;
 
 
-cv::Vec3f findMSO( const ObjModelKDTree* kdt, cv::Vec3f v, const cv::Vec3f& p)
+cv::Vec3f findMSO( const FM* fm, cv::Vec3f v, const cv::Vec3f& p)
 {
     float x = p[0]; // In line with pupil
     float y = 0.5f * (p[1] + v[1]); // Halfway between pupil and reference vertex
     float z = v[2]; // Depth of reference vertex
-    cv::Vec3f t0 = toS( kdt, cv::Vec3f( x,          y, z));    // Bottom
-    cv::Vec3f t1 = toS( kdt, cv::Vec3f( x, 2*v[1] - y, z));    // Top
-    return toD( kdt, t0, t1, nullptr);
+    cv::Vec3f t0 = toS( fm, cv::Vec3f( x,          y, z));    // Bottom
+    cv::Vec3f t1 = toS( fm, cv::Vec3f( x, 2*v[1] - y, z));    // Top
+    return toD( fm, t0, t1, nullptr);
 }   // end findMSO
 
 
@@ -89,7 +88,7 @@ void setLandmark( const QString& ch, const cv::Vec3f& v, LandmarkSet& lms, const
 void setLandmarks( const OffscreenModelViewer& vwr,
                    const std::vector<bool>& foundVec,
                    const std::vector<cv::Point2f>& cpts,
-                   const ObjModelKDTree* kdt,
+                   const FM* fm,
                    LandmarkSet& lms,
                    const IntSet& ulmks)
 {
@@ -102,15 +101,15 @@ void setLandmarks( const OffscreenModelViewer& vwr,
 
     // Left and right palpebral superius
     std::cerr << " * Detecting [PS] L" << std::endl;
-    cv::Vec3f lps = toS( kdt, 0.5f * (vpts[37] + vpts[38]));
+    cv::Vec3f lps = toS( fm, 0.5f * (vpts[37] + vpts[38]));
     std::cerr << " * Detecting [PS] R" << std::endl;
-    cv::Vec3f rps = toS( kdt, 0.5f * (vpts[43] + vpts[44]));
+    cv::Vec3f rps = toS( fm, 0.5f * (vpts[43] + vpts[44]));
 
     // Left and right palpebral inferius
     std::cerr << " * Detecting [PI] L" << std::endl;
-    cv::Vec3f lpi = toS( kdt, 0.5f * (vpts[40] + vpts[41]));
+    cv::Vec3f lpi = toS( fm, 0.5f * (vpts[40] + vpts[41]));
     std::cerr << " * Detecting [PI] R" << std::endl;
-    cv::Vec3f rpi = toS( kdt, 0.5f * (vpts[46] + vpts[47]));
+    cv::Vec3f rpi = toS( fm, 0.5f * (vpts[46] + vpts[47]));
 
     cv::Vec3f enw( 0, 0, -25);
     cv::Vec3f exw( 0, 0, -5);
@@ -121,8 +120,8 @@ void setLandmarks( const OffscreenModelViewer& vwr,
     cv::Vec3f len = vpts[39] + enw;
     cv::Vec3f lex = vpts[36] + exw;
     len[0] += 3;
-    len = toS( kdt, len);
-    lex = toS( kdt, lex);
+    len = toS( fm, len);
+    lex = toS( fm, lex);
 
     // Right endo and exo canthi
     std::cerr << " * Detecting [EN] R" << std::endl;
@@ -130,38 +129,38 @@ void setLandmarks( const OffscreenModelViewer& vwr,
     cv::Vec3f ren = vpts[42] + enw;
     cv::Vec3f rex = vpts[45] + exw;
     ren[0] -= 3;
-    ren = toS( kdt, ren);
-    rex = toS( kdt, rex);
+    ren = toS( fm, ren);
+    rex = toS( fm, rex);
 
     // Left pupil
     std::cerr << " * Detecting [P] L" << std::endl;
-    const cv::Vec3f lp = toS( kdt, 0.25f * (len + lex + lps + lpi));
+    const cv::Vec3f lp = toS( fm, 0.25f * (len + lex + lps + lpi));
 
     // Right pupil
     std::cerr << " * Detecting [P] R" << std::endl;
-    const cv::Vec3f rp = toS( kdt, 0.25f * (ren + rex + rps + rpi));
+    const cv::Vec3f rp = toS( fm, 0.25f * (ren + rex + rps + rpi));
 
     // Sellion - deepest part of the nose bridge between the pupils
     std::cerr << " * Detecting [SE]" << std::endl;
-    const cv::Vec3f se = toS( kdt, toD( kdt, lp, rp, nullptr));
+    const cv::Vec3f se = toS( fm, toD( fm, lp, rp, nullptr));
 
     // Mid-supraorbital
     // [17,21] left brow left to right, [22,26] right brow left to right
     std::cerr << " * Detecting [MSO] L" << std::endl;
-    cv::Vec3f lmso = findMSO( kdt, (1.0f/3) * (vpts[18] + vpts[19] + vpts[20]), lp);    // Left
+    cv::Vec3f lmso = findMSO( fm, (1.0f/3) * (vpts[18] + vpts[19] + vpts[20]), lp);    // Left
     std::cerr << " * Detecting [MSO] R" << std::endl;
-    cv::Vec3f rmso = findMSO( kdt, (1.0f/3) * (vpts[23] + vpts[24] + vpts[25]), rp);    // Right
+    cv::Vec3f rmso = findMSO( fm, (1.0f/3) * (vpts[23] + vpts[24] + vpts[25]), rp);    // Right
 
     // Glabella
     std::cerr << " * Detecting [G]" << std::endl;
     cv::Vec3f g = 0.5f * (lmso + rmso);
     g[0] = se[0];
-    g = toS( kdt, g);
+    g = toS( fm, g);
     cv::Vec3f tmp = se;  // Place temp point in line with sellion halfway in y between palpebral superius and mso points
     tmp[1] = 0.25f * (lps[1] + rps[1] + lmso[1] + rmso[1]);
-    tmp = toS( kdt, tmp);
+    tmp = toS( fm, tmp);
     // Find glabella as maximally off curve point between tmp and tmp point placed above halfway (x) between mso points
-    g = toD( kdt, tmp, toS( kdt, 2*g - tmp), nullptr);
+    g = toD( fm, tmp, toS( fm, 2*g - tmp), nullptr);
 
     // Nasion
     std::cerr << " * Detecting [N]" << std::endl;
@@ -170,111 +169,111 @@ void setLandmarks( const OffscreenModelViewer& vwr,
     /*
     n[0] = se[0];
     n[1] = std::max( 0.5f * (lps[1] + rps[1]), se[1]);
-    n = toS( kdt, n);
+    n = toS( fm, n);
     n[1] = std::max(n[1], se[1]); // Ensure nasion remains no lower on face than sellion
     */
-    n = toD( kdt, g, se, nullptr);
+    n = toD( fm, g, se, nullptr);
 
     // Pronasale as on detected nose tip but high in z axis.
     std::cerr << " * Detecting [PRN]" << std::endl;
-    cv::Vec3f prn = toS( kdt, vpts[30]);
-    prn = toT( kdt, prn, cv::Vec3f(prn[0], prn[1], prn[2] + 100));
+    cv::Vec3f prn = toS( fm, vpts[30]);
+    prn = toT( fm, prn, cv::Vec3f(prn[0], prn[1], prn[2] + 100));
 
     // Mid-nasal dorsum as halfway between sellion and pronasale and high in z axis.
     std::cerr << " * Detecting [MND]" << std::endl;
-    cv::Vec3f mnd = toS( kdt, se + 0.5f*( cv::Vec3f( prn[0], prn[1] + 5, prn[2] + 10) - se));
+    cv::Vec3f mnd = toS( fm, se + 0.5f*( cv::Vec3f( prn[0], prn[1] + 5, prn[2] + 10) - se));
 
     // Maxillofrontale
     std::cerr << " * Detecting [MF] L" << std::endl;
-    cv::Vec3f lref0 = toS( kdt, 0.5f * (g + len));
-    cv::Vec3f lref1 = toS( kdt, 0.5f * (mnd + len));
-    const cv::Vec3f lmf = toD( kdt, lref0, lref1, nullptr);
+    cv::Vec3f lref0 = toS( fm, 0.5f * (g + len));
+    cv::Vec3f lref1 = toS( fm, 0.5f * (mnd + len));
+    const cv::Vec3f lmf = toD( fm, lref0, lref1, nullptr);
     std::cerr << " * Detecting [MF] R" << std::endl;
-    cv::Vec3f rref0 = toS( kdt, 0.5f * (g + ren));
-    cv::Vec3f rref1 = toS( kdt, 0.5f * (mnd + ren));
-    const cv::Vec3f rmf = toD( kdt, rref0, rref1, nullptr);
+    cv::Vec3f rref0 = toS( fm, 0.5f * (g + ren));
+    cv::Vec3f rref1 = toS( fm, 0.5f * (mnd + ren));
+    const cv::Vec3f rmf = toD( fm, rref0, rref1, nullptr);
 
     // Subnasale
     std::cerr << " * Detecting [SN]" << std::endl;
-    cv::Vec3f sn = toS( kdt, vpts[33]);
+    cv::Vec3f sn = toS( fm, vpts[33]);
 
     // Alare (vpts[31] and vpts[35] left and right respectively)
     std::cerr << " * Detecting [AL] L" << std::endl;
-    cv::Vec3f lal = toS( kdt, vpts[31]);
+    cv::Vec3f lal = toS( fm, vpts[31]);
     std::cerr << " * Detecting [AL] R" << std::endl;
-    cv::Vec3f ral = toS( kdt, vpts[35]);
+    cv::Vec3f ral = toS( fm, vpts[35]);
 
     // Crista philtri
     std::cerr << " * Detecting [CPH] L" << std::endl;
-    cv::Vec3f lcph = toS( kdt, vpts[50]);
+    cv::Vec3f lcph = toS( fm, vpts[50]);
     std::cerr << " * Detecting [CPH] R" << std::endl;
-    cv::Vec3f rcph = toS( kdt, vpts[52]);
+    cv::Vec3f rcph = toS( fm, vpts[52]);
 
     // Subalare (32 and 34 left and right)
     std::cerr << " * Detecting [SBAL] L" << std::endl;
-    cv::Vec3f lsbal = toS( kdt, vpts[32]);
+    cv::Vec3f lsbal = toS( fm, vpts[32]);
     std::cerr << " * Detecting [SBAL] R" << std::endl;
-    cv::Vec3f rsbal = toS( kdt, vpts[34]);
+    cv::Vec3f rsbal = toS( fm, vpts[34]);
 
     cv::Vec3f lac, rac;
 
     for ( int i = 0; i < 1; ++i)
     {
         std::cerr << " * Updating  [SN]" << std::endl;
-        sn = toD( kdt, lsbal, rsbal, nullptr);
+        sn = toD( fm, lsbal, rsbal, nullptr);
 
         // Find reference points on alare as highest points between subnasale and halfway to pupils.
         std::cerr << " * Updating  [AL] L" << std::endl;
-        cv::Vec3f lt = toD( kdt, sn, sn + 0.5f*(lp - sn), nullptr);
+        cv::Vec3f lt = toD( fm, sn, sn + 0.5f*(lp - sn), nullptr);
         std::cerr << " * Updating  [AL] R" << std::endl;
-        cv::Vec3f rt = toD( kdt, sn, sn + 0.5f*(rp - sn), nullptr);
+        cv::Vec3f rt = toD( fm, sn, sn + 0.5f*(rp - sn), nullptr);
 
         // Alare curvature point points
         std::cerr << " * Updating  [AC] L" << std::endl;
-        lac = toD( kdt, lt, toS( kdt, cv::Vec3f( lp[0], sn[1], 0.5f* (lp[2] + sn[2]))), nullptr);
+        lac = toD( fm, lt, toS( fm, cv::Vec3f( lp[0], sn[1], 0.5f* (lp[2] + sn[2]))), nullptr);
         std::cerr << " * Updatint  [AC] R" << std::endl;
-        rac = toD( kdt, rt, toS( kdt, cv::Vec3f( rp[0], sn[1], 0.5f* (rp[2] + sn[2]))), nullptr);
+        rac = toD( fm, rt, toS( fm, cv::Vec3f( rp[0], sn[1], 0.5f* (rp[2] + sn[2]))), nullptr);
 
         // Now update alare points using the just calculated curvature points and the reference points.
-        cv::Vec3f lt2 = toS( kdt, lac + 2*(lt - lac));
-        lal = toD( kdt, lac, lt2, nullptr);
-        cv::Vec3f rt2 = toS( kdt, rac + 2*(rt - rac));
-        ral = toD( kdt, rac, rt2, nullptr);
+        cv::Vec3f lt2 = toS( fm, lac + 2*(lt - lac));
+        lal = toD( fm, lac, lt2, nullptr);
+        cv::Vec3f rt2 = toS( fm, rac + 2*(rt - rac));
+        ral = toD( fm, rac, rt2, nullptr);
 
         // Update subalare
         std::cerr << " * Updating  [SBAL] L" << std::endl;
-        lsbal = toD( kdt, lal, lcph, nullptr);
+        lsbal = toD( fm, lal, lcph, nullptr);
         std::cerr << " * Updating  [SBAL] R" << std::endl;
-        rsbal = toD( kdt, ral, rcph, nullptr);
+        rsbal = toD( fm, ral, rcph, nullptr);
 
         std::cerr << " * Updating  [SN]" << std::endl;
-        sn = toD( kdt, lsbal, rsbal, nullptr);
+        sn = toD( fm, lsbal, rsbal, nullptr);
     }   // end for
 
     // Cheilion
     std::cerr << " * Detecting [CH] L" << std::endl;
-    const cv::Vec3f lch = toS( kdt, vpts[48]);
+    const cv::Vec3f lch = toS( fm, vpts[48]);
     std::cerr << " * Detecting [CH] R" << std::endl;
-    const cv::Vec3f rch = toS( kdt, vpts[54]);
+    const cv::Vec3f rch = toS( fm, vpts[54]);
 
     // Labiale superius
     std::cerr << " * Detecting [LS]" << std::endl;
-    const cv::Vec3f ls = toS( kdt, vpts[51]);
+    const cv::Vec3f ls = toS( fm, vpts[51]);
 
     // Labiale inferius
     std::cerr << " * Detecting [LI]" << std::endl;
-    const cv::Vec3f li = toS( kdt, 1.0f/3 * (vpts[56] + vpts[57] + vpts[58]));
+    const cv::Vec3f li = toS( fm, 1.0f/3 * (vpts[56] + vpts[57] + vpts[58]));
 
     // Sublabiale
     std::cerr << " * Detecting [SL]" << std::endl;
     const float hmw = static_cast<float>(cv::norm(lch - rch)/2);   // Half mouth width
-    const cv::Vec3f sl = toD( kdt, li, toS(kdt, cv::Vec3f(li[0], li[1]-hmw, li[2])), nullptr);
+    const cv::Vec3f sl = toD( fm, li, toS(fm, cv::Vec3f(li[0], li[1]-hmw, li[2])), nullptr);
 
     // Stomion inferius/superius
     std::cerr << " * Detecting [STS]" << std::endl;
-    cv::Vec3f sts = toS( kdt, 1.0f/3 * (vpts[65] + vpts[66] + vpts[67]));
+    cv::Vec3f sts = toS( fm, 1.0f/3 * (vpts[65] + vpts[66] + vpts[67]));
     std::cerr << " * Detecting [STI]" << std::endl;
-    cv::Vec3f sti = toS( kdt, 1.0f/3 * (vpts[61] + vpts[62] + vpts[63]));
+    cv::Vec3f sti = toS( fm, 1.0f/3 * (vpts[61] + vpts[62] + vpts[63]));
     // Detector can confuse placement of stomion inferius/superius, so check relative heights.
     if ( sts[1] < sti[1])
         std::swap( sts, sti);
@@ -344,7 +343,7 @@ bool FaceShapeLandmarks2DDetector::initialise( const std::string& fdat)
 
 
 // public static
-bool FaceShapeLandmarks2DDetector::detect( const OffscreenModelViewer& vwr, const ObjModelKDTree* kdt, LandmarkSet& lms, const IntSet& ulmks)
+bool FaceShapeLandmarks2DDetector::detect( const OffscreenModelViewer& vwr, const FM* fm, LandmarkSet& lms, const IntSet& ulmks)
 {
     if ( s_shapePredictor.num_parts() == 0)
     {
@@ -399,6 +398,6 @@ bool FaceShapeLandmarks2DDetector::detect( const OffscreenModelViewer& vwr, cons
         }   // end else
     }   // end for
 
-    setLandmarks( vwr, foundVec, cpts, kdt, lms, ulmks);
+    setLandmarks( vwr, foundVec, cpts, fm, lms, ulmks);
     return nfound == 68;
 }   // end detectFeatures

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,37 +16,52 @@
  ************************************************************************/
 
 #include <ActionResetCamera.h>
+#include <FaceModelViewer.h>
+#include <FaceModel.h>
 #include <algorithm>
 using FaceTools::Action::ActionResetCamera;
 using FaceTools::Action::FaceAction;
-using FaceTools::FMVS;
+using FaceTools::Action::Event;
+using FaceTools::Vis::FV;
+using FaceTools::FMV;
 using FaceTools::FMV;
 using FaceTools::FVS;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionResetCamera::ActionResetCamera( const QString& dn, const QIcon& ico, FMV *mv)
-    : FaceAction( dn, ico)
+ActionResetCamera::ActionResetCamera( const QString& dn, const QIcon& ico, const QKeySequence& ks)
+    : FaceAction( dn, ico, ks)
 {
-    if ( mv)
-        addViewer(mv);
-    setRespondToEvent( VIEWER_CHANGE);
+    addTriggerEvent( Event::VIEWER_CHANGE);
 }   // end ctor
 
-
-bool ActionResetCamera::doAction( FVS &fvs, const QPoint&)
+void ActionResetCamera::resetCamera( const FV* fv)
 {
-    FMVS vwrs = fvs.dviewers();
-    for ( FMV* fmv : vwrs)
-        fmv->resetCamera();
+    FMV* vwr = fv->viewer();
+    const FM* fm = fv->data();
+    fm->lockForRead();
+    const RFeatures::ObjModelBounds& bounds = *fm->bounds()[0];
+    vwr->resetDefaultCamera( static_cast<float>( 1.5 * bounds.diagonal()));
+    vwr->setCameraFocus( bounds.centre());    // Also resets the clipping range.
+    fm->unlock();
+}   // end resetCamera
 
-    for ( FMV* fmv : _viewers)
+
+void ActionResetCamera::doAction( Event)
+{
+    if ( MS::isViewSelected())
     {
-        if ( fmv->attached().empty())
+        resetCamera( MS::selectedView());
+        emit onEvent( Event::CAMERA_CHANGE);
+    }   // end if
+    else
+    {
+        for ( FMV* vwr : MS::viewers())
         {
-            fmv->resetCamera();
-            fmv->updateRender();
-        }   // end if
-    }   // end for
+            vwr->resetDefaultCamera( FaceTools::DEFAULT_CAMERA_DISTANCE);
+            vwr->setCameraFocus( cv::Vec3f(0,0,0));
+        }   // end for
 
-    return true;
+        emit onEvent( {Event::CAMERA_CHANGE, Event::ALL_VIEWERS});
+    }   // end else
 }   // end doAction

@@ -32,6 +32,8 @@ public:
     // Call whenever given Path instance is changed (id of given path must match internal).
     void update( const std::list<cv::Vec3f>&);
 
+    void updateColours();
+
     int id() const { return _id;}
     void setVisible( bool, ModelViewer*);  // Add/remove the path actors (handles and path) to the viewer.
 
@@ -47,6 +49,8 @@ public:
     private:
         Handle( int, int, const cv::Vec3f&, double);
         ~Handle();
+        Handle( const Handle&) = delete;
+        void operator=( const Handle&) = delete;
         int _hid;
         int _pid;
         SphereView *_sv;
@@ -57,7 +61,6 @@ public:
     Handle* handle1() { return _h1;}
 
     void pokeTransform( const vtkMatrix4x4*);
-    void fixTransform();
 
 private:
     ModelViewer *_viewer;

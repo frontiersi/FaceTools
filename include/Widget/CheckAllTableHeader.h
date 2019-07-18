@@ -27,7 +27,7 @@ namespace FaceTools { namespace Widget {
 class FaceTools_EXPORT CheckAllTableHeader : public QHeaderView
 { Q_OBJECT
 public:
-    explicit CheckAllTableHeader( QWidget *parent = nullptr);
+    CheckAllTableHeader( QWidget *parent = nullptr, bool useEye=false);
 
 public slots:
     void setAllChecked( bool);
@@ -40,6 +40,7 @@ protected:
 
 private:
     bool _on;
+    bool _useEye;
 };  // end class
 
 }}   // end namespaces

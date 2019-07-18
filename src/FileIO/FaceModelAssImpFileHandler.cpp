@@ -39,15 +39,8 @@ FM* FaceModelAssImpFileHandler::read( const QString& qfname)
     const std::string fname = qfname.toStdString();
     RFeatures::ObjModel::Ptr model = _assimp->load(fname);
     if ( model)
-    {
-        RFeatures::ObjModelInfo::Ptr minfo = RFeatures::ObjModelInfo::create(model);
-        if ( minfo)
-            fm = new FM(minfo);
-        else
-            _err = QString("Failed to clean object loaded from '%1'").arg( qfname);
-    }   // end if
+        fm = new FM(model);
     else
         _err = _assimp->err().c_str();
     return fm;
 }   // end read
-

@@ -17,25 +17,27 @@
 
 #include <ActionShowScanInfo.h>
 #include <FaceModel.h>
-#include <FaceView.h>
-#include <cmath>
-#include <cassert>
 using FaceTools::Action::ActionShowScanInfo;
 using FaceTools::Action::ActionUpdateThumbnail;
 using FaceTools::Action::FaceAction;
-using FaceTools::Action::EventSet;
+using FaceTools::Action::Event;
 using FaceTools::Widget::ScanInfoDialog;
-using FaceTools::Vis::FV;
-using FaceTools::FVS;
 using FaceTools::FM;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionShowScanInfo::ActionShowScanInfo( const QString& dname, const QIcon& icon, QWidget* parent)
-    : FaceAction( dname, icon), _dialog( new ScanInfoDialog(parent)), _tupdater(nullptr)
+ActionShowScanInfo::ActionShowScanInfo( const QString& dname, const QIcon& icon, const QKeySequence& ks)
+    : FaceAction( dname, icon, ks), _tupdater(nullptr), _dialog(nullptr)
 {
-    connect( _dialog, &ScanInfoDialog::onUpdated, this, &ActionShowScanInfo::doOnUpdated);
-    setAsDialogShower( _dialog);
 }   // end ctor
+
+
+void ActionShowScanInfo::postInit()
+{
+    QWidget* p = static_cast<QWidget*>(parent());
+    _dialog = new ScanInfoDialog(p);
+    connect( _dialog, &ScanInfoDialog::onUpdated, [this](){ emit onEvent(Event::METADATA_CHANGE);});
+}   // end postInit
 
 
 ActionShowScanInfo::~ActionShowScanInfo()
@@ -47,31 +49,28 @@ ActionShowScanInfo::~ActionShowScanInfo()
 void ActionShowScanInfo::setThumbnailUpdater( ActionUpdateThumbnail* act)
 {
     _tupdater = act;
-    const int dims = _dialog->minThumbDims();
-    _tupdater->setThumbnailSize( dims, dims);
+    const QSize dims = _dialog->thumbDims();
+    _tupdater->setThumbnailSize( dims.width(), dims.height());
     connect( act, &ActionUpdateThumbnail::updated, this, &ActionShowScanInfo::doOnUpdatedThumbnail);
 }   // end setThumbnailUpdater
 
 
-void ActionShowScanInfo::tellReady( const FV* fv, bool v)
+bool ActionShowScanInfo::checkState( Event e)
 {
-    FM* fm = nullptr;
-    if ( fv && v)
-        fm = fv->data();
-    _dialog->set( fm);
+    if ( EventGroup(e).has(Event::CLOSED_MODEL) && !MS::selectedModel())
+        _dialog->hide();
+    return !_dialog->isHidden();
+}   // end checkState
+
+
+bool ActionShowScanInfo::checkEnable( Event)
+{
+    FM* fm = ModelSelector::selectedModel();
+    _dialog->set(fm);
     if ( fm && _tupdater)
         doOnUpdatedThumbnail( fm, _tupdater->thumbnail(fm));
-}   // end tellReady
-
-
-void ActionShowScanInfo::doOnUpdated( FM* fm)
-{
-    EventSet eset;
-    eset.insert(METADATA_CHANGE);
-    FVS fvs;
-    fvs.insert(fm);
-    emit reportFinished( eset, fvs, true);
-}   // end doOnUpdated
+    return fm;
+}   // end checkEnable
 
 
 void ActionShowScanInfo::doOnUpdatedThumbnail( const FM* fm, const cv::Mat& img)
@@ -79,3 +78,12 @@ void ActionShowScanInfo::doOnUpdatedThumbnail( const FM* fm, const cv::Mat& img)
     if ( _dialog->get() == fm)
         _dialog->setThumbnail(img);
 }   // end doOnUpdatedThumbnail
+
+
+void ActionShowScanInfo::doAction( Event)
+{
+    _dialog->refresh();
+    _dialog->show();
+    _dialog->raise();
+    _dialog->activateWindow();
+}   // end doAction

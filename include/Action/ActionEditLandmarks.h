@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,20 +28,19 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionEditLandmarks : public ActionVisualise
 { Q_OBJECT
 public:
-    ActionEditLandmarks( const QString&, const QIcon&, Interactor::MEEI*, bool visOnLoad=false);
+    ActionEditLandmarks( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
     ~ActionEditLandmarks() override;
 
-    Interactor::LandmarksInteractor* interactor() override { return _interactor;}
+    QString toolTip() const override { return "Toggle the showing of facial landmarks (if present).";}
 
-protected slots:
-    void tellReady( const Vis::FV*, bool) override;
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet&, const FVS&, bool) override;
-    void doOnEditedLandmark( const Vis::FV*);
+protected:
+    bool checkState( Event) override;
+    bool doBeforeAction( Event) override;
+    void doAfterAction( Event) override;
 
 private:
     Vis::LandmarksVisualisation *_vis;
-    Interactor::LandmarksInteractor *_interactor;
+    std::shared_ptr<Interactor::LandmarksInteractor> _interactor;
 };  // end class
 
 }}   // end namespace

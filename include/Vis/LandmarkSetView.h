@@ -26,13 +26,12 @@ namespace FaceTools { namespace Vis {
 class FaceTools_EXPORT LandmarkSetView
 {
 public:
-    LandmarkSetView( const Landmark::LandmarkSet&, double radius=1.1);
+    LandmarkSetView( const Landmark::LandmarkSet&, double radius=1.2);
     virtual ~LandmarkSetView();
 
     void setLandmarkRadius( double);
     double landmarkRadius() const { return _lmrad;}
 
-    void setColour( double r, double g, double b);
     void setColour( const cv::Vec3d&);
 
     void setVisible( bool, ModelViewer*);              // Show/hide all landmarks (also sets current viewer)
@@ -43,19 +42,18 @@ public:
     const IntSet& highlighted() const { return _highlighted;} // IDs of highlighted landmarks
     void highlightLandmark( bool, int, FaceLateral);          // Highlights a (visible) landmark
 
+    // Set the landmark position with the model in standard position.
+    // Use pokeTransform to make affine transforms on the actors.
     void set( int, FaceLateral, const cv::Vec3f&);
     void remove( int);
-
-    // Refresh from the given set of landmarks.
-    void refresh( const Landmark::LandmarkSet&);
 
     // Returns ID of landmark for prop or -1 if not found.
     // On return >= 0, out parameter FaceLateral is set to the
     // lateral on which the landmark appears.
     int landmarkId( const vtkProp*, FaceLateral&) const;
 
-    void pokeTransform( const vtkMatrix4x4*);                     
-    void fixTransform();
+    // Sync view locations of landmarks + d.
+    void sync( const Landmark::LandmarkSet&, const cv::Matx44d& d);
 
     static cv::Vec3d BASE0_COL;
     static cv::Vec3d SPEC0_COL;
@@ -70,8 +68,8 @@ private:
     IntSet _highlighted;
     IntSet _visible;
 
-    void remove( int, SphereMap&, PropMap&);
-    void set( int, SphereMap&, PropMap&, const cv::Vec3f&);
+    void _remove( int, SphereMap&, PropMap&);
+    void _set( int, SphereMap&, PropMap&, const cv::Vec3f&, const QString& lats="");
     LandmarkSetView( const LandmarkSetView&) = delete;
     void operator=( const LandmarkSetView&) = delete;
 };  // end class

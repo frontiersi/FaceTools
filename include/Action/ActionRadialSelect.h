@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,6 @@
  */
 
 #include "ActionVisualise.h"
-#include <ObjModelRegionSelector.h> // RFeatures
 #include <LoopSelectVisualisation.h>
 #include <RadialSelectInteractor.h>
 
@@ -33,32 +32,24 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionRadialSelect : public ActionVisualise
 { Q_OBJECT
 public:
-    ActionRadialSelect( const QString& dname, const QIcon& icon, Interactor::MEEI*, QStatusBar*);
+    ActionRadialSelect( const QString&, const QIcon&);
     ~ActionRadialSelect() override;
 
-    Interactor::MVI* interactor() override { return _interactor;}   // Return the interactor.
+    QString toolTip() const override { return "Use the radial selection tool to select a bounded region of a model for cropping or copying.";}
 
-    double radius( const FaceModel *fm) const;
-    cv::Vec3f centre( const FaceModel *fm) const;
-    void selectedFaces( const FaceModel* fm, IntSet& fs) const;
+    double radius() const;
+    cv::Vec3f centre() const;
+    size_t selectedFaces( IntSet& fs) const;
 
-private slots:
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet&, const FVS&, bool) override;
-    void purge( const FaceModel*) override;
-
-    void doOnIncreaseRadius( const Vis::FV*);
-    void doOnDecreaseRadius( const Vis::FV*);
-    void doOnSetCentre( const Vis::FV*, const cv::Vec3f&);
+protected:
+    void purge( const FM*, Event) override;
+    bool checkEnable( Event) override;
+    void doAction( Event) override;
+    void doAfterAction( Event) override;
 
 private:
     Vis::LoopSelectVisualisation *_vis;
-    Interactor::RadialSelectInteractor *_interactor;
-    double _radius;
-    std::unordered_map<const FaceModel*, RFeatures::ObjModelRegionSelector::Ptr> _rsels;
-    static const double MIN_RADIUS;
-    void setRadius( const FaceModel*, double);
-    void updateVis( const FaceModel*);
+    std::shared_ptr<Interactor::RadialSelectInteractor> _interactor;
 };  // end class
 
 }}   // end namespace

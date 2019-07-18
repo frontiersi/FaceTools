@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,28 +20,25 @@
 
 #include "FaceAction.h"
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionSetMinScalarColour : public FaceAction
 { Q_OBJECT
 public:
-    ActionSetMinScalarColour( const QString& dname, QWidget* parent=nullptr);
+    explicit ActionSetMinScalarColour( const QString&);
 
-private slots:
-    void tellReady( const Vis::FV*, bool) override;
-    bool testReady( const Vis::FV*) override;
-    bool doBeforeAction( FVS&, const QPoint&) override;
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& evs, const FVS&, bool) override { evs.insert(VIEW_CHANGE);}
+    QString toolTip() const override { return "Set the colour to represent the minimum value for scalar colour mapping of model surfaces.";}
+
+protected:
+    bool checkEnable( Event) override;
+    bool doBeforeAction( Event) override;
+    void doAction( Event) override;
 
 private:
-    QWidget *_parent;
     QColor _curColour;
     void setIconColour( const QColor&);
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

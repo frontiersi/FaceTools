@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,23 +23,24 @@
 #include <ObjModelAligner.h>
 #include <Transformer.h>
 using FaceTools::Action::ActionAlignLandmarks;
-using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
+using FaceTools::Action::Event;
 using FaceTools::FVS;
 using FaceTools::FMS;
 using FaceTools::Vis::FV;
 using FaceTools::Landmark::LandmarkSet;
 using FaceTools::FM;
 using RFeatures::ObjModel;
+using MS = FaceTools::Action::ModelSelector;
 
 namespace {
 
-ObjModel::Ptr makeLandmarksModel( const LandmarkSet::Ptr& lmks)
+ObjModel::Ptr makeLandmarksModel( const LandmarkSet& lmks)
 {
     ObjModel::Ptr mod = ObjModel::create();
 
     // Sort the landmark ids so that the vertices of a landmarks model are always added in the same order.
-    const IntSet& lmids = lmks->ids();
+    const IntSet& lmids = lmks.ids();
     std::vector<int> ids( std::begin(lmids), std::end(lmids));
     std::sort( std::begin(ids), std::end(ids));
 
@@ -47,81 +48,68 @@ ObjModel::Ptr makeLandmarksModel( const LandmarkSet::Ptr& lmks)
     {
         if ( LDMKS_MAN::landmark(id)->isBilateral())
         {
-            mod->addVertex( *lmks->pos(id, FaceTools::FACE_LATERAL_LEFT));
-            mod->addVertex( *lmks->pos(id, FaceTools::FACE_LATERAL_RIGHT));
+            mod->addVertex( lmks.pos(id, FaceTools::FACE_LATERAL_LEFT));
+            mod->addVertex( lmks.pos(id, FaceTools::FACE_LATERAL_RIGHT));
         }   // end if
         else
-            mod->addVertex( *lmks->pos(id, FaceTools::FACE_LATERAL_MEDIAL));
+            mod->addVertex( lmks.pos(id, FaceTools::FACE_LATERAL_MEDIAL));
     }   // end for
     return mod;
 }   // end makeLandmarksModel
 
-
-ObjModel::Ptr makeMeanLandmarksModel( const std::vector<ObjModel::Ptr>& lms, double &rms)
+/*
+// Calculate and return the root mean square error of displacement over all models.
+double calcRMS( const ObjModel* tmod, const std::vector<ObjModel::Ptr>& lms)
 {
-    assert(lms.size() > 0);
+    assert(!lms.empty());
 
-    ObjModel::Ptr nm = ObjModel::create();
-
-    // For each vertex from the provided models, set the new landmark vertex as the mean from all the models.
-    const double nfactor = 1.0 / static_cast<int>(lms.size());
-    const int n = static_cast<int>((*lms.begin())->getNumVertices());
-    for ( int vidx = 0; vidx < n; ++vidx)   // Okay to do this since all vertex IDs [0,n-1] will be present
-    {
-        cv::Vec3d v(0,0,0);
-        for ( ObjModel::Ptr m : lms)
-            v += m->vtx(vidx);
-        v *= nfactor;
-        nm->addVertex(v);
-    }   // end for
-
-    // Calculate the new root mean square error of displacement
-    rms = 0;
+    double rms = 0;
+    const int n = tmod->numVtxs();
     for ( int vidx = 0; vidx < n; ++vidx)
     {
-        const cv::Vec3f& mv = nm->vtx(vidx);
+        const cv::Vec3f& tv = tmod->vtx(vidx);
         for ( ObjModel::Ptr m : lms)
         {
             const cv::Vec3f& v = m->vtx(vidx);
-            rms += double(powf(v[0] - mv[0],2) + powf(v[1] - mv[1],2) + powf(v[2] - mv[2],2));
+            rms += double(powf(v[0] - tv[0],2) + powf(v[1] - tv[1],2) + powf(v[2] - tv[2],2));
         }   // end for
     }   // end for
     rms = sqrt( rms / (n*int(lms.size())));
 
-    return nm;
-}   // end makeMeanLandmarksModel
+    return rms;
+}   // end calcRMS
+*/
 
 }   // end namespace
 
 
-ActionAlignLandmarks::ActionAlignLandmarks( const QString& dn, const QIcon& ico, QProgressBar* pb)
+ActionAlignLandmarks::ActionAlignLandmarks( const QString& dn, const QIcon& ico)
     : FaceAction(dn, ico)
 {
-    if ( pb)
-        setAsync(true, QTools::QProgressUpdater::create(pb));
+    setAsync(true);
 }   // end ctor
 
 
-bool ActionAlignLandmarks::testEnabled( const QPoint*) const
+bool ActionAlignLandmarks::checkEnable( Event)
 {
     // Enabled only if the selected viewer has other models with landmarks.
-    const FV* fv = ready1();
+    const FV* fv = MS::selectedView();
     bool ready = false;
     if ( fv && fv->viewer()->attached().size() >= 2)
     {
-        FM* fm = fv->data();
+        const FM* fm = fv->data();
         fm->lockForRead();
-        LandmarkSet::Ptr lmks = fm->landmarks();
-        if ( !lmks->empty())
+        const LandmarkSet& lmks = fm->landmarks();
+        if ( !lmks.empty())
         {
             // Get the other models from the viewer.
             FMS fms = fv->viewer()->attached().models();
-            fms.erase(fm);
+            fms.erase(const_cast<FM*>(fm));
             // If at least one other model in the viewer with landmarks, then enable this action.
             for ( const FM* fm2 : fms)
             {
                 fm2->lockForRead();
-                ready = !fm2->landmarks()->empty();
+                ready = !fm2->landmarks().empty();
                 fm2->unlock();
                 if ( ready)
                     break;
@@ -130,72 +118,58 @@ bool ActionAlignLandmarks::testEnabled( const QPoint*) const
         fm->unlock();
     }   // end if
     return ready;
-}   // end testEnabled
+}   // end checkEnabled
 
 
-
-bool ActionAlignLandmarks::doAction( FVS& rset, const QPoint&)
+bool ActionAlignLandmarks::doBeforeAction( Event)
 {
-    assert(rset.size() == 1);
-    FV* fv = rset.first();
-    FM* sfm = fv->data();   // Source model
-    FMS fms = fv->viewer()->attached().models();
+    MS::showStatus( "Aligning to landmarks on selected face...");
+    return true;
+}   // end doBeforeAction
 
-    const size_t n = fms.size();
 
-    // Create the initial sets of common landmarks models associated with each FaceModel
-    ObjModel::Ptr mlmks;    // Will be the "mean" landmark model updated at each iteration.
-    std::vector<ObjModel::Ptr> lmodels, olmodels;   // lmodels is updated while olmodels holds a copy of the original.
-    std::vector<FM*> fmodels;
+void ActionAlignLandmarks::doAction( Event)
+{
+    storeUndo(this, {Event::AFFINE_CHANGE, Event::ALL_VIEWS});
+    FV* fv = MS::selectedView();
+
+    FM* tfm = fv->data();   // Target model whose landmarks we want the other models' landmarks to align with.
+    tfm->lockForRead();
+    ObjModel::Ptr tlmks = makeLandmarksModel( tfm->landmarks());    // Create the target landmarks model
+    tfm->unlock();
+
+    FMS fms = fv->viewer()->attached().models(); // Get models from the same viewer as the target model
+    fms.erase(tfm); // Ensure the target model is removed
+
+    // Create the landmarks models for each FaceModel that isn't the target model
+    std::unordered_map<FM*, ObjModel::Ptr> lmods;
     for ( FM* fm : fms)
     {
-        fmodels.push_back(fm);
         fm->lockForRead();
-        ObjModel::Ptr mod = makeLandmarksModel( fm->landmarks());
+        lmods[fm] = makeLandmarksModel( fm->landmarks());
         fm->unlock();
-        lmodels.push_back( mod);
-        olmodels.push_back( ObjModel::copy(mod.get()));
-        if ( fm == sfm) // Ensure the first target landmark model to superimpose against is of the selected FaceModel.
-            mlmks = mod;
     }   // end for
 
-    double tol = 0.0001;
-    double rms = DBL_MAX;
-    double rmsDelta = DBL_MAX;
-    while ( rmsDelta >= tol)
+    const std::vector<double> weights( size_t(tlmks->numVtxs()), 1.0);
+    RFeatures::ObjModelProcrustesSuperimposition aligner( *tlmks, weights);
+
+    // Align each of the landmark models to the target landmark model and use the calculated transform on the whole model.
+    for ( const auto& p : lmods)
     {
-        RFeatures::ObjModelProcrustesSuperimposition aligner( mlmks.get());
-
-        // Align each of landmark models to the mean landmark model.
-        for ( size_t i = 0; i < n; ++i)
-        {
-            ObjModel::Ptr mod = lmodels.at(i);
-            cv::Matx44d T = aligner.calcTransform( mod.get());    // Calculate the transform to the source landmark model
-            // Transform this landmark model to be superimposed against the current mean landmark model.
-            RFeatures::Transformer transformer(T);
-            transformer.transform(mod);
-        }   // end for
-
-        rmsDelta = rms;
-        mlmks = makeMeanLandmarksModel( lmodels, rms);
-        rmsDelta -= rms;
-        std::cerr << "RMS: " << rms << " (delta = " << rmsDelta << ")" << std::endl;
-    }   // end while
-
-    // Calculate the transforms using the final mean landmark model created and the original untransformed landmark models.
-    RFeatures::ObjModelProcrustesSuperimposition aligner( mlmks.get());
-
-    rset.clear();
-    for ( size_t i = 0; i < n; ++i)
-    {
-        ObjModel::Ptr lmod = olmodels.at(i);
-        cv::Matx44d T = aligner.calcTransform( lmod.get());
-        FM* fm = fmodels[i];
-        fm->transform( T);
-        // Set the FaceViews adjusted as a result
-        for ( auto* f : fm->fvs())
-            rset.insert(f);    // Worked on this view!
+        const ObjModel& lmod = *p.second;
+        const cv::Matx44d T = aligner.calcTransform( lmod);    // Calculate transform to the target landmarks
+        FM* fm = p.first;
+        fm->lockForWrite();
+        fm->addTransformMatrix( T);
+        fm->unlock();
     }   // end for
-
-    return true;
 }   // end doAction
+
+
+void ActionAlignLandmarks::doAfterAction( Event)
+{
+    MS::setInteractionMode( IMode::CAMERA_INTERACTION);
+    MS::showStatus( "Finished alignment by landmarks.", 5000);
+    emit onEvent( {Event::AFFINE_CHANGE, Event::ALL_VIEWS});
+}   // end doAfterAction
+

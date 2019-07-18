@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,17 +25,14 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionResetDetection : public FaceAction
 { Q_OBJECT
 public:
-    ActionResetDetection( const QString& dname, const QIcon& icon, QWidget *parent=nullptr);
+    ActionResetDetection( const QString&, const QIcon&);
 
-protected slots:
-    bool testReady( const Vis::FV*) override;
-    bool testEnabled( const QPoint*) const override;
-    bool doBeforeAction( FVS&, const QPoint&) override;
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet&, const FVS&, bool) override;
+    QString toolTip() const override { return "Remove facial landmarks from the selected model.";}
 
-private:
-    QWidget *_parent;
+protected:
+    bool checkEnable( Event) override;
+    bool doBeforeAction( Event) override;   // Warn if overwriting
+    void doAction( Event) override;
 };  // end class
 
 }}   // end namespace

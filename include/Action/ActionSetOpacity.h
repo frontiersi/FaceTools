@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,35 +21,36 @@
 #include "FaceAction.h"
 #include <QDoubleSpinBox>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionSetOpacity : public FaceAction
 { Q_OBJECT
 public:
     // Display name will be used for spin box widget's tool tip.
-    ActionSetOpacity( const QString& dname, double maxOpacityOnOverlap=0.7, double minOpacity=0.1, QWidget* parent=nullptr);
+    explicit ActionSetOpacity( const QString&);
 
-    QWidget* getWidget() const override { return _opacitySpinBox;}
+    QString toolTip() const override { return "Change the opacity of model surfaces.";}
 
-public slots:
+    QWidget* widget() const override { return _opacitySpinBox;}
+
     // Sets a new value for opacity on overlap. Fixes the value between minOpacity and 1.0 and returns it.
-    double setOpacityOnOverlap( double);
+    static void setOpacityOnOverlap( double);
+    static void setMinOpacity( double);
+
+protected:
+    void postInit() override;
+    bool checkEnable( Event) override;
+    void doAction( Event) override;
 
 private slots:
-    void tellReady( const Vis::FV*, bool) override;
-    bool testEnabled( const QPoint* mc=nullptr) const override;
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(VIEW_CHANGE);}
     void doOnValueChanged( double);
 
 private:
-    double _maxOpacityOnOverlap;
+    static double s_maxOpacityOnOverlap;
+    static double s_minOpacity;
     QDoubleSpinBox *_opacitySpinBox;
-    FMV* _viewer;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

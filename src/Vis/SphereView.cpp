@@ -25,7 +25,7 @@
 #include <vtkMapper.h>
 #include <algorithm>
 #include <cassert>
-using QTools::VtkScalingActor;
+using RVTK::VtkScalingActor;
 using FaceTools::Vis::SphereView;
 using FaceTools::ModelViewer;
 
@@ -39,7 +39,7 @@ void SphereView::init()
     _caption->GetCaptionTextProperty()->ShadowOff();
     _caption->GetCaptionTextProperty()->SetFontFamilyToCourier();
     _caption->GetCaptionTextProperty()->SetFontSize(21);
-    _caption->GetCaptionTextProperty()->SetColor( 1,1,1);
+    setCaptionColour( Qt::GlobalColor::white);
     _caption->GetCaptionTextProperty()->SetUseTightBoundingBox(true);
     _caption->SetVisibility(false);
     _caption->SetPickable(false);
@@ -109,7 +109,7 @@ void SphereView::setCentre( const cv::Vec3f& pos)
     setHighlighted(highlighted());  // Just for resetting the caption attachment point
 }   // end setCentre
 
-cv::Vec3f SphereView::centre() const { return _actor->position();}
+const cv::Vec3f& SphereView::centre() const { return _actor->position();}
 
 void SphereView::setRadius( double r) { _source->SetRadius(r);}
 double SphereView::radius() const { return _source->GetRadius();}
@@ -124,12 +124,16 @@ const double* SphereView::colour() const { return _actor->colour();}
 void SphereView::setCaption( const std::string& lname) { _caption->SetCaption( lname.c_str());}
 void SphereView::setCaption( const QString& lname) { setCaption(lname.toStdString());}
 
-
 std::string SphereView::caption() const
 {
     const char* cap = _caption->GetCaption();
     return cap == nullptr ? "" : cap;
 }   // end caption
+
+void SphereView::setCaptionColour( const QColor& tcol)
+{
+    _caption->GetCaptionTextProperty()->SetColor( tcol.redF(), tcol.greenF(), tcol.blueF());
+}   // end setCaptionColour
 
 void SphereView::setHighlighted( bool v)
 {
@@ -158,9 +162,10 @@ void SphereView::setVisible( bool v, ModelViewer* vwr)
     _visible = v;
 }   // end setVisible
 
-void SphereView::pokeTransform( const vtkMatrix4x4* vm) { _actor->pokeTransform(vm);}
-
-void SphereView::fixTransform()
+/*
+void SphereView::pokeTransform( const vtkMatrix4x4* vm)
 {
-    _actor->fixTransform();
-}   // end fixTransform
+    _actor->pokeTransform(vm);
+    _caption->PokeMatrix( const_cast<vtkMatrix4x4*>(vm));
+}   // end pokeTransform
+*/

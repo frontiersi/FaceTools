@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,63 +16,51 @@
  ************************************************************************/
 
 #include <ActionSetMinScalarColour.h>
-#include <SurfaceDataMapper.h>
+#include <SurfaceMetricsMapper.h>
 #include <FaceView.h>
 #include <QColorDialog>
 #include <algorithm>
 using FaceTools::Action::ActionSetMinScalarColour;
 using FaceTools::Action::FaceAction;
+using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
-using SDM = FaceTools::Vis::SurfaceDataMapper;
+using SMM = FaceTools::Vis::SurfaceMetricsMapper;
 
 
-ActionSetMinScalarColour::ActionSetMinScalarColour( const QString& dname, QWidget* parent)
-    : FaceAction( dname), _parent(parent)
+ActionSetMinScalarColour::ActionSetMinScalarColour( const QString& dname)
+    : FaceAction( dname)
 {
     setIconColour( QColor(0,0,255));
 }   // end ctor
 
 
-void ActionSetMinScalarColour::tellReady( const FV* fv, bool v)
+bool ActionSetMinScalarColour::checkEnable( Event)
 {
-    if ( v)
-    {
-        SDM* sdm = fv->activeSurface();
-        if ( sdm)
-            setIconColour( sdm->minColour());
-    }   // end if
-}   // end tellReady
+    const FV* fv = ModelSelector::selectedView();
+    const SMM* smm = fv ? fv->activeSurface() : nullptr;
+    if ( smm)
+        setIconColour( smm->minColour());
+    return smm && smm->isScalarMapping();
+}   // end checkEnabled
 
 
-bool ActionSetMinScalarColour::testReady( const FV* fv)
+bool ActionSetMinScalarColour::doBeforeAction( Event)
 {
-    SDM* sdm = fv->activeSurface();
-    return sdm && sdm->isScalarMapping();
-}   // end testReady
-
-
-bool ActionSetMinScalarColour::doBeforeAction( FVS&, const QPoint&)
-{
-    QColor c = QColorDialog::getColor( _curColour, _parent, "Choose new minimum surface mapping colour");
+    QColor c = QColorDialog::getColor( _curColour, static_cast<QWidget*>(parent()), "Choose new minimum surface mapping colour");
     if ( c.isValid())
         setIconColour( c);
     return c.isValid();
 }   // end doBeforeAction
 
 
-bool ActionSetMinScalarColour::doAction( FVS& fvs, const QPoint&)
+void ActionSetMinScalarColour::doAction( Event)
 {
-    std::unordered_set<SDM*> sdms;
-    for ( FV* fv : fvs)
-    {
-        SDM* sdm = fv->activeSurface();
-        assert(sdm);
-        sdm->setMinColour( _curColour);
-        sdms.insert(sdm);
-    }   // end for
-    std::for_each( std::begin(sdms), std::end(sdms), [](SDM* sdm){ sdm->rebuild();});
-    return true;
+    SMM* smm = ModelSelector::selectedView()->activeSurface();
+    assert(smm);
+    smm->setMinColour( _curColour);
+    smm->rebuild();
+    emit onEvent( Event::VIEW_CHANGE);
 }   // end doAction
 
 

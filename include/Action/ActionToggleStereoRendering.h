@@ -25,18 +25,12 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionToggleStereoRendering : public FaceAction
 { Q_OBJECT
 public:
-    ActionToggleStereoRendering( const QString& dname="Use Stereo Rendering", const QIcon& ico=QIcon());
+    ActionToggleStereoRendering( const QString&, const QIcon&);
 
-    void addViewer( FMV*);
+    QString toolTip() const override { return "Toggle scene rendering to red/blue mode for a 3D effect when wearing suitable glasses.";}
 
-private slots:
-    bool testEnabled( const QPoint* mc=nullptr) const override { return true;}
-    bool testIfCheck( const Vis::FV*) const override;
-    bool doAction( FVS&, const QPoint&) override;
-
-private:
-    FMVS _viewers;
-    bool _sren;
+protected:
+    void doAction( Event) override;
 };  // end class
 
 }}   // end namespace

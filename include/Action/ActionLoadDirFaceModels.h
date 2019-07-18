@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,16 +27,20 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionLoadDirFaceModels : public FaceAction
 { Q_OBJECT
 public:
-    ActionLoadDirFaceModels( const QString&, const QIcon&, QWidget* parent=nullptr);
+    ActionLoadDirFaceModels( const QString&, const QIcon&);
+    ~ActionLoadDirFaceModels() override;
 
-protected slots:
-    bool testEnabled( const QPoint*) const override;
-    bool doBeforeAction( FVS&, const QPoint&) override;
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet&, const FVS&, bool) override;
+    QString toolTip() const override { return "Load all models found in a specified directory.";}
+
+protected:
+    void postInit() override;
+    bool checkEnable( Event) override;
+    bool doBeforeAction( Event) override;
+    void doAction( Event) override;
+    void doAfterAction( Event) override;
 
 private:
-    FileIO::LoadFaceModelsHelper _loadHelper;
+    FileIO::LoadFaceModelsHelper *_loadHelper;
     QFileDialog *_dialog;
 };  // end class
 

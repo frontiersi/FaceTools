@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,42 +21,58 @@
 #include <cassert>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionInvertNormals;
-using FaceTools::Action::EventSet;
+using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
 using FaceTools::FMS;
 using FaceTools::FM;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionInvertNormals::ActionInvertNormals( const QString& dn, const QIcon& ico, QProgressBar* pb)
+ActionInvertNormals::ActionInvertNormals( const QString& dn, const QIcon& ico)
     : FaceAction(dn, ico)
 {
-    if ( pb)
-        setAsync(true, QTools::QProgressUpdater::create(pb));
+    setAsync(true);
 }   // end ctor
 
 
-bool ActionInvertNormals::doAction( FVS& fvs, const QPoint&)
+bool ActionInvertNormals::checkEnable( Event)
 {
-    FMS fms = fvs.models(); // Copy out
-    fvs.clear();
+    return MS::isViewSelected();
+}   // end checkEnabled
 
-    for ( FM* fm : fms)
-    {
-        fm->lockForWrite();
 
-        RFeatures::ObjModelInfo::Ptr info = fm->info();
-        RFeatures::ObjModel::Ptr model = info->model();
-
-        const IntSet& fids = model->getFaceIds();
-        std::for_each( std::begin(fids), std::end(fids), [&](int fid){ model->reverseFaceVertices(fid);});
-
-        info->reset( model);
-        fm->update(info);
-
-        fm->unlock();
-
-        fvs.insert(fm);
-    }   // end for
+bool ActionInvertNormals::doBeforeAction( Event)
+{
+    MS::showStatus( "Inverting normals on selected model...");
     return true;
+}   // end doBeforeAction
+
+
+void ActionInvertNormals::invertNormals(RFeatures::ObjModel::Ptr model)
+{
+    const IntSet& fids = model->faces();
+    for ( int fid : fids)
+        model->reversePolyVertices(fid);
+}   // end invertNormals
+
+
+void ActionInvertNormals::doAction( Event)
+{
+    storeUndo(this, Event::GEOMETRY_CHANGE);
+
+    FM* fm = MS::selectedModel();
+    fm->lockForWrite();
+    RFeatures::ObjModel::Ptr model = fm->wmodel();
+    invertNormals(model);
+    fm->update( nullptr, false);    // Connectivity update not required
+    fm->unlock();
 }   // end doAction
+
+
+void ActionInvertNormals::doAfterAction( Event)
+{
+    MS::showStatus("Finished inverting model normals.", 5000);
+    emit onEvent( Event::GEOMETRY_CHANGE);
+}   // end doAfterAction
+

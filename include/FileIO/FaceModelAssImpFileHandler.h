@@ -36,7 +36,7 @@ public:
 
     bool canRead() const override { return true;}
     QString error() const override { return _err;}
-    FaceModel* read( const QString&) override;
+    FM* read( const QString&) override;
 
 private:
     RModelIO::AssetImporter *_assimp;

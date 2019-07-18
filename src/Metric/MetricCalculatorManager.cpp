@@ -32,7 +32,6 @@ std::unordered_map<int, MC::Ptr> MetricCalculatorManager::_metrics;
 MCSet MetricCalculatorManager::_mset;
 MCSet MetricCalculatorManager::_vmset;
 QStringList MetricCalculatorManager::_names;
-QStringList MetricCalculatorManager::_ethnicities;
 int MetricCalculatorManager::_cmid(-1);
 int MetricCalculatorManager::_pmid(-1);
 
@@ -44,7 +43,6 @@ int MetricCalculatorManager::load( const QString& dname)
     _mset.clear();
     _vmset.clear();
     _names.clear();
-    _ethnicities.clear();
 
     QDir mdir( dname);
     if ( !mdir.exists() || !mdir.isReadable())
@@ -53,7 +51,6 @@ int MetricCalculatorManager::load( const QString& dname)
         return -1;
     }   // end if
 
-    QStringSet ethnSet;
     int nloaded = 0;
     const QStringList fnames = mdir.entryList( QDir::Files | QDir::Readable, QDir::Type | QDir::Name);
     for ( const QString& fname : fnames)
@@ -66,14 +63,6 @@ int MetricCalculatorManager::load( const QString& dname)
             else
             {
                 _names.append(mc->name());
-
-                for ( const QString& s : mc->sources())
-                {
-                    mc->setSource(s);
-                    for ( const QString& e : mc->ethnicities())
-                        ethnSet.insert( e);
-                }   // end for
-
                 nloaded++;
             }   // end else
 
@@ -86,10 +75,6 @@ int MetricCalculatorManager::load( const QString& dname)
     }   // end for
 
     _names.sort();
-    for ( const QString& e : ethnSet)
-        _ethnicities.append(e);
-    _ethnicities.sort();
-
     _pmid = -1;
     _cmid = *_ids.begin();
     return nloaded;
@@ -110,7 +95,6 @@ bool MetricCalculatorManager::setCurrentMetric( int mid)
         assert( _metrics.count(mid) > 0);
         _pmid = _cmid;
         _cmid = mid;
-        _metrics.at(mid)->setSelected();  // Cause the selected signal on the metric to fire
         return true;
     }   // end if
     return false;

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,106 +32,89 @@
 #include <fstream>
 #include <cassert>
 using FaceTools::Action::ActionExportPDF;
-using FaceTools::Action::U3DCache;
-using FaceTools::Action::EventSet;
-using FaceTools::FVS;
-using FaceTools::Vis::FV;
-using FaceTools::FaceModel;
+using FaceTools::Action::Event;
 using FaceTools::Report::ReportManager;
 using FaceTools::Widget::ReportChooserDialog;
+using FaceTools::U3DCache;
+using FaceTools::Vis::FV;
+using FaceTools::FM;
+using MS = FaceTools::Action::ModelSelector;
 
 
 // public
-ActionExportPDF::ActionExportPDF( const QString& nm, const QIcon& icon, QWidget* p)
-    : FaceAction( nm, icon), _dialog( new ReportChooserDialog(p)), _parent(p)
+ActionExportPDF::ActionExportPDF( const QString& nm, const QIcon& icon, const QKeySequence& ks)
+    : FaceAction( nm, icon, ks), _dialog( nullptr)
 {
-    /*
-    // Default author info
-    if ( !email.isEmpty())
-        _author = "\\href{mailto:" + email + "?subject=FaceTools::Action::ActionExportPDF}{Email}";
-    */
     //_tmpdir.setAutoRemove(false);    // Uncomment for debug purposes
     assert( _tmpdir.isValid());
     //setAsync(true);
 }   // end ctor
 
 
-bool ActionExportPDF::testReady( const FV*)
+void ActionExportPDF::postInit()
 {
-    //return !fv->data()->landmarks()->empty();
-    return true;    // Allow individual reports to enable/disable themselves
-}   // end testReady
+    _dialog = new ReportChooserDialog( static_cast<QWidget*>(parent()));
+}   // end postInit
 
 
-// All reports assumed available for the selected model currently.
-// TODO Set reports to check landmarks on face data.
-bool ActionExportPDF::testEnabled( const QPoint*) const
+bool ActionExportPDF::checkEnable( Event)
 {
-    return ready1() && ReportManager::isAvailable();
-}   // end testEnabled
+    const FV* fv = MS::selectedView();
+    return fv && U3DCache::isAvailable() && !U3DCache::u3dfilepath(fv->data())->isEmpty() && ReportManager::isAvailable();
+}   // end checkEnabled
 
 
 // Get the save filepath for the report
-bool ActionExportPDF::doBeforeAction( FVS& fvs, const QPoint&)
+bool ActionExportPDF::doBeforeAction( Event)
 {
-    assert( fvs.size() == 1);
-    const FM* fm = fvs.first()->data();
-
-    if ( U3DCache::lock(fm).isEmpty())
-        U3DCache::refresh(fm, true);  // Background thread will unlock access to the U3D once written.
-    else
-        U3DCache::release();
-
+    const FM* fm = MS::selectedModel();
     _report = nullptr;
     _tmpfile = "";
     _err = "";
-
     if ( _dialog->show(fm))
     {
         const QString rname = _dialog->selectedReportName();
         _report = ReportManager::report(rname);
     }   // end if
 
-    return _report != nullptr;
+    const bool doAct = _report != nullptr;
+    if ( doAct)
+        MS::showStatus( "Generating report...");
+    return doAct;
 }   // end doBeforeAction
 
 
-bool ActionExportPDF::doAction( FVS& fvs, const QPoint&)
+void ActionExportPDF::doAction( Event)
 {
-    assert( fvs.size() == 1);
     _err = "";
-
-    const FM* fm = fvs.first()->data();
-
-    const QString u3dfile = U3DCache::lock( fm);
-
+    const FM* fm = MS::selectedModel();
+    const U3DCache::Filepath u3dfile = U3DCache::u3dfilepath(fm);
     _tmpfile = _tmpdir.filePath( "report.pdf");
-    const bool genok = _report->generate( fm, u3dfile, _tmpfile);   // May take time - make asynchronous?
+    const bool genok = _report->generate( fm, *u3dfile, _tmpfile);   // May take time - make asynchronous?
     if ( !genok)
         _err = "Failed to generate report PDF!";
-
-    U3DCache::release();
-
-    return genok;
 }   // end doAction
 
 
-void ActionExportPDF::doAfterAction( EventSet& cs, const FVS& fvs, bool v)
+void ActionExportPDF::doAfterAction( Event)
 {
-    if ( !v)
+    QWidget* prnt = static_cast<QWidget*>(parent());
+
+    if ( !_err.isEmpty())
     {
-        QMessageBox::warning( _parent, tr("Report Creation Error!"), _err);
+        QMessageBox::warning( prnt, tr("Report Creation Error!"), _err);
+        MS::showStatus("Failed to generate report!", 5000);
         std::cerr << _err.toStdString() << std::endl;
         return;
     }   // end if
 
     std::cerr << "Created PDF at '" << _tmpfile.toStdString() << "'" << std::endl;
 
-    const FM* fm = fvs.first()->data();
+    const FM* fm = MS::selectedModel();
     const std::string fname = FileIO::FMM::filepath( fm);
     QString outfile = boost::filesystem::path(fname).filename().replace_extension( "pdf").string().c_str();
 
-    QFileDialog fileDialog( _parent);
+    QFileDialog fileDialog( prnt);
     fileDialog.setWindowTitle( tr("Save Generated Report"));
     fileDialog.setFileMode( QFileDialog::AnyFile);
     fileDialog.setNameFilter( "Portable Document Format (*.pdf)");
@@ -147,6 +130,7 @@ void ActionExportPDF::doAfterAction( EventSet& cs, const FVS& fvs, bool v)
         if ( fileDialog.exec() > 0)
             fileNames = fileDialog.selectedFiles();
 
+        outfile = "";
         if ( fileNames.empty())
             break;
 
@@ -158,7 +142,7 @@ void ActionExportPDF::doAfterAction( EventSet& cs, const FVS& fvs, bool v)
             if ( !QFile::remove(outfile))
             {
                 _err = "Unable to remove existing file! Choose a different filename.";
-                QMessageBox::warning( _parent, tr("Report Save Error!"), _err);
+                QMessageBox::warning( prnt, tr("Report Save Error!"), _err);
                 std::cerr << _err.toStdString() << std::endl;
                 docopy = false; // Try again!
             }   // end if
@@ -168,7 +152,8 @@ void ActionExportPDF::doAfterAction( EventSet& cs, const FVS& fvs, bool v)
     // Copy the report temporary file to the output location (only succeeds if outfile not present already).
     if ( docopy && QFile::copy( _tmpfile, outfile))
     {
-        cs.insert(REPORT_CREATED);
+        MS::showStatus( "Report saved to '" + outfile + "'", 5000);
+        emit onEvent( Event::REPORT_CREATED);
         if ( !_pdfreader.isEmpty())
         {
             std::cerr << "Forking " << _pdfreader.toStdString() << " " << outfile.toStdString() << std::endl;

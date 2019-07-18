@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,24 +39,24 @@ MCT* LineAngleMetricCalculatorType::make( int id, const LmkList* l0, const LmkLi
 bool LineAngleMetricCalculatorType::canCalculate( const FM* fm, const LmkList* ll) const
 {
     using SLmk = FaceTools::Landmark::SpecificLandmark;
-    LandmarkSet::Ptr lmks = fm->landmarks();
-    return std::all_of( std::begin(*ll), std::end(*ll), [lmks]( const SLmk& p){ return lmks->has(p);});
+    const LandmarkSet& lmks = fm->landmarks();
+    return std::all_of( std::begin(*ll), std::end(*ll), [&lmks]( const SLmk& p){ return lmks.has(p);});
 }   // end canCalculate
 
 
 void LineAngleMetricCalculatorType::measure( std::vector<double>& dvals, const FM* fm, const LmkList* ll) const
 {
     assert( canCalculate(fm, ll));
-    LandmarkSet::Ptr lmks = fm->landmarks();
-    cv::Vec3d p0 = *lmks->pos( ll->front());
-    cv::Vec3d p1 = *lmks->pos( ll->back());
+    const LandmarkSet& lmks = fm->landmarks();
+    cv::Vec3d p0 = lmks.pos( ll->front());
+    cv::Vec3d p1 = lmks.pos( ll->back());
     cv::Vec3d cp;
     if ( ll->size() > 2)
-        cp = *fm->landmarks()->pos( ll->at(1));
+        cp = lmks.pos( ll->at(1));
     else
     {
         const cv::Vec3f mp( 0.5 * (p0 + p1));
-        cp = FaceTools::toSurface( fm->kdtree(), mp);
+        cp = FaceTools::toSurface( fm, mp);
     }   // end else
 
     // Return a value in the range [0,pi]

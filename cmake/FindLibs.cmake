@@ -23,8 +23,10 @@ if( CMAKE_BUILD_TYPE_LOWER STREQUAL "debug")
     set( IS_DEBUG TRUE)
     set(_dsuffix "d")
 endif()
-unset( CMAKE_BUILD_TYPE_LOWER)
 set( CMAKE_DEBUG_POSTFIX ${_dsuffix})
+
+# For Valloric YouCompleteMe (VIM plugin) for clangd-completer
+set( CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
 macro( get_msvc_version _ver)
@@ -53,9 +55,9 @@ endmacro( get_msvc_version)
 
 
 # Add definitions for Windows 7 build target (SDK 8.1 support Win 7 and up)
-add_definitions( -DWINVER=0x0601)
-add_definitions( -D_WIN32_WINNT=0x0601)
 if(WIN32)
+    add_definitions( -DWINVER=0x0601)
+    add_definitions( -D_WIN32_WINNT=0x0601)
     set( CMAKE_SYSTEM_VERSION 8.1)
 endif()
 message( STATUS "OS Name build target:    ${CMAKE_SYSTEM_NAME}")
@@ -108,7 +110,6 @@ if(WITH_RVTK)
     link_directories( ${rVTK_LIBRARY_DIR})
     set(WITH_RFEATURES TRUE)
     set(WITH_VTK TRUE)
-    set(WITH_QT TRUE)
     message( STATUS "rVTK:       ${rVTK_LIBRARIES}")
     set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${rVTK_LIBRARY_DIR})
 endif()
@@ -190,6 +191,24 @@ if(WITH_RLIB)
 endif()
 
 
+if(WITH_LIBICP) # The ICP source library (Andreas Geiger) (https://github.com/symao/libicp)
+    set( LIBICP_DIR "${LIB_PRE_REQS}/libICP" CACHE PATH "Location of libICP source files.")
+    set( LIBICP_SRC "${LIBICP_DIR}/src")
+    set( LIBICP_SRC_FILES
+        "${LIBICP_SRC}/icp.cpp"
+        "${LIBICP_SRC}/icpPointToPlane.cpp"
+        "${LIBICP_SRC}/icpPointToPoint.cpp"
+        "${LIBICP_SRC}/kdtree.cpp"
+        "${LIBICP_SRC}/matrix.cpp"
+        )
+    if (NOT IS_DIRECTORY ${LIBICP_SRC})
+        message( FATAL_ERROR "Can't find libICP source files!")
+    endif()
+    message( STATUS "LibICP:     ${LIBICP_SRC}/*")
+    include_directories( "${LIBICP_SRC}")
+endif()
+
+
 if(WITH_QUAZIP)     # QuaZIP
     set(QuaZip_DIR "${LIB_PRE_REQS}/quazip/cmake" CACHE PATH "Location of QuaZip (Qt/C++ wrapper for Minizip)")
     find_package( QuaZip REQUIRED)
@@ -212,26 +231,72 @@ if(WITH_ASSIMP)     # AssImp
     if (WIN32)
         set(WITH_ZLIB TRUE)
     endif()
-    message( STATUS "AssImp LDIR ${ASSIMP_LIBRARY_DIRS}")
-    message( STATUS "AssImp:     ${ASSIMP_LIBRARIES}")
+    message( STATUS "AssImp      ${ASSIMP_LIBRARY_DIRS}/${ASSIMP_LIBRARIES}")
     set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${ASSIMP_LIBRARY_DIRS})
 endif()
 
 
 # Link to separately compiled zlib on Windows.
-if(WITH_ZLIB AND WIN32)
-    set( ZLIB_DIR "${LIB_PRE_REQS}/zlib")
+if(WITH_ZLIB)
+    set( ZLIB_DIR "${LIB_PRE_REQS}/zlib" CACHE PATH "Location of zlib")
     set( ZLIB_INCLUDE_DIR "${ZLIB_DIR}/include")
     set( ZLIB_LIBRARY_DIR "${ZLIB_DIR}/lib")
-    set( ZLIB_LIBRARIES "${ZLIB_LIBRARY_DIR}/zlibstatic${_dsuffix}.lib")
-    set( ZLIB_DLL "${ZLIB_DIR}/bin/zlib${_dsuffix}.dll")
-    if ( NOT EXISTS ${ZLIB_DLL})
-        message( FATAL_ERROR "Required dll ${ZLIB_DLL} missing!")
+    set( ZLIB_LIBRARIES "${ZLIB_LIBRARY_DIR}/zlibstatic${_dsuffix}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+    set( ZLIB_LIBRARY "${ZLIB_DIR}/bin/zlib${_dsuffix}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+    if ( NOT EXISTS ${ZLIB_LIBRARY})
+        message( FATAL_ERROR "Can't find zlib library at ${ZLIB_LIBRARY}!")
     endif()
     include_directories( "${ZLIB_INCLUDE_DIR}")
-    link_directories( "${ZLIB_LIBRARY_DIR}")
+    #link_directories( "${ZLIB_LIBRARY_DIR}")
     message( STATUS "Zlib:       ${ZLIB_LIBRARIES}")
-    set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${ZLIB_LIBRARY_DIR})
+    #set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${ZLIB_LIBRARY_DIR})
+endif()
+
+
+if(WITH_LUA)
+    set( LUA_DIR "${LIB_PRE_REQS}/lua5" CACHE PATH "Location of Lua")
+    set( LUA_INCLUDE_DIRS "${LUA_DIR}/include")
+    set( LUA_LIBRARY_DIR  "${LUA_DIR}/lib")
+    set( LUA_LIBRARY "${LUA_DIR}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}lua53${CMAKE_SHARED_LIBRARY_SUFFIX}")
+    set( LUA_LIBRARIES "${LUA_LIBRARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}lua53${CMAKE_STATIC_LIBRARY_SUFFIX}")
+    if(UNIX)
+        set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${LUA_LIBRARY_DIR})
+    endif()
+    set( SOL_HPP "${LUA_INCLUDE_DIRS}/sol.hpp")
+
+    if(NOT EXISTS ${LUA_LIBRARY})
+        message( FATAL_ERROR "Can't find Lua library at ${LUA_LIBRARY}!")
+    endif()
+
+    if(NOT EXISTS ${LUA_LIBRARIES})
+        message( FATAL_ERROR "Can't find Lua library at ${LUA_LIBRARIES}!")
+    endif()
+
+    if(NOT EXISTS "${SOL_HPP}")
+        message( FATAL_ERROR "Can't find ${SOL_HPP}!")
+    endif()
+
+    include_directories( "${LUA_INCLUDE_DIRS}")
+    message( STATUS "Lua:        ${LUA_LIBRARIES}")
+    message( STATUS "sol.hpp:    ${SOL_HPP}")
+endif()
+
+
+if(WITH_DLIB)   # dlib
+    set( dlib_ROOT "${LIB_PRE_REQS}/dlib" CACHE PATH "Location of dlib")
+    set( dlib_DIR "${dlib_ROOT}/${CMAKE_BUILD_TYPE_LOWER}/lib/cmake/dlib" CACHE PATH "Location of dlibConfig.cmake")
+    find_package( dlib REQUIRED)
+    get_filename_component( dlib_LIBRARY_DIR "${dlib_DIR}/../.." REALPATH)
+    set( dlib_LIBRARY "${dlib_LIBRARY_DIR}/dlib.lib")
+    if(UNIX)
+        set( dlib_LIBRARY "${dlib_LIBRARY_DIR}/libdlib.so.${dlib_VERSION}")
+        set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${dlib_LIBRARY_DIR})
+    endif()
+    if(NOT EXISTS ${dlib_LIBRARY})
+        message( FATAL_ERROR "Can't find dlib library at ${dlib_LIBRARY}!")
+    endif()
+    include_directories( ${dlib_INCLUDE_DIRS})
+    message( STATUS "dlib:       ${dlib_LIBRARY}")
 endif()
 
 
@@ -246,6 +311,90 @@ if(WITH_TINYXML)    # tinyxml
     find_package( tinyxml REQUIRED)
     include_directories( ${tinyxml_INCLUDE_DIR})
     link_directories( ${tinyxml_LIBRARY_DIR})
+endif()
+
+
+if(WITH_EIGEN) # Eigen3
+    if(WIN32)
+        set( EIGEN3_INCLUDE_DIR "${LIB_PRE_REQS}/eigen3/include/eigen3" CACHE PATH "Location of Eigen3 headers (Eigen/*.h) directory")
+    elseif(UNIX)
+        find_package( Eigen3 REQUIRED)
+    endif()
+    if( NOT IS_DIRECTORY ${EIGEN3_INCLUDE_DIR})
+        message( FATAL_ERROR "Can't find Eigen3 headers!")
+    endif()
+    include_directories( ${EIGEN3_INCLUDE_DIR})
+endif()
+
+
+if(WITH_VTK)    # VTK
+    set( VTK_VER 8.1)
+
+    if( ${VTK_VER} EQUAL "8.1")
+        set( VTK_BASE "${LIB_PRE_REQS}/VTK-8.1.1")
+    elseif( ${VTK_VER} EQUAL "8.2")
+        set( VTK_BASE "${LIB_PRE_REQS}/VTK-8.2.0")
+    endif()
+
+    set( VTK_DIR "${VTK_BASE}/${CMAKE_BUILD_TYPE_LOWER}/lib/cmake/vtk-${VTK_VER}" CACHE PATH "Location of VTKConfig.cmake")
+
+    if(NOT IS_DIRECTORY ${VTK_DIR})
+        message( FATAL_ERROR "Can't find VTK! Set VTK_VER correctly for the version of VTK you want to build against!")
+    endif()
+
+    if(UNIX)
+        set( VTK_LIBRARY_DIR "${VTK_DIR}/../.." CACHE PATH "Location of VTK shared libraries")
+    elseif(WIN32)
+        set( VTK_BIN "${VTK_DIR}/../../../bin" CACHE PATH "Location of VTK shared libraries")
+    endif()
+
+    find_package( VTK REQUIRED)
+    include( ${VTK_USE_FILE})
+    set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${VTK_LIBRARY_DIR})
+    message( STATUS "VTK:        ${VTK_DIR}")
+endif()
+
+
+if(WITH_QT)     # Qt5
+    set( Qt5_DIR "$ENV{QT5}/lib/cmake/Qt5" CACHE PATH "Location of Qt5Config.cmake")
+    if(NOT IS_DIRECTORY ${Qt5_DIR})
+        message( FATAL_ERROR "Can't find Qt5! Set environment variable QT5 to the location of the library!")
+    endif()
+    get_filename_component( QT_INSTALLER_FRAMEWORK "$ENV{QT5}/../../Tools/QtInstallerFramework/3.1/bin" REALPATH)
+    set( QT_INF_BINARY_CREATOR "${QT_INSTALLER_FRAMEWORK}/binarycreator${CMAKE_EXECUTABLE_SUFFIX}")
+    set( QT_INF_REPO_GEN "${QT_INSTALLER_FRAMEWORK}/repogen${CMAKE_EXECUTABLE_SUFFIX}")
+
+    find_package( Qt5 CONFIG REQUIRED Core Widgets Charts Sql Svg)
+    include_directories( ${Qt5Core_INCLUDE_DIRS})
+    include_directories( ${Qt5Widgets_INCLUDE_DIRS})
+    include_directories( ${Qt5Charts_INCLUDE_DIRS})
+    include_directories( ${Qt5Sql_INCLUDE_DIRS})
+    include_directories( ${Qt5Svg_INCLUDE_DIRS})
+
+    #add_definitions( ${Qt5Core_DEFINITIONS})
+    #add_definitions( ${Qt5Widgets_DEFINITIONS})
+    #add_definitions( ${Qt5Charts_DEFINITIONS})
+    #add_definitions( ${Qt5Sql_DEFINITIONS})
+    #add_definitions( ${Qt5Svg_DEFINITIONS})
+
+    set( QT_LIBRARIES Qt5::Core Qt5::Widgets Qt5::Charts Qt5::Sql Qt5::Svg)
+
+    set( QT_LIB_DIR "${Qt5_DIR}/../..")
+    set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${QT_LIB_DIR})
+
+    message( STATUS "Qt5:        ${Qt5_DIR}")
+endif()
+
+
+if(WITH_OPENCV) # OpenCV
+    if(WIN32)
+        set( OpenCV_DIR "${LIB_PRE_REQS}/opencv" CACHE PATH "Location of OpenCVConfig.cmake")
+        get_msvc_version( _msvcv)
+        set( OpenCV_BIN "${OpenCV_DIR}/x64/vc${_msvcv}/bin" CACHE PATH "Location of OpenCV binary (dll) files")
+    endif()
+    find_package( OpenCV 3.2 REQUIRED)
+    include_directories( ${OpenCV_INCLUDE_DIRS})
+    message( STATUS "OpenCV:     ${OpenCV_DIR}")
 endif()
 
 
@@ -281,147 +430,26 @@ if(WITH_BOOST)  # Boost
 endif()
 
 
-if(WITH_EIGEN) # Eigen3
-    if(WIN32)
-        set( EIGEN3_INCLUDE_DIR "${LIB_PRE_REQS}/eigen3/include/eigen3" CACHE PATH "Location of Eigen3 headers (Eigen/*.h) directory")
-    elseif(UNIX)
-        find_package( Eigen3 REQUIRED)
-    endif()
-    include_directories( ${EIGEN3_INCLUDE_DIR})
-endif()
-
-if(WITH_OPENCV) # OpenCV
-    if(WIN32)
-        if(IS_DEBUG)
-            set( OpenCV_DIR "${LIB_PRE_REQS}/opencv/debug" CACHE PATH "Location of OpenCVConfig.cmake")
-        else()
-            set( OpenCV_DIR "${LIB_PRE_REQS}/opencv/release" CACHE PATH "Location of OpenCVConfig.cmake")
-        endif()
-        get_msvc_version( _msvcv)
-        set( OpenCV_BIN "${OpenCV_DIR}/x64/vc${_msvcv}/bin" CACHE PATH "Location of OpenCV binary (dll) files")
-    endif()
-    find_package( OpenCV 2.4 REQUIRED)
-    include_directories( ${OpenCV_INCLUDE_DIRS})
-    message( STATUS "OpenCV_DIR: ${OpenCV_DIR}")
-    message( STATUS "OpenCV_INSTALL_PATH: ${OpenCV_INSTALL_PATH}")
-endif()
-
-if(WITH_VTK)    # VTK
-    set( VTK_VER 8.1)
-    if(IS_DEBUG)
-        set( VTK_DIR "${LIB_PRE_REQS}/VTK/debug/lib/cmake/vtk-${VTK_VER}" CACHE PATH "Location of VTKConfig.cmake")
-    else()
-        set( VTK_DIR "${LIB_PRE_REQS}/VTK/release/lib/cmake/vtk-${VTK_VER}" CACHE PATH "Location of VTKConfig.cmake")
-    endif()
-    if(NOT IS_DIRECTORY ${VTK_DIR})
-        message( FATAL_ERROR "Can't find VTK! Set VTK_VER correctly for the version of VTK you want to build against!")
-    endif()
-    set( VTK_BIN "${VTK_DIR}/../../../bin" CACHE PATH "Location of VTK binary (dll) files")
-    if(UNIX)
-        set( VTK_LIBRARY_DIR "${VTK_BIN}/../lib")
-    endif()
-    find_package( VTK REQUIRED)
-    include( ${VTK_USE_FILE})
-    set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${VTK_LIBRARY_DIR})
-endif()
-
-if(WITH_QT)     # Qt5
-    set( Qt5_DIR "$ENV{QT5}/lib/cmake/Qt5" CACHE PATH "Location of Qt5Config.cmake")
-    if(NOT IS_DIRECTORY ${Qt5_DIR})
-        message( FATAL_ERROR "Can't find Qt5! Set environment variable QT5 to the location of the library!")
-    endif()
-    file( TO_CMAKE_PATH "$ENV{QT5}/../../Tools/QtInstallerFramework/3.0/bin" QT_INSTALLER_FRAMEWORK)
-    set( QT_INF_BINARY_CREATOR "${QT_INSTALLER_FRAMEWORK}/binarycreator${CMAKE_EXECUTABLE_SUFFIX}")
-    set( QT_INF_REPO_GEN "${QT_INSTALLER_FRAMEWORK}/repogen${CMAKE_EXECUTABLE_SUFFIX}")
-
-    find_package( Qt5 CONFIG REQUIRED Core Widgets Svg Charts)
-    include_directories( ${Qt5Core_INCLUDE_DIRS})
-    include_directories( ${Qt5Widgets_INCLUDE_DIRS})
-    include_directories( ${Qt5Charts_INCLUDE_DIRS})
-    #include_directories( ${Qt5Sql_INCLUDE_DIRS})
-    include_directories( ${Qt5Svg_INCLUDE_DIRS})
-
-    #add_definitions( ${Qt5Core_DEFINITIONS})
-    #add_definitions( ${Qt5Widgets_DEFINITIONS})
-    #add_definitions( ${Qt5Charts_DEFINITIONS})
-    #add_definitions( ${Qt5Sql_DEFINITIONS})
-    #add_definitions( ${Qt5Svg_DEFINITIONS})
-
-    set( QT_LIBRARIES Qt5::Core Qt5::Widgets Qt5::Svg Qt5::Charts)
-
-    set( QT_LIB_DIR "${Qt5_DIR}/../..")
-    set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${QT_LIB_DIR})
-
-    message( STATUS "Qt5:        ${Qt5_DIR}")
-endif()
-
 if(WITH_CGAL)   # CGAL
-    if(IS_DEBUG)
-        set( CGAL_DIR "${LIB_PRE_REQS}/CGAL/debug/lib/CGAL" CACHE PATH "Location of CGALConfig.cmake")
-    else()
-        set( CGAL_DIR "${LIB_PRE_REQS}/CGAL/release/lib/CGAL" CACHE PATH "Location of CGALConfig.cmake")
-    endif()
+    set( CGAL_DIR "${LIB_PRE_REQS}/CGAL/${CMAKE_BUILD_TYPE_LOWER}/lib/CGAL" CACHE PATH "Location of CGALConfig.cmake")
     set( CGAL_BIN "${CGAL_DIR}/../../bin" CACHE PATH "Location of CGAL binary (dll) files")
     find_package( CGAL COMPONENTS Core)
     set( CGAL_DONT_OVERRIDE_CMAKE_FLAGS TRUE CACHE BOOL "Prevent CGAL from overwritting CMake flags.")
     include( ${CGAL_USE_FILE})
 endif()
 
-if(WITH_DLIB)   # dlib
-    set( dlib_ROOT "${LIB_PRE_REQS}/dlib" CACHE PATH "Location of dlib")
-    if(IS_DEBUG)
-        set( dlib_DIR "${dlib_ROOT}/debug/lib/cmake/dlib" CACHE PATH "Location of dlibConfig.cmake")
-    else()
-        set( dlib_DIR "${dlib_ROOT}/release/lib/cmake/dlib" CACHE PATH "Location of dlibConfig.cmake")
-    endif()
-    find_package( dlib REQUIRED)
-    include_directories( ${dlib_INCLUDE_DIRS})
-    set( dlib_LIBRARY_DIR "${dlib_DIR}/../..")
-    set( dlib_LIBRARY "${dlib_LIBRARY_DIR}/libdlib.so.19.4.0")
-    set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${dlib_LIBRARY_DIR})
-endif()
 
 #if(WITH_VCG)    # VCGLib (Visual and Computer Graphics Library)
 #    set( VCG_DIR "${LIB_PRE_REQS}/vcglib" CACHE PATH "Location of VCG header only library.")
 #    include_directories( ${VCG_DIR})    # Header only library
 #endif()
 
-if(WITH_LIBICP) # The ICP source library (Andreas Geiger) (https://github.com/symao/libicp)
-    set( LIBICP_DIR "${LIB_PRE_REQS}/libICP" CACHE PATH "Location of libICP source files.")
-    set( LIBICP_SRC "${LIBICP_DIR}/src")
-    include_directories( "${LIBICP_SRC}")
-    set( LIBICP_SRC_FILES
-        "${LIBICP_SRC}/icp.cpp"
-        "${LIBICP_SRC}/icpPointToPlane.cpp"
-        "${LIBICP_SRC}/icpPointToPoint.cpp"
-        "${LIBICP_SRC}/kdtree.cpp"
-        "${LIBICP_SRC}/matrix.cpp"
-        )
-endif()
 
 if(WITH_CPD) # Coherent Point Drift
     set( Cpd_ROOT "${LIB_PRE_REQS}/cpd" CACHE PATH "Location of CPD (Coherent Point Drift)")
-    if(IS_DEBUG)
-        set( Cpd_DIR "${Cpd_ROOT}/debug/lib/cmake/cpd" CACHE PATH "Location of cpd-config.cmake")
-    else()
-        set( Cpd_DIR "${Cpd_ROOT}/release/lib/cmake/cpd" CACHE PATH "Location of cpd-config.cmake")
-    endif()
+    set( Cpd_DIR "${Cpd_ROOT}/${CMAKE_BUILD_TYPE_LOWER}/lib/cmake/cpd" CACHE PATH "Location of cpd-config.cmake")
     find_package( Cpd REQUIRED)
     set( Cpd_INCLUDE_DIRS "${Cpd_DIR}/../../../include")
     include_directories( ${Cpd_INCLUDE_DIRS})
     message( STATUS "Cpd:        ${Cpd_DIR}")
-endif()
-
-if(WITH_LUA)
-    set( LUA_DIR "${LIB_PRE_REQS}/lua5" CACHE PATH "Location of Lua")
-    set( LUA_INCLUDE_DIRS "${LUA_DIR}/include")
-    set( LUA_LIBRARY_DIR  "${LUA_DIR}/lib")
-    include_directories( "${LUA_INCLUDE_DIRS}")
-    link_directories( "${LUA_LIBRARY_DIR}")
-    set( LUA_LIBRARIES "lua53.dll")
-    if(UNIX)
-        set( LUA_LIBRARIES "${LUA_LIBRARY_DIR}/liblua53.so")
-        set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${LUA_LIBRARY_DIR})
-    endif()
-    message( STATUS "Lua:        ${LUA_LIBRARIES}")
 endif()

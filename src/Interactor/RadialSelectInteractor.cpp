@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,112 +18,162 @@
 #include <RadialSelectInteractor.h>
 #include <LoopSelectVisualisation.h>
 #include <FaceModelViewer.h>
+#include <ModelSelector.h>
 #include <FaceModel.h>
 #include <FaceView.h>
 #include <cassert>
 using FaceTools::Interactor::RadialSelectInteractor;
-using FaceTools::Interactor::ModelViewerInteractor;
-using FaceTools::Interactor::MEEI;
+using FaceTools::Interactor::FaceViewInteractor;
 using FaceTools::Vis::LoopSelectVisualisation;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
+using MS = FaceTools::Action::ModelSelector;
 
 
-const QString RadialSelectInteractor::s_msg( tr("Reposition radial area by left-click and dragging the centre; change radius using the mouse wheel."));
-
-
-// public
-RadialSelectInteractor::RadialSelectInteractor( MEEI* meei, LoopSelectVisualisation* vis, QStatusBar* sbar)
-    : ModelViewerInteractor( nullptr, sbar), _meei(meei), _vis(vis), _move(false), _onReticule(false)
+RadialSelectInteractor::RadialSelectInteractor( LoopSelectVisualisation& vis, const FM* fm)
+    : _vis(vis), _onReticule(false), _move(false), _model(fm), _radiusChange(0)
 {
-    connect( meei, &MEEI::onEnterProp, [this](FV* fv, const vtkProp* p){ if ( _vis->belongs( p, fv)) this->doOnEnterReticule();});
-    connect( meei, &MEEI::onLeaveProp, [this](FV* fv, const vtkProp* p){ if ( _vis->belongs( p, fv)) this->doOnLeaveReticule();});
-    setEnabled(false);
+    fm->lockForRead();
+    cv::Vec3f cpos = fm->findClosestSurfacePoint( fm->icentre());
+    const int sv = fm->findVertex( cpos);
+    _rsel = RFeatures::ObjModelRegionSelector::create( fm->model(), sv);
+
+    const double diag = fm->bounds()[0]->diagonal();
+    const double initRad = diag / 3;
+    _rsel->setRadius( initRad);
+    _radiusChange = initRad / 100;
+    fm->unlock();
 }   // end ctor
 
 
-void RadialSelectInteractor::doOnEnterReticule()
+void RadialSelectInteractor::set( const cv::Vec3f &p, double r)
 {
-    _onReticule = true;
-}   // end doOnEnterReticule
+    _model->lockForRead();
+    cv::Vec3f cpos = _model->findClosestSurfacePoint( p);
+    const int sv = _model->findVertex( cpos);
+    cv::Vec3f offset = cpos - _model->model().vtx(sv); // Offset from the vertex
+    _rsel->setCentre( sv, offset);
+    _rsel->setRadius(r);
+    updateVis();
+    _model->unlock();
+}   // end set
 
 
-void RadialSelectInteractor::doOnLeaveReticule()
+// private
+void RadialSelectInteractor::updateVis()
 {
-    _onReticule = false;
-}   // end doOnLeaveReticule
+    // Get the boundary as a vector of vertices
+    const IntSet* vidxs = _rsel->boundary();
+    std::vector<cv::Vec3f> pts;
+    const RFeatures::ObjModel& cmodel = _model->model();
+    std::for_each( std::begin(*vidxs), std::end(*vidxs), [&](int v){ pts.push_back(cmodel.vtx(v));});
+
+    cv::Vec3f v = _rsel->centre(); // Get the centre vertex
+
+    // Update the visualisation
+    for ( const FV* fv : _model->fvs())
+    {
+        _vis.setReticule( fv, v);
+        _vis.setPoints( fv, pts);
+    }   // end for
+
+    _model->updateRenderers();
+}   // end updateVis
 
 
-bool RadialSelectInteractor::leftButtonDown( const QPoint& p)
+double RadialSelectInteractor::radius() const { return _rsel->radius();}
+cv::Vec3f RadialSelectInteractor::centre() const { return _rsel->centre();}
+size_t RadialSelectInteractor::selectedFaces(IntSet &fs) const { return _rsel->selectedFaces(fs);}
+
+
+void RadialSelectInteractor::enterProp( FV* fv, const vtkProp* p)
+{
+    if ( _vis.belongs( p, fv))
+    {
+        _onReticule = true;
+        showHover( true);
+    }   // end if
+}   // end enterProp
+
+
+void RadialSelectInteractor::leaveProp( FV* fv, const vtkProp* p)
+{
+    if ( _vis.belongs( p, fv))
+    {
+        _onReticule = false;
+        showHover( false);
+    }   // end if
+}   // end leaveProp
+
+
+bool RadialSelectInteractor::leftButtonDown()
 {
     _move = _onReticule;
-    if ( _move)
-        viewer()->setCursor(Qt::CrossCursor);
-    return _onReticule;
+    return _move;
 }   // end leftButtonDown
 
 
-bool RadialSelectInteractor::leftButtonUp( const QPoint& p)
+bool RadialSelectInteractor::leftButtonUp()
 {
-    if ( _move)
-        viewer()->setCursor(Qt::ArrowCursor);
+    const bool wasMoving = _move;
     _move = false;
-    return mouseMove(p);
+    return wasMoving;
 }   // end leftButtonUp
 
 
-// Left drag (but only after _move flag set with leftButtonDown)
-// to reposition the centre of the boundary.
-bool RadialSelectInteractor::leftDrag( const QPoint& p)
+bool RadialSelectInteractor::leftDrag()
 {
-    FV* fv = _meei->model();
+    FaceViewInteractor::leftDrag();
+    bool swallowed = false;
+    FV* fv = view();
     if ( fv && _move)
     {
-        cv::Vec3f v;
-        if ( fv->projectToSurface( p, v))
-            emit onSetCentre( fv, v);
+        assert( _model->fvs().has(fv));
+        cv::Vec3f c;
+        fv->data()->lockForRead();
+        if ( fv->projectToSurface( MS::mousePos(), c))
+        {
+            MS::setCursor(Qt::CursorShape::SizeAllCursor);
+            set( c, _rsel->radius());
+            swallowed = true;
+        }   // end if
+        fv->data()->unlock();
     }   // end if
-    return _move;
+    return swallowed;
 }   // end leftDrag
 
 
 // Increase the radius
-bool RadialSelectInteractor::mouseWheelForward( const QPoint& p)
+bool RadialSelectInteractor::mouseWheelForward()
 {
     if ( _onReticule)
-        emit onIncreaseRadius( _meei->model());
+        set( _rsel->centre(), _rsel->radius() + _radiusChange);
     return _onReticule;
 }   // end mouseWheelForward
 
 
 // Decrease the radius
-bool RadialSelectInteractor::mouseWheelBackward( const QPoint& p)
+bool RadialSelectInteractor::mouseWheelBackward()
 {
     if ( _onReticule)
-        emit onDecreaseRadius( _meei->model());
+        set( _rsel->centre(), std::max( _rsel->radius() - _radiusChange, 0.0));
     return _onReticule;
 }   // end mouseWheeBackward
 
 
-bool RadialSelectInteractor::mouseMove( const QPoint& p)
+void RadialSelectInteractor::showHover( bool v)
 {
-    FV* fv = _meei->model();
-    if ( fv)
+    if ( view())
     {
-        const FM* fm = fv->data();
+        if ( v)
+            MS::setCursor(Qt::CursorShape::SizeAllCursor);
+        else
+            MS::restoreCursor();
+
+        const FM* fm = view()->data();
         for ( FV* f : fm->fvs())
-            _vis->setHighlighted( f, _onReticule);
+            _vis.setHighlighted( f, v);
+
         fm->updateRenderers();
     }   // end if
-    return false;
-}   // end mouseMove
-
-
-// protected
-void RadialSelectInteractor::onEnabledStateChanged( bool v)
-{
-    if ( v)
-        showStatus( s_msg, 10000);    // 10 seconds display time
-    else
-        clearStatus();
-}   // end onEnabledStateChanged
+}   // end showHover

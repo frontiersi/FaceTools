@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,27 +18,24 @@
 #ifndef FACE_TOOLS_ACTION_TRANSFORM_TO_STANDARD_POSITION_H
 #define FACE_TOOLS_ACTION_TRANSFORM_TO_STANDARD_POSITION_H
 
-#include "ActionOrientCameraToFace.h"
+#include "FaceAction.h"
 
 namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionTransformToStandardPosition : public FaceAction
 { Q_OBJECT
 public:
-    ActionTransformToStandardPosition( const QString& dname="Transform to Standard Position",
-                                       const QIcon& icon=QIcon(),
-                                       ActionOrientCameraToFace* camSetter=nullptr);
+    ActionTransformToStandardPosition( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
 
-private slots:
-    bool testReady( const Vis::FV*) override;
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(AFFINE_CHANGE);}
+    QString toolTip() const override;
+    QString whatsThis() const override;
 
-private:
-    ActionOrientCameraToFace *_camSetter;
+protected:
+    bool checkEnable( Event) override;
+    void doAction( Event) override;
+    void doAfterAction( Event) override;
 };  // end class
 
 }}   // end namespace
 
 #endif
-

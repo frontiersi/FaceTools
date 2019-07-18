@@ -25,29 +25,22 @@ using FaceTools::Vis::LandmarksVisualisation;
 using FaceTools::Vis::BaseVisualisation;
 using FaceTools::Vis::LandmarkSetView;
 using FaceTools::Vis::FV;
-using FaceTools::FVS;
 using FaceTools::FM;
 using FaceTools::FaceLateral;
+using FaceTools::Action::Event;
 using FaceTools::Landmark::LandmarkSet;
-
-
-LandmarksVisualisation::LandmarksVisualisation( const QString& dname, const QIcon& icon)
-    : BaseVisualisation(dname, icon)
-{
-}   // end ctor
-
 
 LandmarksVisualisation::~LandmarksVisualisation()
 {
     while (!_views.empty())
-        purge(const_cast<FV*>(_views.begin()->first));
+        purge(const_cast<FV*>(_views.begin()->first), Event::NONE);
 }   // end dtor
 
 
 bool LandmarksVisualisation::isAvailable( const FM* fm) const
 {
     assert(fm);
-    return !fm->landmarks()->empty();
+    return !fm->landmarks().empty();
 }   // end isAvailable
 
 
@@ -56,19 +49,40 @@ void LandmarksVisualisation::apply( FV* fv, const QPoint*)
     assert(fv);
     if ( !hasView(fv))
     {
-        LandmarkSet::Ptr lmks = fv->data()->landmarks();
-        _views[fv] = new LandmarkSetView(*lmks);
+        const LandmarkSet& lmks = fv->data()->landmarks();
+        _views[fv] = new LandmarkSetView(lmks);
     }   // end if
     _views.at(fv)->setVisible( true, fv->viewer());
 }   // end apply
 
 
-void LandmarksVisualisation::clear( FV* fv)
+bool LandmarksVisualisation::purge( FV* fv, Event)
+{
+    if ( hasView(fv))
+    {
+        _views.at(fv)->setVisible( false, fv->viewer());
+        delete _views.at(fv);
+        _views.erase(fv);
+    }   // end if
+    return true;
+}   // end purge
+
+
+void LandmarksVisualisation::setVisible( FV* fv, bool v)
 {
     assert(fv);
     if ( hasView(fv))
-        _views.at(fv)->setVisible( false, fv->viewer());
-}   // end clear 
+        _views.at(fv)->setVisible( v, fv->viewer());
+}   // end setVisible
+
+
+bool LandmarksVisualisation::isVisible( const FV *fv) const
+{
+    bool vis = false;
+    if ( hasView(fv))
+        vis = !_views.at(fv)->visible().empty();
+    return vis;
+}   // end isVisible
 
 
 void LandmarksVisualisation::setLandmarkVisible( const FM* fm, int lm, bool v)
@@ -90,49 +104,64 @@ void LandmarksVisualisation::setLandmarkHighlighted( const FM* fm, int lm, FaceL
 }   // end setLandmarkHighlighted
 
 
+void LandmarksVisualisation::setHighlighted( const FM* fm)
+{
+    for ( auto& p : _views) // Unhighlight all
+        p.second->setColour( LandmarkSetView::BASE0_COL);
+
+    if ( fm)    // Highlight just the landmarks of the given model.
+    {
+        for ( FV* fv : fm->fvs())
+            if ( hasView(fv))
+                _views.at(fv)->setColour( LandmarkSetView::SPEC0_COL);
+    }   // end if
+}   // end setHighlighted
+
+
 void LandmarksVisualisation::updateLandmark( const FM* fm, int id)
 {
     assert(fm);
+    const LandmarkSet& lmks = fm->landmarks();
+    const bool isBilateral = LDMKS_MAN::landmark(id)->isBilateral();
+
     for ( FV* fv : fm->fvs())
     {
         if ( hasView(fv))
         {
-            LandmarkSet::Ptr lmks = fv->data()->landmarks();
-            const bool isBilateral = LDMKS_MAN::landmark(id)->isBilateral();
             LandmarkSetView* view = _views.at(fv);
-
             if ( isBilateral)
             {
-                view->set(id, FACE_LATERAL_LEFT, *lmks->pos(id, FACE_LATERAL_LEFT));
-                view->set(id, FACE_LATERAL_RIGHT, *lmks->pos(id, FACE_LATERAL_RIGHT));
+                view->set(id, FACE_LATERAL_LEFT, lmks.pos(id, FACE_LATERAL_LEFT));
+                view->set(id, FACE_LATERAL_RIGHT, lmks.pos(id, FACE_LATERAL_RIGHT));
             }   // end if
             else
-                view->set(id, FACE_LATERAL_MEDIAL, *lmks->pos(id, FACE_LATERAL_MEDIAL));
+                view->set(id, FACE_LATERAL_MEDIAL, lmks.pos(id, FACE_LATERAL_MEDIAL));
         }   // end if
     }   // end for
 }   // end updateLandmark
 
 
-void LandmarksVisualisation::refreshLandmarks( const FM* fm)
+void LandmarksVisualisation::updateLandmarks( const FM* fm)
 {
-    const FV* sfv = Action::ModelSelector::selected();
-    cv::Vec3d col = (sfv && sfv->data() == fm) ? LandmarkSetView::SPEC0_COL : LandmarkSetView::BASE0_COL;
-
-    LandmarkSet::Ptr lmks = fm->landmarks();
-    for ( FV* fv : fm->fvs())
+    assert(fm);
+    const LandmarkSet& lmks = fm->landmarks();
+    if ( lmks.empty())
     {
-        if ( hasView(fv))
-        {
-            _views.at(fv)->refresh(*lmks);
-            _views.at(fv)->setColour( col);
-        }   // end if
-    }   // end for
-}   // end refreshLandmarks
+        const FVS& fvs = fm->fvs();
+        for ( FV* fv : fvs)
+            purge(fv, Event::NONE);
+    }   // end if
+    else
+    {
+        for ( int id : lmks.ids())
+            updateLandmark( fm, id);
+    }   // end else
+}   // end updateLandmarks
 
 
 int LandmarksVisualisation::landmarkId( const FV* fv, const vtkProp* prop, FaceLateral &lat) const
 {
-    return  hasView(fv) ? _views.at(fv)->landmarkId( prop, lat) : -1;
+    return hasView(fv) ? _views.at(fv)->landmarkId( prop, lat) : -1;
 }   // end landmarkId
 
 
@@ -148,39 +177,11 @@ bool LandmarksVisualisation::belongs( const vtkProp* p, const FV* fv) const
 }   // end belongs
 
 
-// protected
-void LandmarksVisualisation::pokeTransform( const FV* fv, const vtkMatrix4x4* vm)
+void LandmarksVisualisation::syncActorsToData( const FV* fv, const cv::Matx44d& d)
 {
     if ( hasView(fv))
-        _views.at(fv)->pokeTransform(vm);
-}   // end pokeTransform
-
-
-// protected
-void LandmarksVisualisation::fixTransform( const FV* fv)
-{
-    if ( hasView(fv))
-        _views.at(fv)->fixTransform();
-}   // end fixTransform
-
-
-// protected
-void LandmarksVisualisation::purge( FV* fv)
-{
-    if ( hasView(fv))
-    {
-        _views.at(fv)->setVisible( false, fv->viewer());
-        delete _views.at(fv);
-        _views.erase(fv);
-    }   // end if
-}   // end purge
-
-
-// protected
-bool LandmarksVisualisation::allowShowOnLoad( const FM* fm) const
-{
-    return !fm->landmarks()->empty();
-}   // end allowShowOnLoad
+        _views.at(fv)->sync( fv->data()->landmarks(), d);
+}   // end syncActorsToData
 
 
 // private

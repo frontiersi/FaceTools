@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,27 +18,30 @@
 #ifndef FACE_TOOLS_ACTION_RENAME_PATH_H
 #define FACE_TOOLS_ACTION_RENAME_PATH_H
 
-#include "ActionEditPaths.h"
+#include "FaceAction.h"
+#include <PathsInteractor.h>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionRenamePath : public FaceAction
 { Q_OBJECT
 public:
-    ActionRenamePath( const QString& dname, const QIcon&, ActionEditPaths*, QWidget *parent=nullptr);
+    ActionRenamePath( const QString&, const QIcon&, Interactor::PathsInteractor::Ptr);
+
+    QString toolTip() const override { return "Give the selected path a label to identify it in metadata.";}
+
+protected:
+    bool checkEnable( Event) override;
+    void doAction( Event) override;
 
 private slots:
-    bool testEnabled( const QPoint* mc=nullptr) const override;
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(METRICS_CHANGE);}
+    void doOnEnterPath();
+    void doOnLeavePath();
 
 private:
-    ActionEditPaths *_editor;
-    QWidget *_parent;
+    Interactor::PathsInteractor::Ptr _pint;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

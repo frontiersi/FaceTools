@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,26 +21,21 @@
 #include "FaceAction.h"
 #include <FaceModelViewer.h>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionSetParallelProjection : public FaceAction
 { Q_OBJECT
 public:
-    ActionSetParallelProjection( const QString& dname="Parallel Projection", const QIcon& ico=QIcon());
+    ActionSetParallelProjection( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
 
-    void addViewer( FaceModelViewer* v) { _viewers.push_back(v);}
+    QString toolTip() const override { return "Toggle the rendering projection between perspective (normal vision) and orthographic (parallel lines always appear parallel).";}
 
-private slots:
-    bool testEnabled( const QPoint* mc=nullptr) const override { return true;}
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(CAMERA_CHANGE);}
-
-private:
-    std::vector<FaceModelViewer*> _viewers;
+protected:
+    bool checkState( Event) override;
+    bool checkEnable( Event) override;
+    void doAction( Event) override;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

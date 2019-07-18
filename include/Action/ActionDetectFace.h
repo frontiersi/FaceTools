@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,21 +26,22 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionDetectFace : public FaceAction
 { Q_OBJECT
 public:
-    ActionDetectFace( const QString& dname, const QIcon& icon, QWidget *parent=nullptr, QProgressBar* pb=nullptr);
+    ActionDetectFace( const QString&, const QIcon&);
+
+    QString toolTip() const override { return "Attempt to automatically detect and place landmarks over the facial region of the selected model.";}
 
     // Returns an empty string on success, otherwise the nature of the error.
     // If ulmks is null, all landmarks are updated, otherwise just the set pointed to.
     static std::string redetectLandmarks( FM*, const IntSet* ulmks=nullptr);
 
-protected slots:
-    bool testReady( const Vis::FV*) override;
-    bool testEnabled( const QPoint*) const override;
-    bool doBeforeAction( FVS&, const QPoint&) override;   // Warn if overwriting
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet&, const FVS&, bool) override;
+protected:
+    void postInit() override;
+    bool checkEnable( Event) override;
+    bool doBeforeAction( Event) override;   // Warn if overwriting
+    void doAction( Event) override;
+    void doAfterAction( Event) override;
 
 private:
-    QWidget *_parent;
     Widget::DetectionCheckDialog *_cdialog;
     std::string _err;
     IntSet _ulmks;

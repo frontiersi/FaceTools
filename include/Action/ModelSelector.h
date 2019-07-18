@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,43 +19,99 @@
 #define FACE_TOOLS_MODEL_SELECTOR_H
 
 #include <FaceModelViewer.h>
-#include <ModelSelectInteractor.h>
+#include <BoundingVisualisation.h>
+#include <SelectMouseHandler.h>
+#include <QStatusBar>
+using IMode = QTools::InteractionMode;
 
 namespace FaceTools { namespace Action {
-
-class FaceActionManager;
 
 class FaceTools_EXPORT ModelSelector
 {
 public:
-    using Ptr = std::shared_ptr<ModelSelector>;
+    // Add the application's viewers to the ModelSelector.
+    // Do this before calling any of the other functions.
+    static void addViewer( FMV*, bool setDefault=false);
 
-    static void create( FaceActionManager*, FMV*);
+    // Optionally set a statically accessible status bar for convenient access.
+    static void setStatusBar( QStatusBar*);
+    static void showStatus( const QString&, int timeOutMilliSecs=0);    // No effect if status bar not set.
+    static void clearStatus();
 
-    static FMV* viewer();   // The currently selected viewer
-    static Vis::FV* selected() { return _me->_msi.selected();}
-    static const FVS& available() { return _me->_msi.available();}
+    // Set the cursor shape to be used across all viewers.
+    static void setCursor( Qt::CursorShape);
+    static void restoreCursor();
+
+    // Return the interactor to connect to its onSelected event.
+    // Call AFTER using addViewer to add all required viewers since the
+    // construction of a ModelViewerInteractor derived type will call
+    // ModelSelector::viewers() in its constructor.
+    static const Interactor::SelectMouseHandler* selector();
+
+    // Set/get the interaction mode for the viewers (camera - default, or actor).
+    static void setInteractionMode( IMode, bool useCameraOffActor=false);
+    static IMode interactionMode();
+
+    // Return the viewer that the mouse was last over. Never returns null.
+    // This is NOT necessarily the same as the currently selected FaceView's viewer!
+    static FMV* mouseViewer();
+
+    // Returns current mouse cursor position relative to the mouse viewer.
+    static QPoint mousePos() { return mouseViewer()->mouseCoords();}
+
+    // Simply returns the default viewer (set from addViewer).
+    static FMV* defaultViewer();
+
+    // Return all viewers in the order they were added.
+    static const std::vector<FMV*>& viewers();
+
+    static Vis::FV* selectedView();
+    static bool isViewSelected() { return selectedView() != nullptr;}
+    static FM* selectedModel() { return selectedView() ? selectedView()->data() : nullptr;}
 
     // Create a new FaceView instances and attach it to the given viewer.
-    // If given viewer is null, FaceView added to currently selected viewer.
-    // Returned FaceView is NOT automatically selected.
+    // If given viewer is null, FaceView added to the viewer of the currently
+    // selected FaceView. If no FaceView is currently selected, the default viewer
+    // is used. If no default viewer is set, the current mouseViewer() is used.
+    // Failing all of that, the first available viewer set is used.
+    // Returned FaceView will have been automatically selected.
     static Vis::FV* addFaceView( FM*, FMV *v=nullptr);
 
-    // Programmatically select/deselect the given FaceView.
-    static void setSelected( Vis::FV*, bool);
-
-    static void setSelectEnabled( bool);
+    // Programmatically select the given FaceView.
+    static void setSelected( Vis::FV*);
 
     // Detach the FaceView from its viewer and delete it.
     static void removeFaceView( Vis::FV*);
 
     // Call removeFaceView for ALL associated FaceViews of the given FaceModel.
-    static void remove( FM*);
+    static void remove( const FM*);
+
+    // Set whether the camera autofocuses on the selected model upon selection (on by default).
+    static void setAutoFocusOnSelectEnabled( bool);
+
+    // Synchronise all bounding cuboid actors to match the model's orientation bounds.
+    static void syncBoundingVisualisation( const FM*);
+
+    // Update rendering across all viewers.
+    static void updateRender();
 
 private:
+    using Ptr = std::shared_ptr<ModelSelector>;
     static ModelSelector::Ptr _me;
-    Interactor::ModelSelectInteractor _msi;
-    ModelSelector( FaceActionManager*, FMV*);
+    static Ptr me();
+    static Interactor::SelectMouseHandler& msi();
+
+    Vis::BoundingVisualisation _bvis;
+    std::vector<FMV*> _viewers;
+    QStatusBar* _sbar;
+    bool _autoFocus;
+    int _defv;  // Default viewer index
+    Interactor::SelectMouseHandler *_msi;
+
+    void doOnSelected( Vis::FV*, bool);
+    ModelSelector();
+    ModelSelector( const ModelSelector&) = delete;
+    void operator=( const ModelSelector&) = delete;
 };  // end class
 
 }}   // end namespace

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,20 +25,23 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionSmooth : public FaceAction
 { Q_OBJECT
 public:
-    ActionSmooth( const QString& dname, const QIcon& icon=QIcon(), QProgressBar* pb=nullptr);   // Async if pb not null 
+    ActionSmooth( const QString&, const QIcon&);
+
+    QString toolTip() const override { return "Lightly smooth the selected model's geometry to reduce the severity of sharp edges / corners.";}
 
     void setMaxCurvature( double c) { _maxc = c;}
     double maxCurvature() const { return _maxc;}
 
-protected slots:
-    bool testReady( const Vis::FV*) override;
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet&, const FVS&, bool) override;
+protected:
+    bool checkEnable( Event) override;
+    bool doBeforeAction( Event) override;
+    void doAction( Event) override;
+    void doAfterAction( Event) override;
 
 private:
     double _maxc;
 };  // end class
 
-} }   // end namespace
+}}   // end namespaces
 
 #endif

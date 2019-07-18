@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
 
 #include "FaceModelViewer.h"
 #include <QToolButton>
-#include <QHBoxLayout>
+#include <QComboBox>
 #include <QSplitter>
 
 namespace FaceTools {
@@ -29,11 +29,11 @@ class FaceTools_EXPORT MultiFaceModelViewer : public QWidget
 { Q_OBJECT
 public:
     MultiFaceModelViewer( QWidget *parent=nullptr);
-    ~MultiFaceModelViewer() override;
+    ~MultiFaceModelViewer() override {}
 
-    FMV* leftViewer() { return _v0;}
-    FMV* centreViewer() { return _v1;}
-    FMV* rightViewer() { return _v2;}
+    FMV* leftViewer() const { return _fmvs.at(0);}
+    FMV* centreViewer() const { return _fmvs.at(1);}
+    FMV* rightViewer() const { return _fmvs.at(2);}
 
     void setCopyLeftToCentreAction( QAction*);
     void setMoveLeftToCentreAction( QAction*);
@@ -46,29 +46,22 @@ public:
     void setMoveRightToCentreAction( QAction*);
     void setCopyRightToCentreAction( QAction*);
 
-    void setLeftAction0( QAction*);
-    void setCentreAction0( QAction*);
-    void setRightAction0( QAction*);
-
-    void setLeftAction1( QAction*);
-    void setCentreAction1( QAction*);
-    void setRightAction1( QAction*);
-
 public slots:
-    void setViewerVisible(int, bool);
+    void doOnUpdateModelLists( const FM*);
 
 private:
     std::vector<QToolButton*> _copyButton;
     std::vector<QToolButton*> _moveButton;
-    std::vector<QToolButton*> _action0Buttons;
-    std::vector<QToolButton*> _action1Buttons;
-
-    FMV *_v0;
-    FMV *_v1;
-    FMV *_v2;
+    std::vector<QComboBox*> _modelLists;
+    std::vector<FMV*> _fmvs;
     QSplitter *_splitter;
 
-    void addCommonButtons( QLayout*);
+    // The reference names (filenames) shown in the dropdown lists for attached models.
+    std::unordered_map<const FM*, QString> _attachedNames;
+
+    void setViewerVisible( size_t, bool);
+    void doOnViewerChanged( size_t, const Vis::FV*);
+    void doOnComboBoxChanged( size_t, const QString&);
 
     MultiFaceModelViewer( const MultiFaceModelViewer&) = delete;
     void operator=( const MultiFaceModelViewer&) = delete;

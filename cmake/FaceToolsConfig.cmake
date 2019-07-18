@@ -32,4 +32,4 @@ set( FaceTools_LIBRARIES     ${FaceTools_LIBRARIES}         CACHE FILE "The Face
 
 # handle QUIETLY and REQUIRED args and set FaceTools_FOUND to TRUE if all listed variables are TRUE
 include( "${CMAKE_ROOT}/Modules/FindPackageHandleStandardArgs.cmake")
-find_package_handle_standard_args( FaceTools "Found:\t${FaceTools_LIBRARIES}" FaceTools_LIBRARIES FaceTools_INCLUDE_DIRS)
+find_package_handle_standard_args( FaceTools FaceTools_FOUND FaceTools_LIBRARIES FaceTools_INCLUDE_DIRS)

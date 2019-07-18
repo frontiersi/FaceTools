@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,31 +26,20 @@ namespace FaceTools { namespace Vis {
 class FaceTools_EXPORT BoundingVisualisation : public BaseVisualisation
 { Q_OBJECT
 public:
-    explicit BoundingVisualisation( const QString& dname="BoundingVisualisation");
     ~BoundingVisualisation() override;
 
-    bool isUIVisible() const override { return false;}
-
-    // Used to bound just the selected views.
-    bool applyToAllInViewer() const override { return false;}
-
     void apply( FV*, const QPoint* mc=nullptr) override;
-    void clear( FV*) override;
+    bool purge( FV*, Action::Event) override;
 
-    // Set the given component to be highlighted or not.
-    // If c == -1, then all components are referenced.
-    void setHighlighted( const FV*, int c=-1, bool v=false);
+    void setVisible( FV*, bool) override;
+    bool isVisible( const FV*) const override;
 
-    void pokeTransform( const FV*, const vtkMatrix4x4*) override;
-    void fixTransform( const FV*) override;
-
-    void purge( FV*) override;
-    bool applyOnReady() const override { return true;}
+    void syncActorsToData( const FV*, const cv::Matx44d& d=cv::Matx44d::eye()) override;
 
 private:
     std::unordered_map<const FV*, BoundingView*> _views;
 };  // end class
 
-} }   // end namespace
+}}   // end namespace
 
 #endif

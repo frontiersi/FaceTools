@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 
 namespace FaceTools { namespace FileIO {
 
-static const std::string XML_VERSION = "3.1";
+static const std::string XML_VERSION = "4.0";
 static const std::string XML_FILE_EXTENSION = "3df";
 static const std::string XML_FILE_DESCRIPTION = "3D Face Image and Metadata";
 
@@ -35,6 +35,7 @@ public:
 
     bool canRead() const override { return true;}
     bool canWrite() const override { return true;}
+    bool canWriteTextures() const override { return true;}
 
     QString error() const override { return _err;}
     double version() const override { return _fversion;}
@@ -42,10 +43,20 @@ public:
     FM* read( const QString& filepath) override;
     bool write( const FM*, const QString& filepath) override;
 
+    // Export metadata about the given model into a property tree ready for writing.
+    // Note that because the data are being written out into a property tree, different
+    // export formats are available (not just XML).
+    static void exportMetaData( const FM*, const std::string& objfilename, PTree&);
+
+    // Import metadata from a property tree for the given model returning file version > 0 on success.
+    static double importMetaData( FM*, const PTree&, std::string& objfilename);
+
 private:
     QStringSet _exts;
     QString _err;
     double _fversion;   // File version read in
+
+    static PTree& exportXMLHeader( PTree&);
 };  // end class
 
 }}   // end namespaces

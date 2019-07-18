@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,6 @@ namespace FaceTools { namespace Vis {
 class FaceTools_EXPORT PathSetVisualisation : public BaseVisualisation
 { Q_OBJECT
 public:
-    PathSetVisualisation( const QString &dname, const QIcon &icon);
     ~PathSetVisualisation() override;
 
     bool applyToAllInViewer() const override { return true;}
@@ -35,8 +34,13 @@ public:
     bool belongs( const vtkProp*, const FV*) const override;
     bool isAvailable( const FM*) const override;
 
+    bool hasView( const FV*) const;
+
     void apply( FV*, const QPoint* mc=nullptr) override;
-    void clear( FV*) override;
+    bool purge( FV*, Action::Event) override;
+
+    void setVisible( FV*, bool) override;
+    bool isVisible( const FV*) const override;
 
     // Creates and shows the given path across all FaceViews for the FaceModel.
     void addPath( const FM*, int pathId);
@@ -60,15 +64,11 @@ public:
     // Show the text caption for all views of the associated model - turning off all others.
     void showText( const FM* fm=nullptr);
 
-    void pokeTransform( const FV*, const vtkMatrix4x4*) override;
-    void fixTransform( const FV*) override;
-
-    void purge( FV*) override;
+    void syncActorsToData( const FV*, const cv::Matx44d&) override;
 
 private:
     // The paths associated with a FV.
     std::unordered_map<const FV*, PathSetView*> _views;
-    bool hasView( const FV*) const;
 };  // end class
 
 }}   // end namespace

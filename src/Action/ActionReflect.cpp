@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,112 +16,81 @@
  ************************************************************************/
 
 #include <ActionReflect.h>
-#include <ObjModelReflector.h>
-#include <FaceModelViewer.h>
+#include <ActionInvertNormals.h>
 #include <FaceModel.h>
-#include <cassert>
-using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionReflect;
-using FaceTools::Action::EventSet;
-using FaceTools::Vis::FV;
+using FaceTools::Action::FaceAction;
+using FaceTools::Action::Event;
 using FaceTools::FVS;
 using FaceTools::FM;
-using FaceTools::Path;
-using FaceTools::PathSet;
-using FaceTools::Landmark::LandmarkSet;
+using FaceTools::Vis::FV;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionReflect::ActionReflect( const QString& dn, const QIcon& ico, QProgressBar* pb)
-    : FaceAction(dn, ico)
+ActionReflect::ActionReflect( const QString &dn, const QIcon& ico)
+    : FaceAction( dn, ico)
 {
-    if ( pb)
-        setAsync(true, QTools::QProgressUpdater::create(pb));
 }   // end ctor
 
 
-bool ActionReflect::testReady( const FV* fv) { return !fv->data()->landmarks()->empty();}
-
-
-namespace {
-
-void reflectPaths( PathSet::Ptr paths, const cv::Vec3f& ppt, const cv::Vec3f& pvec)
+QString ActionReflect::toolTip() const
 {
-    for ( int pid : paths->ids())
-    {
-        Path* path = paths->path(pid);
-        RFeatures::ObjModelReflector::reflectPoint( *path->vtxs.begin(), ppt, pvec);
-        RFeatures::ObjModelReflector::reflectPoint( *path->vtxs.rbegin(), ppt, pvec);
-    }   // end for
-}   // end reflectPaths
+    return "Reflect through the YZ plane, or if landmarks are present, through the midsagittal (median) plane.";
+}   // end toolTip
 
 
-void reflectLandmarks( LandmarkSet::Ptr lmks, const cv::Vec3f& ppt, const cv::Vec3f& pvec)
+bool ActionReflect::checkEnable( Event)
 {
-    using namespace FaceTools;
-    for ( int id : lmks->ids())
-    {
-        if ( LDMKS_MAN::landmark(id)->isBilateral())
-        {
-            cv::Vec3f p0 = *lmks->pos(id, FACE_LATERAL_LEFT);
-            cv::Vec3f p1 = *lmks->pos(id, FACE_LATERAL_RIGHT);
-            RFeatures::ObjModelReflector::reflectPoint( p0, ppt, pvec);
-            RFeatures::ObjModelReflector::reflectPoint( p1, ppt, pvec);
-            lmks->set( id, p0, FACE_LATERAL_LEFT);
-            lmks->set( id, p1, FACE_LATERAL_RIGHT);
-        }   // end if
-        else
-        {
-            cv::Vec3f p = *lmks->pos(id);
-            RFeatures::ObjModelReflector::reflectPoint( p, ppt, pvec);
-            lmks->set(id, p);
-        }   // end else
-    }   // end for
-}   // end reflectLandmarks
-
-}   // end namespace
+    return MS::isViewSelected();
+}   // end checkEnabled
 
 
-bool ActionReflect::doAction( FVS& fvs, const QPoint&)
+bool ActionReflect::doBeforeAction( Event)
 {
-    assert(fvs.size() == 1);
-    FV* fv = fvs.first();
-    FM* fm = fv->data();
-
-    fm->lockForWrite();
-
-    const RFeatures::Orientation& on = fm->landmarks()->orientation();
-    RFeatures::ObjModelInfo::Ptr info = fm->info();
-    RFeatures::ObjModel::Ptr model = info->model();
-
-    cv::Vec3f pvec;
-    cv::normalize( on.uvec().cross( on.nvec()), pvec);    // Reflection plane vector (normalized)
-    const cv::Vec3f ppt = fm->landmarks()->fullMean();    // Point in reflection plane
-
-    // Reflect the underlying model
-    RFeatures::ObjModelReflector reflector( model);
-    reflector.reflect( ppt, pvec);
-
-    // Also need to reflect landmarks and paths before updating FaceModel
-    reflectLandmarks( fm->landmarks(), ppt, pvec);
-    reflectPaths( fm->paths(), ppt, pvec);
-
-    info->reset( model);
-    fm->update(info);
-
+    _ev = Event::AFFINE_CHANGE;
+    FM* fm = MS::selectedModel();
+    fm->lockForRead();
+    if ( !fm->landmarks().empty())  // Will also have to invert normals if landmarks present
+        _ev.add( {Event::LANDMARKS_CHANGE, Event::GEOMETRY_CHANGE});
     fm->unlock();
     return true;
+}   // end doBeforeAction
+
+
+void ActionReflect::doAction( Event)
+{
+    storeUndo(this, _ev);
+
+    FM* fm = MS::selectedModel();
+    fm->lockForWrite();
+
+    cv::Matx44d rmat = cv::Matx44d( -1, 0, 0, 0,
+                                     0, 1, 0, 0,
+                                     0, 0, 1, 0,
+                                     0, 0, 0, 1);
+
+    // If the model has landmarks, then reflect through the model's median plane.
+    if ( !fm->landmarks().empty())
+    {
+        // Translate to origin, reflect through YZ plane, then translate back.
+        const Landmark::LandmarkSet& lmks = fm->landmarks();
+        const cv::Matx44d m = lmks.orientation().asMatrix( lmks.fullMean());
+        rmat = m * rmat * m.inv();
+        ActionInvertNormals::invertNormals( fm->wmodel());
+    }   // end if
+
+    fm->addTransformMatrix(rmat);
+    fm->swapLandmarkLaterals();
+    fm->unlock();
 }   // end doAction
 
 
-void ActionReflect::doAfterAction( EventSet& es, const FVS& fvs, bool)
+void ActionReflect::doAfterAction( Event)
 {
-    es.insert(GEOMETRY_CHANGE);
-
-    assert(fvs.size() == 1);
-    FV* fv = fvs.first();
-    FM* fm = fv->data();
-    if ( !fm->landmarks()->empty())
-        es.insert(LANDMARKS_CHANGE);
-    if ( !fm->paths()->empty())
-        es.insert(METRICS_CHANGE);
+    QString smsg = "Reflected model through YZ plane.";
+    if ( !MS::selectedModel()->landmarks().empty())
+        smsg = "Reflected face through midsagittal plane.";
+    MS::showStatus( smsg, 5000);
+    MS::setInteractionMode( IMode::CAMERA_INTERACTION);
+    emit onEvent(_ev);
 }   // end doAfterAction

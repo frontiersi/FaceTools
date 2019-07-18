@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,36 +18,29 @@
 #ifndef FACE_TOOLS_ACTION_FACE_ACTION_WORKER_H
 #define FACE_TOOLS_ACTION_FACE_ACTION_WORKER_H
 
-#include <FaceTools_Export.h>
-#include <opencv2/opencv.hpp>
+#include <FaceTypes.h>
 #include <QThread>
-#include <QPoint>
 
-namespace FaceTools {
-class FaceViewSet;
-
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceAction;
 
 class FaceTools_EXPORT FaceActionWorker : public QThread
 { Q_OBJECT
 public:
-    FaceActionWorker( FaceAction*, FaceViewSet*, const QPoint&);
+    FaceActionWorker( FaceAction*, Event);
 
 signals:
-    void workerFinished(bool);
+    void workerFinished( Event);
 
 protected:
     void run() override;
 
 private:
     FaceAction* _worker;
-    FaceViewSet* _rset;
-    QPoint _tp;
+    Event _event;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

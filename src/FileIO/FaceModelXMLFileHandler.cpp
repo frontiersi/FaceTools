@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 #include <FaceTools.h>
 #include <FaceModel.h>
 #include <PhenotypeManager.h>
+#include <Ethnicities.h>
 #include <MiscFunctions.h>
 #include <AssetImporter.h>
 #include <OBJExporter.h>
@@ -37,53 +38,75 @@ using FaceTools::Metric::PhenotypeManager;
 using FaceTools::Metric::Phenotype;
 using FaceTools::FM;
 
-namespace {
-
-void writeFaceModel( const FM* fm, const std::string& objfname, PTree& rnode)
+void FaceModelXMLFileHandler::exportMetaData( const FM* fm, const std::string& objfname, PTree& tnode)
 {
-    const std::string relfname = boost::filesystem::path( objfname).filename().string(); // Relative filepath
-    rnode.put( "ObjFilename", relfname);
+    PTree& rnode = tnode.add("FaceModel","");
+
+    rnode.put( "ObjFilename", objfname);
     rnode.put( "Notes", fm->notes().toStdString());
     rnode.put( "Source", fm->source().toStdString());
     rnode.put( "StudyId", fm->studyId().toStdString());
     rnode.put( "DateOfBirth", fm->dateOfBirth().toString().toStdString());
     rnode.put( "Sex", FaceTools::toSexString(fm->sex()).toStdString());
-    rnode.put( "Ethnicity", fm->ethnicity().toStdString());
+    rnode.put( "MaternalEthnicity", fm->maternalEthnicity());
+    rnode.put( "PaternalEthnicity", fm->paternalEthnicity());
     rnode.put( "CaptureDate", fm->captureDate().toString().toStdString());
 
-    rnode.put("OriginalOrientation", "") << fm->initialOrientation();
-    RFeatures::putVertex( rnode.put("OriginalCentre", ""), fm->initialCentre());
+    fm->landmarks().write( rnode.put("Landmarks", ""));
+    fm->paths().write( rnode.put("Paths", ""));
 
-    fm->landmarks()->write( rnode.put("Landmarks", ""));
-    fm->paths()->write( rnode.put("Paths", ""));
+    rnode.put("Orientation", "") << fm->orientation();
+    RFeatures::putVertex( rnode.put("Centre", ""), fm->icentre());
 
-    if ( !fm->landmarks()->empty())
-    {
-        rnode.put("DetectedOrientation", "") << fm->landmarks()->orientation();
-        RFeatures::putVertex( rnode.put("DetectedCentre", ""), fm->landmarks()->fullMean());
-    }   // end if
-
+    const double age = fm->age();
     PTree& mgrps = rnode.put("MetricGroups", "");
-    mgrps.add("Frontal", "") << fm->cmetrics();
-    mgrps.add("LeftLateral", "") << fm->cmetricsL();
-    mgrps.add("RightLateral", "") << fm->cmetricsR();
+    fm->cmetrics().write( mgrps.put("Frontal", ""), age);
+    fm->cmetricsL().write( mgrps.put("LeftLateral", ""), age);
+    fm->cmetricsR().write( mgrps.put("RightLateral", ""), age);
 
-    PTree& hpos = rnode.put("CriteriaMatchedPhenotypes", "");
-    for ( int hid : fm->phenotypes())
+    PTree& hpos = rnode.put("PhenotypicIndications", "");
+    const IntSet ptypes = PhenotypeManager::discover(fm);
+    for ( int hid : ptypes)
     {
-        PTree& node = hpos.add( "HPOTerm", "");
-        node.put( "<xmlattr>.id", hid);
-        const Phenotype::Ptr hpo = PhenotypeManager::phenotype(hid);
-        node.put( "<xmlattr>.name", hpo->name().toStdString());
-        node.put( "ValidDemographics", hpo->isDemographicMatch(fm));
+        PTree& node = hpos.add( "Term", "");
+        const Phenotype::Ptr pind = PhenotypeManager::phenotype(hid);
+
+        node.put( "Id", pind->id());
+        node.put( "Name", pind->name().toStdString());
+
+        QStringList mids;
+        for ( int mid : pind->metrics())
+            mids << QString("%1").arg(mid);
+        const QString midList = mids.join(",");
+        node.put( "Metrics", midList.toStdString());
+
+        node.put( "SexMatch", pind->isSexMatch(fm->sex()));
+        node.put( "AgeMatch", pind->isAgeMatch(fm->age()));
+        node.put( "MaternalEthnicityMatch", pind->isEthnicityMatch(fm->maternalEthnicity()));
+        node.put( "PaternalEthnicityMatch", pind->isEthnicityMatch(fm->paternalEthnicity()));
     }   // end for
-}   // end writeFaceModel
+}   // end exportMetaData
 
 
-FM* readFaceModel( const PTree& rnode, std::string& objfilename)
+// private static
+PTree& FaceModelXMLFileHandler::exportXMLHeader( PTree& tree)
 {
-    FM* fm = new FM;
+    PTree& topNode = tree.put( "faces","");
+    topNode.put( "<xmlattr>.version", XML_VERSION);
+    std::ostringstream desc;
+    desc << XML_FILE_DESCRIPTION << ";" << time(nullptr);
+    topNode.put( "description", desc.str());
 
+    PTree& records = topNode.put( "FaceModels","");    // Only a single record
+    records.put( "<xmlattr>.count", 1);
+    return records;
+}   // end exportXMLHeader
+
+
+namespace {
+
+void importModelRecord( FM* fm, const PTree& rnode, std::string& objfilename)
+{
     if ( rnode.count("objfilename") > 0)
         objfilename = rnode.get<std::string>( "objfilename");  // Without path info
     else if ( rnode.count("ObjFilename") > 0)
@@ -119,17 +142,6 @@ FM* readFaceModel( const PTree& rnode, std::string& objfilename)
         cdate = QDate::fromString( rnode.get<std::string>( "CaptureDate").c_str());
     fm->setCaptureDate( cdate);
 
-    cv::Vec3f icentre(0,0,0);
-    if ( RFeatures::getNamedVertex( rnode, "OriginalCentre", icentre))
-        fm->setInitialCentre(icentre);
-
-    RFeatures::Orientation iorientation( cv::Vec3f(0,0,1), cv::Vec3f(0,1,0));
-    if ( rnode.count("OriginalOrientation") > 0)
-    {
-        rnode.get_child("OriginalOrientation") >> iorientation;
-        fm->setInitialOrientation( iorientation);
-    }   // end if
-
     double age = 0.0;   // Only use age if DateOfBirth not present in XML
     if ( rnode.count("age") > 0)
         age = rnode.get<double>("age");
@@ -141,9 +153,8 @@ FM* readFaceModel( const PTree& rnode, std::string& objfilename)
         dob = QDate::fromString( rnode.get<std::string>( "DateOfBirth").c_str());
 
     // If no date of birth given, find it as the capture date minus the age (assumed given)
-    if ( dob == QDate::currentDate())
+    if ( dob == QDate::currentDate() && cdate != QDate::currentDate())
         dob = cdate.addDays(qint64( -age * 365.25));
-
     fm->setDateOfBirth( dob);
 
     int8_t sex = FaceTools::UNKNOWN_SEX;
@@ -153,27 +164,111 @@ FM* readFaceModel( const PTree& rnode, std::string& objfilename)
         sex = FaceTools::fromSexString( rnode.get<std::string>("Sex").c_str());
     fm->setSex(sex);
 
-    QString ethn;
+    int methn = 0;
+    int pethn = 0;
     if ( rnode.count("ethnicity") > 0)
-        ethn = rnode.get<std::string>( "ethnicity").c_str();
+    {
+        QString seth = rnode.get<std::string>( "ethnicity").c_str();
+        seth = seth.split(" ")[0].trimmed();  // Use just the first word
+        pethn = methn = FaceTools::Ethnicities::code( seth);
+    }   // end if
     else if ( rnode.count("Ethnicity") > 0)
-        ethn = rnode.get<std::string>( "Ethnicity").c_str();
-    fm->setEthnicity(ethn);
+    {
+        QString seth = rnode.get<std::string>( "Ethnicity").c_str();
+        seth = seth.split(" ")[0].trimmed();  // Use just the first word
+        pethn = methn = FaceTools::Ethnicities::code( seth);
+    }   // end else if
+
+    if ( rnode.count("MaternalEthnicity") > 0)
+        methn = rnode.get<int>( "MaternalEthnicity");
+
+    if ( rnode.count("PaternalEthnicity") > 0)
+        pethn = rnode.get<int>( "PaternalEthnicity");
+
+    fm->setMaternalEthnicity(methn);
+    fm->setPaternalEthnicity(pethn);
 
     // Read in the landmarks
-    FaceTools::Landmark::LandmarkSet::Ptr lmks = fm->landmarks();
+    FaceTools::Landmark::LandmarkSet::Ptr lmks = FaceTools::Landmark::LandmarkSet::create();
     if ( rnode.count("Landmarks") > 0)
+    {
         lmks->read( rnode.get_child("Landmarks"));
+        fm->setLandmarks(lmks);
+    }   // end if
 
     // Read in the saved paths
+    FaceTools::PathSet::Ptr paths = FaceTools::PathSet::create();
     if ( rnode.count("Paths") > 0)
-        fm->paths()->read( rnode.get_child("Paths"));
-
-    fm->setSaved(true);
-    return fm;
-}   // end readFaceModel
-
+    {
+        paths->read( rnode.get_child("Paths"));
+        fm->setPaths(paths);
+    }   // end if
+}   // end importModelRecord
 }   // end namespace
+
+
+double FaceModelXMLFileHandler::importMetaData( FM* fm, const PTree& tree, std::string& objfilename)
+{
+    static const std::string msghd( " FaceTools::FileIO::FaceModelXMLFileHandler::importMetaData: ");
+
+    std::string vstr;
+    const PTree* fnode = nullptr; // Will point to the FaceModel record
+
+    if ( tree.count("faces") > 0)
+    {
+        const PTree& faces = tree.get_child( "faces");
+        if ( faces.count("<xmlattr>.version") > 0)
+            vstr = faces.get<std::string>( "<xmlattr>.version");
+
+        std::string filedesc;
+        if ( faces.count("description") > 0)
+            filedesc = faces.get<std::string>( "description");
+        else if ( faces.count("Description") > 0)
+            filedesc = faces.get<std::string>( "Description");
+
+        if ( !filedesc.empty())
+            std::cerr << "[INFO]" << msghd << "\"" << filedesc << "\"" << std::endl;
+
+        if ( faces.count("FaceModels") > 0)
+        {
+            const PTree& fms = faces.get_child( "FaceModels");
+            if ( fms.count("FaceModel") > 0)
+                fnode = &fms.get_child("FaceModel");
+        }   // end if
+        else if ( faces.count("FaceModel") > 0)
+            fnode = &faces.get_child("FaceModel");
+    }   // end if
+    else if ( tree.count("FaceModel") > 0)
+        fnode = &tree.get_child("FaceModel");
+
+    if ( fnode)
+    {
+        if ( fnode->count("<xmlattr>.version") > 0)
+            vstr = fnode->get<std::string>( "<xmlattr>.version");
+    }   // end if
+    else
+    {
+        std::cerr << "[WARNING]" << msghd << "FaceModel record not found!" << std::endl;
+        return -1;
+    }   // end else
+
+    static const double VERSION = QString( XML_VERSION.c_str()).toDouble();
+
+    double fversion = VERSION;
+    if ( !vstr.empty())
+        fversion = QString(vstr.c_str()).toDouble();
+
+    // If the file version is lower than this library version then print a warning (should be backwards compatible).
+    // But if the file version is higher, then compatibility may not be possible (still try to read in).
+    if ( fversion < VERSION)
+        std::cerr << "[INFO]" << msghd << "Lower version " << fversion << " of XML file being read into version " << VERSION << " library." << std::endl;
+    else if ( fversion > VERSION)
+        std::cerr << "[WARNING]" << msghd << "Higher version " << fversion << " of XML file being read into version " << VERSION << " library!" << std::endl;
+
+    importModelRecord( fm, *fnode, objfilename);
+
+    return fversion;
+}   // end importMetaData
 
 
 // public
@@ -185,25 +280,28 @@ FM* FaceModelXMLFileHandler::read( const QString& sfname)
 
     try
     {
-        QTemporaryDir dir;
-        if ( !dir.isValid())
+        QTemporaryDir tdir;
+        if ( !tdir.isValid())
         {
             _err = "Unable to open temporary directory for reading from!";
             return nullptr;
         }   // end if
 
-        QStringList fnames = JlCompress::extractDir( sfname, dir.path());
+        QStringList fnames = JlCompress::extractDir( sfname, tdir.path());
         if ( fnames.isEmpty())
         {
             _err = "Unable to extract files from archive!";
             return nullptr;
         }   // end if
 
-        std::string xmlfile = boost::filesystem::path(sfname.toStdString()).filename().replace_extension( "xml").string();   // 13040011.xml
-        xmlfile = dir.filePath( xmlfile.c_str()).toStdString();
-        if ( !boost::filesystem::exists( xmlfile) || !boost::filesystem::is_regular_file( xmlfile))
+        QStringList xmlList = QDir( tdir.path()).entryList( {"*.xml"});
+        std::string xmlfile;
+        if ( xmlList.size() == 1)
+            xmlfile = tdir.filePath( xmlList.first()).toStdString();
+
+        if ( xmlfile.empty() || !boost::filesystem::is_regular_file( xmlfile))
         {
-            _err = "Cannot find XML meta-data file in archive!";
+            _err = "Cannot find XML meta-data in archive!";
             return nullptr;
         }   // end if
 
@@ -219,79 +317,38 @@ FM* FaceModelXMLFileHandler::read( const QString& sfname)
 
         PTree tree;
         boost::property_tree::read_xml( ifs, tree);
-
-        const PTree& faces = tree.get_child( "faces");
-        _fversion = QString(faces.get<std::string>( "<xmlattr>.version").c_str()).toDouble();
-        if ( _fversion < QString( XML_VERSION.c_str()).toDouble())
-            std::cerr << "[WARNING] FaceTools::FileIO::FaceModelXMLFileHandler::read: Lower version of XML file being read!" << std::endl;
-
-        const std::string filedesc = faces.get<std::string>( "description");
-        std::cerr << "[INFO] FaceTools::FileIO::FaceModelXMLFileHandler::read: Reading file with description \""
-                  << filedesc << "\"" << std::endl;
-
-        const PTree& records = faces.get_child( "FaceModels");
-        const int nrecs = records.get<int>( "<xmlattr>.count");
-        if ( nrecs <= 0)
-        {
-            _err = "No FaceModel objects recorded in file!";
-            return nullptr;
-        }   // end if
-
-        if ( nrecs > 1)
-        {
-            std::cerr << "[WARNING] FaceTools::FileIO::FaceModelXMLFileHandler::read: Multiple FaceModel records not supported!"
-                      << " Ignoring all records after the first." << std::endl;
-        }   // end if
-
+        fm = new FM;
         std::string objfilename;
-        for ( const PTree::value_type& rnode : records)
+        const double fvers = importMetaData( fm, tree, objfilename);
+
+        if ( fvers > 0)
         {
-            if ( rnode.first == "FaceModel")
+            _fversion = fvers;
+            const std::string fext = rlib::getExtension( objfilename);
+            assert( fext == "obj");
+            RModelIO::AssetImporter importer(true,true);
+            importer.enableFormat(fext);
+            const std::string objfile = tdir.filePath( objfilename.c_str()).toStdString();
+            std::cerr << "[INFO] FaceTools::FileIO::FaceModelXMLFileHandler::read: Loading model from \"" << objfile << "\"" << std::endl;
+            RFeatures::ObjModel::Ptr model = importer.load( objfile);   // Raw model - no post process undertaken!
+            if ( model)
+                fm->update( model);
+            else
             {
-                fm = readFaceModel( rnode.second, objfilename);
-                break;
+                _err = QString("Couldn't load model data from '%1'").arg(objfile.c_str());
+                delete fm;
+                fm = nullptr;
             }   // end if
-        }   // end for
-
-        if ( !fm)
-        {
-            _err = "Unable to read in FaceModel from file record!";
-            return nullptr;
         }   // end if
-
-        const std::string fext = rlib::getExtension( objfilename);
-        if ( fext != "obj")
+        else
         {
-            _err = "FaceModel has its model saved in an unsupported format!";
+            if ( fvers == 0.0)
+                _err = "No FaceModel objects recorded in file!";
+            else
+                _err = "Invalid record header in file!";
             delete fm;
-            return nullptr;
-        }   // end if
-
-        RModelIO::AssetImporter importer(true,true);
-        importer.enableFormat(fext);
-        const std::string objfile = dir.filePath( objfilename.c_str()).toStdString();
-        std::cerr << "[INFO] FaceTools::FileIO::FaceModelXMLFileHandler::read: Loading model from \"" << objfile << "\"" << std::endl;
-        RFeatures::ObjModel::Ptr model = importer.load( objfile);   // Doesn't merge materials or clean!
-        if ( !model)
-        {
-            std::ostringstream serr;
-            serr << "Failed to load object from \"" << objfile << "\"";
-            _err = serr.str().c_str();
-            delete fm;
-            return nullptr;
-        }   // end if
-
-        RFeatures::ObjModelInfo::Ptr minfo = RFeatures::ObjModelInfo::create(model);
-        if ( !minfo)
-        {
-            std::ostringstream serr;
-            serr << "Failed to clean object loaded from \"" << objfile << "\"";
-            _err = serr.str().c_str();
-            delete fm;
-            return nullptr;
-        }   // end if
-
-        fm->update( minfo);
+            fm = nullptr;
+        }   // end else
     }   // end try
     catch ( const boost::property_tree::ptree_bad_path& e)
     {
@@ -329,15 +386,15 @@ bool FaceModelXMLFileHandler::write( const FM* fm, const QString& sfname)
     try
     {
         std::string fname = sfname.toStdString();   // /home/rich/Desktop/13040011.3df
-        QTemporaryDir dir( boost::filesystem::path(fname).parent_path().string().c_str());
-        if ( !dir.isValid())
+        QTemporaryDir tdir( boost::filesystem::path(fname).parent_path().string().c_str());
+        if ( !tdir.isValid())
         {
             _err = "Unable to create temporary directory for writing to!";
             return false;
         }   // end if
 
         std::string xmlfile = boost::filesystem::path(fname).filename().replace_extension( "xml").string();   // 13040011.xml
-        xmlfile = dir.filePath( xmlfile.c_str()).toStdString();
+        xmlfile = tdir.filePath( xmlfile.c_str()).toStdString();
 
         std::ofstream ofs;
         ofs.open( xmlfile);
@@ -350,7 +407,7 @@ bool FaceModelXMLFileHandler::write( const FM* fm, const QString& sfname)
         // Write out the model geometry itself into .obj format.
         RModelIO::OBJExporter exporter;
         const std::string modfile = boost::filesystem::path(xmlfile).replace_extension( "obj").string();
-        const RFeatures::ObjModel* model = fm->info()->cmodel();
+        const RFeatures::ObjModel& model = fm->model();
         if ( !exporter.save( model, modfile))
         {
             _err = exporter.err().c_str();
@@ -366,24 +423,16 @@ bool FaceModelXMLFileHandler::write( const FM* fm, const QString& sfname)
         cv::imwrite( thumbfile, img);
 
         PTree tree;
-        PTree& topNode = tree.put( "faces","");
-        topNode.put( "<xmlattr>.version", XML_VERSION);
-        std::ostringstream desc;
-        desc << XML_FILE_DESCRIPTION << ";" << time(nullptr);
-        topNode.put( "description", desc.str());
-
-        PTree& records = topNode.put( "FaceModels","");    // Only a single record
-        records.put( "<xmlattr>.count", 1);
-        PTree& rnode = records.add("FaceModel","");
-        writeFaceModel( fm, modfile, rnode);
-
+        PTree& rnode = exportXMLHeader( tree);
+        const std::string relfname = boost::filesystem::path( modfile).filename().string(); // Relative filepath
+        exportMetaData( fm, relfname, rnode);
         boost::property_tree::write_xml( ofs, tree);
         ofs.close();
 
         std::cerr << "[INFO] FaceTools::FileIO::FaceModelXMLFileHandler::write: Exported meta-data to " << xmlfile << std::endl;
 
         // Finally, zip up the contents of the directory into sfname.
-        if ( !JlCompress::compressDir( sfname, dir.path(), true/*recursively pack subdirs*/))
+        if ( !JlCompress::compressDir( sfname, tdir.path(), true/*recursively pack subdirs*/))
             _err = "Unable to compress saved data into archive format!";
     }   // end try
     catch ( const std::exception& e)

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 #include <FaceView.h>
 #include <FaceModel.h>
 #include <FaceModelViewer.h>
-#include <SurfaceDataMapper.h>
+#include <SurfaceMetricsMapper.h>
 #include <BaseVisualisation.h>
 #include <MetricVisualiser.h>
 #include <vtkProperty.h>
@@ -29,60 +29,77 @@
 #include <cassert>
 using FaceTools::Vis::FaceView;
 using BV = FaceTools::Vis::BaseVisualisation;
-using FaceTools::Vis::SurfaceDataMapper;
+using FaceTools::Vis::SurfaceMetricsMapper;
 using FaceTools::FMV;
 using FaceTools::FM;
+using FaceTools::Action::Event;
+using FaceTools::Action::EventGroup;
 
 
-// public
 FaceView::FaceView( FM* fm, FMV* viewer)
     : _data(fm), _actor(nullptr), _texture(nullptr), _viewer(nullptr), _pviewer(nullptr),
-      _sdmap(nullptr), _xvis(nullptr), _nMetricLayers(0)
+      _smm(nullptr), _baseCol(200,190,210), _xvis(nullptr), _nMetricLayers(0)
 {
     assert(viewer);
     assert(fm);
-    _data->_fvs.insert(this);
+    _data->addView(this);
     setViewer(viewer);
     reset();
 }   // end ctor
 
 
-FaceView::FaceView( const FaceView& fv)
+bool FaceView::copyFrom( const FaceView* fv)
 {
-    *this = fv;
-}   // end ctor
+    assert( data() == fv->data());
+    if ( data() != fv->data())
+        return false;
+
+    assert( _actor != fv->_actor);
+    assert( _viewer != fv->_viewer);
+
+    setBackfaceCulling(fv->backfaceCulling());
+    setOpacity(fv->opacity());
+    setColour(fv->colour());
+
+    for ( BaseVisualisation* vl : fv->visualisations())
+    {
+        assert( vl->isAvailable(data()));
+        if ( vl->isVisible(fv))
+            apply(vl);
+    }   // end for
+
+    _updateModelLighting();
+
+    return true;
+}   // end copyFrom
 
 
-FaceView& FaceView::operator=( const FaceView& fv)
-{
-    _data = fv.data();
-    _data->_fvs.insert(this);
-    _actor = nullptr;
-    _texture = nullptr;
-    _viewer = nullptr;
-    return *this;
-}   // end operator=
-
-
-// public
 FaceView::~FaceView()
 {
-    remove();   // Remove all
+    while ( !_vlayers.empty())
+        purge( *_vlayers.begin(), Event::NONE);
     setViewer(nullptr);
-    _data->_fvs.erase(this);
+    _data->eraseView(this);
     if ( _actor)
         _actor->Delete();
-    _texture = nullptr;
 }   // end dtor
 
 
-// public
 void FaceView::setViewer( FMV* viewer)
 {
+    // Record which visualisations are hidden on the current viewer
+    // (these ones won't be applied in the new viewer).
+    VisualisationLayers wasHidden;
+
     if ( _viewer)
     {
         _viewer->detach(this);
-        std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](BV* v){v->clear(this);});
+        for ( BV* vis : _vlayers)
+        {
+            if ( !vis->isVisible(this))
+                wasHidden.insert(vis);
+            vis->setVisible(this,false);
+        }   // end for
         _viewer->remove(_actor);
     }   // end if
 
@@ -92,117 +109,111 @@ void FaceView::setViewer( FMV* viewer)
     if ( _viewer)
     {
         _viewer->add(_actor);
-        std::for_each( std::begin(_vlayers), std::end(_vlayers), [this](BV* v){v->apply(this);});
+        for ( BV* vis : _vlayers)
+        {
+            if ( wasHidden.count(vis) == 0)    // Apply if wasn't hidden on the previous viewer
+                vis->apply(this);
+        }   // end for
         _viewer->attach(this);
     }   // end if
 }   // end setViewer
 
 
-// public
 void FaceView::reset()
 {
     assert(_viewer);
-    std::cerr << "[INFO] FaceTools::Vis::FaceView::reset: <" << this << "> on viewer <" << _viewer << ">" << std::endl;
 
-    bool bface = false;
-    bool tex = false;
-    double op = 1.0;
-    QColor cl(255,255,255);
-
-    setActiveSurface(nullptr);
+    const bool bface = backfaceCulling();
+    const bool tex = textured();
+    const bool wf = wireframe();
+    const double op = opacity();
+    const QColor cl = colour();
 
     if ( _actor)
     {
-        bface = backfaceCulling();
-        tex = textured();
-        op = opacity();
-        cl = colour();
-
         _viewer->remove(_actor);    // Remove the actor
         _actor->Delete();
         _actor = nullptr;
     }   // end if
 
     // Create the new actor from the data
-    RVTK::VtkActorCreator ac;
-    _polymap.clear();
-    ac.setObjToVTKUniqueFaceMap( &_polymap);
-    const RFeatures::ObjModel* model = _data->info()->cmodel();
-    _actor = ac.generateActor( model, _texture);
-    if ( !_texture)
-        std::cerr << "[INFO] FaceTools::Vis::FaceView::reset: No texture found!" << std::endl;
+    _actor = RVTK::VtkActorCreator::generateActor( _data->model(), _texture);
 
     setBackfaceCulling(bface);
     setTextured(tex);
+    setWireframe(wf);
     setOpacity(op);
     setColour(cl);
 
     _viewer->add(_actor);   // Re-add the newly generated actor
 
-    // Re-apply the old visualisation layers - now unavailable ones are left unapplied.
+    // Re-apply the old visualisation layers - now unavailable ones or ones
+    // that are not visible are left unapplied (the non-visible ones will be
+    // applied later when/if necessary by their parent ActionVisualise objects).
     auto vlayers = _vlayers;
-    _vlayers.clear();
     _xvis = nullptr;
     _nMetricLayers = 0;
-    std::for_each( std::begin(vlayers), std::end(vlayers), [this](BV* v){this->apply(v);});
+    for ( BV* vis : vlayers)
+    {
+        const bool wasVisible = vis->isVisible(this);
+        purge(vis, Event::NONE);
+
+        if ( vis->isAvailable(_data))
+        {
+            if ( wasVisible)
+                this->apply(vis);
+        }   // end if
+    }   // end for
 }   // end reset
 
 
-// public
-void FaceView::remove( BV* vis)
+bool FaceView::purge( BV* vis, Event e)
 {
     assert(_viewer);
-    if ( !vis)
-    {
-        if ( !_vlayers.empty())
-            remove( *_vlayers.begin());
-        return;
-    }   // end if
-    vis->clear(this);
+    // Only allow a visualisation to reject a purge if receiving a
+    // specific event trigger; Event::NONE indicates internal force through.
+    if ( !vis->purge( this, e) && !EventGroup(e).is(Event::NONE))
+        return false;
+
+    vis->setVisible( this, false);
+
     _vlayers.erase(vis);
     if ( _xvis == vis)
         _xvis = nullptr;
-
     if ( _nMetricLayers > 0 && qobject_cast<MetricVisualiser*>(vis) != nullptr)
         _nMetricLayers--;
-}   // end remove
+
+    return true;
+}   // end purge
 
 
-// public
-bool FaceView::apply( BV* vis, const QPoint* mc)
+void FaceView::apply( BV* vis, const QPoint* mc)
 {
     assert( vis);
     assert(_actor);
     assert(_viewer);
 
-    if ( _vlayers.count(vis) > 0)   // Already applied
-        return true;
+    const bool wasPresent = _vlayers.count(vis) > 0;
+    assert( vis->isAvailable(_data));
 
-    if ( !vis->isAvailable(_data))
-        return false;
-
-    _data->lockForRead();
-    vis->apply( this, mc);
-    _vlayers.insert(vis);
-    if ( !vis->isToggled() || vis->isExclusive())
+    // Is the passed in visualisation exclusive?
+    if ( _xvis != vis && (vis->isExclusive() || !vis->isToggled()))
     {
-        assert(_xvis == nullptr);
+        if ( _xvis)
+            _xvis->setVisible( this, false);
         _xvis = vis;
     }   // end if
-    _data->unlock();
 
-    if ( qobject_cast<MetricVisualiser*>(vis) != nullptr)
+    vis->apply( this, mc);
+    vis->setVisible( this, true);
+
+    _vlayers.insert(vis);
+
+    if ( !wasPresent && qobject_cast<MetricVisualiser*>(vis) != nullptr)
         _nMetricLayers++;
-
-    return isApplied(vis);
 }   // end apply
 
 
-// public
-bool FaceView::isApplied( const BV *vis) const { return vis && _vlayers.count(const_cast<BV*>(vis)) > 0;}
-
-
-// public
 BV* FaceView::layer( const vtkProp* prop) const
 {
     BV* vis = nullptr;
@@ -221,15 +232,34 @@ BV* FaceView::layer( const vtkProp* prop) const
 }   // end layer
 
 
-// public
+void FaceView::syncActorDeltaToVisualisations()
+{
+    const cv::Matx44d& bmat = _data->model().transformMatrix(); // Data baseline transform
+    const cv::Matx44d vmat = RVTK::toCV( _actor->GetMatrix());  // Actor's transform matrix
+    const cv::Matx44d dmat = vmat * bmat.inv(); // Calc transform difference to be added
+
+    // Collect all visualisation layers from all FaceViews (there is a more efficient
+    // way to do this given that all visualisations are effectively singletons).
+    VisualisationLayers vlayers;
+    for ( FV* fv : _data->fvs())
+    {
+        const VisualisationLayers& vl = fv->visualisations();
+        vlayers.insert( std::begin(vl), std::end(vl));
+    }   // end for
+
+    for ( BV* vis : vlayers)
+        for ( FV* f : _data->fvs())
+            vis->syncActorsToData( f, dmat);
+}   // end syncActorDeltaToVisualisations
+
+
 bool FaceView::isPointOnFace( const QPoint& p) const
 {
     assert(_viewer);
-    return _viewer->getPointedAt(p) == _actor;
+    return _viewer && _actor ? _viewer->getPointedAt(p) == _actor : false;
 }   // end isPointOnFace
 
 
-// public
 bool FaceView::projectToSurface( const QPoint& p, cv::Vec3f& v) const
 {
     assert(_viewer);
@@ -237,17 +267,11 @@ bool FaceView::projectToSurface( const QPoint& p, cv::Vec3f& v) const
 }   // end projectToSurface
 
 
-// public
-void FaceView::setPickable( bool v) { _actor->SetPickable(v);}
-bool FaceView::pickable() const { return _actor->GetPickable();}
-
-
-// public
 double FaceView::opacity() const
 {
-    assert(_actor);
-    return _actor->GetProperty()->GetOpacity();
+    return _actor ? _actor->GetProperty()->GetOpacity() : 1.0;
 }   // end opacity
+
 
 void FaceView::setOpacity( double v)
 {
@@ -256,18 +280,17 @@ void FaceView::setOpacity( double v)
 }   // end setOpacity
 
 
-// public
 QColor FaceView::colour() const
 {
-    assert(_actor);
-    double* vc = _actor->GetProperty()->GetColor();
-    return QColor::fromRgbF( vc[0], vc[1], vc[2]);
+    return _baseCol;
 }   // end colour
+
 
 void FaceView::setColour( const QColor& c)
 {
     assert(_actor);
     _actor->GetProperty()->SetColor( c.redF(), c.greenF(), c.blueF());
+    _baseCol = c;
 }   // end setColour
 
 
@@ -280,8 +303,7 @@ void FaceView::setBackfaceCulling( bool v)
 
 bool FaceView::backfaceCulling() const
 {
-    assert(_actor);
-    return _actor->GetProperty()->GetBackfaceCulling();
+    return _actor ? _actor->GetProperty()->GetBackfaceCulling() : false;
 }   // end backfaceCulling
 
 
@@ -291,8 +313,8 @@ void FaceView::setWireframe( bool v)
     vtkProperty* p = _actor->GetProperty();
     if (v)
     {
-        p->SetEdgeColor(0,0.7,0);
-        p->SetLineWidth(0.4f);
+        p->SetEdgeColor(0.0, 0.7, 0.1);
+        //p->SetLineWidth(1.0f);
     }   // end if
     p->SetEdgeVisibility(v);
 }   // end setWireframe
@@ -300,27 +322,30 @@ void FaceView::setWireframe( bool v)
 
 bool FaceView::wireframe() const
 {
-    assert(_actor);
-    return _actor->GetProperty()->GetEdgeVisibility();
+    return _actor ? _actor->GetProperty()->GetEdgeVisibility() : false;
 }   // end wireframe
 
 
 void FaceView::setTextured( bool v)
 {
     assert(_actor);
-    _actor->SetTexture( v && _texture ? _texture : nullptr);
-    // Set the correct lighting
-    vtkProperty* property = _actor->GetProperty();
-    property->SetAmbient( textured() ? 1.0 : 0.0);
-    property->SetDiffuse( 1.0);
-    property->SetSpecular(0.0);
+    if ( v && _texture)
+    {
+        _actor->GetProperty()->SetColor( 1.0, 1.0, 1.0);    // Set the base colour to white
+        _actor->SetTexture( _texture);
+    }   // end if
+    else
+    {
+        setColour(_baseCol);
+        _actor->SetTexture( nullptr);
+    }   // end else
+    _updateModelLighting();
 }   // end setTextured
 
 
 bool FaceView::textured() const
 {
-    assert(_actor);
-    return _actor->GetTexture() != nullptr;
+    return _actor ? _actor->GetTexture() != nullptr : false;
 }   // end textured
 
 
@@ -331,12 +356,13 @@ bool FaceView::canTexture() const
 }   // end canTexture
 
 
-void FaceView::setActiveSurface( SurfaceDataMapper* s)
+void FaceView::setActiveSurface( SurfaceMetricsMapper* s)
 {
-    if ( _sdmap)
+    if ( _smm)
     {
-        _sdmap->remove(this);
-        _sdmap = nullptr;
+        _smm->remove(this);
+        _smm = nullptr;
+        setColour(_baseCol);
     }   // end if
 
     if ( !_actor)
@@ -344,10 +370,23 @@ void FaceView::setActiveSurface( SurfaceDataMapper* s)
 
     if ( s)
     {
-        _sdmap = s;
-        _sdmap->add(this);
+        _smm = s;
+        _smm->add(this);
+        _actor->GetProperty()->SetColor( 1.0, 1.0, 1.0);    // Set the base colour to white
     }   // end if
+
+    _updateModelLighting();
 }   // end setActiveSurface
 
 
-SurfaceDataMapper* FaceView::activeSurface() const { return _sdmap;}
+SurfaceMetricsMapper* FaceView::activeSurface() const { return _smm;}
+
+
+void FaceView::_updateModelLighting()
+{
+    // Set the correct lighting
+    vtkProperty* property = _actor->GetProperty();
+    property->SetAmbient( textured() ? 1.0 : 0.0);
+    property->SetDiffuse( 1.0);
+    property->SetSpecular( 0.0);
+}   // end _updateModelLighting

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,43 +19,43 @@
 #define FACE_TOOLS_ACTION_ACTION_SHOW_METRICS_H
 
 #include "FaceAction.h"
-#include <MetricsInteractor.h>
 #include <MetricsDialog.h>
-#include <ChartDialog.h>
-#include <PhenotypesDialog.h>
 
 namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionShowMetrics : public FaceAction
 { Q_OBJECT
 public:
-    ActionShowMetrics( const QString&, const QIcon&, QWidget *parent=nullptr);
+    ActionShowMetrics( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
 
-    QWidget* getWidget() const override { return _mdialog;}
+    QString toolTip() const override { return "Show the measurements dialog and indicate on the face where the measurements are taken from.";}
+
+    QWidget* widget() const override { return _mdialog;}
 
     void setShowScanInfoAction( QAction*);
 
-protected slots:
-    bool testReady( const Vis::FV*) override;
-    void tellReady( const Vis::FV*, bool) override;
-    bool testEnabled( const QPoint*) const override;
-    bool testIfCheck( const Vis::FV*) const override;
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(VIEW_CHANGE);}
-    void purge( const FM*) override;
+    static void setOpacityOnShow( double);
+
+protected:
+    void postInit() override;
+    void purge( const FM*, Event) override;
+    bool checkState( Event) override;
+    bool checkEnable( Event) override;
+    bool doBeforeAction( Event) override;
+    void doAction( Event) override;
 
 private slots:
-    void doOnMetricUpdated(int);
-    void doOnSetSelectedMetric();
-    void doOnShowChartDialog();
-    void doOnShowPhenotypesDialog();
-    bool doOnRefresh();
+    void _doOnSelectedMetric(int);
+    void _doOnSetMetricGrowthData();
+    void _doOnChangedMetric(int);
 
 private:
+    static double s_opacity;
     Widget::MetricsDialog *_mdialog;
-    Widget::ChartDialog *_cdialog;
-    Widget::PhenotypesDialog *_pdialog;
-    FMS _vmodels;
+    bool _nowShowing;
+    std::unordered_map<FMV*, vtkNew<vtkTextActor> > _texts;
+    void _updateMetricText(int);
+    void _addViewer( FMV*);
 };  // end class
 
 }}   // end namespaces

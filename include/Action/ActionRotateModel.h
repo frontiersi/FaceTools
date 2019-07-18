@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,11 +25,14 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionRotateModel : public FaceAction
 { Q_OBJECT
 public:
-    ActionRotateModel( const QString& dname, const QIcon&, const cv::Vec3f& raxis, float degs);
+    ActionRotateModel( const QString&, const QIcon&, const cv::Vec3d& raxis, double degs);
 
-private slots:
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(AFFINE_CHANGE);}
+    QString toolTip() const override;
+
+protected:
+    bool checkEnable( Event) override;
+    void doAction( Event) override;
+    void doAfterAction( Event) override;
 
 private:
     cv::Matx44d _rmat;

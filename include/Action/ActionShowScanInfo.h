@@ -26,19 +26,25 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionShowScanInfo : public FaceAction
 { Q_OBJECT
 public:
-    ActionShowScanInfo( const QString& dname, const QIcon& icon, QWidget* parent=nullptr);
+    ActionShowScanInfo( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
     ~ActionShowScanInfo() override;
+
+    QString toolTip() const override { return "Display and edit demographic and other metadata about the selected model.";}
 
     void setThumbnailUpdater( ActionUpdateThumbnail*);
 
+protected:
+    void postInit() override;
+    bool checkState( Event) override;
+    bool checkEnable( Event) override;
+    void doAction( Event) override;
+
 private slots:
-    void tellReady( const Vis::FV*, bool) override;
-    void doOnUpdated( FM*);
     void doOnUpdatedThumbnail( const FM*, const cv::Mat&);
 
 private:
-    Widget::ScanInfoDialog *_dialog;
     ActionUpdateThumbnail *_tupdater;
+    Widget::ScanInfoDialog *_dialog;
 };  // end class
 
 }}   // end namespace

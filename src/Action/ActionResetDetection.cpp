@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,56 +21,46 @@
 #include <QMessageBox>
 #include <cassert>
 using FaceTools::Action::ActionResetDetection;
-using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
+using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
 using FaceTools::FMS;
 using FaceTools::FM;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionResetDetection::ActionResetDetection( const QString& dn, const QIcon& icon, QWidget *parent)
-    : FaceAction(dn, icon), _parent(parent)
+ActionResetDetection::ActionResetDetection( const QString& dn, const QIcon& icon) : FaceAction(dn, icon) {}
+
+
+bool ActionResetDetection::checkEnable( Event)
 {
-}   // end ctor
+    const FV* fv = ModelSelector::selectedView();
+    return fv && !fv->data()->landmarks().empty();
+}   // end checkEnabled
 
 
-bool ActionResetDetection::testReady( const FV* fv) { return !fv->data()->landmarks()->empty();}
-
-bool ActionResetDetection::testEnabled( const QPoint*) const { return ready1();}
-
-
-bool ActionResetDetection::doBeforeAction( FVS& fvs, const QPoint&)
+bool ActionResetDetection::doBeforeAction( Event)
 {
-    assert(fvs.size() == 1);
-    static const QString msg = tr("Really reset existing landmark and metric detections?");
-    bool go = QMessageBox::Yes == QMessageBox::question( _parent, tr("Reset face detection?"), msg,
+    QWidget* prnt = static_cast<QWidget*>(parent());
+    static const QString msg = tr("This will also erase existing measurements; continue?");
+    bool go = QMessageBox::Yes == QMessageBox::question( prnt, displayName(), msg,
                                   QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     return go;
 }   // end doBeforeAction
 
 
-bool ActionResetDetection::doAction( FVS& fvs, const QPoint&)
+void ActionResetDetection::doAction( Event)
 {
-    assert(fvs.size() == 1);
-    FM* fm = fvs.first()->data();
+    storeUndo(this, {Event::LANDMARKS_CHANGE, Event::ORIENTATION_CHANGE, Event::METRICS_CHANGE});
+
+    FM* fm = ModelSelector::selectedModel();
     fm->lockForWrite();
-    fm->clearMeta();
-    fm->landmarks()->clear();
-    // Transform back to original position
-    const RFeatures::Orientation on = fm->initialOrientation();
-    const cv::Vec3f c = fm->initialCentre();
-    cv::Matx44d m = RFeatures::toStandardPosition( on.nvec(), on.uvec(), c);
-    fm->transform(m);
+    fm->setLandmarks( Landmark::LandmarkSet::create());
+    fm->clearMetrics();
+    fm->fixOrientation();
     fm->unlock();
-    fvs.insert(fm);
-    return true;
+
+    emit onEvent( {Event::LANDMARKS_CHANGE, Event::ORIENTATION_CHANGE, Event::METRICS_CHANGE});
 }   // end doAction
 
-
-void ActionResetDetection::doAfterAction( EventSet& cset, const FVS&, bool)
-{
-    cset.insert(ORIENTATION_CHANGE);
-    cset.insert(LANDMARKS_DELETE);
-    cset.insert(AFFINE_CHANGE);
-}   // end doAfterAction

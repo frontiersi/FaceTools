@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,24 +19,31 @@
 #define FACE_TOOLS_ACTION_TOGGLE_CAMERA_ACTOR_INTERACTION_H
 
 #include "FaceAction.h"
-#include <ModelMoveInteractor.h>
+#include <ActorMoveHandler.h>
 
 namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionToggleCameraActorInteraction : public FaceAction
 { Q_OBJECT
 public:
-    ActionToggleCameraActorInteraction( const QString& dname="Move Models", const QIcon& ico=QIcon());
+    ActionToggleCameraActorInteraction( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
 
-    Interactor::ModelMoveInteractor* interactor() override { return &_interactor;}
+    QString toolTip() const override;
+    QString whatsThis() const override;
 
-protected slots:
-    bool doAction( FVS&, const QPoint&) override;
-    void doOnAffineChange( const Vis::FV*);
+protected:
+    bool checkState( Event) override;
+    bool checkEnable( Event) override;
+    void doAction( Event) override;
+
+private slots:
+    void doOnActorStart();
+    void doOnActorStop();
 
 private:
-    Interactor::ModelMoveInteractor _interactor;
+    std::shared_ptr<Interactor::ActorMoveHandler> _moveHandler;
 };  // end class
+
 
 }}   // end namespace
 

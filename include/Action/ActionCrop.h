@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,24 +20,25 @@
 
 #include "ActionRadialSelect.h"
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionCrop : public FaceAction
 { Q_OBJECT
 public:
-    ActionCrop( const QString& dname, const QIcon&, ActionRadialSelect*, QProgressBar* pb=nullptr); // Async if pb not null
+    ActionCrop( const QString&, const QIcon&, ActionRadialSelect*);
 
-private slots:
-    bool testEnabled( const QPoint*) const override;
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(GEOMETRY_CHANGE);}
+    QString toolTip() const override { return "Crop out the selected region of the model and discard what's outside the selected region.";}
+
+protected:
+    bool checkEnable( Event) override;
+    bool doBeforeAction( Event) override;
+    void doAction( Event) override;
+    void doAfterAction( Event) override;
 
 private:
     ActionRadialSelect *_rsel;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

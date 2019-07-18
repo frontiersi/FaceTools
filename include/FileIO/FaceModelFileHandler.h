@@ -20,8 +20,7 @@
 
 #include <FaceModelFileHandlerInterface.h>
 
-namespace FaceTools {
-namespace FileIO {
+namespace FaceTools { namespace FileIO {
 
 class FaceTools_EXPORT FaceModelFileHandler : public FaceModelFileHandlerInterface
 { Q_OBJECT
@@ -35,10 +34,11 @@ public:
 
     bool canRead() const override { return false;}
     bool canWrite() const override { return false;}
+    bool canWriteTextures() const override { return false;}
 
     // Default implementations cause application exit if not overridden and respective canRead/Write return true.
-    FaceModel* read( const QString& filepath) override;               // Must override if canRead overridden to true
-    bool write( const FaceModel*, const QString& filepath) override;  // Must override if canWrite overridden to true
+    FM* read( const QString&) override;              // Must override if canRead overridden to true
+    bool write( const FM*, const QString&) override; // Must override if canWrite overridden to true
 
 private:
     FaceModelFileHandler( const FaceModelFileHandler&) = delete;

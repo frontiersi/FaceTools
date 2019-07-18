@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@ FaceHoveringInteractor::FaceHoveringInteractor( MEEI *meei, FaceTools::Vis::Base
 void FaceHoveringInteractor::doOnEnterModel( FaceTools::Vis::FV* fv)
 {
     this->enteringModel();
-    setEnabled( fv->isApplied(_vis));
+    setEnabled( _vis->isVisible(fv));
 }   // end doOnEnterModel
 
 

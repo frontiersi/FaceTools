@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <PathView.h>
+#include <FaceTools.h>
 #include <VtkActorCreator.h>    // RVTK
 #include <VtkTools.h>           // RVTK
 #include <vtkProperty.h>
@@ -27,15 +28,15 @@ using FaceTools::ModelViewer;
 PathView::PathView( int id, const std::list<cv::Vec3f>& vtxs)
     : _viewer(nullptr), _id(id), _h0(nullptr), _h1(nullptr), _lprop(nullptr)
 {
-    _h0 = new Handle( 0, _id, vtxs.front(), 1.4);
-    _h1 = new Handle( 1, _id, vtxs.back(), 1.4);
+    _h0 = new Handle( 0, _id, vtxs.front(), 1.5);
+    _h1 = new Handle( 1, _id, vtxs.back(), 1.5);
 
     _h0->_sv->setResolution(30);
-    _h0->_sv->setColour( 1.0, 0.0, 0.0);
+    _h0->_sv->setColour( 0.0, 1.0, 0.0);    // Green
     _h0->_sv->setOpacity( 0.4);
 
     _h1->_sv->setResolution(30);
-    _h1->_sv->setColour( 0.0, 0.0, 1.0);
+    _h1->_sv->setColour( 0.0, 0.0, 1.0);    // Blue
     _h1->_sv->setOpacity( 0.4);
 
     update( vtxs);
@@ -87,28 +88,36 @@ void PathView::update( const std::list<cv::Vec3f>& vtxs)
     vtkProperty* property = _lprop->GetProperty();
     property->SetRepresentationToWireframe();
     property->SetRenderLinesAsTubes(false);
-    property->SetLineWidth( 3.0);
-    property->SetColor( 1,1,1);
+    property->SetLineWidth( 2.0);
+    property->SetColor( 0.0, 0.0, 1.0);
+    property->SetOpacity( 0.4);
     property->SetAmbient( 1.0);
     property->SetDiffuse( 0.0);
     property->SetSpecular(0.0);
+
+    if ( _viewer)
+        updateColours();
 }   // end update
+
+
+void PathView::updateColours()
+{
+    assert(_viewer);
+    QColor fg = chooseContrasting(_viewer->backgroundColour());
+    _h0->_sv->setCaptionColour(fg);
+    _h1->_sv->setCaptionColour(fg);
+    //vtkProperty* property = _lprop->GetProperty();
+    //property->SetColor( fg.redF(), fg.greenF(), fg.blueF());
+}   // end updateColours
 
 
 void PathView::pokeTransform( const vtkMatrix4x4* vm)
 {
-    _h0->_sv->pokeTransform( vm);
-    _h1->_sv->pokeTransform( vm);
+    const cv::Matx44d cm = RVTK::toCV(vm);
+    _h0->_sv->setCentre( RFeatures::transform( cm, _h0->_sv->centre()));
+    _h1->_sv->setCentre( RFeatures::transform( cm, _h1->_sv->centre()));
     _lprop->PokeMatrix( const_cast<vtkMatrix4x4*>(vm));
-}   // end transform
-
-
-void PathView::fixTransform()
-{
-    _h0->_sv->fixTransform();
-    _h1->_sv->fixTransform();
-    RVTK::transform( _lprop, _lprop->GetMatrix());
-}   // end fixTransform
+}   // end pokeTransform
 
 
 // private

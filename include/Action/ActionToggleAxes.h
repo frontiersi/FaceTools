@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,25 +22,25 @@
 #include <FaceModelViewer.h>
 #include <vtkCubeAxesActor.h>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionToggleAxes : public FaceAction
 { Q_OBJECT
 public:
-    ActionToggleAxes( const QString& dname="Show Axes", const QIcon& ico=QIcon());
+    ActionToggleAxes( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
 
-    void addViewer( FaceModelViewer*);
+    QString toolTip() const override { return "Toggle the display of the axes grid.";}
 
-private slots:
-    bool testEnabled( const QPoint* mc=nullptr) const override { return true;}
-    bool doAction( FVS&, const QPoint&) override;
+protected:
+    void postInit() override;
+    bool checkState( Event) override;
 
 private:
-    std::unordered_map<FaceModelViewer*, vtkSmartPointer<vtkCubeAxesActor> > _viewers;
+    std::unordered_map<FMV*, vtkNew<vtkCubeAxesActor> > _viewers;
+    void updateAxesUnits( vtkCubeAxesActor*) const;
+    void addViewer( FMV*);
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

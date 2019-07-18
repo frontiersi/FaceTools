@@ -38,9 +38,6 @@ public:
     // Returns alphanumerically sorted list of unique metric names.
     static const QStringList& names() { return _names;}
 
-    // Returns alphanumerically sorted list of all ethnicities used by growth metrics.
-    static const QStringList& ethnicities() { return _ethnicities;}
-
     static const IntSet& ids() { return _ids;}
 
     // Returns all metrics.
@@ -68,7 +65,6 @@ private:
     static MCSet _mset;
     static MCSet _vmset;
     static QStringList _names;
-    static QStringList _ethnicities;
     static int _cmid;
     static int _pmid;
 };  // end class

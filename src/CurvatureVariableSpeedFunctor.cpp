@@ -19,13 +19,13 @@
 using FaceTools::CurvatureVariableSpeedFunctor;
 using RFeatures::ObjModelCurvatureMap;
 
-CurvatureVariableSpeedFunctor::CurvatureVariableSpeedFunctor( const ObjModelCurvatureMap::Ptr omcm)
+CurvatureVariableSpeedFunctor::CurvatureVariableSpeedFunctor( const ObjModelCurvatureMap& omcm)
 {
     double kp1, kp2;
-    for ( int vi : omcm->model()->getVertexIds())
+    for ( int vi : omcm.manifolds().model()->vertexIds())
     {
-        omcm->vertexPC1( vi, kp1); // Magnitude of curvature in direction of max curvature
-        omcm->vertexPC2( vi, kp2); // Magnitude of curvature in direction of minimum curvature
+        omcm.vertexPC1( vi, kp1); // Magnitude of curvature in direction of max curvature
+        omcm.vertexPC2( vi, kp2); // Magnitude of curvature in direction of minimum curvature
         _curvedness[vi] = sqrt( pow(kp1,2) + pow(kp2,2)/2);
     }   // end for
 }   // end ctor

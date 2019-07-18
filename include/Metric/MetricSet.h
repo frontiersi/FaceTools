@@ -32,23 +32,25 @@ public:
     static Ptr create();
 
     MetricSet(){}
+    MetricSet( const MetricSet&) = default;
+    MetricSet& operator=( const MetricSet&) = default;
     ~MetricSet(){}
 
-    // Copy in metric (or overwrite if has same name)
+    // Copy in metric (or overwrite if has same metric id).
     void set( const MetricValue&);
 
     // Copy in given set of metrics to this set returning num added.
     size_t add( const MetricSet&);
 
     // Returns metric or null if no metric with id exists.
-    const MetricValue* get( int id) const;
+    const MetricValue& metric( int id) const;
 
     // Returns true if metric existed and was removed.
     bool erase( int id);
 
     // Clears all metrics from this set.
     void reset();
-    
+
     // Get metric ids.
     const IntSet& ids() const { return _ids;}
 
@@ -58,16 +60,12 @@ public:
     size_t size() const { return _metrics.size();}
     bool has( int id) const { return _ids.count(id) > 0;}
 
+    void write( PTree& node, double age) const;
+
 private:
     std::unordered_map<int, MetricValue> _metrics;
     IntSet _ids;
-
-    MetricSet( const MetricSet&) = delete;
-    void operator=( const MetricSet&) = delete;
 };  // end class
-
-
-FaceTools_EXPORT PTree& operator<<( PTree&, const MetricSet&);        // Write out the set of metric
 
 }}   // end namespace
 

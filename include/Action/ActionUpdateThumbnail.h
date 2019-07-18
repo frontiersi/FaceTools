@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,10 +18,6 @@
 #ifndef FACE_TOOLS_ACTION_ACTION_UPDATE_THUMBNAIL_H
 #define FACE_TOOLS_ACTION_ACTION_UPDATE_THUMBNAIL_H
 
-/**
- * Automatically handles updating of model thumbnails whenever their centre/orientation/geometry changes.
- */
-
 #include "FaceAction.h"
 #include <OffscreenModelViewer.h>
 
@@ -36,15 +32,14 @@ public:
     void setThumbnailSize( int w, int h) { _omv.setSize(cv::Size(w,h));}
 
     // Returns thumbnail for the given model - generates if not already available.
-    const cv::Mat& thumbnail( const FM*);
+    const cv::Mat thumbnail( const FM*);
 
 signals:
     void updated( const FM*, const cv::Mat&);   // Emitted whenever a new thumbnail generated for the model.
 
-protected slots:
-    bool testEnabled( const QPoint*) const override { return ready1();}
-    bool doAction( FVS&, const QPoint&) override;
-    void purge( const FM*) override;
+protected:
+    void purge( const FM*, Event) override;
+    void doAction( Event) override;
 
 private:
     RVTK::OffscreenModelViewer _omv;

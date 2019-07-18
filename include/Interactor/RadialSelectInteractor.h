@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,42 +18,49 @@
 #ifndef FACE_TOOLS_RADIAL_SELECT_INTERACTOR_H
 #define FACE_TOOLS_RADIAL_SELECT_INTERACTOR_H
 
-#include "ModelEntryExitInteractor.h"
+#include "FaceViewInteractor.h"
 #include <LoopSelectVisualisation.h>
+#include <ObjModelRegionSelector.h> // RFeatures
 
-namespace FaceTools {
-namespace Interactor {
+namespace FaceTools { namespace Interactor {
 
-class FaceTools_EXPORT RadialSelectInteractor : public ModelViewerInteractor 
+class FaceTools_EXPORT RadialSelectInteractor : public FaceViewInteractor
 { Q_OBJECT
 public:
-    RadialSelectInteractor( MEEI*, Vis::LoopSelectVisualisation*, QStatusBar* sbar=nullptr);
+    RadialSelectInteractor( Vis::LoopSelectVisualisation&, const FM*);
 
-signals:
-    void onIncreaseRadius( const Vis::FV*);
-    void onDecreaseRadius( const Vis::FV*);
-    void onSetCentre( const Vis::FV*, const cv::Vec3f&);
+    // Return the model this region selector is for.
+    const FM* model() const { return _model;}
+
+    // Use after initialisation (centre and radius managed internally thereafter).
+    void set( const cv::Vec3f& centre, double radius);
+
+    double radius() const;
+    cv::Vec3f centre() const;
+    size_t selectedFaces( IntSet&) const;
+
+protected:
+    void enterProp( Vis::FV*, const vtkProp*) override;
+    void leaveProp( Vis::FV*, const vtkProp*) override;
+
+    bool leftButtonDown() override;
+    bool leftButtonUp() override;
+    bool leftDrag() override;
+
+    bool mouseWheelForward() override;
+    bool mouseWheelBackward() override;
 
 private:
-    bool leftButtonDown( const QPoint&) override;
-    bool leftButtonUp( const QPoint&) override;
-    bool leftDrag( const QPoint&) override;
-    bool mouseMove( const QPoint&) override;
-    bool mouseWheelForward( const QPoint&) override;
-    bool mouseWheelBackward( const QPoint&) override;
-    void onEnabledStateChanged(bool) override;
-    void doOnEnterReticule();
-    void doOnLeaveReticule();
+    Vis::LoopSelectVisualisation &_vis;
+    bool _onReticule, _move;
+    const FM* _model;   // The model the region selector is for.
+    double _radiusChange;
+    RFeatures::ObjModelRegionSelector::Ptr _rsel;
 
-    MEEI *_meei;
-    Vis::LoopSelectVisualisation *_vis;
-    bool _move;
-    bool _onReticule;
-    Vis::FV* _model;
-    static const QString s_msg;
+    void showHover(bool);
+    void updateVis();
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,55 +17,57 @@
 
 #include <ActionUpdateThumbnail.h>
 #include <FaceModel.h>
-#include <FaceView.h>
 #include <cmath>
 #include <cassert>
 using FaceTools::Action::ActionUpdateThumbnail;
 using FaceTools::Action::FaceAction;
-using FaceTools::Action::EventSet;
-using FaceTools::Vis::FV;
-using FaceTools::FVS;
+using FaceTools::Action::Event;
 using FaceTools::FM;
+using MS = FaceTools::Action::ModelSelector;
 
 
 ActionUpdateThumbnail::ActionUpdateThumbnail( int w, int h)
-    : FaceAction(), _omv( cv::Size(w,h), 500)
+    : FaceAction("Thumbnail Updater"), _omv( cv::Size(w,h))
 {
-    setRespondToEvent( GEOMETRY_CHANGE);
-    setRespondToEvent( ORIENTATION_CHANGE);
+    addTriggerEvent( Event::ORIENTATION_CHANGE);
+    addTriggerEvent( Event::LANDMARKS_CHANGE);
+    addTriggerEvent( Event::GEOMETRY_CHANGE);
 }   // end ctor
 
 
 ActionUpdateThumbnail::~ActionUpdateThumbnail()
 {
     while ( !_thumbs.empty())
-        purge( _thumbs.begin()->first);
+        _thumbs.erase( _thumbs.begin()->first);
 }   // end dtor
 
 
-const cv::Mat& ActionUpdateThumbnail::thumbnail( const FM* fm)
+const cv::Mat ActionUpdateThumbnail::thumbnail( const FM* fm)
 {
-    if ( _thumbs.count(fm) == 0)
-    {
-        _omv.setModel(fm->info()->cmodel());
-        _thumbs[fm] = _omv.snapshot();
-    }   // end if
-    return _thumbs.at(fm);
+    if ( _thumbs.count(fm) > 0)
+        return _thumbs.at(fm);
+    fm->lockForRead();
+    _omv.setModel( fm->model());
+    const cv::Vec3f centre = fm->icentre();  // Calculated from landmarks if available
+    const RFeatures::Orientation on = fm->orientation();    // Calculated from landmarks if available
+    fm->unlock();
+    const cv::Vec3f cpos = (500 * on.nvec()) + centre;
+    const RFeatures::CameraParams cam( cpos, centre, on.uvec(), 30);
+    _omv.setCamera( cam);
+    return _thumbs[fm] = _omv.snapshot();
 }   // end thumbnail
 
 
-bool ActionUpdateThumbnail::doAction( FVS& fvs, const QPoint&)
+void ActionUpdateThumbnail::doAction( Event)
 {
-    const FM* fm = fvs.first()->data();
-    purge(fm);
-    const cv::Mat& img = thumbnail(fm);
+    const FM* fm = MS::selectedModel();
+    _thumbs.erase(fm);
+    const cv::Mat img = thumbnail(fm);
     emit updated( fm, img);
-    return true;
 }   // end doAction
 
 
-void ActionUpdateThumbnail::purge( const FM* fm)
+void ActionUpdateThumbnail::purge( const FM* fm, Event)
 {
-    if ( _thumbs.count(fm) > 0)
-        _thumbs.erase(fm);
+    _thumbs.erase(fm);
 }   // end purge

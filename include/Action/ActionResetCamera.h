@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,18 +26,14 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionResetCamera : public FaceAction
 { Q_OBJECT
 public:
-    // If no viewers are added, viewers that are reset will be taken from the FVS passed in to doAction.
-    ActionResetCamera( const QString& dname="Reset Camera", const QIcon& ico=QIcon(), FaceModelViewer *v=nullptr);
+    ActionResetCamera( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
 
-    void addViewer( FaceModelViewer* v) { _viewers.push_back(v);}
+    QString toolTip() const override { return "Reset the camera in the viewer of the currently selected model to focus on it, or reset all viewer cameras to their default position and focus if no model is selected.";}
 
-private slots:
-    bool testEnabled( const QPoint*) const override { return true;}
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(CAMERA_CHANGE);}
+    static void resetCamera( const Vis::FV*);
 
-private:
-    std::vector<FaceModelViewer*> _viewers;
+protected:
+    void doAction( Event) override;
 };  // end class
 
 }}   // end namespace

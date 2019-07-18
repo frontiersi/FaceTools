@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 #include <FaceTools.h>
 #include <algorithm>
 using FaceTools::Path;
+using FaceTools::FM;
 
 
 Path::Path() : id(-1), elen(0), psum(0) {}
@@ -68,20 +69,18 @@ int findMostParallelVertex( const cv::Vec3d& u, const RFeatures::ObjModel* model
 */
 
 
-bool Path::recalculate( const RFeatures::ObjModelKDTree* kdt)
+bool Path::recalculate( const FM* fm)
 {
     if ( vtxs.empty())
         return false;
 
     cv::Vec3f v0 = vtxs.front();
     cv::Vec3f v1 = vtxs.back();
-    //v0 = cv::Vec3f( 1.16529, 18.5761, 6.63304);   // mouth.3df
-    //v1 = cv::Vec3f( 2.44465, 7.49523, 0.568123);
 
     elen = cv::norm(v1-v0);    // The l2-norm (straight line distance)
     vtxs.clear();
     psum = 0;
-    if ( findPath( kdt, v0, v1, vtxs))
+    if ( findPath( fm, v0, v1, vtxs))
     {
         const cv::Vec3f* vp = &vtxs.front();
         for ( const cv::Vec3f& v : vtxs)

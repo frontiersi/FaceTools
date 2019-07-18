@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,70 +26,42 @@
 #pragma warning( disable : 4251)
 #endif
 
-#include <FaceTools_Export.h>
+#include <FaceTypes.h>
 #include <boost/property_tree/ptree.hpp>
 using PTree = boost::property_tree::ptree;
-#include <RangedScalarDistribution.h>
-#include <string>
 
 namespace FaceTools { namespace Metric {
-
-struct FaceTools_EXPORT DimensionStat
-{
-    DimensionStat( double v) : value(v), eage(0), mean(0), stdv(0) {}
-    DimensionStat() : value(0), eage(0), mean(0), stdv(0) {}
-
-    double zscore() const { return stdv > 0.0 ? (value - mean) / stdv : 0.0;}
-
-    double value;           // Value
-    double eage;            // Evaluation age
-    double mean;            // Mean
-    double stdv;            // Standard deviation
-};  // end struct
-
 
 class FaceTools_EXPORT MetricValue
 {
 public:
     MetricValue(){}
     MetricValue( int id);
-    MetricValue( int id, const std::vector<DimensionStat>&);
-    MetricValue( const MetricValue&);
-    MetricValue& operator=( const MetricValue&);
+    MetricValue( const MetricValue&) = default;
+    MetricValue& operator=( const MetricValue&) = default;
 
     int id() const { return _id;}
+    size_t ndims() const { return _values.size();}
 
-    // Set/get the sex presumed for the statistical data.
-    void setSex( int8_t s) { _sex = s;}
-    int8_t sex() const { return _sex;}
+    // Overwrite with new values.
+    void setValues( const std::vector<double>& dvals) { _values = dvals;}
 
-    // Set/get the ethnicity presumed for the statistical data.
-    void setEthnicity( const std::string& e) { _eth = e;}
-    const std::string& ethnicity() const { return _eth;}
+    // Return the raw value at dimension i.
+    double value( size_t i=0) const { return _values.at(i);}
 
-    // Set/get the source of the statistical data.
-    void setSource( const std::string& s) { _src = s;}
-    const std::string& source() const { return _src;}
+    // Returns the mean at the given age for dimension i.
+    double mean( double age, size_t i=0) const;
 
-    // Add a new metric statistic only if doing so does not add more dimensions than allowed.
-    bool addStat( const DimensionStat& ds);
-    size_t ndims() const { return _dstats.size();}
+    // Returns the z-score at the given age for dimension i.
+    double zscore( double age, size_t i=0) const;
 
-    double value( size_t i=0) const { return _dstats.at(i).value;}
-    double zscore( size_t i=0) const { return _dstats.at(i).zscore();}
-    double mean( size_t i=0) const { return _dstats.at(i).mean;}
-    double stdv( size_t i=0) const { return _dstats.at(i).stdv;}
+    void write( PTree&, double age) const;
 
 private:
     int _id;
-    int8_t _sex;
-    std::string _eth, _src;
-    std::vector<DimensionStat> _dstats;
+    std::vector<double> _values;
 };  // end class
 
-
-FaceTools_EXPORT PTree& operator<<( PTree&, const MetricValue&);
-
-} }   // end namespace
+}}   // end namespace
 
 #endif

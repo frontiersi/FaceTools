@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,47 +37,21 @@ RegionVisualiser::RegionVisualiser( int id, const LmkList* lmks0, const LmkList*
     : MetricVisualiser( id), _lmks0(lmks0), _lmks1(lmks1) {}
 
 
-bool RegionVisualiser::belongs( const vtkProp* p, const FV *fv) const
-{
-    return ( _rep0.count(fv) > 0 && _rep0.at(fv) == p) || ( _rep1.count(fv) > 0 && _rep1.at(fv) == p);
-}   // end belongs
-
-
-void RegionVisualiser::pokeTransform( const FV *fv, const vtkMatrix4x4* cvm)
-{
-    vtkMatrix4x4* vm = const_cast<vtkMatrix4x4*>(cvm);
-    if ( _rep0.count(fv) > 0)
-        _rep0.at(fv)->PokeMatrix(vm);
-    if ( _rep1.count(fv) > 0)
-        _rep1.at(fv)->PokeMatrix(vm);
-}   // end pokeTransform
-
-
-void RegionVisualiser::fixTransform( const FV *fv)
-{
-    if ( _rep0.count(fv) > 0)
-        RVTK::transform( _rep0.at(fv), _rep0.at(fv)->GetMatrix());
-    if ( _rep1.count(fv) > 0)
-        RVTK::transform( _rep1.at(fv), _rep1.at(fv)->GetMatrix());
-}   // end fixTransform
-
-
 namespace {
-
 void highlight( vtkActor* actor, bool v)
 {
     vtkProperty* prop = actor->GetProperty();
     if ( v)
     {
-        prop->SetLineWidth(7.0);
-        prop->SetColor(1.0,1.0,1.0);
-        prop->SetOpacity(1.0);
+        prop->SetLineWidth(8.0);
+        prop->SetColor( 0.8, 0.2, 0.2);
+        prop->SetOpacity(0.99);
     }   // end if
     else
     {
-        prop->SetLineWidth(4.0);
-        prop->SetColor(0.6,0.6,0.7);
-        prop->SetOpacity(0.5);
+        prop->SetLineWidth(2.0);
+        prop->SetColor( 0.2, 0.2, 1.0);
+        prop->SetOpacity(0.3);
     }   // end else
 }   // end highlight
 
@@ -94,26 +68,73 @@ void setActorProperties( vtkActor* actor)
     actor->SetPickable(false);
 }   // end setActorProperties
 
+/*
+void setLineColour( vtkActor* actor, const QColor& bg)
+{
+    QColor col = FaceTools::chooseContrasting( bg);
+    vtkProperty* prop = actor->GetProperty();
+    prop->SetColor( col.redF(), col.greenF(), col.blueF());
+}   // end setLineColour
+*/
 }   // end namespace
 
-void RegionVisualiser::setHighlighted( const FM* fm)
-{
-    for ( auto& p : _rep0)
-        highlight( p.second, false);
-    for ( auto& p : _rep1)
-        highlight( p.second, false);
 
-    if ( fm)
-    {
-        for ( const FV* fv : fm->fvs())
-        {
-            if ( _rep0.count(fv) > 0)
-                highlight( _rep0.at(fv), true);
-            if ( _rep1.count(fv) > 0)
-                highlight( _rep1.at(fv), true);
-        }   // end for
-    }   // end if
+bool RegionVisualiser::belongs( const vtkProp* p, const FV *fv) const
+{
+    return ( _rep0.count(fv) > 0 && _rep0.at(fv) == p) || ( _rep1.count(fv) > 0 && _rep1.at(fv) == p);
+}   // end belongs
+
+
+void RegionVisualiser::syncActorsToData(const FV *fv, const cv::Matx44d &d)
+{
+    const cv::Matx44d& bmat = fv->data()->model().transformMatrix();
+    vtkSmartPointer<vtkMatrix4x4> vm = RVTK::toVTK( d * bmat);
+    if ( _rep0.count(fv) > 0)
+        _rep0.at(fv)->PokeMatrix(vm);
+    if ( _rep1.count(fv) > 0)
+        _rep1.at(fv)->PokeMatrix(vm);
+}   // end syncActorsToData
+
+
+void RegionVisualiser::setHighlighted( const FV* fv, bool v)
+{
+    if ( _rep0.count(fv) > 0)
+        highlight( _rep0.at(fv), v);
+    if ( _rep1.count(fv) > 0)
+        highlight( _rep1.at(fv), v);
 }   // end setHighlighted
+
+
+void RegionVisualiser::doSetVisible( const FV* fv, bool v)
+{
+    if ( _rep0.count(fv) > 0)
+        _rep0.at(fv)->SetVisibility(v);
+    if ( _rep1.count(fv) > 0)
+        _rep1.at(fv)->SetVisibility(v);
+}   // end doSetVisible
+
+
+bool RegionVisualiser::isVisible( const FV *fv) const
+{
+    bool vis = false;
+    if ( _rep0.count(fv) > 0)
+        vis = _rep0.at(fv)->GetVisibility() != 0;
+    if ( _rep1.count(fv) > 0)
+        vis &= _rep1.at(fv)->GetVisibility() != 0;
+    return vis;
+}   // end isVisible
+
+
+void RegionVisualiser::checkState( const FV*)
+{
+    /*
+    const QColor bg = fv->viewer()->backgroundColour();
+    if ( _rep0.count(fv) > 0)
+        setLineColour( _rep0.at(fv), bg);
+    if ( _rep1.count(fv) > 0)
+        setLineColour( _rep0.at(fv), bg);
+    */
+}   // end checkState
 
 
 bool RegionVisualiser::isAvailable( const FM* fm) const
@@ -121,43 +142,45 @@ bool RegionVisualiser::isAvailable( const FM* fm) const
     using SLMK = Landmark::SpecificLandmark;
     bool b0 = true;
     if ( _lmks0)
-        b0 = std::all_of( std::begin(*_lmks0), std::end(*_lmks0), [fm]( const SLMK& lm){ return fm->landmarks()->has(lm);});
+        b0 = std::all_of( std::begin(*_lmks0), std::end(*_lmks0), [fm]( const SLMK& lm){ return fm->landmarks().has(lm);});
     bool b1 = true;
     if ( _lmks1)
-        b1 = std::all_of( std::begin(*_lmks1), std::end(*_lmks1), [fm]( const SLMK& lm){ return fm->landmarks()->has(lm);});
+        b1 = std::all_of( std::begin(*_lmks1), std::end(*_lmks1), [fm]( const SLMK& lm){ return fm->landmarks().has(lm);});
     return b0 && b1;
 }   // end isAvailable
 
 
+void RegionVisualiser::doApply( const FV *fv)
+{
+    if ( _lmks0 && !_lmks0->empty())
+        applyActor( fv, _lmks0, _rep0);
+    if ( _lmks1 && !_lmks1->empty())
+        applyActor( fv, _lmks1, _rep1);
+}   // end doApply
+
+
+void RegionVisualiser::doPurge( const FV *fv)
+{
+    purgeActor( fv, _rep0);
+    purgeActor( fv, _rep1);
+}   // end doPurge
+
+
 // private
-void RegionVisualiser::apply( FV *fv, const LmkList* lmks, std::unordered_map<const FV*, vtkActor*>& actors)
+void RegionVisualiser::applyActor( const FV *fv, const LmkList* lmks, std::unordered_map<const FV*, vtkActor*>& actors)
 {
     const FM* fm = fv->data();
     std::vector<cv::Vec3f> vtxs;
     for ( const auto& lmk : *lmks)
-        vtxs.push_back(*fm->landmarks()->pos(lmk));
+        vtxs.push_back(fm->landmarks().pos(lmk));
     vtkActor* actor = actors[fv] = RVTK::VtkActorCreator::generateLineActor(vtxs, true);
     setActorProperties(actor);
     fv->viewer()->add( actor);
-}   // end apply
-
-
-void RegionVisualiser::apply( FV *fv, const QPoint*)
-{
-    const FM* fm = fv->data();
-    fm->lockForRead();
-    clear(fv); // Ensure removed so can create new actor(s)
-    if ( _lmks0 && !_lmks0->empty())
-        apply( fv, _lmks0, _rep0);
-    if ( _lmks1 && !_lmks1->empty())
-        apply( fv, _lmks1, _rep1);
-    fm->unlock();
-    MetricVisualiser::apply( fv, nullptr);
-}   // end apply
+}   // end applyActor
 
 
 // private
-void RegionVisualiser::clear( FV *fv, std::unordered_map<const FV*, vtkActor*>& actors)
+void RegionVisualiser::purgeActor( const FV *fv, std::unordered_map<const FV*, vtkActor*>& actors)
 {
     if ( actors.count(fv) > 0)
     {
@@ -166,20 +189,4 @@ void RegionVisualiser::clear( FV *fv, std::unordered_map<const FV*, vtkActor*>& 
         actors.at(fv)->Delete();
         actors.erase(fv);
     }   // end if
-}   // end clear
-
-
-void RegionVisualiser::clear( FV *fv)
-{
-    clear( fv, _rep0);
-    clear( fv, _rep1);
-    MetricVisualiser::clear(fv);
-}   // end clear 
-
-
-void RegionVisualiser::purge( const FM* fm)
-{
-    const FVS& fvs = fm->fvs();
-    std::for_each( std::begin(fvs), std::end(fvs), [this](FV* fv){ this->clear(fv);});
-}   // end purge
-
+}   // end purgeActor

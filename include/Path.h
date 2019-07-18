@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,23 +22,25 @@
 #pragma warning( disable : 4251)
 #endif
 
-#include "FaceTools_Export.h"
+#include "FaceTypes.h"
 #include <ObjModelKDTree.h>
 #include <opencv2/opencv.hpp>
 #include <boost/property_tree/ptree.hpp>
-typedef boost::property_tree::ptree PTree;
+using PTree = boost::property_tree::ptree;
 
 namespace FaceTools {
 
 struct FaceTools_EXPORT Path
 {
     Path();
+    Path( const Path&) = default;
+    Path& operator=( const Path&) = default;
     Path( int id, const cv::Vec3f& v0);
 
     // Set path endpoints on the model surface and recalculate
-    // path and both path lengths using the given KD-tree.
+    // path and both path lengths using the given model.
     // If no path could be found, return false.
-    bool recalculate( const RFeatures::ObjModelKDTree*);
+    bool recalculate( const FM*);
 
     int id;
     double elen;                // Cached straight line distance (l2-norm between path end-points)
@@ -53,7 +55,6 @@ FaceTools_EXPORT PTree& operator<<( PTree&, const Path&);
 
 // After reading in, path vertices will need calculating via a call to recalculate.
 FaceTools_EXPORT const PTree& operator>>( const PTree&, Path&);
-
 
 }   // end namespace
 

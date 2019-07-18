@@ -37,7 +37,7 @@ public:
     // Provide the initial detection range with d used to scale how closely the camera
     // is positioned to the face based on the detected distance between the eyes e
     // with the distance formula rng * e/d.
-    FaceOrientationDetector( const RFeatures::ObjModelKDTree* kdt, float rng=700.0f, float d=0.30f);
+    FaceOrientationDetector( const FM*, float rng=700.0f, float d=0.30f);
 
     // Update only the landmarks with the given IDs.
     // If left as default, allows all landmarks to be updated.
@@ -60,7 +60,7 @@ private:
     float orient();
 
     RVTK::OffscreenModelViewer _vwr;
-    const RFeatures::ObjModelKDTree* _kdt;
+    const FM* _model;
     float _orng, _dfact;
     cv::Vec3f _nvec, _v0, _v1;
     std::string _err;

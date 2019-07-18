@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,43 +22,47 @@
 #include <cassert>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionRemesh;
-using FaceTools::Action::EventSet;
+using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
 using FaceTools::FM;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionRemesh::ActionRemesh( const QString& dn, const QIcon& ico, QProgressBar* pb)
+ActionRemesh::ActionRemesh( const QString& dn, const QIcon& ico)
     : FaceAction(dn, ico), _maxtarea(2.0)
 {
-    if ( pb)
-        setAsync(true, QTools::QProgressUpdater::create(pb));
+    setAsync(true);
 }   // end ctor
 
 
-bool ActionRemesh::doAction( FVS& fvs, const QPoint&)
+bool ActionRemesh::checkEnable( Event)
 {
-    assert(fvs.size() == 1);
-    FV* fv = fvs.first();
-    FM* fm = fv->data();
+    return MS::isViewSelected();
+}   // end checkEnabled
 
+
+bool ActionRemesh::doBeforeAction( Event)
+{
+    MS::showStatus( "Remeshing model...");
+    return true;
+}   // end doBeforeAction
+
+void ActionRemesh::doAction( Event)
+{
+    FM* fm = MS::selectedModel();
     fm->lockForWrite();
-
-    bool success = true;
-    RFeatures::ObjModelInfo::Ptr info = fm->info();
-    RFeatures::ObjModel::Ptr model = info->model();
-
+    RFeatures::ObjModel::Ptr model = fm->model()->deepCopy(true);
     RFeatures::ObjModelVertexAdder vadder( model);
     vadder.subdivideAndMerge( maxTriangleArea());
     //vadder.addVerticesToMaxTriangleArea( maxTriangleArea());
-    if ( info->reset( model))
-        fm->update(info);
-    else
-    {
-        std::cerr << "[ERROR] FaceTools::Action::ActionRemesh::doAction: Unable to clean model post remesh!" << std::endl;
-        success = false;
-    }   // end else
-
+    fm->update(model);
     fm->unlock();
-    return success;
 }   // end doAction
+
+
+void ActionRemesh::doAfterAction()
+{
+    MS::showStatus( "Finished remeshing model.", 5000);
+    emit onEvent( Event::GEOMETRY_CHANGE);
+}   // end doAfterAction

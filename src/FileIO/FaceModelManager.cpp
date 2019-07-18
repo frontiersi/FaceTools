@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,11 +45,11 @@ void FaceModelManager::setLoadLimit( size_t llimit) { _loadLimit = llimit;}
 void FaceModelManager::add( FaceModelFileHandler* fii) { if ( fii) _fhmap.add(fii);}
 
 
-bool FaceModelManager::hasPreferredFileFormat( FM* fm)
+bool FaceModelManager::hasPreferredFileFormat( const FM* fm)
 {
     assert( fm != nullptr);
-    assert( _models.count(fm) > 0);
-    return isPreferredFileFormat( _mdata.at(fm));
+    assert( _models.count(const_cast<FM*>(fm)) > 0);
+    return isPreferredFileFormat( _mdata.at(const_cast<FM*>(fm)));
 }   // end hasPreferredFileFormat
 
 
@@ -61,18 +61,18 @@ bool FaceModelManager::isPreferredFileFormat( const std::string& fname)
 }   // end isPreferredFileFormat
 
 
-// private
-void FaceModelManager::setModelFilepath( FM* fm, const std::string& fname)
+void FaceModelManager::_setModelFilepath( const FM* cfm, const std::string& fname)
 {
+    FM* fm = const_cast<FM*>(cfm);
     _models.insert(fm);
     _mdata[fm] = fname;
     _mfiles[fname] = fm;
-    fm->setSaved();
-}   // end setModelFilepath
+}   // end _setModelFilepath
 
 
-bool FaceModelManager::write( FM* fm, std::string* fpath)
+bool FaceModelManager::write( const FM* cfm, std::string* fpath)
 {
+    FM* fm = const_cast<FM*>(cfm);
     assert( _models.count(fm) > 0);
     std::string savefilepath = _mdata.at(fm);
     std::string delfilepath;    // Will not be empty if replacing filename
@@ -87,11 +87,8 @@ bool FaceModelManager::write( FM* fm, std::string* fpath)
         }   // end else
     }   // end if
 
-    qInfo() << QString( "Writing out file '%1'").arg( savefilepath.c_str());
-
     _err = "";  // Reset the error
-    FaceModelFileHandler* fileio = _fhmap.getSaveInterface( savefilepath);
-    fm->lockForRead();
+    FaceModelFileHandler* fileio = _fhmap.writeInterface( savefilepath);
     if ( !fileio)
         _err = "File \"" + savefilepath + "\" is not an allowed file type!";
     else if ( !fileio->canWrite())
@@ -101,21 +98,49 @@ bool FaceModelManager::write( FM* fm, std::string* fpath)
     else    // Successful write
     {
         _mfiles.erase(delfilepath);
-        setModelFilepath( fm, savefilepath);
+        _setModelFilepath( fm, savefilepath);
+        fm->setModelSaved(true);
+        if ( fm->hasMetaData())
+            fm->setMetaSaved(false);
+        if ( isPreferredFileFormat(savefilepath) || !fm->hasMetaData())
+            fm->setMetaSaved(true);
     }   // end else
-    fm->unlock();
 
     return _err.empty();
-}   // end save
+}   // end write
+
+
+bool FaceModelManager::canWrite( const std::string& fpath)
+{
+    FaceModelFileHandler* fileio = _fhmap.writeInterface( fpath);
+    if ( fileio && fileio->canWrite())
+        return true;
+    return false;
+}   // end canWrite
 
 
 bool FaceModelManager::canRead( const std::string& fname)
 {
     if ( !boost::filesystem::exists( fname))
        return false;
-    FaceModelFileHandler* fileio = _fhmap.getLoadInterface( fname);
+    FaceModelFileHandler* fileio = _fhmap.readInterface( fname);
     return fileio && fileio->canRead();
 }   // end canRead
+
+
+bool FaceModelManager::hasFileHandler( const std::string &fpath)
+{
+    return _fhmap.readInterface( fpath) != nullptr;
+}   // end hasFileHandler
+
+
+bool FaceModelManager::canSaveTextures( const std::string &fpath)
+{
+    FaceModelFileHandler* fileio = _fhmap.writeInterface( fpath);
+    if ( fileio && fileio->canWriteTextures())
+        return true;
+    return false;
+}   // end canSaveTextures
 
 
 bool FaceModelManager::isOpen( const std::string& fname) { return _mfiles.count(fname) > 0;}
@@ -129,24 +154,26 @@ FM* FaceModelManager::read( const std::string& fname)
     if ( _mfiles.count(fname) > 0)
     {
         _err = "File \"" + fname + "\" already open!";
-        qInfo() << "Model already loaded!";
+        std::cerr << "Model already loaded!" << std::endl;
         return nullptr;
     }   // end if
-
-    qDebug() << QString("Reading in file '%1'").arg(fname.c_str());
 
     FaceModelFileHandler* fileio = nullptr;
     FM* fm = nullptr;
     if ( !boost::filesystem::exists( fname))
         _err = "File \"" + fname + "\" does not exist!";
-    else if ( (fileio = _fhmap.getLoadInterface(fname)) == nullptr)
+    else if ( (fileio = _fhmap.readInterface(fname)) == nullptr)
         _err = "File \"" + fname + "\" is not an allowed file type!";
     else if ( !fileio->canRead())
         _err = "Cannot read from " + fileio->getFileDescription().toStdString() + " files!";
     else if ( (fm = fileio->read( QString( fname.c_str()))) == nullptr)
         _err = fileio->error().toStdString();
     else
-        setModelFilepath( fm, fname);
+    {
+        _setModelFilepath( fm, fname);
+        fm->setModelSaved(true);
+        fm->setMetaSaved(true);
+    }   // end else
 
     return fm;
 }   // end read
@@ -154,7 +181,8 @@ FM* FaceModelManager::read( const std::string& fname)
 
 const std::string& FaceModelManager::filepath( const FM* fm)
 {
-    assert(_models.count(const_cast<FM*>(fm)) > 0);
+    assert( fm);
+    assert( _models.count(const_cast<FM*>(fm)) > 0);
     return _mdata.at(const_cast<FM*>(fm));
 }   // end filepath
 
@@ -168,12 +196,10 @@ FM* FaceModelManager::model( const std::string& fname)
 }   // end model
 
 
-void FaceModelManager::close( FM* fm)
+void FaceModelManager::close( const FM* cfm)
 {
+    FM* fm = const_cast<FM*>(cfm);
     assert(_models.count(fm) > 0);
-    if ( !fm->isSaved())
-        qWarning() << QString( "Model '%1' is unsaved!").arg(filepath(fm).c_str());
-    qInfo() << QString( "Closing '%1'").arg(filepath(fm).c_str());
     _mfiles.erase(_mdata.at(fm));
     _models.erase(fm);
     _mdata.erase(fm);

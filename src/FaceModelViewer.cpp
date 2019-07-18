@@ -74,22 +74,28 @@ size_t FaceModelViewer::findOverlaps( FVFlags &olaps) const
     for ( size_t i = 0; i < n; ++i)
         olaps[fvs[i]] = false;
 
-    size_t nol = 0;
+    size_t numOverlaps = 0;
     for ( size_t i = 0; i < n; ++i)
     {
         FV* ifv = fvs[i];
+        const FM* ifm = ifv->data();
+        const RFeatures::ObjModelBounds& ibnds = *ifm->bounds()[0];
+
         for ( size_t j = i+1; j < n; ++j)
         {
             FV* jfv = fvs[j];
-            if ( ifv->data()->supersIntersect( *jfv->data()))
+            const FM* jfm = jfv->data();
+            const RFeatures::ObjModelBounds& jbnds = *jfm->bounds()[0];
+
+            if ( ibnds.intersects( jbnds))
             {
                 olaps[ifv] = olaps[jfv] = true;
-                nol++;
+                numOverlaps++;
             }   // end if
         }   // end for
     }   // end for
 
-    return nol;
+    return numOverlaps;
 }   // end findOverlaps
 
 
@@ -97,8 +103,8 @@ void FaceModelViewer::refreshOverlapOpacity( const FVFlags& olaps, double maxOpa
 {
     for ( FV* fv : _attached)
     {
-        const double olapVal = std::min( fv->opacity(), maxOpacityOnOverlap);
-        fv->setOpacity( olaps.at(fv) ? olapVal : 1.0);
+        if ( olaps.at(fv))
+            fv->setOpacity( std::min( fv->opacity(), maxOpacityOnOverlap));
     }   // end for
 }   // end refreshOpacity
 

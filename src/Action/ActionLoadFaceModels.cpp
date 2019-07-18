@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,76 +18,97 @@
 #include <ActionLoadFaceModels.h>
 #include <FaceModelManager.h>
 using FaceTools::Action::ActionLoadFaceModels;
-using FaceTools::Action::EventSet;
+using FaceTools::Action::Event;
 using FaceTools::Action::FaceAction;
 using FaceTools::FileIO::LoadFaceModelsHelper;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
+using FaceTools::FileIO::FMM;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionLoadFaceModels::ActionLoadFaceModels( const QString& dn, const QIcon& ico, QWidget *p)
-    : FaceAction( dn, ico), _loadHelper(p), _dialog( new QFileDialog(p, tr("Select one or more models to load")))
+ActionLoadFaceModels::ActionLoadFaceModels( const QString& dn, const QIcon& ico, const QKeySequence& ks)
+    : FaceAction( dn, ico, ks), _loadHelper(nullptr), _dialog(nullptr)
 {
     setAsync(true);
-    QStringList filters = _loadHelper.createImportFilters().split(";;");
+}   // end ctor
+
+
+ActionLoadFaceModels::~ActionLoadFaceModels()
+{
+    delete _loadHelper;
+}   // end dtor
+
+
+void ActionLoadFaceModels::postInit()
+{
+    QWidget* p = static_cast<QWidget*>(parent());
+    _loadHelper = new LoadFaceModelsHelper(p);
+    _dialog = new QFileDialog(p, tr("Select one or more models to load"));
+    QStringList filters = FMM::fileFormats().createImportFilters().split(";;");
     filters.prepend( "Any file (*)");
     _dialog->setNameFilters(filters);
     _dialog->setViewMode(QFileDialog::Detail);
     _dialog->setFileMode(QFileDialog::ExistingFiles);
-    //_dialog->setOption(QFileDialog::DontUseCustomDirectoryIcons);
     _dialog->setOption(QFileDialog::DontUseNativeDialog);
-}   // end ctor
+    _dialog->setOption(QFileDialog::DontUseCustomDirectoryIcons);
+}   // end postInit
 
 
-bool ActionLoadFaceModels::testEnabled( const QPoint*) const
+bool ActionLoadFaceModels::checkEnable( Event)
 {
-    using FaceTools::FileIO::FMM;
     return FMM::numOpen() < FMM::loadLimit();
-}   // end testEnabled
+}   // end checkEnable
 
 
 // public
-FV* ActionLoadFaceModels::loadModel( const QString& fname)
+bool ActionLoadFaceModels::loadModel( const QString& fname)
 {
     bool loaded = false;
-    if ( testEnabled(nullptr))
+    if ( checkEnable(Event::NONE))
     {
         QStringList fnames;
         fnames << fname;
-        if ( _loadHelper.setFilteredFilenames(fnames) > 0)
-            loaded = process();
+        if ( _loadHelper->setFilteredFilenames(fnames) > 0)
+            loaded = execute( Event::USER);
     }   // end if
-
-    FV* fv = nullptr;
-    if ( loaded)
-        fv = _loadHelper.lastLoaded().first();
-    return fv;
+    return loaded;
 }   // end loadModel
 
 
-bool ActionLoadFaceModels::doBeforeAction( FVS&, const QPoint&)
+bool ActionLoadFaceModels::doBeforeAction( Event)
 {
-    if ( _loadHelper.filenames().empty())
+    if ( _loadHelper->filenames().empty())
     {
         if (_dialog->exec())
-            _loadHelper.setFilteredFilenames( _dialog->selectedFiles());
+            _loadHelper->setFilteredFilenames( _dialog->selectedFiles());
     }   // end if
-    return !_loadHelper.filenames().empty();
+
+    const int nfiles = _loadHelper->filenames().size();
+    const bool doLoad = nfiles > 0;
+    if ( doLoad)
+        MS::showStatus( QString("Loading model%1...").arg(nfiles > 1 ? "s" : ""));
+    return doLoad;
 }   // end doBeforeAction
 
 
-bool ActionLoadFaceModels::doAction( FVS& fvs, const QPoint&)
+void ActionLoadFaceModels::doAction( Event)
 {
-    fvs.clear();
-    if ( _loadHelper.loadModels() > 0)   // Blocks
-        fvs.insert(_loadHelper.lastLoaded());
-    return !fvs.empty();
+    _loadHelper->loadModels();
 }   // end doAction
 
 
-void ActionLoadFaceModels::doAfterAction( EventSet& cs, const FVS&, bool loaded)
+void ActionLoadFaceModels::doAfterAction( Event)
 {
-    _loadHelper.showLoadErrors();
-    if ( loaded)
-        cs.insert(LOADED_MODEL);
+    _loadHelper->showLoadErrors();
+    const FMS& fms = _loadHelper->lastLoaded();
+    for ( FM* fm : fms)
+        MS::addFaceView( fm);
+    if ( !fms.empty())
+    {
+        MS::showStatus( QString("Finished loading model%1.").arg( fms.size() > 1 ? "s" : ""), 5000);
+        emit onEvent( {Event::LOADED_MODEL, Event::GEOMETRY_CHANGE});
+    }   // end if
+    else
+        MS::showStatus( "Error loading model(s)!", 5000);
 }   // end doAfterAction

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,58 +16,50 @@
  ************************************************************************/
 
 #include <ActionEditPaths.h>
+#include <ModelSelector.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <VtkTools.h>
 using FaceTools::Action::ActionEditPaths;
-using FaceTools::Action::EventSet;
+using FaceTools::Action::Event;
 using FaceTools::Action::ActionVisualise;
-using FaceTools::Interactor::PathSetInteractor;
-using FaceTools::Interactor::ModelViewerInteractor;
-using FaceTools::Interactor::MEEI;
+using FaceTools::Interactor::PathsInteractor;
 using FaceTools::Vis::PathSetVisualisation;
-using FaceTools::FVS;
+using FaceTools::FM;
 using FaceTools::Vis::FV;
-using FaceTools::FaceModel;
+using FaceTools::Vis::PathView;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionEditPaths::ActionEditPaths( const QString& dn, const QIcon& ico, MEEI* meei, QStatusBar* sbar)
-    : ActionVisualise( _vis = new PathSetVisualisation( dn, ico)),
-      _interactor( new PathSetInteractor( meei, _vis, sbar))
+
+ActionEditPaths::ActionEditPaths( const QString& dn, const QIcon& ic, PathSetVisualisation* vis, PathsInteractor::Ptr pint, const QKeySequence& ks)
+    : ActionVisualise( dn, ic, vis, ks), _pint( pint), _vis(vis)
 {
-    // Leverage this action's reportFinished signal to propagate path edits.
-    connect( _interactor, &ModelViewerInteractor::onChangedData, this, &ActionEditPaths::doOnEditedPath);
-    setRespondToEventIfAllReady( PATHS_CHANGE, true);
+    connect( &*_pint, &PathsInteractor::onUpdated, [this](){ emit onEvent( Event::PATHS_CHANGE);});
+    addTriggerEvent( Event::PATHS_CHANGE);
 }   // end ctor
 
 
-ActionEditPaths::~ActionEditPaths()
+bool ActionEditPaths::checkState( Event e)
 {
-    delete _interactor;
-    delete _vis;
-}   // end dtor
+    const bool chk = ActionVisualise::checkState(e);
+    _pint->setEnabled(chk);
+    if ( chk)
+        _vis->refresh( MS::selectedModel());
+    return chk;
+}   // end checkState
 
 
-bool ActionEditPaths::doAction( FVS& fvs, const QPoint& mc)
+void ActionEditPaths::doAction( Event e)
 {
-    const FMS& fms = fvs.models();
-    std::for_each( std::begin(fms), std::end(fms), [=](FM* fm){ _vis->refresh( fm);});
-    return ActionVisualise::doAction(fvs, mc);
+    ActionVisualise::doAction(e);
+    if ( isChecked())
+    {
+        MS::setInteractionMode( IMode::CAMERA_INTERACTION);
+        MS::showStatus( "Move path handles by left-clicking and dragging; right click to rename/delete.");
+        if ( _pint->hoverPath())  // Ensure captions of hovered over path is up-to-date.
+            _pint->setCaption( MS::selectedView(), _pint->hoverPath()->pathId());
+    }   // end if
+    else
+        MS::clearStatus();
 }   // end doAction
-
-
-void ActionEditPaths::doAfterAction( EventSet& cs, const FVS& fvs, bool v)
-{
-    ActionVisualise::doAfterAction( cs, fvs, v);
-    _interactor->setEnabled(isChecked());
-}   // end doAfterAction
-
-
-void ActionEditPaths::doOnEditedPath( const FV* fv)
-{
-    EventSet cset;
-    cset.insert(PATHS_CHANGE);
-    FVS fvs;
-    fvs.insert(const_cast<FV*>(fv));
-    emit reportFinished( cset, fvs, true);
-}   // end doOnEditedPath

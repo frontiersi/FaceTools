@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,16 +19,16 @@
 #include <FaceAction.h>
 using FaceTools::Action::FaceActionWorker;
 using FaceTools::Action::FaceAction;
-using FaceTools::FVS;
+using FaceTools::Action::Event;
 
-FaceActionWorker::FaceActionWorker( FaceAction* worker, FVS* rset, const QPoint& tp)
-    : QThread(worker), _worker(worker), _rset(rset), _tp(tp)
+FaceActionWorker::FaceActionWorker( FaceAction* worker, Event e)
+    : QThread(worker), _worker(worker), _event(e)
 {
 }   // end ctor
 
 void FaceActionWorker::run()
 {
-    const bool rv = _worker->doAction( *_rset, _tp);
-    emit workerFinished(rv);
+    _worker->doAction( _event);
+    emit workerFinished( _event);
 }   // end run
 

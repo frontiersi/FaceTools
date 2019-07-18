@@ -9,7 +9,7 @@ include_directories( ${PROJECT_BINARY_DIR}) # Include because generated header f
 
 # Rename the library if compiled using MSVC to append the MSVC version so as to avoid DLL HELL.
 if(WIN32)
-    include("cmake/Macros.cmake")
+    include("${CMAKE_CURRENT_LIST_DIR}/Macros.cmake")
     get_msvc_version( _msvcv)
     set_target_properties( ${PROJECT_NAME} PROPERTIES SUFFIX "-vc${_msvcv}0.dll")
     set_target_properties( ${PROJECT_NAME} PROPERTIES IMPORT_SUFFIX "-vc${_msvcv}0.lib")
@@ -28,4 +28,4 @@ endif()
 install( FILES "${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME}Config.cmake" DESTINATION "lib/cmake")
 install( FILES "${PROJECT_SOURCE_DIR}/cmake/Macros.cmake" DESTINATION "lib/cmake")
 
-include("cmake/LinkTargets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/LinkTargets.cmake")

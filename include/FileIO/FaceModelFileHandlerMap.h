@@ -28,8 +28,7 @@
 #include <FaceTypes.h>
 #include "FaceModelFileHandler.h"
 
-namespace FaceTools {
-namespace FileIO {
+namespace FaceTools { namespace FileIO {
 
 // Prints the IO formats to given stream.
 FaceTools_EXPORT std::ostream& operator<<( std::ostream&, const FaceModelFileHandlerMap&);
@@ -40,9 +39,9 @@ public:
     void add( FaceModelFileHandler*);  // The first added will be the preferred file format.
     const QString& preferredExt() const { return _primaryExt;}   // First added
 
-    // Get the load/save interface appropriate for the given filename (extension checked for type).
-    FaceModelFileHandler* getLoadInterface( const std::string&) const;
-    FaceModelFileHandler* getSaveInterface( const std::string&) const;
+    // Get the read/write interface appropriate for given filename (its extension is checked for type).
+    FaceModelFileHandler* readInterface( const std::string&) const;
+    FaceModelFileHandler* writeInterface( const std::string&) const;
 
     QString createAllImportFilter() const;  // Consider using "Any file (*.*)" instead if long.
     QString createAllExportFilter() const;  // Consider using "Any file (*.*)" instead if long.
@@ -51,8 +50,11 @@ public:
 
     QString getFilter( const QString& ext) const;  // Gets file dialog filter for extension (empty if invalid ext)
 
-    QStringList createSimpleImportFilters() const;    // e.g. the three element list "*.cpp", "*.cxx", "*.cc" (no descriptions)
-    QStringList createSimpleExportFilters() const;    // As above but for export types
+    QStringList createSimpleImportFilters() const;    // e.g. {"*.cpp", "*.cxx", "*.cc"}
+    QStringList createSimpleExportFilters() const;    // Same but for export types
+
+    QStringList createRawImportFilters() const;     // e.g. {"cpp", "cxx", "cc"}
+    QStringList createRawExportFilters() const;     // Same but for export types
 
 private:
     std::unordered_map<QString, FaceModelFileHandler*> _fileInterfaces; // Keyed by extensions
@@ -69,7 +71,6 @@ private:
     void operator=( const FaceModelFileHandlerMap&) = delete;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

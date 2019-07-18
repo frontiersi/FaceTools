@@ -22,37 +22,29 @@
 #include <algorithm>
 using FaceTools::Action::ActionSaveScreenshot;
 using FaceTools::Action::FaceAction;
+using FaceTools::Action::Event;
 using FaceTools::FMV;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionSaveScreenshot::ActionSaveScreenshot( const QString& dn, const QIcon& ico, FMV *mv)
+ActionSaveScreenshot::ActionSaveScreenshot( const QString& dn, const QIcon& ico)
     : FaceAction( dn, ico)
 {
-    if ( mv)
-        addViewer(mv);
 }   // end ctor
 
 
-bool ActionSaveScreenshot::doAction( FVS& fset, const QPoint&)
+void ActionSaveScreenshot::doAction( Event)
 {
-    if ( _viewers.empty())
+    std::vector<cv::Mat> imgs;
+    for ( const FMV* fmv : MS::viewers())
     {
-        for ( FV* fv : fset)
-            fv->viewer()->saveScreenshot();
-    }   // end if
-    else
-    {
-        std::vector<cv::Mat> mimgs;
-        for ( const FMV *v : _viewers)
-        {
-            if ( v->width() > 0 && v->height() > 0)
-                mimgs.push_back( v->grabImage());
-        }   // end for
-        cv::Mat m = RFeatures::concatHorizontalMax( mimgs);
-        QTools::saveImage( m);
-    }   // end else
+        QSize sz = fmv->size();
+        if ( fmv->isVisible() && sz.width() > 0 && sz.height() > 0)
+            imgs.push_back( fmv->grabImage());
+    }   // end for
 
-    return true;
+    cv::Mat img = RFeatures::concatHorizontalMax( imgs);
+    QTools::saveImage( img);
 }   // end doAction

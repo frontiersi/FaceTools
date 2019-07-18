@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,24 +21,23 @@
 #include <FaceModelViewer.h>
 #include <LandmarksManager.h>
 #include <FaceModel.h>
+#include <Ethnicities.h>
 #include <Transformer.h>        // RFeatures
 #include <algorithm>
 #include <FaceView.h>
 #include <MetricCalculatorManager.h>
-#include <QtCharts/QScatterSeries>
-#include <QtCharts/QValueAxis>
 using namespace RFeatures;
 using namespace FaceTools::Landmark;
-using namespace QtCharts;
 using MCM = FaceTools::Metric::MetricCalculatorManager;
 using MC = FaceTools::Metric::MetricCalculator;
 using FaceTools::Metric::GrowthData;
 using FaceTools::Metric::MetricValue;
+using FaceTools::FM;
 
 
 namespace {
 
-cv::Vec3f calcMeanNormalBetweenPoints( const ObjModel* model, int v0, int v1)
+cv::Vec3f calcMeanNormalBetweenPoints( const ObjModel& model, int v0, int v1)
 {
     RFeatures::DijkstraShortestPathFinder pfinder( model);
     pfinder.setEndPointVertexIndices( v0, v1);
@@ -48,18 +47,16 @@ cv::Vec3f calcMeanNormalBetweenPoints( const ObjModel* model, int v0, int v1)
     cv::Vec3f nrm(0,0,0);
     for ( int i = 0; i < n; ++i)
     {
-        const IntSet& sfids = model->getSharedFaces( vidxs[size_t(i)], vidxs[size_t(i+1)]);
-        std::for_each( std::begin(sfids), std::end(sfids), [&](int fid){ nrm += model->calcFaceNorm(fid);});
+        const IntSet& sfs = model.spolys( vidxs[size_t(i)], vidxs[size_t(i+1)]);
+        std::for_each( std::begin(sfs), std::end(sfs), [&](int f){ nrm += model.calcFaceNorm(f);});
     }   // end for
     cv::normalize( nrm, nrm);
     return nrm;
 }   // end calcMeanNormalBetweenPoints
 
 
-void updateNormal( const RFeatures::ObjModelKDTree* kdt, const cv::Vec3f& v0, int e0, const cv::Vec3f& v1, int e1, cv::Vec3f& nvec)
+void updateNormal( const FM* fm, const cv::Vec3f& v0, int e0, const cv::Vec3f& v1, int e1, cv::Vec3f& nvec)
 {
-    const ObjModel* model = kdt->model();
-
     // Estimate "down" vector from cross product of base vector with current (inaccurate) face normal.
     const cv::Vec3f evec = v1 - v0;
     cv::Vec3f dvec;
@@ -67,13 +64,13 @@ void updateNormal( const RFeatures::ObjModelKDTree* kdt, const cv::Vec3f& v0, in
 
     // Find reference locations further down the face from e0 and e1
     const float pdelta = float(1.0 * cv::norm(evec));
-    const int r0 = kdt->find( v0 + dvec * pdelta);
-    const int r1 = kdt->find( v1 + dvec * pdelta);
+    const int r0 = fm->findVertex( v0 + dvec * pdelta);
+    const int r1 = fm->findVertex( v1 + dvec * pdelta);
 
     // The final view vector is defined as the mean normal along the path over
     // the model between the provided points and the shifted points.
-    const cv::Vec3f vv0 = calcMeanNormalBetweenPoints( model, r0, e0);
-    const cv::Vec3f vv1 = calcMeanNormalBetweenPoints( model, r1, e1);
+    const cv::Vec3f vv0 = calcMeanNormalBetweenPoints( fm->model(), r0, e0);
+    const cv::Vec3f vv1 = calcMeanNormalBetweenPoints( fm->model(), r1, e1);
     cv::normalize( vv0 + vv1, nvec);
 }   // end updateNormal
 
@@ -81,10 +78,10 @@ void updateNormal( const RFeatures::ObjModelKDTree* kdt, const cv::Vec3f& v0, in
 
 
 // public
-void FaceTools::findNormal( const RFeatures::ObjModelKDTree* kdt, const cv::Vec3f& v0, const cv::Vec3f& v1, cv::Vec3f& nvec)
+void FaceTools::findNormal( const FM* fm, const cv::Vec3f& v0, const cv::Vec3f& v1, cv::Vec3f& nvec)
 {
-    const int e0 = kdt->find( v0);
-    const int e1 = kdt->find( v1);
+    const int e0 = fm->findVertex( v0);
+    const int e1 = fm->findVertex( v1);
     static const double MIN_DELTA = 1e-8;
     static const int MAX_TRIES = 12;
 
@@ -93,7 +90,7 @@ void FaceTools::findNormal( const RFeatures::ObjModelKDTree* kdt, const cv::Vec3
     while ( fabs(delta) > MIN_DELTA && tries < MAX_TRIES)
     {
         const cv::Vec3f invec = nvec;
-        updateNormal( kdt, v0, e0, v1, e1, nvec);
+        updateNormal( fm, v0, e0, v1, e1, nvec);
         delta = cv::norm( nvec - invec);
         tries++;
     }   // end while
@@ -117,24 +114,22 @@ ObjModel::Ptr FaceTools::createFromVertices( const cv::Mat_<cv::Vec3f>& vrow)
 }   // end createFromVertices
 
 
-ObjModel::Ptr FaceTools::createFromSubset( const ObjModel* smod, const IntSet& vidxs)
+ObjModel::Ptr FaceTools::createFromSubset( const ObjModel& smod, const IntSet& vidxs)
 {
-    assert(smod);
-    ObjModel::Ptr omod = ObjModel::create( smod->spatialPrecision());
-    std::for_each( std::begin(vidxs), std::end(vidxs), [&](int vidx){ omod->addVertex( smod->vtx(vidx));});
+    ObjModel::Ptr omod = ObjModel::create();
+    std::for_each( std::begin(vidxs), std::end(vidxs), [&](int vidx){ omod->addVertex( smod.vtx(vidx));});
     return omod;
 }   // end createFromSubset
 
 
-ObjModel::Ptr FaceTools::createFromTransformedSubset( const ObjModel* smod, const IntSet& vidxs, const cv::Matx44d& T,
+ObjModel::Ptr FaceTools::createFromTransformedSubset( const ObjModel& smod, const IntSet& vidxs, const cv::Matx44d& T,
                                                       std::unordered_map<int,int>* newVidxsToSource)
 {
-    assert(smod);
     const RFeatures::Transformer transformer(T);
-    ObjModel::Ptr omod = ObjModel::create( smod->spatialPrecision());
+    ObjModel::Ptr omod = ObjModel::create();
     for ( int vidx : vidxs)
     {
-        cv::Vec3f v = smod->vtx(vidx);
+        cv::Vec3f v = smod.vtx(vidx);
         transformer.transform( v);
         const int nvidx = omod->addVertex(v);
         if ( newVidxsToSource)
@@ -146,17 +141,16 @@ ObjModel::Ptr FaceTools::createFromTransformedSubset( const ObjModel* smod, cons
 
 // Flatten m to XY plane and return it, also setting fmap to be the
 // vertex ID mapping from the returned flattened object to the original object m.
-ObjModel::Ptr FaceTools::makeFlattened( const ObjModel* m, std::unordered_map<int,int>* fmap)
+ObjModel::Ptr FaceTools::makeFlattened( const ObjModel& m, std::unordered_map<int,int>* fmap)
 {
-    assert(m);
     if ( fmap)
         fmap->clear();
-    const IntSet& vidxs = m->getVertexIds();
     int nvidx;
-    ObjModel::Ptr fmod = ObjModel::create( m->spatialPrecision());
-    for ( int vidx : vidxs)
+    ObjModel::Ptr fmod = ObjModel::create();
+    const IntSet& vids = m.vtxIds();
+    for ( int vidx : vids)
     {
-        cv::Vec3f v = m->vtx(vidx);
+        cv::Vec3f v = m.vtx(vidx);
         v[2] = 0;
         nvidx = fmod->addVertex(v);
         if ( fmap)
@@ -179,21 +173,21 @@ void FaceTools::updateRenderers( const FMS& fms)
 }   // end updateRenderers
 
 
-cv::Vec3f FaceTools::toSurface( const ObjModelKDTree* kdt, const cv::Vec3f& v)
+cv::Vec3f FaceTools::toSurface( const FM* fm, const cv::Vec3f& v)
 {
     int notused;
     cv::Vec3f fv;
-    const RFeatures::ObjModelSurfacePointFinder spfinder( kdt->model());
-    int vidx = kdt->find(v);
+    const RFeatures::ObjModelSurfacePointFinder spfinder( fm->model());
+    int vidx = fm->findVertex(v);
     spfinder.find( v, vidx, notused, fv);
     return fv;
 }   // end toSurface
 
 
-cv::Vec3f FaceTools::toTarget( const ObjModelKDTree* kdt, const cv::Vec3f& s, const cv::Vec3f& t)
+cv::Vec3f FaceTools::toTarget( const FM* fm, const cv::Vec3f& s, const cv::Vec3f& t)
 {
-    const RFeatures::ObjModelSurfacePointFinder spfinder( kdt->model());
-    int vidx = kdt->find(s);
+    const RFeatures::ObjModelSurfacePointFinder spfinder( fm->model());
+    int vidx = fm->findVertex(s);
     int notused;
     cv::Vec3f fv;
     spfinder.find( t, vidx, notused, fv);
@@ -201,14 +195,13 @@ cv::Vec3f FaceTools::toTarget( const ObjModelKDTree* kdt, const cv::Vec3f& s, co
 }   // end toTarget
 
 
-bool FaceTools::findPath( const ObjModelKDTree* kdt, const cv::Vec3f& p0, const cv::Vec3f& p1, std::list<cv::Vec3f>& pts)
+bool FaceTools::findPath( const FM* fm, const cv::Vec3f& p0, const cv::Vec3f& p1, std::list<cv::Vec3f>& pts)
 {
     using namespace RFeatures;
 
-    const ObjModel *model = kdt->model();
-    const ObjModelSurfacePointFinder spfinder( model);
-    int v0i = kdt->find(p0);
-    int v1i = kdt->find(p1);
+    const ObjModelSurfacePointFinder spfinder( fm->model());
+    int v0i = fm->findVertex(p0);
+    int v1i = fm->findVertex(p1);
     int sT, fT;
     cv::Vec3f v0 = p0;
     cv::Vec3f v1 = p1;
@@ -216,7 +209,7 @@ bool FaceTools::findPath( const ObjModelKDTree* kdt, const cv::Vec3f& p0, const 
     spfinder.find( p1, v1i, fT, v1);
 
     pts.clear();
-    SurfaceCurveFinder scfinder( model);
+    SurfaceCurveFinder scfinder( fm->model());
     bool foundPath = scfinder.findPath( v0, sT, v1, fT, pts);
     if ( !foundPath)
     {
@@ -229,13 +222,12 @@ bool FaceTools::findPath( const ObjModelKDTree* kdt, const cv::Vec3f& p0, const 
 }   // end findPath
 
 
-cv::Vec3f FaceTools::findDeepestPoint2( const ObjModelKDTree* kdt, const cv::Vec3f& p0, const cv::Vec3f& p1, double *dout)
+cv::Vec3f FaceTools::findDeepestPoint2( const FM* fm, const cv::Vec3f& p0, const cv::Vec3f& p1, double *dout)
 {
-    using namespace RFeatures;
-    const ObjModel *model = kdt->model();
-    DijkstraShortestPathFinder spfinder( kdt->model());
-    const int v0 = kdt->find(p0);
-    const int v1 = kdt->find(p1);
+    const ObjModel& model = fm->model();
+    DijkstraShortestPathFinder spfinder( model);
+    const int v0 = fm->findVertex(p0);
+    const int v1 = fm->findVertex(p1);
     spfinder.setEndPointVertexIndices( v0, v1);
     std::vector<int> vpids;
     spfinder.findShortestPath( vpids);
@@ -249,7 +241,7 @@ cv::Vec3f FaceTools::findDeepestPoint2( const ObjModelKDTree* kdt, const cv::Vec
     for ( size_t i = 0; i < n; ++i)
     {
         int vidx = vpids[i];
-        const cv::Vec3f& p = model->vtx(vidx);
+        const cv::Vec3f& p = model.vtx(vidx);
         const cv::Vec3f dv = p - p0;
         const double h = cv::norm(dv);
         const double theta = acos( double(dv.dot(u))/h);
@@ -264,18 +256,18 @@ cv::Vec3f FaceTools::findDeepestPoint2( const ObjModelKDTree* kdt, const cv::Vec
     if ( dout)
         *dout = maxd;
 
-    return model->vtx(bv);
+    return model.vtx(bv);
 }   // end findDeepestPoint2
 
 
-cv::Vec3f FaceTools::findDeepestPoint( const ObjModelKDTree* kdt, const cv::Vec3f& p0, const cv::Vec3f& p1, double *dout)
+cv::Vec3f FaceTools::findDeepestPoint( const FM* fm, const cv::Vec3f& p0, const cv::Vec3f& p1, double *dout)
 {
     std::list<cv::Vec3f> pts;
-    const bool foundPath = findPath( kdt, p0, p1, pts);
+    const bool foundPath = findPath( fm, p0, p1, pts);
     if ( !foundPath)
     {
         std::cerr << "[WARNING] FaceTools::findDeepestPoint: Failed to find path using SurfaceCurveFinder - using DijkstraShortestPathFinder instead." << std::endl;
-        return findDeepestPoint2(kdt, p0, p1, dout);
+        return findDeepestPoint2( fm, p0, p1, dout);
     }   // end if
 
     cv::Vec3f u;
@@ -306,120 +298,37 @@ cv::Vec3f FaceTools::findDeepestPoint( const ObjModelKDTree* kdt, const cv::Vec3
 cv::Mat_<cv::Vec3b> FaceTools::makeThumbnail( const FM* fm, const cv::Size& dims, float d)
 {
     RVTK::OffscreenModelViewer omv( dims, 1);
-    omv.setModel( fm->info()->cmodel());
-    const cv::Vec3f centre = fm->centre();
+    omv.setModel( fm->model());
+    const cv::Vec3f centre = fm->icentre();
     const RFeatures::Orientation on = fm->orientation();
-    cv::Vec3f cpos = (d * on.nvec()) + centre;
-    CameraParams cam( cpos, centre, on.uvec(), 30);
+    const cv::Vec3f cpos = (d * on.nvec()) + centre;
+    const CameraParams cam( cpos, centre, on.uvec(), 30);
     omv.setCamera( cam);
     return omv.snapshot();
 }   // end makeThumbnail
 
 
-namespace {
-
-QtCharts::QScatterSeries* createMetricPoint( double age, double val, const QString& title, const QColor& c)
+/*
+QColor FaceTools::chooseContrasting( const QColor& a)
 {
-    QScatterSeries *dpoints = new QScatterSeries;
-    dpoints->setName( title);
-    dpoints->setMarkerShape(QScatterSeries::MarkerShapeCircle);
-    dpoints->setMarkerSize(10);
-    dpoints->setColor(c);
-    dpoints->append( age, val);
-    return dpoints;
-}   // end createMetricPoint
-
-}   // end namespace
+    QColor b;
+    b.setRed( abs(a.red() - 255) > a.red() ? 255 : 0);
+    b.setGreen( abs(a.green() - 255) > a.green() ? 255 : 0);
+    b.setBlue( abs(a.blue() - 255) > a.blue() ? 255 : 0);
+    return b;
+}   // end chooseContrasting
+*/
 
 
-QChart* FaceTools::createChart( const QString& ethn, int8_t sex, size_t d, int mid, const FM* fm, bool withTitle)
+QColor FaceTools::chooseContrasting( const QColor& a)
 {
-    MC::Ptr mc = MCM::metric(mid);
-    assert(mc);
-    const GrowthData* gd = mc->growthData( ethn, sex);
-    if ( !gd)
-        return nullptr;
-
-    QChart *chart = new QChart;
-
-    double xmin = 0;
-    double xmax = 0;
-    mc->addSeriesToChart( chart, gd, &xmin, &xmax);
-
-    // Add the subject data point(s)
-    if ( fm)
-    {
-        const double age = fm->age();
-        xmin = std::min<double>(xmin, age);
-        xmax = std::max<double>(xmax, age);
-
-        if ( mc->isBilateral())
-        {
-            const MetricValue *mvl = fm->cmetricsL().get( mid);
-            const MetricValue *mvr = fm->cmetricsR().get( mid);
-
-            if ( mvl)
-                chart->addSeries( createMetricPoint( age, mvl->value(d), "Left", Qt::blue));
-
-            if ( mvl && mvr) // Create a mean data point
-            {
-                double val = 0.5 * (mvl->value(d) + mvr->value(d));
-                chart->addSeries( createMetricPoint( age, val, "Mean", Qt::red));
-            }   // end if
-
-            if ( mvr)
-                chart->addSeries( createMetricPoint( age, mvr->value(d), "Right", Qt::darkGreen));
-        }   // end if
-        else
-        {
-            const MetricValue *mv = fm->cmetrics().get( mid);
-            if ( mv)
-                chart->addSeries( createMetricPoint( age, mv->value(d), "Subject", Qt::red));
-        }   // end else
-    }   // end if
-
-    chart->createDefaultAxes();
-
-    QValueAxis* xaxis = new QValueAxis;
-    xaxis->setLabelFormat( "%d");
-
-    xaxis->setRange( xmin, xmax);
-    int nyears = (int(xmax) - int(xmin));   // TODO make xtick count change on resizing of window
-    int tc = nyears + 1;
-    if ( nyears > 16)
-        tc /= 2;
-    xaxis->setTickCount( tc);
-
-    chart->setAxisX( xaxis);
-
-    chart->legend()->setAlignment(Qt::AlignRight);
-    chart->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
-
-    chart->setBackgroundVisible(false);
-    chart->setDropShadowEnabled(false);
-    chart->axisX()->setTitleText( "Age from birth (years)");
-    chart->axisY()->setTitleText( QString("Distance (%1)").arg(FM::LENGTH_UNITS));
-
-    if ( withTitle)
-    {
-        QString title = mc->name();
-        if ( mc->dims() > 1)    // Specify which dimension of the metric is being shown
-            title += QString( " (Dimension %1)").arg(d+1);
-
-        QString demog;
-        if ( !gd->ethnicity().isEmpty())
-            demog = " (" + gd->ethnicity() + "; ";
-        demog += toLongSexString( static_cast<Sex>(gd->sex())) + ")";
-
-        QString src = "<em>" + gd->source();
-        if ( !gd->note().isEmpty())
-            src += "<br>" + gd->note();
-        if ( gd->n() > 0)
-            src += QString("; N=%1").arg(gd->n());
-        src += "</em>";
-
-        chart->setTitle( QString("<center><big><b>%1</b>%2</big><br>%3</center>").arg( title, demog, src));
-    }   // end if
-
-    return chart;
-}   // end createChart
+    QColor b;
+    double nr = 0.299*a.red();
+    double ng = 0.587*a.green();
+    double nb = 0.114*a.blue();
+    if ( (nr + ng + nb) > 186.0)
+        b = Qt::black;
+    else
+        b = Qt::white;
+    return b;
+}   // end chooseContrasting

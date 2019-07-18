@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,13 +49,10 @@ public:
     bool loadModel( const QString& filename);
 
     // Returns the set of just loaded models.
-    const FVS& lastLoaded() const { return _loaded;}
+    const FMS& lastLoaded() const { return _loaded;}
 
     // Shows the last set of load errors and then clears these errors.
     void showLoadErrors();
-
-    QString createImportFilters() const;
-    QStringList createSimpleImportFilters() const;
 
     QWidget *parent() const { return _parent;}
 
@@ -63,7 +60,7 @@ private:
     QWidget *_parent;
     QStringList _filenames;
     std::unordered_map<QString, QStringList> _failnames;
-    FVS _loaded;
+    FMS _loaded;
 
     LoadFaceModelsHelper( const LoadFaceModelsHelper&) = delete;
     void operator=( const LoadFaceModelsHelper&) = delete;

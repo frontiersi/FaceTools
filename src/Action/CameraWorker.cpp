@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,6 @@
 #include <CameraWorker.h>
 #include <FaceModelViewer.h>
 #include <Transformer.h>
-#include <QThread>
 #include <cmath>
 using FaceTools::Action::CameraWorker;
 using FaceTools::FaceModelViewer;
@@ -33,7 +32,7 @@ CameraWorker::CameraWorker( FaceModelViewer* v, size_t fps, double hs, double vs
       _hs(hs), _vs(vs),
       _ABS_MAX_H_RADS(hmax * CV_PI/180),
       _ABS_MAX_V_RADS(vmax * CV_PI/180),
-      _cp( _viewer->getCamera()),
+      _cp( _viewer->camera()),
       _timer(nullptr),
       _hdiff(0), _vdiff(0),
       _hangle(0), _vangle(0)
@@ -47,7 +46,7 @@ CameraWorker::~CameraWorker() { stop();}
 void CameraWorker::start()
 {
     stop(); // Ensure stopped
-    _cp = _viewer->getCamera(); // The base camera
+    _cp = _viewer->camera(); // The base camera
 
     const int mspf =  static_cast<int>(1000.0/_fps);
     _hdiff = 2.0*mspf*_ABS_MAX_H_RADS/(_hs * 1000);

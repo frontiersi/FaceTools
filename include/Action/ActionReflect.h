@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,13 +25,18 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionReflect : public FaceAction
 { Q_OBJECT
 public:
-    ActionReflect( const QString& dname, const QIcon& icon=QIcon(), QProgressBar* pb=nullptr);  // Async if pb not null
+    ActionReflect( const QString&, const QIcon&);
 
-private slots:
-    bool testReady( const Vis::FV*) override;
-    bool testEnabled( const QPoint*) const override { return ready1() != nullptr;}
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet&, const FVS&, bool) override;
+    QString toolTip() const override;
+
+protected:
+    bool checkEnable( Event) override;
+    bool doBeforeAction( Event) override;
+    void doAction( Event) override;
+    void doAfterAction( Event) override;
+
+private:
+    EventGroup _ev;
 };  // end class
 
 }}   // end namespace

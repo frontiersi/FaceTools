@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,21 +27,21 @@
 
 #include <FaceTypes.h>
 #include <VtkActorCreator.h>    // RVTK
-#include <QObject>
 #include <QColor>
 #include <QPoint>
 
-namespace FaceTools {
-namespace Vis {
+namespace FaceTools { namespace Vis {
 
-class FaceTools_EXPORT FaceView : public QObject
-{ Q_OBJECT
+class FaceTools_EXPORT FaceView
+{
 public:
-    FaceView() : _data(nullptr), _viewer(nullptr) {} // For QMetaType
     FaceView( FM*, FMV*);
-    FaceView( const FaceView&);
-    FaceView& operator=( const FaceView&);
     virtual ~FaceView();
+
+    // Copy visualisations and other state from the parameter view to this one.
+    // Only works if the parameter view and this one share the same underlying
+    // FaceModel, otherwise false is returned.
+    bool copyFrom( const FaceView*);
 
     inline FM* data() const { return _data;}
 
@@ -65,14 +65,17 @@ public:
     inline vtkActor* actor() { return _actor;}
     inline const vtkActor* actor() const { return _actor;}
 
-    // Remove the given visualisation - pass in null to remove all.
-    void remove( BaseVisualisation *vis=nullptr);
+    // Apply the given visualisation and make it visible.
+    // After applying, a visualisation's visibility is controlled directly
+    // through its interface using BaseVisualisation::setVisible.
+    void apply( BaseVisualisation*, const QPoint* mc=nullptr);
 
-    // Add visualisation returning true iff visualisation applied on return.
-    bool apply( BaseVisualisation *vis, const QPoint* mc=nullptr);
-
-    // Returns true iff the given visualisation is currently applied.
-    bool isApplied( const BaseVisualisation *vis) const;
+    // Ask the given visualisation to purge before removing it from this view.
+    // If the given visualisation decides not to purge (i.e. returning false from BaseVisualisation::purge)
+    // then the visualisation will remain visible and attached to this view. Only if the event is Event::NONE
+    // will the visualisation be set hidden and removed from this view. This function returns true iff the
+    // visualisation was purged.
+    bool purge( BaseVisualisation*, Action::Event e=Action::Event::NONE);
 
     // Returns the set of currently applied visualisations.
     const VisualisationLayers& visualisations() const { return _vlayers;}
@@ -80,17 +83,12 @@ public:
     // Returns true if at least one of the visualisations currently applied are MetricVisualiser.
     bool hasMetricVisualiser() const { return _nMetricLayers > 0;}
 
-    // Returns the current exclusive visualisation or null if none set.
-    // Only one exclusive visualisation can be set at a time (handled by ActionVisualise).
-    BaseVisualisation* exvis() const { return _xvis;}
-
-    // The ObjModel to vtkActor polygon lookups for the face actor created upon bulding.
-    // Can be used by visualisations to map information calculated about polygons on the
-    // source ObjModel to polygons created for the vtkActor face model.
-    const IntIntMap& polyLookups() const { return _polymap;}
-
     // Returns the visualisation layer that vtkProp belongs to or null.
     BaseVisualisation* layer( const vtkProp*) const;
+
+    // Add the difference in transform between the model and the face actor
+    // to all of the other visualisations attached to views of the model.
+    void syncActorDeltaToVisualisations();
 
     // Returns true iff the given point projects to intersect with the face actor.
     bool isPointOnFace( const QPoint& p) const;
@@ -98,10 +96,6 @@ public:
     // Project the given 2D point to a location on the 3D surface of the main actor.
     // Returns true iff the point projects to the surface. Ignores all other actors.
     bool projectToSurface( const QPoint&, cv::Vec3f&) const;
-
-    // Set the pickability of the face actor.
-    void setPickable( bool);
-    bool pickable() const;
 
     // Set/get the opacity of the face actor.
     void setOpacity( double);
@@ -121,8 +115,8 @@ public:
     bool canTexture() const;    // Returns true iff texturing is available for the actor.
 
     // Set the active surface mapping of the actor's surface. Surface visibility turned off if left null.
-    void setActiveSurface( SurfaceDataMapper *s=nullptr);
-    SurfaceDataMapper* activeSurface() const;
+    void setActiveSurface( SurfaceMetricsMapper *s=nullptr);
+    SurfaceMetricsMapper* activeSurface() const;
 
     // Set/get whether backface culling is applied.
     void setBackfaceCulling( bool);
@@ -134,16 +128,17 @@ private:
     vtkSmartPointer<vtkTexture> _texture;   // The texture map (if available).
     FMV *_viewer;                           // The viewer this view is attached to.
     FMV *_pviewer;                          // The previous viewer this view was attached to.
-    SurfaceDataMapper *_sdmap;              // The active surface mapping (if not null).
+    SurfaceMetricsMapper *_smm;             // The active surface mapping (if not null).
+    QColor _baseCol;
     BaseVisualisation *_xvis;
     size_t _nMetricLayers;                  // Count of metric visualiser layers.
     VisualisationLayers _vlayers;           // Visualisation layers.
-    IntIntMap _polymap;                     // Polygon ID lookups for the actor.
 
-    void applyLayer( BaseVisualisation*, const QPoint*);
+    void _updateModelLighting();
+    FaceView( const FaceView&) = delete;
+    FaceView& operator=( const FaceView&) = delete;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

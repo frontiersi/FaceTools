@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ namespace FaceTools {
 class FaceTools_EXPORT CurvatureVariableSpeedFunctor : public RFeatures::ObjModelFastMarcher::SpeedFunctor
 {
 public:
-    CurvatureVariableSpeedFunctor( const RFeatures::ObjModelCurvatureMap::Ptr omcm);
+    explicit CurvatureVariableSpeedFunctor( const RFeatures::ObjModelCurvatureMap&);
 
     virtual double operator()( int vidx) const { return _curvedness.at(vidx);}
 

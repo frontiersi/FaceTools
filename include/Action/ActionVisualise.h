@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,41 +21,41 @@
 #include "FaceAction.h"
 #include <BaseVisualisation.h>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionVisualise : public FaceAction
 { Q_OBJECT
 public:
-    ActionVisualise( Vis::BaseVisualisation*, bool visualiseOnLoad=false);
+    ActionVisualise( const QString&, const QIcon&, Vis::BaseVisualisation*, const QKeySequence& ks=QKeySequence());
 
-    QWidget* getWidget() const override { return _vis->getWidget();}
+    QWidget* widget() const override { return _vis->widget();}
 
     Vis::BaseVisualisation* visualisation() { return _vis;}
 
     bool isExclusive() const { return !_vis->isToggled() || _vis->isExclusive();}
 
-protected slots:
-    bool testReady( const Vis::FV*) override;
-    void tellReady( const Vis::FV*, bool) override;   // Called whenever ready status changes
-    bool testEnabled( const QPoint*) const override;
-    bool testIfCheck( const Vis::FV*) const override;
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(VIEW_CHANGE);}
-    void purge( const FM*) override;
-    void clean( const FM*) override;
+protected:
+    void purge( const FM*, Event) override;
+
+    // checkState returns true iff a view is selected and the view currently
+    // has this visualisation visible on it. If there are other factors than
+    // can cause the visualisation to become visible, they should be looked at
+    // within an overridden version of this function.
+    bool checkState( Event) override;
+
+    // checkEnable returns true iff isChecked() returns true or the
+    // visualisation is available for the currently selected view.
+    bool checkEnable( Event) override;
+
+    void doAction( Event) override;
 
 private:
     bool toggleVis( Vis::FV*, const QPoint*);
     Vis::BaseVisualisation *_vis; // The visualisation delegate
 
-    bool isVisAvailable( const FM*) const;
-    bool isVisAvailable( const Vis::FV*, const QPoint* p=nullptr) const;
-    bool isVisAvailable( const FVS&, const QPoint* p=nullptr) const;
-    size_t setViewsToProcess( FVS&) const;
+    bool isVisAvailable( const Vis::FV*) const;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

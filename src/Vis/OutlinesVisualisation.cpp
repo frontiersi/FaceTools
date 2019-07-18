@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,30 +16,22 @@
  ************************************************************************/
 
 #include <OutlinesVisualisation.h>
-#include <ActionVisualise.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
+#include <Random.h> // rlib
 #include <algorithm>
 #include <cassert>
 using FaceTools::Vis::OutlinesVisualisation;
 using FaceTools::Vis::LoopsView;
 using FaceTools::Vis::FV;
-using FaceTools::Action::ActionVisualise;
-using FaceTools::Action::FaceAction;
-using FaceTools::ModelViewer;
-using FaceTools::FVS;
-
-
-OutlinesVisualisation::OutlinesVisualisation( const QString& dname, const QIcon& icon, const QKeySequence& keys)
-    : BaseVisualisation(dname, icon, keys)
-{
-}   // end ctor
+using FaceTools::FM;
+using FaceTools::Action::Event;
 
 
 OutlinesVisualisation::~OutlinesVisualisation()
 {
     while (!_views.empty())
-        purge( const_cast<FV*>(_views.begin()->first));
+        purge( const_cast<FV*>(_views.begin()->first), Event::NONE);
 }   // end dtor
 
 
@@ -47,49 +39,45 @@ void OutlinesVisualisation::apply( FV* fv, const QPoint*)
 {
     if ( _views.count(fv) == 0)
     {
-        LoopsView* ov = _views[fv] = new LoopsView( 5, 1.0/*red*/, 0.0/*green*/, 0.1/*blue*/);
-        const RFeatures::ObjModelBoundaryFinder& boundaries = fv->data()->info()->boundaries();
-        const int nbs = (int)boundaries.size();
-        assert(nbs > 0);
-        const RFeatures::ObjModel* model = boundaries.model();
-        for ( int i = 0; i < nbs; ++i)
+        const FM* fm = fv->data();
+        const RFeatures::ObjModel& model = fm->model();
+        const RFeatures::ObjModelManifolds& manifolds = fm->manifolds();
+
+        rlib::Random rng(5);
+        LoopsView* loopsView = _views[fv] = new LoopsView( 4.0f);
+
+        const int nm = static_cast<int>(manifolds.count());
+        for ( int i = 0; i < nm; ++i)
         {
-            // Get the vertex positions for boundary i
-            const std::list<int>& loop = boundaries.boundary(i);
-            std::list<cv::Vec3f> line;
-            std::for_each( std::begin(loop), std::end(loop), [&](int v){ line.push_back(model->vtx(v));});
-            ov->addLoop(line);  // Add actor
+            // Define a different colour for the boundaries of each manifold
+            const double r = 0.2 + 0.8 * rng.getRandom();
+            const double g = 0.2 + 0.8 * rng.getRandom();
+            const double b = 0.2 + 0.8 * rng.getRandom();
+            loopsView->setColour( r, g, b);
+
+            // Get the boundaries for manifold i
+            const RFeatures::ObjModelManifoldBoundaries& bnds = manifolds.manifold(i)->boundaries(model);
+            const int nb = static_cast<int>(bnds.count());
+            for ( int j = 0; j < nb; ++j)
+            {
+                // Get the vertex positions for boundary j
+                const std::list<int>& loop = bnds.boundary(j);
+                std::list<cv::Vec3f> line;
+                for ( int v : loop)
+                    line.push_back( model.uvtx(v));
+
+                loopsView->addLoop(line);  // Add actor
+            }   // end for
         }   // end for
+
+        syncActorsToData(fv);
     }   // end if
+    assert( fv->viewer());
     _views.at(fv)->setVisible( true, fv->viewer());
 }   // end apply
 
 
-void OutlinesVisualisation::clear( FV* fv)
-{
-    if (_views.count(fv) > 0)
-        _views.at(fv)->setVisible( false, fv->viewer());
-}   // end clear 
-
-
-// protected
-void OutlinesVisualisation::pokeTransform( const FV* fv, const vtkMatrix4x4* m)
-{
-    if ( _views.count(fv) > 0)
-        _views.at(fv)->pokeTransform(m);
-}   // end pokeTransform
-
-
-// protected
-void OutlinesVisualisation::fixTransform( const FV* fv)
-{
-    if ( _views.count(fv) > 0)
-        _views.at(fv)->fixTransform();
-}   // end fixTransform
-
-
-// protected
-void OutlinesVisualisation::purge( FV* fv)
+bool OutlinesVisualisation::purge( FV* fv, Event)
 {
     if (_views.count(fv) > 0)
     {
@@ -97,4 +85,31 @@ void OutlinesVisualisation::purge( FV* fv)
         delete _views.at(fv);
         _views.erase(fv);
     }   // end if
+    return true;
 }   // end purge
+
+
+void OutlinesVisualisation::setVisible( FV* fv, bool v)
+{
+    if (_views.count(fv) > 0)
+        _views.at(fv)->setVisible( v, fv->viewer());
+}   // end setVisible
+
+
+bool OutlinesVisualisation::isVisible( const FV* fv) const
+{
+    bool vis = false;
+    if (_views.count(fv) > 0)
+        vis = _views.at(fv)->visible();
+    return vis;
+}   // end isVisible
+
+
+void OutlinesVisualisation::syncActorsToData( const FV* fv, const cv::Matx44d& d)
+{
+    if ( _views.count(fv) > 0)
+    {
+        const cv::Matx44d& bmat = fv->data()->model().transformMatrix();
+        _views.at(fv)->pokeTransform( RVTK::toVTK( d * bmat));
+    }   // end if
+}   // end syncActorsToData

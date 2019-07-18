@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,22 +27,23 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionExportPDF : public FaceAction
 { Q_OBJECT
 public:
-    ActionExportPDF( const QString& dname="Create Report", const QIcon& icon=QIcon(), QWidget* parent=nullptr);
+    ActionExportPDF( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
+
+    QString toolTip() const override { return "Generate and export a PDF containing information about the selected model.";}
 
     // By default, the user is simply asked to save the report. If given a program name here,
     // the report will be opened in the chosen reader (as a forked process).
     void setOpenOnSave( const QString& pdfreader) { _pdfreader = pdfreader;}
 
-protected slots:
-    bool testReady( const Vis::FV*) override;
-    bool testEnabled( const QPoint* mc=nullptr) const override;
-    bool doBeforeAction( FVS&, const QPoint&) override;
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet&, const FVS&, bool) override;
+protected:
+    void postInit() override;
+    bool checkEnable( Event) override;
+    bool doBeforeAction( Event) override;
+    void doAction( Event) override;
+    void doAfterAction( Event) override;
 
 private:
     Widget::ReportChooserDialog *_dialog;
-    QWidget *_parent;
     Report::Report::Ptr _report;
     QTemporaryDir _tmpdir;
     QString _tmpfile;

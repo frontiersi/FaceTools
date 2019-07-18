@@ -21,8 +21,7 @@
 #include "FaceModelFileHandler.h" // FaceTools
 #include <U3DExporter.h>          // RModelIO
 
-namespace FaceTools {
-namespace FileIO {
+namespace FaceTools { namespace FileIO {
 
 class FaceTools_EXPORT FaceModelU3DFileHandler : public FaceModelFileHandler
 { Q_OBJECT
@@ -32,6 +31,8 @@ public:
     const QStringSet& getFileExtensions() const override { return _exts;}
 
     bool canWrite() const override { return _exporter.isSupported();}
+    bool canWriteTextures() const override { return true;}
+
     QString error() const override { return _err;}
     bool write( const FaceModel*, const QString& filepath) override;
 
@@ -41,7 +42,6 @@ private:
     QString _err;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,13 +28,12 @@
 #include <PathSet.h>
 #include <vtkTextActor.h>
 
-namespace FaceTools {
-namespace Vis {
+namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT PathSetView
 {
 public:
-    explicit PathSetView( const PathSet::Ptr);
+    explicit PathSetView( const PathSet&);
     virtual ~PathSetView();
 
     bool isVisible() const;                             // Returns true iff ANY path shown
@@ -49,14 +48,15 @@ public:
     PathView::Handle* addPath( int pathId);             // Add path from dataset returning a handle (both in same position)
     PathView::Handle* handle( const vtkProp*) const;    // Return the handle mapped to the given prop (if any).
     PathView* pathView( int pathId) const;              // Return the requested path view.
-    void updatePath( int pathId);                       // Update the given path from the PathSet (remove if necessary).
-    void refresh();                                     // Refresh all path visualisations to match _paths.
 
-    void pokeTransform( const vtkMatrix4x4*);
-    void fixTransform();
+    // Update the given path from the PathSet (remove if necessary).
+    void updatePath( int pathId, const cv::Matx44d& d=cv::Matx44d::eye());
+
+    // Refresh all path visualisations to match _paths.
+    void refresh( const cv::Matx44d& d=cv::Matx44d::eye());
 
 private:
-    const PathSet::Ptr _paths;
+    const PathSet& _paths;
     ModelViewer *_viewer;
     std::unordered_map<int, PathView*> _views;
     std::unordered_map<const vtkProp*, PathView::Handle*> _handles;
@@ -67,7 +67,6 @@ private:
     void operator=( const PathSetView&) = delete;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

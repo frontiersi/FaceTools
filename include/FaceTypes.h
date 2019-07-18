@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 #define FACE_TOOLS_FACE_TYPES_H
 
 #include "FaceTools_Export.h"
-#include <ObjModelCurvatureMetrics.h>   // RFeatures
+#include <ObjModelTools.h>   // RFeatures
 #include <vtkSmartPointer.h>
 #include <QMetaType>
 #include <QWidget>
@@ -33,7 +33,7 @@
 #include <unordered_set>
 #include <unordered_map>
 
-/************** FaceTools type declarations and typedefs **************/
+/************** FaceTools type and using declarations **************/
 
 namespace FaceTools {
 
@@ -58,11 +58,11 @@ enum Sex : int8_t
     MALE_SEX = 2,
 };  // end enum
 
-QString toSexString( int8_t);// any of "U", "F M", "F", "M"
-int8_t fromSexString( const QString&);
+FaceTools_EXPORT QString toSexString( int8_t);// any of "U", "F M", "F", "M"
+FaceTools_EXPORT int8_t fromSexString( const QString&);
 
-QString toLongSexString( int8_t);// any of "Unknown", "Female | Male", "Female", "Male"
-int8_t fromLongSexString( const QString&);
+FaceTools_EXPORT QString toLongSexString( int8_t);// any of "Unknown", "Female | Male", "Female", "Male"
+FaceTools_EXPORT int8_t fromLongSexString( const QString&);
 
 static const IntSet EMPTY_INT_SET;      // Useful empty set
 static const IntSet COMPLETE_INT_SET;   // Useful "complete" set
@@ -70,7 +70,7 @@ static const IntSet COMPLETE_INT_SET;   // Useful "complete" set
 static const char IBAR = '|';
 static const char SC = ';';
 
-enum FaceLateral : int8_t
+enum FaceLateral : uint8_t
 {
     FACE_LATERAL_MEDIAL = 1,
     FACE_LATERAL_LEFT = 2,
@@ -86,7 +86,6 @@ class FaceModelAssImpFileHandlerFactory;
 class FaceModelFileHandlerInterface;
 class FaceModelFileHandlerMap;
 class FaceModelManager;
-
 }   // end namespace (FileIO)
 
 namespace Vis {
@@ -97,19 +96,19 @@ class VisualisationInterface;
 class BaseVisualisation;
 class MetricVisualiser;
 class SurfaceVisualisation;
-class SurfaceDataMapper;
+class SurfaceMetricsMapper;
 using VisualisationLayers = std::unordered_set<BaseVisualisation*>;
 using MetricVisSet = std::unordered_set<MetricVisualiser*>;
-
 }   // end namespace (Vis)
 
 namespace Interactor {
 
+class ContextMenu;
+class MouseHandler;
 class ModelViewerInteractor;
 using MVI = ModelViewerInteractor;
-class ModelEntryExitInteractor;
-using MEEI = ModelEntryExitInteractor;
-
+class FaceViewInteractor;
+using FVI = FaceViewInteractor;
 }   // end namespace (Interactor)
 
 namespace Detect {
@@ -119,38 +118,92 @@ class FaceDetector;
 }   // end namespace (Detect)
 
 namespace Action {
+FaceTools_EXPORT Q_NAMESPACE
+// Macro Q_NAMESPACE allows use of Q_ENUM_NS for Event
 
-class EventProcessResponse;
-using EPR = EventProcessResponse;
+
+class UndoState;
+class UndoStates;
 class FaceActionInterface;
 class FaceAction;
 class FaceActionWorker;
 class FaceActionManager;
+using FAM = FaceActionManager;
 
-enum EventId : int16_t
+enum struct Event : int
 {
-    NULL_EVENT,
-    LOADED_MODEL,       // Can be used to specify that an action should process on load (via FaceAction::addProcessOn).
-    CLOSE_MODEL,        // INFORM that one or more models should be closed (actions should not close models themselves).
-    FACE_DETECTED,      // After face has been successfully detected and orientation and landmarks set.
-    GEOMETRY_CHANGE,    // Change to underlying geometry of the model.
-    SURFACE_DATA_CHANGE,// Change to results of cached calculations on the data (often after response to data change).
-    LANDMARKS_CHANGE,   // Change to existing landmark(s).
-    LANDMARKS_ADD,      // Added landmark(s).
-    LANDMARKS_DELETE,   // Deleted landmarks(s).
-    ORIENTATION_CHANGE, // Change to model's orientation.
-    METRICS_CHANGE,     // Change to model metrics.
-    PATHS_CHANGE,       // Change to drawn paths.
-    VIEW_CHANGE,        // Changes to views of the data (visualisations etc) - NOT CAMERA.
-    VIEWER_CHANGE,      // Changed viewer (or the vieweer's state) in which view is shown.
-    CAMERA_CHANGE,      // Changes to camera parameters within a viewer.
-    AFFINE_CHANGE,      // Change to an actor's position (affine transform).
-    REPORT_CREATED,     // A report was just created.
-    METADATA_CHANGE     // Any of a model's metadata changed (including age/ethnicity).
+    NONE = 0x0,
+    USER = 0x1,                 // Events triggered explicitly by the user (only used internally!)
+    LOADED_MODEL = 0x2,         // Can be used to specify that an action should process on load (via FaceAction::addProcessOn).
+    SAVED_MODEL = 0x4,          // Emitted immediately after saving a model or models.
+    CLOSED_MODEL = 0x8,         // Emitted immediately after closing a model or models.
+    FACE_DETECTED = 0x10,       // After face has been successfully detected and orientation and landmarks set.
+    GEOMETRY_CHANGE = 0x20,     // Non-affine change to the underlying geometry of the model without changing graph connectivity.
+    CONNECTIVITY_CHANGE = 0x40, // Emit together with GEOMETRY_CHANGE to notify that graph connectivity has been altered.
+    AFFINE_CHANGE = 0x80,       // Affine transform change to the model data (shear, scale, rotate, reflect, translate).
+    ORIENTATION_CHANGE = 0x100, // When the model's orientation (transform) becomes fixed.
+    SURFACE_DATA_CHANGE = 0x200,// Change to some surface mapped data.
+    LANDMARKS_CHANGE = 0x400,   // Change to landmark(s) (implies orientation change).
+    METRICS_CHANGE = 0x800,     // Change to measurements - either measurements taken, or measurement parameters.
+    STATISTICS_CHANGE = 0x1000, // Change to statistics.
+    PATHS_CHANGE = 0x2000,      // Change to drawn paths.
+    VIEW_CHANGE = 0x4000,       // Changes to views of the data (visualisations etc) - NOT CAMERA.
+    VIEWER_CHANGE = 0x8000,     // Changed viewer (or the viewer's state) in which view is shown.
+    CAMERA_CHANGE = 0x10000,    // Changes to camera parameters within a viewer.
+    ACTOR_MOVE = 0x20000,       // Change to the position of a visualisation actor through interaction.
+    REPORT_CREATED = 0x40000,   // A report was just created.
+    METADATA_CHANGE = 0x80000,  // Any of a model's metadata changed (including age/ethnicity).
+    U3D_MODEL_CHANGE = 0x100000,// The U3D model associated with a FaceModel has been updated.
+    ALL_VIEWS = 0x200000,       // Specify that the event relates to all models in the selected viewer.
+    ALL_VIEWERS = 0x400000,     // Specify that all viewers should be considered as "selected" and partaking in the event.
+    ACT_CANCELLED = 0x800000,   // An action was cancelled from its doBeforeAction function.
+    ACT_COMPLETE = 0x1000000,   // An action completed after running doAfterAction and refreshing its state.
+    MODEL_SELECT = 0x2000000    // When a model has just been selected.
 };  // end enum
 
-using EventSet = std::unordered_set<EventId>;
-using TestFVSTrue = std::function<bool(const FVS&)>;
+// Make Event available to Qt's meta type system.
+Q_ENUM_NS(Event)
+
+
+// Inherit from EventGroup to test for the presence of individual events
+struct FaceTools_EXPORT EventGroup
+{
+    EventGroup();
+    EventGroup( Event);
+    EventGroup( Event, Event);
+    EventGroup( Event, Event, Event);
+    EventGroup( Event, Event, Event, Event);
+    EventGroup( Event, Event, Event, Event, Event);
+
+    EventGroup( const EventGroup&) = default;
+    EventGroup& operator=( const EventGroup&) = default;
+    virtual ~EventGroup(){}
+
+    void clear();   // Reset back to Event::NONE
+
+    // Combine event(s) with this one and return the union.
+    Event add( EventGroup);
+
+    // Returns human readable name of the event.
+    std::string name() const;
+
+    // Returns true iff e & _E (_E contains e)
+    bool has( EventGroup e) const;
+
+    // Returns true iff e == _E (_E is only e)
+    bool is( EventGroup e) const;
+
+    Event event() const { return _E;}
+
+    void operator()();
+
+protected:
+    virtual void checkEvent( Event){}
+
+private:
+    Event _E;
+};  // end struct
+
 
 }   // end namespace (Action)
 
@@ -208,11 +261,14 @@ struct hash<vtkSmartPointer<T> >
     }   // end operator()
 };  // end struct
 
-// Custom hash function for EventId (to allow use of EventSet)
-template<>
-struct hash<FaceTools::Action::EventId>
+template <>
+struct hash<FaceTools::Action::Event>
 {
-    size_t operator()( const FaceTools::Action::EventId& e) const { return hash<int>()((int)e);}
+    //size_t operator()( const FaceTools::Action::Event& x) const
+    size_t operator()( FaceTools::Action::Event x) const
+    {
+        return hash<int>()( int(x));
+    }   // end operator()
 };  // end struct
 
 }   // end namespace (std)
@@ -226,19 +282,5 @@ struct hash<FaceTools::Action::EventId>
 using QStringSet = std::unordered_set<QString>;
 
 /*************************************************************/
-
-
-
-/************ Register MetaTypes with Qt ************/
-
-Q_DECLARE_METATYPE( FaceTools::Action::EventId)
-Q_DECLARE_METATYPE( FaceTools::Action::EventSet)
-
-namespace FaceTools {
-FaceTools_EXPORT void registerTypes();
-}   // end namespace (FaceTools)
-
-/****************************************************/
-
 
 #endif

@@ -58,17 +58,39 @@ public:
     void addMetric( int id) { _metrics.insert(id);}
     void removeMetric( int id) { _metrics.erase(id);}
 
-    // Check if this HPO term is present. Pass in metric sets for the front (non-bilateral),
-    // left and right laterals. Metrics that are not bilateral are in the f set while bilateral
-    // metrics appear in the left and right sets (llat and rlat).
-    bool isPresent( const MetricSet* f, const MetricSet* llat, const MetricSet* rlat) const;
+    /**
+     * Returns true iff a match of the given sex is possible to every metric's
+     * statistics necessary to evaluate the presence of this phenotypic indication.
+     */
+    bool isSexMatch( int8_t) const;
 
-    // Returns true iff the associated metrics have data about the provided model that
-    // would allow the isPresent function to return true in principle if the associated
-    // measurements meet the criteria for this phenotype.
-    bool isDemographicMatch( const FM*) const;
+    /**
+     * Returns true iff the given age is within bounds for all of the metric
+     * statistics necessary to evaluate the presence of this phenotypic indication.
+     */
+    bool isAgeMatch( double age) const;
 
-    ~Phenotype();
+    /**
+     * Returns true iff a match of the given ethnicity is possible to every metric's
+     * statistics necessary to evaluate the presence of this phenotypic indication.
+     */
+    bool isEthnicityMatch( int) const;
+
+    /**
+     * Returns true iff the given model has measurements for all of the
+     * corresponding metrics used in the evaluation of the presence of
+     * this phenotypic indication.
+     */
+    bool hasMeasurements( const FM*) const;
+
+    /**
+     * Check if this phenotypic indication is present given the measurements
+     * recorded in the metric sets of the provided model. Ignores demographic info.
+     */
+    bool isPresent( const FM*) const;
+
+    ~Phenotype(){}  // Public for Lua
+
 private:
     int _id;
     QString _name;

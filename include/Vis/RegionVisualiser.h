@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,24 +30,24 @@ public:
     RegionVisualiser( int id, const Landmark::LmkList* lmks0=nullptr, const Landmark::LmkList* lmks1=nullptr);
 
     bool belongs( const vtkProp*, const FV*) const override;
-    void pokeTransform( const FV*, const vtkMatrix4x4*) override;
-    void fixTransform( const FV*) override;
+    void syncActorsToData( const FV*, const cv::Matx44d&) override;
     bool isAvailable( const FM*) const override;
+    bool isVisible( const FV*) const override;
+    void checkState( const FV*) override;
+    void setHighlighted( const FV*, bool) override;
 
-    void apply( FV*, const QPoint* mc=nullptr) override;
-    void clear( FV*) override;
-    void purge( FV* fv) override { MetricVisualiser::purge(fv);}
-    void purge( const FM*) override;
-
-    void setHighlighted( const FM* fm=nullptr) override;
+protected:
+    void doApply( const FV*) override;
+    void doPurge( const FV*) override;
+    void doSetVisible( const FV*, bool) override;
 
 private:
     const Landmark::LmkList* _lmks0;
     const Landmark::LmkList* _lmks1;
     std::unordered_map<const FV*, vtkActor*> _rep0, _rep1;
 
-    void apply( FV*, const Landmark::LmkList*, std::unordered_map<const FV*, vtkActor*>&);
-    void clear( FV*, std::unordered_map<const FV*, vtkActor*>&);
+    void applyActor( const FV*, const Landmark::LmkList*, std::unordered_map<const FV*, vtkActor*>&);
+    void purgeActor( const FV*, std::unordered_map<const FV*, vtkActor*>&);
 };  // end class
 
 }}   // end namespaces

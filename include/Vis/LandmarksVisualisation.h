@@ -26,7 +26,6 @@ namespace FaceTools { namespace Vis {
 class FaceTools_EXPORT LandmarksVisualisation : public BaseVisualisation
 { Q_OBJECT
 public:
-    LandmarksVisualisation( const QString &dname, const QIcon &icon);
     ~LandmarksVisualisation() override;
 
     bool applyToAllInViewer() const override { return true;}
@@ -36,10 +35,16 @@ public:
     bool isAvailable( const FM*) const override;
 
     void apply( FV*, const QPoint* mc=nullptr) override;
-    void clear( FV*) override;
+    bool purge( FV*, Action::Event) override;
+
+    void setVisible( FV*, bool) override;
+    bool isVisible( const FV*) const override;
 
     // Show or hide the given landmark for the given FM.
     void setLandmarkVisible( const FM*, int, bool);
+
+    // Set all landmarks for the given FM to be highlighted.
+    void setHighlighted( const FM*);
 
     // Set highlighted or not the given landmark for the given FM.
     void setLandmarkHighlighted( const FM*, int, FaceLateral, bool);
@@ -47,17 +52,14 @@ public:
     // Set/update the view of the given landmark.
     void updateLandmark( const FM*, int);
 
-    void refreshLandmarks( const FM*);
+    // Update all views of all landmarks for the given model.
+    void updateLandmarks( const FM*);
 
     // Return ID of landmark if given prop is for a landmark or -1 if not.
     // On return of >= 0, lat is set to the face lateral that the landmark appears.
     int landmarkId( const FV*, const vtkProp*, FaceLateral& lat) const;
 
-    void pokeTransform( const FV*, const vtkMatrix4x4*) override;
-    void fixTransform( const FV*) override;
-
-    void purge( FV*) override;
-    bool allowShowOnLoad( const FM* fm) const override;
+    void syncActorsToData( const FV*, const cv::Matx44d& m=cv::Matx44d::eye()) override;
 
 private:
     std::unordered_map<const FV*, LandmarkSetView*> _views;

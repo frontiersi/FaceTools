@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,56 +18,79 @@
 #include <ActionLoadDirFaceModels.h>
 #include <FaceModelManager.h>
 using FaceTools::Action::ActionLoadDirFaceModels;
-using FaceTools::Action::EventSet;
+using FaceTools::Action::Event;
 using FaceTools::Action::FaceAction;
 using FaceTools::FileIO::LoadFaceModelsHelper;
+using FaceTools::Vis::FV;
 using FaceTools::FVS;
+using FaceTools::FileIO::FMM;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionLoadDirFaceModels::ActionLoadDirFaceModels( const QString& dn, const QIcon& ico, QWidget *p)
-    : FaceAction( dn, ico), _loadHelper(p), _dialog( new QFileDialog(p, tr("Select directory containing models")))
+ActionLoadDirFaceModels::ActionLoadDirFaceModels( const QString& dn, const QIcon& ico)
+    : FaceAction( dn, ico), _loadHelper(nullptr), _dialog(nullptr)
 {
     setAsync(true);
+}   // end ctor
 
+
+ActionLoadDirFaceModels::~ActionLoadDirFaceModels()
+{
+    delete _loadHelper;
+}   // end dtor
+
+
+void ActionLoadDirFaceModels::postInit()
+{
+    QWidget* p = static_cast<QWidget*>(parent());
+    _loadHelper = new LoadFaceModelsHelper(p);
+    _dialog = new QFileDialog(p, tr("Select directory containing models"));
     _dialog->setViewMode(QFileDialog::Detail);
     _dialog->setFileMode(QFileDialog::Directory);
     _dialog->setOption(QFileDialog::ShowDirsOnly);
     _dialog->setOption(QFileDialog::DontUseNativeDialog);
     _dialog->setOption(QFileDialog::DontUseCustomDirectoryIcons);
-}   // end ctor
+}   // end postInit
 
 
-bool ActionLoadDirFaceModels::testEnabled( const QPoint*) const
+bool ActionLoadDirFaceModels::checkEnable( Event)
 {
-    using FaceTools::FileIO::FMM;
     return FMM::numOpen() < FMM::loadLimit();
-}   // end testEnabled
+}   // end checkEnabled
 
 
-bool ActionLoadDirFaceModels::doBeforeAction( FVS&, const QPoint&)
+bool ActionLoadDirFaceModels::doBeforeAction( Event)
 {
     if ( !_dialog->exec())
         return false;
-
     QDir qdir = _dialog->directory();
-    QStringList fnames = qdir.entryList( _loadHelper.createSimpleImportFilters());
+    QStringList fnames = qdir.entryList( FMM::fileFormats().createSimpleImportFilters());
     std::for_each( std::begin(fnames), std::end(fnames), [&](QString& fn){ fn = QDir::cleanPath( qdir.filePath(fn));});
-    return _loadHelper.setFilteredFilenames( fnames) > 0;
+    const int nfiles = fnames.size();
+    const bool doLoad = _loadHelper->setFilteredFilenames( fnames) > 0;
+    if ( doLoad)
+        MS::showStatus( QString("Loading model%1...").arg(nfiles > 1 ? "s" : ""));
+    return doLoad;
 }   // end doBeforeAction
 
 
-bool ActionLoadDirFaceModels::doAction( FVS& fvs, const QPoint&)
+void ActionLoadDirFaceModels::doAction( Event)
 {
-    fvs.clear();
-    if ( _loadHelper.loadModels() > 0)  // blocks
-        fvs.insert(_loadHelper.lastLoaded());
-    return !fvs.empty();
+    _loadHelper->loadModels();
 }   // end doAction
 
 
-void ActionLoadDirFaceModels::doAfterAction( EventSet& cs, const FVS&, bool loaded)
+void ActionLoadDirFaceModels::doAfterAction( Event)
 {
-    _loadHelper.showLoadErrors();
-    if ( loaded)
-        cs.insert(LOADED_MODEL);
+    _loadHelper->showLoadErrors();
+    const FMS& fms = _loadHelper->lastLoaded();
+    for ( FM* fm : fms)
+        MS::addFaceView( fm);
+    if ( !fms.empty())
+    {
+        MS::showStatus( QString("Finished loading model%1.").arg( fms.size() > 1 ? "s" : ""), 5000);
+        emit onEvent( Event(int(Event::LOADED_MODEL) | int(Event::GEOMETRY_CHANGE)));
+    }   // end if
+    else
+        MS::showStatus( "Error loading model(s)!", 5000);
 }   // end doAfterAction

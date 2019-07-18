@@ -24,7 +24,7 @@ so that QuaZip can be easily found when building FaceTools.
 
 ### Copyright notice
 
-The FaceTools library is copyright Spatial Information Systems Research Limited, 2018.  
+The FaceTools library is copyright Spatial Information Systems Research Limited, 2019.  
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

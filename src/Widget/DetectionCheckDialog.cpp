@@ -53,6 +53,7 @@ DetectionCheckDialog::DetectionCheckDialog(QWidget *parent) :
     connect( header, &CheckAllTableHeader::allChecked, this, &DetectionCheckDialog::doOnSetAllChecked);
     connect( header, &CheckAllTableHeader::sectionClicked, this, &DetectionCheckDialog::sortOnColumn);
     header->setStretchLastSection(true);   // Resize width of final column
+    header->setAllChecked(true);
 
     _ui->table->setSelectionMode( QAbstractItemView::NoSelection);
     _ui->table->setShowGrid(false);
@@ -95,7 +96,7 @@ bool DetectionCheckDialog::open( const FM* fm)
         const int id = _ui->table->item( i, IDNT_COL)->text().toInt();
         // If the model doesn't have the landmark already set, disable the check button.
         Qt::ItemFlags flags = Qt::ItemIsUserCheckable;
-        if ( fm->landmarks()->has(id))
+        if ( fm->landmarks().has(id))
             flags |= Qt::ItemIsEnabled;
 
         auto* item = _ui->table->item(i, SHOW_COL);

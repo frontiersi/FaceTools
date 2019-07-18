@@ -19,6 +19,7 @@
 #define FACETOOLS_WIDGET_CHART_DIALOG_H
 
 #include <FaceTools.h>
+#include <Chart.h>
 #include <QDialog>
 
 namespace Ui { class ChartDialog;}
@@ -31,29 +32,36 @@ public:
     explicit ChartDialog( QWidget *parent = nullptr);
     ~ChartDialog() override;
 
-    // Refresh against the currently selected model and active metric.
-    void refresh();
+signals:
+    void onGrowthDataChanged();
 
 public slots:
-    void doOnSetEthnicityIgnored( bool);
+    // Call refreshMetricOrModel() whenever a model or a metric is selected or when
+    // the demographics of the selected model are changed. This will check if the
+    // metric growth data should change and update the chart itself. If the metric
+    // growth data changes for the currently selected metric, signal
+    // onSetMetricGrowthData is emitted with the metric id.
+    void refreshMetricOrModel();
 
 private slots:
-    void doOnUserSelectedEthnicity();
-    void doOnUserSelectedSource();
-    void doOnSetSelectedMetric();
-    void doOnResetChart();
-    void doOnSaveImage();
+    void _doOnUserSelectedSex();
+    void _doOnUserSelectedEthnicity();
+    void _doOnSaveImage();
+    void _updateChart();
 
 private:
     Ui::ChartDialog *_ui;
     QtCharts::QChartView *_cview;
-    bool _ignEthn;
 
-    void populateSources();
-    void populateEthnicites();
-    void populateSexs();
-    void populateDimensions();
-    const FM* isDemographic() const;
+    int8_t _selectedSex() const;
+    int _selectedEthnicity() const;
+    QString _selectedSource() const;
+    void _populateSexs( int);
+    void _populateEthnicities( int8_t);
+    void _populateSources();
+    void _populateDimensions();
+    void _setEthnicity();
+    void _setSex();
 };  // end class
 
 }}   // end namespaces

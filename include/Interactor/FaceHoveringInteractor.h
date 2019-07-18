@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,8 +30,7 @@
 #include "ModelEntryExitInteractor.h"
 #include <BaseVisualisation.h>
 
-namespace FaceTools {
-namespace Interactor {
+namespace FaceTools { namespace Interactor {
 
 class FaceTools_EXPORT FaceHoveringInteractor : public ModelViewerInteractor 
 { Q_OBJECT
@@ -58,7 +57,6 @@ private:
     Vis::BaseVisualisation *_vis;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

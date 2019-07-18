@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,37 +19,44 @@
 #include <FaceModelViewer.h>
 #include <FaceView.h>
 #include <algorithm>
-#include <cassert>
 using FaceTools::Action::ActionSetFocus;
-using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
-using FaceTools::FVS;
+using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
+using FaceTools::FMV;
+using MS = FaceTools::Action::ModelSelector;
 
 
 // public
-ActionSetFocus::ActionSetFocus( const QString& dn, const QIcon& icon)
-    : FaceAction( dn, icon)
+ActionSetFocus::ActionSetFocus( const QString& dn, const QIcon& icon, const QKeySequence& ks)
+    : FaceAction( dn, icon, ks)
 {
 }   // end ctor
 
 
-bool ActionSetFocus::testEnabled( const QPoint* p) const
-{
-    bool enabled = false;
-    if ( p && ready1())
-        enabled = ready1()->isPointOnFace(*p);
-    return enabled;
-}   // end testEnabled
+bool ActionSetFocus::checkEnable( Event) { return true;}
 
 
-bool ActionSetFocus::doAction( FVS& fvs, const QPoint& p)
+void ActionSetFocus::setFocus( FMV* vwr, const cv::Vec3f& v)
 {
-    assert(fvs.size() == 1);
-    FV* fv = fvs.first();
-    assert(fv);
+    vwr->setCameraFocus( v);
+}   // end setFocus
+
+
+bool ActionSetFocus::doBeforeAction( Event)
+{
+    bool go = false;
+    if ( MS::isViewSelected())
+        go = MS::selectedView()->isPointOnFace( primedMousePos());
+    return go;
+}   // end doBeforeAction
+
+
+void ActionSetFocus::doAction( Event)
+{
+    FV* fv = MS::selectedView();
     cv::Vec3f nf;
-    fv->projectToSurface( p, nf);
-    fv->viewer()->setFocus(nf);
-    return true;
+    fv->projectToSurface( primedMousePos(), nf);
+    setFocus( fv->viewer(), nf);
+    emit onEvent( Event::CAMERA_CHANGE);
 }   // end doAction

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,21 +32,15 @@ FaceModelOBJFileHandler::FaceModelOBJFileHandler()
 }   // end ctor
 
 
-FM* FaceModelOBJFileHandler::read( const QString& fname)
+FM* FaceModelOBJFileHandler::read( const QString& qfname)
 {
     _err = "";
     FM* fm = nullptr;
-    RFeatures::ObjModel::Ptr model = _importer.load( fname.toStdString());
+    RFeatures::ObjModel::Ptr model = _importer.load(qfname.toStdString());
     if ( model)
-    {
-        RFeatures::ObjModelInfo::Ptr minfo = RFeatures::ObjModelInfo::create(model);
-        if ( minfo)
-            fm = new FM(minfo);
-        else
-            _err = QString("Failed to clean '%1'").arg( fname);
-    }   // end if
+        fm = new FM(model);
     else
-        _err = QString("Failed to load '%1'").arg(fname);
+        _err = _importer.err().c_str();
     return fm;
 }   // end read
 
@@ -55,8 +49,8 @@ bool FaceModelOBJFileHandler::write( const FM* fm, const QString& qfname)
 {
     _err = "";
     const std::string fname = qfname.toStdString();
-    const RFeatures::ObjModel* model = fm->info()->cmodel();
-    qInfo() << QString("Saving to '%1'").arg(qfname);
+    const RFeatures::ObjModel& model = fm->model();
+    std::cerr << QString("Saving to '%1'").arg(qfname).toStdString() << std::endl;
     if ( !_exporter.save( model, fname))
     {
         _err = _exporter.err().c_str();

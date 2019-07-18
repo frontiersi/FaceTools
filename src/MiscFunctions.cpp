@@ -299,7 +299,7 @@ void FaceTools::getVertices( const ObjModel* m, const std::vector<int>& uvids, s
     const size_t nvs = uvids.size();
     path.resize(nvs);
     for ( size_t i = 0; i < nvs; ++i)
-        path[i] = m->getVertex(uvids[i]);
+        path[i] = m->vtx(uvids[i]);
 }   // end getVertices
 
 
@@ -310,7 +310,7 @@ bool FaceTools::getVertexIndices( const ObjModel* m, const std::vector<cv::Vec3f
     int vidx;
     for ( size_t i = 0; i < nvs; ++i)
     {
-        vidx = m->lookupVertexIndex(vs[i]);   // Returns -1 if can't find
+        vidx = m->lookupVertex(vs[i]);   // Returns -1 if can't find
         assert( vidx >= 0);
         if ( vidx < 0)
             return false;
@@ -319,22 +319,22 @@ bool FaceTools::getVertexIndices( const ObjModel* m, const std::vector<cv::Vec3f
     return true;
 }   // end getVertexIndices
 
-
-void FaceTools::findNearestVertexIndices( const RFeatures::ObjModelKDTree& kdtree, const std::vector<cv::Vec3f>& vs, std::vector<int>& vidxs)
+/*
+void FaceTools::findNearestVertexIndices( const ObjModel& m, const ObjModelKDTree& kdt, const std::vector<cv::Vec3f>& vs, std::vector<int>& vidxs)
 {
-    const ObjModel* m = kdtree.model();
     const size_t nvs = vs.size();
     vidxs.resize(nvs);
     int vidx;
     for ( size_t i = 0; i < nvs; ++i)
     {
-        vidx = m->lookupVertexIndex(vs[i]);   // Returns -1 if can't find
+        vidx = m.lookupVertex(vs[i]);   // Returns -1 if can't find
         if ( vidx < 0)
-            vidx = kdtree.find( vs[i]);
+            vidx = kdt.find( vs[i]);
         assert( vidx >= 0);
         vidxs[i] = vidx;
     }   // end for
 }   // end findNearestVertexIndices
+*/
 
 
 cv::Mat_<byte> FaceTools::removeBlackBackground( const cv::Mat_<byte>& m)
@@ -459,7 +459,7 @@ cv::Mat FaceTools::rotateUpright( const cv::Mat& img, const cv::RotatedRect& rr)
 }   // end rotateUpright
 
 
-int FaceTools::findMidway( const ObjModel* model, const std::vector<int>& spidxs)
+int FaceTools::findMidway( const ObjModel& model, const std::vector<int>& spidxs)
 {
     const int nidxs = (int)spidxs.size();
     assert( nidxs > 0);
@@ -467,15 +467,15 @@ int FaceTools::findMidway( const ObjModel* model, const std::vector<int>& spidxs
         return -1;
 
     // Get the endpoint vertices
-    const cv::Vec3f v0 = model->getVertex(spidxs[0]);
-    const cv::Vec3f v1 = model->getVertex(spidxs[nidxs-1]);
+    const cv::Vec3f& v0 = model.vtx(spidxs[0]);
+    const cv::Vec3f& v1 = model.vtx(spidxs[nidxs-1]);
 
     int midwayUvidx = spidxs[0];
     double minDelta = DBL_MAX;
     for ( int i = 0; i < nidxs; ++i)
     {
         const int uvidx = spidxs[i];
-        const cv::Vec3f& uv = model->getVertex(uvidx);
+        const cv::Vec3f& uv = model.vtx(uvidx);
         const double delta = pow( cv::norm(uv - v0) - cv::norm(uv - v1), 2);
         if ( delta < minDelta)
         {
@@ -488,14 +488,14 @@ int FaceTools::findMidway( const ObjModel* model, const std::vector<int>& spidxs
 }   // end findMidway
 
 
-cv::Vec3f FaceTools::getShortestPath( const ObjModel* m, int v0, int v1, std::vector<int>& uvidxs)
+cv::Vec3f FaceTools::getShortestPath( const ObjModel& m, int v0, int v1, std::vector<int>& uvidxs)
 {
     RFeatures::DijkstraShortestPathFinder dspf( m);
     dspf.setEndPointVertexIndices( v0, v1);
     if ( dspf.findShortestPath(uvidxs) == -1)
         return cv::Vec3f(0,0,0);
     const int mp = FaceTools::findMidway( m, uvidxs);
-    return m->getVertex(mp);
+    return m.vtx(mp);
 }   // end getShortestPath
 
 
@@ -513,7 +513,7 @@ cv::Vec3f FaceTools::calcDirectionVectorFromBase( const cv::Vec3f& v0, const cv:
 }   // end calcDirectionVectorFromBase
 
 
-int FaceTools::growOut( const ObjModel* model, const cv::Vec3f& growVec, int vi)
+int FaceTools::growOut( const ObjModel& model, const cv::Vec3f& growVec, int vi)
 {
     double growth, maxGrowth;
     int ni = vi;
@@ -522,11 +522,11 @@ int FaceTools::growOut( const ObjModel* model, const cv::Vec3f& growVec, int vi)
         vi = ni;
         maxGrowth = 0;
         // Find the connected vertex that maximises the distance along the growth vector from bv.
-        const cv::Vec3f& bv = model->getVertex(vi);
-        const IntSet& conns = model->getConnectedVertices(vi);
+        const cv::Vec3f& bv = model.vtx(vi);
+        const IntSet& conns = model.cvtxs(vi);
         for ( int ci : conns)
         {
-            const cv::Vec3f& cv = model->getVertex(ci);
+            const cv::Vec3f& cv = model.vtx(ci);
             growth = (cv - bv).dot(growVec);
             if ( growth >= maxGrowth)
             {

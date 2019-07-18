@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,15 +16,10 @@
  ************************************************************************/
 
 #include <FaceTypes.h>
-#include <FaceViewSet.h>
-
-void FaceTools::registerTypes()
-{
-    qRegisterMetaType<FaceTools::Action::EventSet>("FaceTools::Action::EventSet");
-    qRegisterMetaType<FaceTools::Action::EventId>("FaceTools::Action::EventId");
-//    qRegisterMetaType<FaceTools::Vis::FaceView>("FaceTools::Vis::FaceView");
-    qRegisterMetaType<FaceTools::FaceViewSet>("FaceTools::FaceViewSet");
-}   // end registerTypes
+#include <FaceAction.h>
+using FaceTools::Action::EventGroup;
+using FaceTools::Action::FaceAction;
+using FaceTools::Action::Event;
 
 
 QString FaceTools::toSexString( int8_t s)
@@ -93,3 +88,169 @@ int8_t FaceTools::fromLongSexString( const QString& s)
 
     return sex;
 }   // end fromLongSexString
+
+
+EventGroup::EventGroup() : _E(Event::NONE) {}
+
+EventGroup::EventGroup( Event E) : _E(E)
+{
+}   // end ctor
+
+EventGroup::EventGroup( Event e0, Event e1) : _E(e0)
+{
+    add( e1);
+}   // end ctor
+
+EventGroup::EventGroup( Event e0, Event e1, Event e2) : _E(e0)
+{
+    add({e1, e2});
+}   // end ctor
+
+EventGroup::EventGroup( Event e0, Event e1, Event e2, Event e3) : _E(e0)
+{
+    add({e1, e2, e3});
+}   // end ctor
+
+EventGroup::EventGroup( Event e0, Event e1, Event e2, Event e3, Event e4) : _E(e0)
+{
+    add({e1, e2, e3, e4});
+}   // end ctor
+
+
+void EventGroup::clear() { _E = Event::NONE;}
+
+
+bool EventGroup::has( EventGroup e) const { return int(e.event()) & int(_E);}
+
+
+bool EventGroup::is( EventGroup e) const { return _E == e.event();}
+
+
+Event EventGroup::add( EventGroup ec) { _E = Event(int(_E) | int(ec.event())); return _E;}
+
+
+std::string EventGroup::name() const
+{
+    std::vector<std::string> nms;
+
+    if ( has(Event::ACT_CANCELLED))
+        nms.push_back("ACT_CANCELLED");
+    if ( has(Event::ACT_COMPLETE))
+        nms.push_back("ACT_COMPLETE");
+    if ( has(Event::MODEL_SELECT))
+        nms.push_back("MODEL_SELECT");
+    if ( has(Event::USER))
+        nms.push_back("USER");
+    if ( has(Event::LOADED_MODEL))
+        nms.push_back("LOADED_MODEL");
+    if ( has(Event::SAVED_MODEL))
+        nms.push_back("SAVED_MODEL");
+    if ( has(Event::CLOSED_MODEL))
+        nms.push_back("CLOSED_MODEL");
+    if ( has(Event::FACE_DETECTED))
+        nms.push_back("FACE_DETECTED");
+    if ( has(Event::GEOMETRY_CHANGE))
+        nms.push_back("GEOMETRY_CHANGE");
+    if ( has(Event::CONNECTIVITY_CHANGE))
+        nms.push_back("CONNECTIVITY_CHANGE");
+    if ( has(Event::AFFINE_CHANGE))
+        nms.push_back("AFFINE_CHANGE");
+    if ( has(Event::ORIENTATION_CHANGE))
+        nms.push_back("ORIENTATION_CHANGE");
+    if ( has(Event::SURFACE_DATA_CHANGE))
+        nms.push_back("SURFACE_DATA_CHANGE");
+    if ( has(Event::LANDMARKS_CHANGE))
+        nms.push_back("LANDMARKS_CHANGE");
+    if ( has(Event::METRICS_CHANGE))
+        nms.push_back("METRICS_CHANGE");
+    if ( has(Event::STATISTICS_CHANGE))
+        nms.push_back("STATISTICS_CHANGE");
+    if ( has(Event::PATHS_CHANGE))
+        nms.push_back("PATHS_CHANGE");
+    if ( has(Event::VIEW_CHANGE))
+        nms.push_back("VIEW_CHANGE");
+    if ( has(Event::VIEWER_CHANGE))
+        nms.push_back("VIEWER_CHANGE");
+    if ( has(Event::CAMERA_CHANGE))
+        nms.push_back("CAMERA_CHANGE");
+    if ( has(Event::ACTOR_MOVE))
+        nms.push_back("ACTOR_MOVE");
+    if ( has(Event::REPORT_CREATED))
+        nms.push_back("REPORT_CREATED");
+    if ( has(Event::METADATA_CHANGE))
+        nms.push_back("METADATA_CHANGE");
+    if ( has(Event::U3D_MODEL_CHANGE))
+        nms.push_back("U3D_MODEL_CHANGE");
+    if ( has(Event::ALL_VIEWS))
+        nms.push_back("ALL_VIEWS");
+    if ( has(Event::ALL_VIEWERS))
+        nms.push_back("ALL_VIEWERS");
+
+    std::string nm = "[ ";
+    if ( nms.empty())
+        nm += "NONE";
+    else
+    {
+        nm += nms[0];
+        for ( size_t i = 1; i < nms.size(); ++i)
+            nm += " | " + nms[i];
+    }   // end else
+
+    nm += " ]";
+    return nm;
+}   // end name
+
+
+void EventGroup::operator()()
+{
+    if ( has(Event::ACT_CANCELLED))
+        checkEvent(Event::ACT_CANCELLED);
+    if ( has(Event::ACT_COMPLETE))
+        checkEvent(Event::ACT_COMPLETE);
+    if ( has(Event::MODEL_SELECT))
+        checkEvent(Event::MODEL_SELECT);
+    if ( has(Event::LOADED_MODEL))
+        checkEvent(Event::LOADED_MODEL);
+    if ( has(Event::SAVED_MODEL))
+        checkEvent(Event::SAVED_MODEL);
+    if ( has(Event::CLOSED_MODEL))
+        checkEvent(Event::CLOSED_MODEL);
+    if ( has(Event::FACE_DETECTED))
+        checkEvent(Event::FACE_DETECTED);
+    if ( has(Event::GEOMETRY_CHANGE))
+        checkEvent(Event::GEOMETRY_CHANGE);
+    if ( has(Event::CONNECTIVITY_CHANGE))
+        checkEvent(Event::CONNECTIVITY_CHANGE);
+    if ( has(Event::AFFINE_CHANGE))
+        checkEvent(Event::AFFINE_CHANGE);
+    if ( has(Event::ORIENTATION_CHANGE))
+        checkEvent(Event::ORIENTATION_CHANGE);
+    if ( has(Event::SURFACE_DATA_CHANGE))
+        checkEvent(Event::SURFACE_DATA_CHANGE);
+    if ( has(Event::LANDMARKS_CHANGE))
+        checkEvent(Event::LANDMARKS_CHANGE);
+    if ( has(Event::METRICS_CHANGE))
+        checkEvent(Event::METRICS_CHANGE);
+    if ( has(Event::STATISTICS_CHANGE))
+        checkEvent(Event::STATISTICS_CHANGE);
+    if ( has(Event::PATHS_CHANGE))
+        checkEvent(Event::PATHS_CHANGE);
+    if ( has(Event::VIEW_CHANGE))
+        checkEvent(Event::VIEW_CHANGE);
+    if ( has(Event::VIEWER_CHANGE))
+        checkEvent(Event::VIEWER_CHANGE);
+    if ( has(Event::CAMERA_CHANGE))
+        checkEvent(Event::CAMERA_CHANGE);
+    if ( has(Event::ACTOR_MOVE))
+        checkEvent(Event::ACTOR_MOVE);
+    if ( has(Event::REPORT_CREATED))
+        checkEvent(Event::REPORT_CREATED);
+    if ( has(Event::METADATA_CHANGE))
+        checkEvent(Event::METADATA_CHANGE);
+    if ( has(Event::U3D_MODEL_CHANGE))
+        checkEvent(Event::U3D_MODEL_CHANGE);
+    if ( has(Event::ALL_VIEWS))
+        checkEvent(Event::ALL_VIEWS);
+    if ( has(Event::ALL_VIEWERS))
+        checkEvent(Event::ALL_VIEWERS);
+}   // end operator()

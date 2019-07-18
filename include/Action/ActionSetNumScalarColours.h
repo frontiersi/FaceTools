@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,26 +21,26 @@
 #include "FaceAction.h"
 #include <QSpinBox>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionSetNumScalarColours : public FaceAction
 { Q_OBJECT
 public:
-    ActionSetNumScalarColours( const QString& dname, QWidget* parent=nullptr);
+    explicit ActionSetNumScalarColours( const QString&);
 
-    QWidget* getWidget() const override { return _spinBox;}
+    QString toolTip() const override { return "Set the number of colours to interpolate over when mapping scalar visualisations to a model's surface.";}
 
-private slots:
-    void tellReady( const Vis::FV*, bool) override;
-    bool testReady( const Vis::FV*) override;
-    void updateFaceViewFromWidget( int);
+    QWidget* widget() const override { return _spinBox;}
+
+protected:
+    void postInit() override;
+    bool checkEnable( Event) override;
 
 private:
     QSpinBox *_spinBox;
+    void updateFaceViewFromWidget( int);
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

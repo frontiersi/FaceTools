@@ -19,9 +19,8 @@
 #define FACE_TOOLS_MODEL_VIEWER_H
 
 #include <ModelViewerInteractor.h>
+#include <MouseHandler.h>
 #include <VtkActorViewer.h> // QTools
-#include <ScalarLegend.h>   // RVTK
-#include <Axes.h>           // RVTK
 #include <CameraParams.h>   // RFeatures
 #include <QColor>
 #include <unordered_map>
@@ -33,80 +32,39 @@ class FaceTools_EXPORT ModelViewer : public QWidget
 { Q_OBJECT
 public:
     ModelViewer( QWidget* parent=nullptr, bool useFloodLights=false);
-    virtual ~ModelViewer();
+    ~ModelViewer() override;
 
-    // Interactor::ModelViewerInteractor (MVI) calls the protected attach and detach functions. Multiple different
-    // MVI instances (even of the same type) can be attached at once to this viewer, but MVI instances can only
-    // belong to a single ModelViewer at a time.
-    bool isAttached( Interactor::MVI*) const;  // Returns whether the given MVI is attached.
-
-    // Transfer to parameter viewer all MVIs attached to this viewer (returns # moved).
-    // If the parameter viewer is the same as this one, nothing occurs and zero is returned.
-    size_t transferInteractors( ModelViewer*);
-
-    // Set/get interaction mode.
-    void setInteractionMode( QTools::InteractionMode m) { _qviewer->setInteractionMode(m);}
+    // Set/get interaction mode. Pass boolean true to denote that camera interaction should
+    // be used if in actor interaction mode but the cursor is not found to pick any actor.
+    void setInteractionMode( QTools::InteractionMode m, bool v) { _qviewer->setInteractionMode(m, v);}
     QTools::InteractionMode interactionMode() const { return _qviewer->interactionMode();}
+    bool useCameraOffActor() const { return _qviewer->useCameraOffActor();}
 
     // Lock/unlock camera/actor interaction.
     int lockInteraction() { return _qviewer->lockInteraction();}
     bool unlockInteraction( int lkey) { return _qviewer->unlockInteraction(lkey);}
     bool isInteractionLocked() const { return _qviewer->isInteractionLocked();}
 
-    const QPoint& mouseCoords() const { return _qviewer->mouseCoords();}
-    bool mouseOnRenderer() const { return _qviewer->mouseOnRenderer();}
-    QPoint mapToGlobal( const QPoint& p) const { return _qviewer->mapToGlobal(p);}
+    // Get the mouse coordinates relative to the underlying renderer.
+    QPoint mouseCoords() const { return _qviewer->mapFromGlobal( QCursor::pos());}
 
     void setSize( const cv::Size&);
 
     void show();
     void hide();
 
-    void showLegend( bool);
-    bool legendShown() const;
-    void showAxes( bool);
-    bool axesShown() const;
-
     void enableFloodLights( bool);  // Set true for textured objects, false for surface.
     bool floodLightsEnabled() const;
 
-    enum Visualisation
-    {
-        TEXTURE_VISUALISATION = 1,
-        SURFACE_VISUALISATION,
-        POINTS_VISUALISATION,
-        WIREFRAME_VISUALISATION
-    };  // end enum
-
-    struct VisOptions
-    {
-        VisOptions( Visualisation v=TEXTURE_VISUALISATION, float rc=1.0f, float gc=1.0f, float bc=1.0f, float ac=1.0f,
-                                                bool bf=false, float ps=1.0f, float lw=1.0f)
-            : vis(v), r(rc),g(gc),b(bc),a(ac), backfaceCulling(bf), pointSize(ps), lineWidth(lw) {}
-
-        VisOptions( float rc, float gc, float bc, float ac=1.0f, bool bf=false, float ps=1.0f, float lw=1.0f)
-            : vis(SURFACE_VISUALISATION), r(rc),g(gc),b(bc),a(ac), backfaceCulling(bf), pointSize(ps), lineWidth(lw) {}
-
-        VisOptions( Visualisation v, bool bf, float ps=1.0f, float lw=1.0f)
-            : vis(v), r(1.0f), g(1.0f), b(1.0f), a(1.0f), backfaceCulling(bf), pointSize(ps), lineWidth(lw) {}
-
-        Visualisation vis;
-        float r, g, b, a;
-        bool backfaceCulling;
-        float pointSize;
-        float lineWidth;
-    };  // end struct
-
-    void updateRender();    // Call after making changes to the view content
+    void setBackgroundColour( const QColor&);
+    QColor backgroundColour() const;
 
     // Add or remove a prop.
     void add( vtkProp*);
     void remove( vtkProp*);
     void clear();   // Clear all props
 
-    // Set the legend title and colours lookup table for the scalar legend.
-    void setLegend( const std::string& title, vtkLookupTable*);
-
+    // *** THESE FUNCTIONS ARE NOT THREAD SAFE! Use in the GUI thread. ***
     cv::Point2f projectProp( const cv::Vec3f&) const;   // Project to viewport proportion.
     cv::Point project( const cv::Vec3f&) const;         // Project to pixel coords.
     cv::Vec3f project( const cv::Point2f&) const;       // Project to world coords.
@@ -124,6 +82,7 @@ public:
     // Project the given point to a world position on the given prop, returning true.
     // Return false if the point doesn't project onto the given prop. Out param wpos
     // is set only if the function returns true.
+    // *** THESE FUNCTIONS ARE NOT THREAD SAFE! Use in the GUI thread. ***
     bool calcSurfacePosition( const vtkProp*, const cv::Point2f&, cv::Vec3f& wpos) const;
     bool calcSurfacePosition( const vtkProp*, const cv::Point&, cv::Vec3f& worldPos) const;
     bool calcSurfacePosition( const vtkProp*, const QPoint&, cv::Vec3f& worldPos) const;
@@ -133,8 +92,12 @@ public:
     void setCamera( const RFeatures::CameraParams&);
     // Set the camera using vectors (normal is towards the camera).
     void setCamera( const cv::Vec3f& focus, const cv::Vec3f& normal, const cv::Vec3f& upvector, double camRng=650.0);
-    void setFocus( const cv::Vec3f&);
-    RFeatures::CameraParams getCamera() const;
+    void setCamera( const cv::Vec3f& focus, const cv::Vec3f& position);
+    void setCameraFocus( const cv::Vec3f&);
+    void setCameraPosition( const cv::Vec3f&);
+    void refreshClippingPlanes();
+
+    RFeatures::CameraParams camera() const;
     double cameraDistance() const;   // Distance between position and focus
 
     size_t getWidth() const;    // Return the width of the viewport in pixels
@@ -150,17 +113,20 @@ public:
     cv::Mat_<cv::Vec3b> grabImage() const;  // Retrieves what's currently being rendered as an OpenCV image matrix.
     bool saveSnapshot() const;  // User save of grabImage to file.
 
+    void updateRender();    // Call after making changes to content
+
 protected:
-    bool attach( Interactor::MVI*);  // Attach interactor returning false iff already attached.
-    bool detach( Interactor::MVI*);  // Detach interactor returning false iff already detached.
+    // Attach/detach interactors and mouse handlers returning false iff already attached.
+    bool attach( Interactor::MVI*);
+    bool detach( Interactor::MVI*);
+    bool attach( Interactor::MouseHandler*);
+    bool detach( Interactor::MouseHandler*);
     friend class Interactor::ModelViewerInteractor;    // Calls attach and detach passing in self as parameter.
+    friend class Interactor::MouseHandler;
 
 private:
     QTools::VtkActorViewer *_qviewer;
-    RVTK::ScalarLegend *_scalarLegend;
-    RVTK::Axes *_axes;
     bool _floodLightsEnabled;
-    std::unordered_set<Interactor::MVI*> _interactors;
     ModelViewer( const ModelViewer&) = delete;
     void operator=( const ModelViewer&) = delete;
 };  // end class

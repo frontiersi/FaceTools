@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,14 +28,22 @@ public:
     using Ptr = std::shared_ptr<PathSet>;
     static Ptr create();
 
+    Ptr deepCopy() const;
+
     // Translates path endpoints to be incident with surface and recalculates the paths.
-    void recalculate( const RFeatures::ObjModelKDTree*);
+    void recalculate( const FM*);
 
     // Create a new path with first handle at given position returning its ID.
     int addPath( const cv::Vec3f&);
 
+    void setActivePath( int);
+    int activePath() const { return _aid;}
+
     // Remove the path with given ID returning true on success.
     bool removePath( int pathId);
+
+    // Rename the path with given ID returning true on success.
+    bool renamePath( int pathId, const std::string&);
 
     // Return the path with given ID or null if not found.
     Path* path( int pathId);
@@ -50,19 +58,20 @@ public:
 
     void transform( const cv::Matx44d&);
 
-    void write( PTree&);
+    void write( PTree&) const;
     bool read( const PTree&);
 
 private:
-    int _sid;
+    int _sid;              // static IDs
+    int _aid;              // The active ID
     std::unordered_map<int, Path> _paths;   // IDs that map to paths
     IntSet _ids;           // The IDs themselves
-    int setPath( const Path&);
 
+    int setPath( const Path&);
     PathSet();
     ~PathSet();
-    PathSet( const PathSet&) = delete;
-    void operator=( const PathSet&) = delete;
+    PathSet( const PathSet&) = default;
+    PathSet& operator=( const PathSet&) = default;
 };  // end class
 
 }   // end namespace

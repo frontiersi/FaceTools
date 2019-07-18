@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,38 +16,61 @@
  ************************************************************************/
 
 #include <ActionRotateModel.h>
-#include <Eigen/Geometry>
+#include <Transformer.h>
 #include <FaceModel.h>
 using FaceTools::Action::ActionRotateModel;
 using FaceTools::Action::FaceAction;
+using FaceTools::Action::Event;
 using FaceTools::FVS;
 using FaceTools::FM;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionRotateModel::ActionRotateModel( const QString &dn, const QIcon& ico, const cv::Vec3f& raxis, float degs)
+ActionRotateModel::ActionRotateModel( const QString &dn, const QIcon& ico, const cv::Vec3d& raxis, double degs)
     : FaceAction( dn, ico)
 {
-    // Ensure the rotation axis is normalized first
-    Eigen::Vector3f axis( raxis[0], raxis[1], raxis[2]);
-    axis.normalize();
-    Eigen::Matrix3f m;
-    m = Eigen::AngleAxisf( degs * static_cast<float>(CV_PI/180), axis);
-    _rmat = cv::Matx44d( m(0,0), m(0,1), m(0,2), 0,
-                         m(1,0), m(1,1), m(1,2), 0,
-                         m(2,0), m(2,1), m(2,2), 0,
-                              0,      0,      0, 0);
+    _rmat = RFeatures::Transformer( degs * CV_PI/180, raxis).matrix();
 }   // end ctor
 
 
-bool ActionRotateModel::doAction( FVS& fvs, const QPoint&)
+QString ActionRotateModel::toolTip() const
 {
-    FMS fms = fvs.models(); // Copy out
-    for ( FM* fm : fms)
+    return "Rotate through the given axis, or with respect to the head if landmarks are present.";
+}   // end toolTip
+
+
+bool ActionRotateModel::checkEnable( Event)
+{
+    return MS::isViewSelected();
+}   // end checkEnabled
+
+
+void ActionRotateModel::doAction( Event)
+{
+    storeUndo( this, Event::AFFINE_CHANGE);
+    FM* fm = MS::selectedModel();
+    fm->lockForWrite();
+
+    cv::Matx44d rmat = _rmat;
+    // If the model has landmarks, then rotate with respect to the head's orientation
+    // otherwise simply rotate about the defined axis.
+    if ( !fm->landmarks().empty())
     {
-        fm->lockForWrite();
-        fm->transform(_rmat);
-        fm->unlock();
-        fvs.insert(fm);
-    }   // end for
-    return true;
+        // Translate to origin, rotate, then translate back.
+        const Landmark::LandmarkSet& lmks = fm->landmarks();
+        const RFeatures::Orientation on = lmks.orientation();
+        const cv::Matx44d m = on.asMatrix( lmks.fullMean());
+        rmat = m * _rmat * m.inv();
+    }   // end else
+
+    fm->addTransformMatrix(rmat);
+    fm->unlock();
 }   // end doAction
+
+
+void ActionRotateModel::doAfterAction( Event)
+{
+    MS::setInteractionMode( IMode::CAMERA_INTERACTION);
+    emit onEvent( Event::AFFINE_CHANGE);
+}   // end doAfterAction
+

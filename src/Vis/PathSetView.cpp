@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <PathSetView.h>
+#include <FaceTools.h>
 #include <vtkTextProperty.h>
 #include <FaceModel.h>
 #include <algorithm>
@@ -28,19 +29,17 @@ using FaceTools::Path;
 using ViewPair = std::pair<int, PathView*>;
 
 
-PathSetView::PathSetView( const PathSet::Ptr paths) : _paths(paths), _viewer(nullptr)
+PathSetView::PathSetView( const PathSet& paths) : _paths(paths), _viewer(nullptr)
 {
     // The bottom right text.
     _text->GetTextProperty()->SetJustificationToRight();
     _text->GetTextProperty()->SetFontFamilyToCourier();
-    _text->GetTextProperty()->SetFontSize(17);
+    _text->GetTextProperty()->SetFontSize(21);
     _text->GetTextProperty()->SetBackgroundOpacity(0.7);
     _text->SetPickable( false);
-    static const QColor tcol(255,255,255);
-    _text->GetTextProperty()->SetColor( tcol.redF(), tcol.greenF(), tcol.blueF());
     _text->SetVisibility(false);
 
-    for ( int id : paths->ids())
+    for ( int id : paths.ids())
         addPath(id);
 }   // end ctor
 
@@ -66,7 +65,8 @@ void PathSetView::setVisible( bool enable, ModelViewer *viewer)
 
     if ( enable && _viewer)
     {
-        std::for_each( std::begin(_views), std::end(_views), [this](const ViewPair& p){ this->showPath(true, p.first);});
+        for ( const auto& p : _views)
+            showPath( true, p.first);
         _viewer->add(_text);
     }   // end if
 }   // end setVisible
@@ -84,7 +84,7 @@ void PathSetView::showPath( bool enable, int id)
 
 void PathSetView::setText( int pid, int xpos, int ypos)
 {
-    const Path* path = _paths->path(pid);
+    const Path* path = _paths.path(pid);
     const std::string lnunits = FaceTools::FM::LENGTH_UNITS.toStdString();
     // Set the text contents for the label and the caption
     std::ostringstream oss0, oss1, oss2;
@@ -118,7 +118,7 @@ PathView::Handle* PathSetView::addPath( int id)
         return _views.at(id)->handle0();
     }   // end if
 
-    const Path* path = _paths->path(id);
+    const Path* path = _paths.path(id);
     assert(path);
     if ( !path)
     {
@@ -156,15 +156,20 @@ PathView* PathSetView::pathView( int id) const
 
 
 // public
-void PathSetView::updatePath( int id)
+void PathSetView::updatePath( int id, const cv::Matx44d& d)
 {
     assert(id >= 0);
-    if ( _paths->has(id))
+    if ( _paths.has(id))
     {
         if ( _views.count(id) == 0)
             addPath(id);
         else
-            _views.at(id)->update( _paths->path(id)->vtxs);
+        {
+            std::list<cv::Vec3f> pts;
+            for ( const cv::Vec3f& v : _paths.path(id)->vtxs)
+                pts.push_back( RFeatures::transform( d, v));
+            _views.at(id)->update( pts);
+        }   // end else
         showPath( true, id);
     }   // end if
     else if (_views.count(id) > 0)
@@ -180,26 +185,20 @@ void PathSetView::updatePath( int id)
 
 
 // public
-void PathSetView::pokeTransform( const vtkMatrix4x4* m)
-{
-    std::for_each( std::begin(_views), std::end(_views), [=](const ViewPair& p){ p.second->pokeTransform(m);});
-}   // end pokeTransform
-
-
-// public
-void PathSetView::fixTransform()
-{
-    std::for_each( std::begin(_views), std::end(_views), [=](const ViewPair& p){ p.second->fixTransform();});
-}   // end fixTransform
-
-
-// public
-void PathSetView::refresh()
+void PathSetView::refresh( const cv::Matx44d& d)
 {
     std::unordered_set<int> pids;   // Will be union of path IDs both currently visualised and not.
     std::for_each( std::begin(_views), std::end(_views), [&](const ViewPair& p){ pids.insert(p.first);});
     // Add the current path IDs in from the data
-    std::for_each( std::begin(_paths->ids()), std::end(_paths->ids()), [&](int p){ pids.insert(p);});
+    std::for_each( std::begin(_paths.ids()), std::end(_paths.ids()), [&](int p){ pids.insert(p);});
     // Run updatePath for all pids
-    std::for_each( std::begin(pids), std::end(pids), [this](int p){ this->updatePath(p);});
+    std::for_each( std::begin(pids), std::end(pids), [&](int p){ this->updatePath(p, d);});
+
+    if ( _viewer)
+    {
+        const QColor bg = _viewer->backgroundColour();
+        const QColor fg = chooseContrasting(bg);
+        _text->GetTextProperty()->SetBackgroundColor( bg.redF(), bg.greenF(), bg.blueF());
+        _text->GetTextProperty()->SetColor( fg.redF(), fg.greenF(), fg.blueF());
+    }   // end if
 }   // end refresh

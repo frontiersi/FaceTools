@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,31 +20,29 @@
 
 #include "ActionVisualise.h"
 #include <PathSetVisualisation.h>
-#include <PathSetInteractor.h>
-#include <QStatusBar>
+#include <PathsInteractor.h>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionEditPaths : public ActionVisualise
 { Q_OBJECT
 public:
-    ActionEditPaths( const QString& dname, const QIcon& icon, Interactor::MEEI*, QStatusBar* sb=nullptr);
-    ~ActionEditPaths() override;
+    ActionEditPaths( const QString&, const QIcon&,
+                     Vis::PathSetVisualisation*,
+                     Interactor::PathsInteractor::Ptr,
+                     const QKeySequence& ks=QKeySequence());
 
-    Interactor::PathSetInteractor* interactor() override { return _interactor;}
+    QString toolTip() const override { return "Toggle the showing of any custom path measurements.";}
 
-protected slots:
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet&, const FVS&, bool) override;
-    void doOnEditedPath( const Vis::FV*);
+protected:
+    bool checkState( Event) override;
+    void doAction( Event) override;
 
 private:
+    Interactor::PathsInteractor::Ptr _pint;
     Vis::PathSetVisualisation *_vis;
-    Interactor::PathSetInteractor *_interactor;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

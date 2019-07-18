@@ -19,52 +19,60 @@
 #define FACE_TOOLS_MODEL_VIEWER_INTERACTOR_H
 
 /**
- * Provides an interface to a model viewer via VTK events on the underlying viewer.
- * Multiple ModelViewerInteractor instances can be active on a single viewer at once,
- * but a single ModelViewerInteractor can only be attached to one viewer.
- * This interface attaches itself to a viewer using ModelViewer::attachInterface( &MVI)
- * and detaches itself on destruction with ModelViewer::detachInterface( &MVI).
+ * An event based interface one or more ModelViewers.
  */
 
 #include <FaceTypes.h>
-#include <VtkViewerInteractor.h>    // QTools::VVI
-#include <QStatusBar>
-#include <QPoint>
+#include <VtkViewerInteractor.h>
+#include <vtkRenderWindow.h>
 
 namespace FaceTools { namespace Interactor {
 
 class FaceTools_EXPORT ModelViewerInteractor : public QTools::VVI
 { Q_OBJECT
 public:
-    ModelViewerInteractor( ModelViewer *v=nullptr, QStatusBar *sbar=nullptr);
-    virtual ~ModelViewerInteractor();       // Calls setViewer(nullptr) to detach.
+    ModelViewerInteractor();            // Attaches to ModelSelector::viewers().
+    ~ModelViewerInteractor() override;  // Detaches from ModelSelector::viewers().
 
-    void setViewer( ModelViewer *v=nullptr);  // Attach to given viewer or detach from current (nullptr).
+    // Return the viewer the mouse pointer was last over (never returns null).
+    FMV* mouseViewer() const { return _vwr;}
 
-    ModelViewer* viewer() const { return _viewer;} // Get attached viewer.
-
-signals:
-    void onChangedData( Vis::FV*);  // Interactors that change data should emit this.
+    // Given a prop, return the FaceView iff the given prop is the main face actor
+    // (and not some actor attached to a visualisation of the FaceView).
+    Vis::FV* viewFromActor( const vtkProp3D*) const;
 
 protected:
-    // Called immediately after attaching self. Can be used by derived types to add
-    // other (composite) interactions for example (see RadialSelectInteractor).
-    virtual void onAttached(){}
+    // Called when the mouse has entered the parameter viewer (mouseViewer() returns parameter).
+    virtual void enterViewer( FMV*) {}
+    // Called when the mouse has left the parameter viewer.
+    virtual void leaveViewer( FMV*) {}
 
-    // Called immediately after detaching self. Can be used by derived
-    // types to finish interactions (e.g. emit final signals).
-    virtual void onDetached(){}
+/*
+    virtual void cameraStart(){}
+    virtual void cameraRotate(){}
+    virtual void cameraDolly(){}
+    virtual void cameraSpin(){}
+    virtual void cameraPan(){}
+    virtual void cameraMove(){} // Generic non-specific ongoing movement
+    virtual void cameraStop(){} // After camera movement stopped.
 
-    void setInteractionLocked( bool);   // May not result in unlocking if other interactors active.
-    bool isInteractionLocked() const;   // Returns true iff interaction locked.
-
-    void showStatus( const QString&, int tmsecs=0);
-    void clearStatus();
+    virtual void actorStart( const vtkProp3D*){}
+    virtual void actorRotate( const vtkProp3D*){}
+    virtual void actorDolly( const vtkProp3D*){}
+    virtual void actorSpin( const vtkProp3D*){}
+    virtual void actorPan( const vtkProp3D*){}
+    virtual void actorMove( const vtkProp3D*){} // Generic non-specific ongoing movement
+    virtual void actorStop( const vtkProp3D*){}  // After actor movement stopped.
+*/
 
 private:
-    ModelViewer *_viewer;
-    QStatusBar *_sbar;
-    int _ilock;
+    void mouseEnter( const QTools::VtkActorViewer*) override;
+    void mouseLeave( const QTools::VtkActorViewer*) override;
+    std::unordered_map<const vtkRenderWindow*, FMV*> _vwrs;
+    FMV* _vwr;
+
+    ModelViewerInteractor( const ModelViewerInteractor&) = delete;
+    void operator=( const ModelViewerInteractor&) = delete;
 };  // end class
 
 }}   // end namespace

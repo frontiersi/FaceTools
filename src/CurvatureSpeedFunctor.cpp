@@ -26,7 +26,7 @@ CurvatureSpeedFunctor::CurvatureSpeedFunctor( const ObjModelCurvatureMap::Ptr om
     double meanCurvature = 0.0;
     double kp1, kp2, c;
     std::vector<double> vals;
-    const IntSet& vidxs = omcm->model()->getVertexIds();
+    const IntSet& vidxs = omcm->model()->vertexIds();
     for ( int vi : vidxs)
     {
         omcm->vertexPC1( vi, kp1); // Magnitude of curvature in direction of max curvature

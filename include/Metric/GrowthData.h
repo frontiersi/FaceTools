@@ -26,28 +26,56 @@ namespace FaceTools { namespace Metric {
 class FaceTools_EXPORT GrowthData
 {
 public:
-    explicit GrowthData( size_t ndims);
+    using Ptr = std::shared_ptr<GrowthData>;
+    using CPtr = std::shared_ptr<const GrowthData>;
+    static Ptr create( int mid, size_t ndims, int8_t sex, int ethn);
 
-    void setEthnicity( const QString& e) { _ethnicity = e;}
-    void setSex( int8_t s) { _sex = s;}
-    void setSource( const QString& s) { _source = s;}
-    void setNote( const QString& n) { _note = n;}
-    void setN( int n) {_n = n;}
-    void setRSD( size_t d, const rlib::RSD::Ptr& rsd) { _rsds[d] = rsd;}
+    /**
+     * Create and return a new GrowthData object from the combination
+     * of the given ones. All the GrowthData objects must belong to the
+     * same metric (have the same metric ID), and have the same number
+     * of dimensions. The sex/ethnicity can be different. In particular,
+     * if a combination of ethnicities is created, this is added as a
+     * new temporary ethnicity to the static Ethnicities class.
+     */
+    static Ptr create( const std::vector<GrowthData::CPtr>&);
 
-    const QString& ethnicity() const { return _ethnicity;}
-    int8_t sex() const { return _sex;}
-    const QString& source() const { return _source;}
-    const QString& note() const { return _note;}
+    int metricId() const { return _mid;}
     size_t dims() const { return _rsds.size();}
+    int8_t sex() const { return _sex;}
+    int ethnicity() const { return _ethn;}
+
+    void setSource( const QString&);
+    const QString& source() const { return _source;}
+
+    void setNote( const QString&);
+    const QString& note() const { return _note;}
+
+    void setLongNote( const QString&);
+    const QString& longNote() const { return _lnote;}
+
+    void setN( int n) {_n = n;}
     int n() const { return _n;}
-    rlib::RSD::Ptr rsd( size_t d=0) const { return _rsds.at(d);}
+
+    void setRSD( size_t d, const rlib::RSD::Ptr& rsd) { _rsds[d] = rsd;}
+    rlib::RSD::CPtr rsd( size_t d=0) const { return _rsds.at(d);}
+
+    // Returns true iff the given age is >= min and <= max age domain across
+    // all of the dimensions of the statistics.
+    bool isWithinAgeRange( double age) const;
 
 private:
+    int _mid;
     int8_t _sex;
+    int _ethn;
     int _n;
-    QString _ethnicity, _source, _note;
+    QString _source, _note, _lnote;
     std::vector<rlib::RSD::Ptr> _rsds;
+
+    GrowthData( int mid, size_t ndims, int8_t sex, int ethn);
+    ~GrowthData();
+    GrowthData( const GrowthData&) = delete;
+    void operator=( const GrowthData&) = delete;
 };  // end class
 
 }}   // end namespaces

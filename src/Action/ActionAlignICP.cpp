@@ -21,52 +21,63 @@
 #include <algorithm>
 #include <ObjModelAligner.h>
 using FaceTools::Action::ActionAlignICP;
-using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
+using FaceTools::Action::Event;
 using FaceTools::FVS;
 using FaceTools::Vis::FV;
-using FaceTools::FaceModel;
+using FaceTools::FM;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionAlignICP::ActionAlignICP( const QString& dn, const QIcon& ico, QProgressBar* pb)
+ActionAlignICP::ActionAlignICP( const QString& dn, const QIcon& ico)
     : FaceAction(dn, ico)
 {
-    if ( pb)
-        setAsync(true, QTools::QProgressUpdater::create(pb));
+    setAsync(true);
 }   // end ctor
 
 
-bool ActionAlignICP::testEnabled( const QPoint*) const
+bool ActionAlignICP::checkEnable( Event)
 {
-    // Enabled only if a single model is selected and its viewer has other models.
-    const FV* fv = ready1();
+    // Enabled only if a model is selected and its viewer has other models.
+    const FV* fv = MS::selectedView();
     return fv && fv->viewer()->attached().size() >= 2;
-}   // end testEnabled
+}   // end checkEnabled
 
 
-bool ActionAlignICP::doAction( FVS& rset, const QPoint&)
+bool ActionAlignICP::doBeforeAction( Event)
 {
-    assert(rset.size() == 1);
-    FV* fv = rset.first();
-    FaceModel* sfm = fv->data();    
-    rset.erase(fv); // Won't actually do work on the source FaceView!
+    MS::showStatus( "Performing ICP alignment against selected model...");
+    return true;
+}   // end doBeforeAction
+
+
+void ActionAlignICP::doAction( Event)
+{
+    storeUndo(this, {Event::AFFINE_CHANGE, Event::ALL_VIEWS});
+
+    FV* fv = MS::selectedView();
+    FM* sfm = fv->data();
 
     // Get the source model to align against
     sfm->lockForRead();
-    RFeatures::ObjModelICPAligner aligner( sfm->info()->cmodel());
+    RFeatures::ObjModelICPAligner aligner( sfm->model());
     sfm->unlock();
 
     // In the same viewer, look at every other model and align to the source.
     const FVS& aset = fv->viewer()->attached();
-    for ( FV* fv : aset)
+    for ( FM* fm : aset.models())
     {
-        FaceModel* fm = fv->data();
         fm->lockForWrite();
-        cv::Matx44d T = aligner.calcTransform( fm->info()->cmodel());
-        fm->transform(T);
-        rset.insert(fv);    // Worked on this view!
+        fm->addTransformMatrix( aligner.calcTransform( fm->model()));
         fm->unlock();
     }   // end for
-
-    return true;
 }   // end doAction
+
+
+void ActionAlignICP::doAfterAction( Event)
+{
+    MS::setInteractionMode( IMode::CAMERA_INTERACTION);
+    MS::showStatus( "Finished aligning.", 5000);
+    emit onEvent( {Event::AFFINE_CHANGE, Event::ALL_VIEWS});
+}   // end doAfterAction
+

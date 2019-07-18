@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,15 +25,15 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionCloseAllFaceModels : public FaceAction
 { Q_OBJECT
 public:
-    ActionCloseAllFaceModels( const QString& dname, QWidget* parent=nullptr);
+    ActionCloseAllFaceModels( const QString&, const QIcon&, const QKeySequence& ks=(Qt::CTRL + Qt::SHIFT + Qt::Key_W));
 
-private slots:
-    bool testEnabled( const QPoint*) const override;
-    bool doBeforeAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(CLOSE_MODEL);}
+    QString toolTip() const override { return "Close all models.";}
 
-private:
-    QWidget *_parent;
+protected:
+    bool checkEnable( Event) override;
+    bool doBeforeAction( Event) override;
+    void doAction( Event) override;
+    void doAfterAction( Event) override;
 };  // end class
 
 }}   // end namespace

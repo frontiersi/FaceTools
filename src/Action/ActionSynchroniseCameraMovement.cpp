@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,53 +16,88 @@
  ************************************************************************/
 
 #include <ActionSynchroniseCameraMovement.h>
+#include <ModelViewerInteractor.h>
 #include <FaceModelViewer.h>
 #include <FaceView.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionSynchroniseCameraMovement;
 using FaceTools::Action::FaceAction;
+using FaceTools::Action::Event;
 using FaceTools::FVS;
 using FaceTools::Vis::FV;
+using FaceTools::FMV;
 using FaceTools::ModelViewer;
-using FaceTools::Interactor::ModelMoveInteractor;
+using FaceTools::Interactor::MVI;
+using MS = FaceTools::Action::ModelSelector;
+
+
+namespace {
+class CameraMoveHandler : public MVI
+{
+protected:
+    void cameraStart() override
+    {
+        _ivwr = mouseViewer();
+        _icam = _ivwr->camera();
+    }   // end cameraStart
+
+    // NB Only rotation and panning are synchronised using these calculations!
+    void cameraMove() override
+    {
+        RFeatures::CameraParams cnow = _ivwr->camera();
+        // Find the difference between the camera position and focus at the start of the
+        // movement and those parameters now, and apply the difference to the cameras of
+        // the other viewers.
+        const cv::Vec3f pfNow = cnow.pos - cnow.focus;
+        const cv::Vec3f pfOld = _icam.pos - _icam.focus;
+        const cv::Vec3f raxis = pfNow.cross(pfOld);  // Axis of rotation
+        const double n = double(pfNow.dot(pfOld));
+        const double d = cv::norm(pfNow)*cv::norm(pfOld);
+        const double v = std::min<double>( std::max<double>(-1, n/d), 1);
+        const double rads = -acos( v);
+
+        const cv::Vec3f tvec = cnow.focus - _icam.focus;
+        RFeatures::Transformer trans( rads, raxis);
+
+        for ( ModelViewer* v : MS::viewers())
+        {
+            if ( v != _ivwr)
+            {
+                RFeatures::CameraParams vcam = v->camera();
+                cv::Vec3f pos = vcam.pos;
+                const cv::Vec3f nfoc = vcam.focus + tvec;
+                trans.transform(pos);
+                v->setCamera( nfoc, pos);
+                v->updateRender();
+            }   // end if
+        }   // end for
+        _icam = cnow;
+    }   // end cameraMove
+
+private:
+    FMV* _ivwr;
+    RFeatures::CameraParams _icam;
+};  // end class
+}   // end namespace
 
 
 // public
-ActionSynchroniseCameraMovement::ActionSynchroniseCameraMovement( const QString& dn, const QIcon& ico, ModelMoveInteractor* mmi)
-    : FaceAction( dn, ico), _interactor(mmi)
+ActionSynchroniseCameraMovement::ActionSynchroniseCameraMovement( const QString& dn, const QIcon& ico)
+    : FaceAction( dn, ico), _camMover(new CameraMoveHandler)
 {
     setCheckable(true, false);
-    setRespondToEvent( CAMERA_CHANGE, [this](const FVS&){ return this->isChecked();});
+    _camMover->setEnabled(false);
 }   // end ctor
 
 
-bool ActionSynchroniseCameraMovement::doAction( FVS& fvs, const QPoint&)
+ActionSynchroniseCameraMovement::~ActionSynchroniseCameraMovement()
 {
-    _interactor->disconnect(this);
-    if ( isChecked())
-    {
-        syncActiveCamera( fvs.empty() ? nullptr : fvs.first());
-        connect( _interactor, &ModelMoveInteractor::onCameraMove, this, &ActionSynchroniseCameraMovement::syncActiveCamera);
-    }   // end if
-    return true;
+    delete _camMover;
+}   // end dtor
+
+
+void ActionSynchroniseCameraMovement::doAction( Event)
+{
+    _camMover->setEnabled( isChecked());
 }   // end doAction
-
-
-// private slot
-void ActionSynchroniseCameraMovement::syncActiveCamera( const FV* fv)
-{
-    ModelViewer* viewer = _interactor->viewer();
-    if ( fv)
-        viewer = fv->viewer();
-
-    RFeatures::CameraParams cp = viewer->getCamera();
-    for ( ModelViewer* v : _viewers)
-    {
-        if ( v != viewer)   // Set the same camera parameters for v
-        {
-            v->setCamera(cp);
-            v->updateRender();
-        }   // end if
-    }   // end for
-}   // end syncActiveCamera

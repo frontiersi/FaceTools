@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,7 +43,8 @@ QString FaceModelU3DFileHandler::getFileDescription() const
 bool FaceModelU3DFileHandler::write( const FaceModel* fm, const QString& fname)
 {
     _err = "";
-    if ( !_exporter.save( fm->info()->cmodel(), fname.toStdString()))
+    std::cerr << QString("Saving to '%1'").arg(fname).toStdString() << std::endl;
+    if ( !_exporter.save( fm->model(), fname.toStdString()))
         _err = _exporter.err().c_str();
     return _err.isEmpty();
 }   // end write

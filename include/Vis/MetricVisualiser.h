@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 #define FACE_TOOLS_VIS_METRIC_VISUALISER_H
 
 #include <BaseVisualisation.h>
+#include <FaceViewSet.h>
 #include <vtkTextActor.h>
 
 namespace FaceTools { namespace Vis {
@@ -33,26 +34,28 @@ public:
 
     /*
     bool belongs( const vtkProp*, const FV*) const;
-    void pokeTransform( const FV*, const vtkMatrix4x4*) override;
-    void fixTransform( const FV*) override;
+    void syncActorsToData( const FV*, const cv::Matx44d&) override
     bool isAvailable( const FM*) const override;
+    bool isVisible( const FV*) const override;
     */
 
     void apply( FV*, const QPoint*) override;
-    void clear( FV*) override;
-    void purge( FV*) override;
+    bool purge( FV*, Action::Event) override;
 
-    // Remeasure and update text content across associated views.
-    void updateText( const FM*);
+    void setVisible( FV* fv, bool v) override { doSetVisible(fv,v);}
 
-    // Show metric text for all views of the given model, or hide all if null.
-    void showText( const FM* fm=nullptr);
+    virtual void setHighlighted( const FV*, bool) = 0;
 
-    virtual void setHighlighted( const FM* fm=nullptr) = 0;
+    const FVS& applied() const { return _fvs;}
+
+protected:
+    virtual void doApply( const FV*) = 0;
+    virtual void doPurge( const FV*) = 0;
+    virtual void doSetVisible( const FV*, bool) = 0;
 
 private:
     int _id;
-    std::unordered_map<const FV*, vtkTextActor*> _texts;
+    FVS _fvs;
 };  // end class
 
 }}   // end namespaces

@@ -20,51 +20,59 @@
 #include <FaceTools.h>
 #include <algorithm>
 #include <cassert>
-using FaceTools::Action::FaceAction;
-using FaceTools::Action::ActionEditPaths;
 using FaceTools::Action::ActionDeletePath;
-using FaceTools::Action::EventSet;
-using FaceTools::Interactor::PathSetInteractor;
+using FaceTools::Action::FaceAction;
+using FaceTools::Action::Event;
+using FaceTools::Interactor::PathsInteractor;
 using FaceTools::Vis::PathSetVisualisation;
 using FaceTools::FVS;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionDeletePath::ActionDeletePath( const QString& dn, const QIcon& ico, ActionEditPaths* e)
-    : FaceAction( dn, ico),
-      _vis( static_cast<PathSetVisualisation*>(e->visualisation())),
-      _interactor( e->interactor())
+ActionDeletePath::ActionDeletePath( const QString& dn, const QIcon& ico,
+                              PathSetVisualisation *vis,
+                              PathsInteractor::Ptr pint)
+    : FaceAction( dn, ico), _vis(vis), _pint(pint)
 {
+    connect( &*_pint, &PathsInteractor::onLeavePath, this, &ActionDeletePath::doOnLeavePath);
+    connect( &*_pint, &PathsInteractor::onEnterPath, this, &ActionDeletePath::doOnEnterPath);
 }   // end ctor
 
 
-bool ActionDeletePath::testEnabled( const QPoint*) const
+bool ActionDeletePath::checkEnable( Event)
 {
-    const FV* fv = _interactor->hoverModel();
-    return isReady(fv) && _interactor->hoverPathId() >= 0;
-}   // end testEnabled
+    const FV* fv = _pint->view();
+    return fv == MS::selectedView() && _pint->hoverPath();
+}   // end checkEnabled
 
 
-bool ActionDeletePath::doAction( FVS& fvs, const QPoint&)
+void ActionDeletePath::doAction( Event)
 {
-    FV* fv = fvs.first();
-    assert(fv);
-    assert( _interactor->hoverModel() == fv);
-    fvs.clear();
-
+    storeUndo(this, Event::PATHS_CHANGE);
+    FV* fv = MS::selectedView();
     FM* fm = fv->data();
-    const int pid = _interactor->hoverPathId();
-    if ( pid >= 0)
-    {
-        //fm->lockForWrite();
-        fm->paths()->removePath(pid);
-        fm->setSaved(false);
-        //fm->unlock();
-        fvs.insert( fm);
-        _interactor->doOnLeaveHandle( fv);
-        _vis->refresh(fm);
-    }   // end if
-
-    return !fvs.empty();
+    const int pid = _pint->hoverPath()->pathId();
+    assert(pid >= 0);
+    fm->lockForWrite();
+    fm->removePath(pid);
+    fm->unlock();
+    _pint->leavePath();
+    emit onEvent( Event::PATHS_CHANGE);
 }   // end doAction
+
+
+void ActionDeletePath::doOnLeavePath()
+{
+    setLocked(true);
+    refreshState();
+}   // end doOnLeavePath
+
+
+void ActionDeletePath::doOnEnterPath()
+{
+    setLocked(false);
+    refreshState();
+}   // end doOnEnterPath
+

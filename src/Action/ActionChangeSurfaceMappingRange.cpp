@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,42 +16,53 @@
  ************************************************************************/
 
 #include <ActionChangeSurfaceMappingRange.h>
-#include <SurfaceDataMapper.h>
+#include <SurfaceMetricsMapper.h>
 #include <FaceView.h>
 #include <cmath>
 #include <cassert>
 using FaceTools::Action::ActionChangeSurfaceMappingRange;
 using FaceTools::Action::FaceAction;
-using FaceTools::Vis::SurfaceDataMapper;
+using FaceTools::Action::Event;
+using FaceTools::Vis::SurfaceMetricsMapper;
 using FaceTools::Vis::FV;
 
 
-ActionChangeSurfaceMappingRange::ActionChangeSurfaceMappingRange( const QString& dname, QWidget* parent)
-    : FaceAction( dname), _widget(new QTools::RangeMinMax(parent))
+ActionChangeSurfaceMappingRange::ActionChangeSurfaceMappingRange( const QString& dname)
+    : FaceAction( dname), _widget(nullptr) { }
+
+
+void ActionChangeSurfaceMappingRange::postInit()
 {
+    QWidget* p = static_cast<QWidget*>(parent());
+    _widget = new QTools::RangeMinMax(p);
     _widget->setRange( 0, 1);
     _widget->setMin( 0);
     _widget->setMax( 1);
     _widget->setNumDecimals(2);
-}   // end ctor
+    _widget->setEnabled(false);
+    _widget->setMinimumWidth(140);
+}   // end postInit
 
 
-bool ActionChangeSurfaceMappingRange::testReady( const FV* fv) { return fv->activeSurface() != nullptr;}
-
-
-void ActionChangeSurfaceMappingRange::tellReady( const FV* fv, bool v)
+bool ActionChangeSurfaceMappingRange::checkEnable( Event)
 {
     _widget->disconnect(this);
-    if ( v)
-    {
-        SurfaceDataMapper* sdm = fv->activeSurface();
+    _widget->setEnabled(false);
 
-        const float rmin = sdm->minRange();
-        const float rmax = sdm->maxRange();
+    const FV* fv = ModelSelector::selectedView();
+    const bool isEnabled = fv && fv->activeSurface() != nullptr;
+
+    if ( isEnabled)
+    {
+        _widget->setEnabled(true);
+        SurfaceMetricsMapper* smm = fv->activeSurface();
+
+        const float rmin = smm->minRange();
+        const float rmax = smm->maxRange();
         _widget->setRange( rmin, rmax);
 
-        const float vmin = sdm->minVisible();
-        const float vmax = sdm->maxVisible();
+        const float vmin = smm->minVisible();
+        const float vmax = smm->maxVisible();
 
         assert( vmin <= vmax);
         _widget->setMin( vmin);
@@ -62,19 +73,20 @@ void ActionChangeSurfaceMappingRange::tellReady( const FV* fv, bool v)
 
         connect( _widget, &QTools::RangeMinMax::rangeChanged, this, &ActionChangeSurfaceMappingRange::doOnWidgetRangeChanged);
     }   // end if
-}   // end tellReady
+
+    return isEnabled;
+}   // end checkEnabled
 
 
 void ActionChangeSurfaceMappingRange::doOnWidgetRangeChanged( float minv, float maxv)
 {
     assert( isEnabled());
-    FV* fv = ready().first();
-    assert( fv);
-    SurfaceDataMapper *sdm = fv->activeSurface();
-    assert(sdm);
+    const FV* fv = ModelSelector::selectedView();
+    SurfaceMetricsMapper *smm = fv->activeSurface();
+    assert(smm);
     // Update fv's scalar colour mapper from the widget. Note that the scalar colour mapper
     // object is shared between all FaceViews that have this visualisation set, so this will
     // have the effect of updating the surfaces of all those FaceViews' actors.
-    sdm->setVisibleLimits( minv, maxv);
-    sdm->rebuild();
+    smm->setVisibleRange( minv, maxv);
+    smm->rebuild();
 }   // end doOnWidgetRangeChanged

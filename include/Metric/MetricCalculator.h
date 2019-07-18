@@ -1,3 +1,20 @@
+/************************************************************************
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ ************************************************************************/
+
 #ifndef FACE_TOOLS_METRIC_METRIC_CALCULATOR_H
 #define FACE_TOOLS_METRIC_METRIC_CALCULATOR_H
 
@@ -9,71 +26,80 @@
 #include <GrowthData.h>
 #include <MetricSet.h>
 #include <Landmark.h>
-#include <QtCharts/QChart>
 
 namespace FaceTools { namespace Metric {
 
-// Growth data by ethnicity, then by sex.
-using MetricGrowthData = std::unordered_map<QString, std::unordered_map<int8_t, GrowthData*> >;
+// Growth data by sex then ethnic group code.
+using GrowthDataSources = std::unordered_set<GrowthData::CPtr>;
 
 class FaceTools_EXPORT MetricCalculator : public QObject
 { Q_OBJECT
 public:
     using Ptr = std::shared_ptr<MetricCalculator>;
 
-    // Load from file. On error, return null.
+    // Load from file. Reads in all statistics and also makes new
+    // growth data pairs for single sex / same ethnicity datasets,
+    // and then same sex / two different ethnicity groups.
+    // On error, return null.
     static Ptr load( const QString& filepath);
 
-    void setType( MCT* mct) { _mct = mct;}
-    MCT* type() const { return _mct;}
-
-    int id() const { return _id;}
-    const QString& name() const { return _name;}
-    const QString& description() const { return _desc;}
-    size_t numDecimals() const { return _ndps;}
-    QString category() const { return _mct->category();}
-    size_t dims() const { return _dims;}
-    bool isBilateral() const { return !_lmks1.empty();}
-
-    Vis::MetricVisualiser *visualiser() const { return _mct->visualiser();}
+    inline int id() const { return _id;}
+    inline const QString& name() const { return _name;}
+    inline const QString& description() const { return _desc;}
+    inline size_t numDecimals() const { return _ndps;}
+    inline QString category() const { return _mct->category();}
+    inline size_t dims() const { return _dims;}
+    inline bool isBilateral() const { return !_lmks1.empty();}
+    inline Vis::MetricVisualiser *visualiser() const { return _mct->visualiser();}
 
     // Whether or not this metric should be visible (true by default).
-    void setVisible( bool v) { _visible = v && _mct->visualiser() != nullptr;}
-    bool isVisible() const { return _mct && _mct->visualiser() && _visible;}
+    inline void setVisible( bool v) { _visible = v && _mct->visualiser() != nullptr;}
+    inline bool isVisible() const { return _mct && _mct->visualiser() && _visible;}
 
-    // Returns the age mapping interval range and sets out parameters if not null with min and max age values.
-    double addSeriesToChart( QtCharts::QChart*, const GrowthData*, double *xmin=nullptr, double *xmax=nullptr) const;
+    // Sets compatible growth data against the given model's sex and ethnicity. If the given model's
+    // sex if male or female, then growth data having that sex AND non-specific sex (i.e. both female
+    // and male) are set. In the case of mixed ethnicity, growth data having the mixed ethnicity
+    // (if available) and the individual ethnicities are set. In the case that only one ethnicity
+    // is available from the subject's maternal and paternal ethnic codes, then just the corresponding
+    // growth data are set. All sources are set if parameter is null or there are no compatible data.
+    // If parameter is not null the current source is set to the best match given the model's combination
+    // of sex and ethnicity. Multiple sources may be found because of different originating research into
+    // the same sex/ethnicity combination and the first of these is used. Given the hierarchical nature
+    // of ethnicity, the most specific ethnic match is set that is also a match for the given sex. Since
+    // sex is the bigger factor, only compatible sex stats are checked (i.e. only the model's single sex,
+    // or mixed sex stats).
+    void setCompatibleSources( const FM *fm=nullptr);
 
-    void addGrowthData( GrowthData*);
+    // Returns the set of currently compatible sources. The set of compatible sources can be changed
+    // by calling setCompatibleSources above.
+    const GrowthDataSources& compatibleSources() const { return _compatible;}
 
-    bool hasGrowthData() const { return !_gdata.empty();}
+    // Returns all growth data for the given sex/ethnicity combination. If sex and ethnicity are
+    // left as their default values then all GrowthDataSources are returned. Note that if a single
+    // sex is given then only data for that single sex are returned - not data for both sexes.
+    // By default, only data for the exact ethnicity specified are returned (unless ethnicity = 0)
+    // If exactEth is false, the ethnicity will be matched against all sources having a parent ethnic
+    // group (or being for the same group).
+    GrowthDataSources matchingGrowthData( int8_t sex=UNKNOWN_SEX, int ethnicity=0, bool exactEth=true) const;
 
-    const GrowthData* growthData( const QString& ethnicity, int8_t sex) const;
+    // Return the growth data for the given sex, ethnicity and source.
+    // Source must be specified if there exists more than one viable set of
+    // growth curve data, otherwise the first one is returned.
+    GrowthData::CPtr growthData( int8_t sex, int ethnicity, const QString& src="") const;
 
-    // Returns the growth data that best match the model's sex and ethnicity or null if none available.
-    const GrowthData* growthData( const FM*) const;
+    // Set the current growth data for this metric.
+    void setCurrentGrowthData( GrowthData::CPtr gd) { _cgd = gd;}
 
-    // Set the source to use (only needed if multiple distribution sources defined for this metric).
-    bool setSource( const QString&);
-    const QString& source() const { return _csrc;}  // Returns currently set source for metric calculations.
+    // Returns the currently set growth data for this metric.
+    GrowthData::CPtr currentGrowthData() const { return _cgd;}
 
-    // Return all sources available for this metric.
-    const QStringSet& sources() const { return _sources;}
+    // Returns true iff the landmark data exist on the given model to allow measurement.
+    bool canMeasure( const FM* fm) const;
 
-    // Return all ethnicities defined for the current source.
-    const QStringSet& ethnicities() const;
-
-    bool canCalculate( const FM* fm) const;
-
-    // Carry out the calculation against current source, returning true on success.
-    bool calculate( FM*) const;
-
-    void signalUpdated() { emit updated( id());}  // Simply fire the updated signal passing this metric's id.
-    void setSelected() { emit selected( id());}    // Tell others that this metric is the currently active one.
-
-signals:
-    void updated( int);
-    void selected( int);
+    // Record the measurement for this metric and store in the given model's
+    // metric values. Returns true iff the measurement could be taken.
+    // Overwrites metric values so statistics will need updating.
+    bool measure( FM*) const;
 
 private:
     MCT* _mct;
@@ -83,16 +109,24 @@ private:
     QString _name, _desc;
     Landmark::LmkList _lmks0, _lmks1;
 
-    std::unordered_map<QString, MetricGrowthData> _gdata;   // Keyed by source
-    std::unordered_set<GrowthData*> _agd;                   // All added growth data
-    std::unordered_map<QString, QStringSet> _ethnicities;   // Keyed by source
-    QStringSet _sources;
-    QString _csrc;  // The current source to use (first added if not changed)
-    QString _deth;  // The default ethnicity (first added)
+    // GrowthData keyed by sex-->ethnicity.
+    std::unordered_map<int8_t, std::unordered_map<int, GrowthDataSources> > _gdata;
+    GrowthData::CPtr _cgd;  // Current (default) for this metric
+    GrowthDataSources _compatible;
 
-    MetricValue calcMetricValue( const FM* fm, const Landmark::LmkList&) const;
+    void _setType( MCT* mct) { _mct = mct;}
+    void _addGrowthData( GrowthData::Ptr);
+    void _combineGrowthDataSexes();
+    void _combineGrowthDataEthnicities();
+    MetricValue _measure( const FM* fm, const Landmark::LmkList&) const;
+    void _findMatchingGrowthData( int8_t, int, bool, GrowthDataSources&) const;
     MetricCalculator();
     ~MetricCalculator();
+    MetricCalculator( const MetricCalculator&) = delete;
+    void operator=( const MetricCalculator&) = delete;
+
+    GrowthDataSources _compatibleGrowthData( const FM*) const;
+    GrowthDataSources _mostCompatible( int8_t, int) const;
 };  // end class
 
 }}   // end namespaces

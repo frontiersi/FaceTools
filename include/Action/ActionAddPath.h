@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,23 +18,31 @@
 #ifndef FACE_TOOLS_ACTION_ADD_PATH_H
 #define FACE_TOOLS_ACTION_ADD_PATH_H
 
-#include "ActionEditPaths.h"
+#include "FaceAction.h"
+#include <PathsInteractor.h>
 
 namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionAddPath : public FaceAction
 { Q_OBJECT
 public:
-    ActionAddPath( const QString& dname, const QIcon& icon, ActionEditPaths*);
+    ActionAddPath( const QString&, const QIcon&,
+                   Vis::PathSetVisualisation*,
+                   Interactor::PathsInteractor::Ptr);
 
-protected slots:
-    bool testEnabled( const QPoint* mc=nullptr) const override;
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(PATHS_CHANGE);}
+    QString toolTip() const override { return "Drag a new custom measurement path over the selected model.";}
+
+protected:
+    bool checkEnable( Event) override;
+    void doAction( Event) override;
+
+private slots:
+    void doOnEnterPath();
+    void doOnLeavePath();
 
 private:
     Vis::PathSetVisualisation *_vis;
-    Interactor::PathSetInteractor *_interactor;
+    Interactor::PathsInteractor::Ptr _pint;
 };  // end class
 
 }}   // end namespace

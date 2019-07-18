@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,7 +60,6 @@ private:
     double _hangle, _vangle;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

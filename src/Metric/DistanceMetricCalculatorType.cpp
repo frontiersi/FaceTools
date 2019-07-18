@@ -39,17 +39,17 @@ MCT* DistanceMetricCalculatorType::make( int id, const LmkList* l0, const LmkLis
 bool DistanceMetricCalculatorType::canCalculate( const FM* fm, const LmkList* ll) const
 {
     using SLmk = FaceTools::Landmark::SpecificLandmark;
-    LandmarkSet::Ptr lmks = fm->landmarks();
+    const LandmarkSet& lmks = fm->landmarks();
     if ( ll->size() != 2)
         return false;
-    return std::all_of( std::begin(*ll), std::end(*ll), [lmks]( const SLmk& p){ return lmks->has(p);});
+    return std::all_of( std::begin(*ll), std::end(*ll), [&lmks]( const SLmk& p){ return lmks.has(p);});
 }   // end canCalculate
 
 
 void DistanceMetricCalculatorType::measure( std::vector<double>& dvals, const FM* fm, const LmkList* ll) const
 {
     assert( canCalculate(fm, ll));
-    LandmarkSet::Ptr lmks = fm->landmarks();
+    const LandmarkSet& lmks = fm->landmarks();
     dvals.resize(1);
-    dvals[0] = cv::norm( *lmks->pos(ll->front()) - *lmks->pos(ll->back()));
+    dvals[0] = cv::norm( lmks.pos(ll->front()) - lmks.pos(ll->back()));
 }   // end measure

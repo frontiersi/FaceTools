@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,19 +27,23 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionLoadFaceModels : public FaceAction
 { Q_OBJECT
 public:
-    ActionLoadFaceModels( const QString& dname, const QIcon& icon, QWidget* parent=nullptr);
+    ActionLoadFaceModels( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence::Open);
+    ~ActionLoadFaceModels() override;
 
-    // Load a single model returning the associated FaceView on success or null on failure.
-    Vis::FV* loadModel( const QString& filepath);
+    QString toolTip() const override { return "Load a model from file.";}
 
-protected slots:
-    bool testEnabled( const QPoint*) const override;
-    bool doBeforeAction( FVS&, const QPoint&) override;
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet&, const FVS&, bool) override;
+    // Load a single model returning true on success.
+    bool loadModel( const QString& filepath);
+
+protected:
+    void postInit() override;
+    bool checkEnable( Event) override;
+    bool doBeforeAction( Event) override;
+    void doAction( Event) override;
+    void doAfterAction( Event) override;
 
 private:
-    FileIO::LoadFaceModelsHelper _loadHelper;
+    FileIO::LoadFaceModelsHelper *_loadHelper;
     QFileDialog *_dialog;
 };  // end class
 

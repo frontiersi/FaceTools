@@ -35,8 +35,8 @@ public:
     void set( FM*);
     const FM* get() const { return _model;}
 
-    int minThumbDims() const;
-    void setThumbnail( const cv::Mat_<cv::Vec3b>&);
+    QSize thumbDims() const;
+    void setThumbnail( const cv::Mat_<cv::Vec3b>);
 
 signals:
     void onUpdated( FM*);   // On updated data on FaceModel
@@ -44,15 +44,24 @@ signals:
 public slots:
     void accept() override;
     void reject() override;
-    void doOnApply();
+    void refresh();
+
+private slots:
+    void _doOnApply();
+    void _doOnChangedMaternalEthnicity();
+    void _doOnChangedPaternalEthnicity();
+    void _doOnDOBChanged();
+    void _doOnCaptureDateChanged();
+    void _doOnSexChanged();
+    void _doOnSourceChanged();
+    void _doOnStudyIdChanged();
+    void _doOnNotesChanged();
 
 private:
     Ui::ScanInfoDialog *_ui;
     FM *_model;
-    QStringSet _ethnicities;
-
-    void reset();
-    QString addEthnicityToComboBox( QString);
+    const QString _dialogRootTitle;
+    bool _isDifferentToModel();
 };  // end class
 
 }}   // end namespace

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,73 +16,75 @@
  ************************************************************************/
 
 #include <ActionTransformToStandardPosition.h>
-#include <Transformer.h>  // RFeatures
+#include <ActionOrientCameraToFace.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <FaceView.h>
-#include <VtkTools.h>
 using FaceTools::Action::ActionTransformToStandardPosition;
-using FaceTools::Action::ActionOrientCameraToFace;
 using FaceTools::Action::FaceAction;
+using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
-using FaceTools::FVS;
 using FaceTools::FMS;
 using FaceTools::FM;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionTransformToStandardPosition::ActionTransformToStandardPosition( const QString &dn, const QIcon& ico, ActionOrientCameraToFace* camSetter)
-    : FaceAction( dn, ico), _camSetter(camSetter)
+ActionTransformToStandardPosition::ActionTransformToStandardPosition( const QString &dn, const QIcon& ico, const QKeySequence& ks)
+    : FaceAction( dn, ico, ks)
 {
 }   // end ctor
 
 
-bool ActionTransformToStandardPosition::testReady( const FV* fv)
+QString ActionTransformToStandardPosition::toolTip() const
 {
+    return "Transform and orient the selected model according to its landmarks (if present) or to its last saved position.";
+}   // end toolTip
+
+
+QString ActionTransformToStandardPosition::whatsThis() const
+{
+    QStringList htext;
+    htext << "Reposition the selected model back to its last saved position and orientation,";
+    htext << "or if the model has facial landmarks, use these to orient the face in an upright";
+    htext << "position with the mean of the landmarks coincident with the world coordinates origin.";
+    return htext.join(" ");
+}   // end whatsThis
+
+
+bool ActionTransformToStandardPosition::checkEnable( Event)
+{
+    const FM* fm = MS::selectedModel();
+    if (!fm)
+        return false;
     using namespace RFeatures;
-    const FM* fm = fv->data();
     fm->lockForRead();
-    cv::Vec3f centre = fm->centre();
+    cv::Vec3f centre = fm->icentre();
     Orientation on = fm->orientation();
     fm->unlock();
-    static const double MINF = 0.00000001;
+    static const double MINF = 1e-6;
     return (l2sq( centre) > MINF) || (l2sq( on.nvec() - cv::Vec3f(0,0,1)) > MINF) || (l2sq( on.uvec() - cv::Vec3f(0,1,0)) > MINF);
-}   // end testReady
+}   // end checkEnabled
 
 
-bool ActionTransformToStandardPosition::doAction( FVS& fvs, const QPoint&)
+void ActionTransformToStandardPosition::doAction( Event)
 {
-    assert(fvs.size() == 1);
-    FM* fm = fvs.first()->data();
-
+    storeUndo(this, {Event::AFFINE_CHANGE, Event::CAMERA_CHANGE});
+    const FV* fv = MS::selectedView();
+    FM* fm = fv->data();
     fm->lockForWrite();
-    cv::Vec3f c = fm->centre();
-    RFeatures::Orientation on = fm->orientation();
-    cv::Matx44d m = RFeatures::toStandardPosition( on.nvec(), on.uvec(), c);
-
-    /*
-    std::cerr << "PRE-TRANSFORM:" << std::endl;
-    std::cerr << "  Centre : " << c << std::endl;
-    std::cerr << "  Orientation (norm,up)  : " << on << std::endl;
-    */
-
-    fm->transform(m);
-
-    /*
-    std::cerr << "POST-TRANSFORM:" << std::endl;
-    std::cerr << "  Centre : " << c << std::endl;
-    std::cerr << "  Orientation (norm,up)  : " << on << std::endl;
-    */
-
+    fm->addTransformMatrix( fm->orientation().asMatrix( fm->icentre()).inv());
     fm->unlock();
-
-    fvs.clear();
-    fvs.insert(fm);
-
-    if ( _camSetter)
-    {
-        for ( FV* fv : fm->fvs())
-            _camSetter->process(fv);
-    }   // end if
-
-    return true;
+    ActionOrientCameraToFace::orientToFace( fv, double(DEFAULT_CAMERA_DISTANCE));
 }   // end doAction
+
+
+void ActionTransformToStandardPosition::doAfterAction( Event)
+{
+    MS::setInteractionMode( IMode::CAMERA_INTERACTION);
+    emit onEvent( {Event::AFFINE_CHANGE, Event::CAMERA_CHANGE});
+    QString msg = "Model orientation and position restored.";
+    if ( !MS::selectedModel()->landmarks().empty())
+        msg = "Transformed to detected face orientation.";
+    MS::showStatus( msg, 5000);
+}   // end doAfterAction
+

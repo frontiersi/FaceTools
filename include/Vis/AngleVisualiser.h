@@ -30,24 +30,24 @@ public:
     AngleVisualiser( int id, const Landmark::LmkList* l0=nullptr, const Landmark::LmkList* l1=nullptr);
 
     bool belongs( const vtkProp*, const FV*) const override;
-    void pokeTransform( const FV*, const vtkMatrix4x4*) override;
-    void fixTransform( const FV*) override;
+    void syncActorsToData( const FV*, const cv::Matx44d&) override;
     bool isAvailable( const FM*) const override;
+    bool isVisible( const FV*) const override;
 
-    void apply( FV*, const QPoint* mc=nullptr) override;
-    void clear( FV*) override;
-    void purge( FV* fv) override { MetricVisualiser::purge(fv);}
-    void purge( const FM*) override;
+    void setHighlighted( const FV*, bool) override;
 
-    void setHighlighted( const FM* fm=nullptr) override;
+protected:
+    void doApply( const FV*) override;
+    void doPurge( const FV*) override;
+    void doSetVisible( const FV*, bool) override;
 
 private:
     const Landmark::LmkList* _lmks0;
     const Landmark::LmkList* _lmks1;
     std::unordered_map<const FV*, vtkAngleRepresentation3D*> _angle0, _angle1;
 
-    void apply( FV*, const Landmark::LmkList*, std::unordered_map<const FV*, vtkAngleRepresentation3D*>&);
-    void clear( FV*, std::unordered_map<const FV*, vtkAngleRepresentation3D*>&);
+    void applyActor( const FV*, const Landmark::LmkList*, std::unordered_map<const FV*, vtkAngleRepresentation3D*>&);
+    void purgeActor( const FV*, std::unordered_map<const FV*, vtkAngleRepresentation3D*>&);
 };  // end class
 
 }}   // end namespaces

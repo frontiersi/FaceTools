@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,21 +22,21 @@
 using FaceTools::Action::ActionMarquee;
 using FaceTools::Action::CameraWorker;
 using FaceTools::Action::FaceAction;
+using FaceTools::Action::Event;
 using FaceTools::FaceModelViewer;
-using FaceTools::Interactor::ModelMoveInteractor;
 using FaceTools::FVS;
 using CW = FaceTools::Action::CameraWorker;
+using MS = FaceTools::Action::ModelSelector;
 
 
-// public
-ActionMarquee::ActionMarquee( const QString& dn, const QIcon& ico, ModelMoveInteractor* mmi)
+ActionMarquee::ActionMarquee( const QString& dn, const QIcon& ico)
     : FaceAction( dn, ico)
 {
     setCheckable(true, false);
-    std::function<void()> pred = [this](){ if ( isChecked()) process(false);};
-    connect( mmi, &ModelMoveInteractor::onCameraMove, pred);
-    connect( mmi, &ModelMoveInteractor::onActorMove, pred);
-    setRespondToEvent( CAMERA_CHANGE, false);
+    addTriggerEvent( Event::CAMERA_CHANGE);
+    addTriggerEvent( Event::ACTOR_MOVE);
+    for ( FMV* fmv : ModelSelector::viewers())
+        _workers.insert( new CameraWorker( fmv));
 }   // end ctor
 
 
@@ -46,17 +46,19 @@ ActionMarquee::~ActionMarquee()
 }   // end dtor
 
 
-void ActionMarquee::addViewer( FaceModelViewer* v)
+bool ActionMarquee::checkState( Event e)
 {
-    _workers.insert( new CameraWorker( v));
-}   // end addViewer
+    return isTriggerEvent(e) ? false : isChecked();
+}   // end checkChecked
 
 
-bool ActionMarquee::doAction( FVS&, const QPoint&)
+void ActionMarquee::doAction( Event)
 {
     if ( isChecked())
+    {
         std::for_each( std::begin(_workers), std::end(_workers), [](CW* cw){cw->start();});
+        emit onEvent( Event::CAMERA_CHANGE);
+    }   // end if
     else
         std::for_each( std::begin(_workers), std::end(_workers), [](CW* cw){cw->stop();});
-    return true;
 }   // end doAction

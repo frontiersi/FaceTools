@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,21 +20,22 @@
 
 #include "FaceAction.h"
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionAlignICP : public FaceAction
 { Q_OBJECT
 public:
-    ActionAlignICP( const QString& dname="ICP", const QIcon& icon=QIcon(), QProgressBar* pb=nullptr);   // Async if pb not NULL
+    ActionAlignICP( const QString&, const QIcon&);
 
-protected slots:
-    bool testEnabled( const QPoint* mc=nullptr) const override;
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(AFFINE_CHANGE);}
+    QString toolTip() const override { return "Use the Iterative Closest Point (ICP) algorithm to attempt to align the other models in the same viewer as the selected model with it.";}
+
+protected:
+    bool checkEnable( Event) override;
+    bool doBeforeAction( Event) override;
+    void doAction( Event) override;
+    void doAfterAction( Event) override;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

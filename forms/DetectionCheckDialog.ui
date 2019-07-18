@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>409</width>
-    <height>322</height>
+    <width>388</width>
+    <height>392</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,10 +17,13 @@
    <bool>true</bool>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="sizeConstraint">
+    <enum>QLayout::SetMinimumSize</enum>
+   </property>
    <item>
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>All checked landmarks below will be overwritten. Really reset?</string>
+      <string>Checked landmarks below will be overwritten. Really reset?</string>
      </property>
      <property name="wordWrap">
       <bool>false</bool>
@@ -28,10 +31,29 @@
     </widget>
    </item>
    <item>
-    <widget class="QTableWidget" name="table"/>
+    <widget class="QTableWidget" name="table">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>1</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>370</width>
+       <height>320</height>
+      </size>
+     </property>
+    </widget>
    </item>
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>

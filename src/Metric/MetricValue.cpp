@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,103 +17,87 @@
 
 #include <MetricValue.h>
 #include <MetricCalculatorManager.h>
+#include <Ethnicities.h>
 #include <Round.h>  // rlib
 #include <cassert>
 using FaceTools::Metric::MetricValue;
-using FaceTools::Metric::DimensionStat;
 using MCM = FaceTools::Metric::MetricCalculatorManager;
 
 
-namespace {
-void checkId( int id)
+MetricValue::MetricValue( int id) : _id(id) {}
+
+
+double MetricValue::zscore( double age, size_t i) const
 {
-    FaceTools::Metric::MC::Ptr metric = MCM::metric(id);
-    if ( !metric)
+    double zs = 0;
+    GrowthData::CPtr gd = MCM::metric(_id)->currentGrowthData();
+    if ( gd)
     {
-        std::cerr << "[ERROR] FaceTools::Metric::MetricValue::ctor: Invalid metric values set!" << std::endl;
-        assert(metric);
+        rlib::RSD::CPtr rsd = gd->rsd(i);
+        assert(rsd);
+        const double t = std::max<double>( rsd->tmin(), std::min<double>( age, int(rsd->tmax() + 0.5)));
+        zs = rsd->zscore( t, _values.at(i));
     }   // end if
-}   // end checkId
-}   // end namespace
+    return zs;
+}   // end zscore
 
 
-MetricValue::MetricValue( int id)
-    : _id(id), _sex(0), _eth(""), _src("")
+double MetricValue::mean( double age, size_t i) const
 {
-    checkId(id);
-}   // end ctor
-
-
-MetricValue::MetricValue( int id, const std::vector<DimensionStat>& ds)
-    : _id(id), _sex(0), _eth(""), _src(""), _dstats(ds)
-{
-    checkId(id);
-    MC::Ptr mc = MCM::metric( id);
-    const size_t rdims = mc->dims();    // Required number of dimensions
-    if ( ndims() > rdims)
+    double mn = 0;
+    GrowthData::CPtr gd = MCM::metric(_id)->currentGrowthData();
+    if ( gd)
     {
-        _dstats.resize(rdims);  // Truncate!
-        std::cerr << "[ERROR] FaceTools::Metric::MetricValue::ctor: Too many statistics added for the allowed number of dimensions!" << std::endl;
-        assert(false);
+        rlib::RSD::CPtr rsd = gd->rsd(i);
+        assert(rsd);
+        const double t = std::max<double>( rsd->tmin(), std::min<double>( age, int(rsd->tmax() + 0.5)));
+        mn = rsd->mval( t);
     }   // end if
-}   // end ctor
+    return mn;
+}   // end mean
 
 
-MetricValue::MetricValue( const MetricValue& mv)
+void MetricValue::write( PTree& pnode, double age) const
 {
-    *this = mv;
-}   // end ctor
-
-
-MetricValue& MetricValue::operator=( const MetricValue& mv)
-{
-    _id = mv._id;
-    _sex = mv._sex;
-    _eth = mv._eth;
-    _src = mv._src;
-    _dstats = mv._dstats;
-    return *this;
-}   // end operator=
-
-
-bool MetricValue::addStat( const DimensionStat& ds)
-{
-    MC::Ptr mc = MCM::metric( id());
-    const size_t rdims = mc->dims();    // Required number of dimensions
-    if ( ndims() >= rdims)
-        return false;
-    _dstats.push_back(ds);
-    return true;
-}   // end addStat
-
-
-PTree& FaceTools::Metric::operator<<( PTree& pnode, const MetricValue& m)
-{
-    MC::Ptr mc = MCM::metric( m.id());
+    MC::Ptr mc = MCM::metric( _id);
+    assert(mc);
 
     PTree& mnode = pnode.add("MetricValue","");
 
-    mnode.put( "<xmlattr>.id", mc->id());
-    mnode.put( "<xmlattr>.name", mc->name().toStdString());
+    mnode.put( "id", mc->id());
+    mnode.put( "name", mc->name().toStdString());
     mnode.put( "category", mc->category().toStdString());
     const int ndps = static_cast<int>(mc->numDecimals());
     const size_t dims = mc->dims();
     mnode.put( "ndims", dims);
-    mnode.put( "sex", FaceTools::toLongSexString(m.sex()).toStdString());
-    mnode.put( "ethnicity", m.ethnicity());
-    mnode.put( "source", m.source());
+
+    GrowthData::CPtr gd = mc->currentGrowthData();
 
     // Output the statistics for the metric
-    PTree& dnode = mnode.put( "stats", "");
+    PTree& snode = mnode.put( "stats", "");
+
+    if ( gd)
+    {
+        snode.put( "sex", FaceTools::toLongSexString( gd->sex()).toStdString());
+        snode.put( "ethnicity", Ethnicities::name( gd->ethnicity()).toStdString());
+        snode.put( "source", gd->source().toStdString());
+    }   // end if
+
     for ( size_t i = 0; i < dims; ++i)
     {
-        PTree& node = dnode.add( "dimension", "");
+        PTree& node = snode.add( "dimension", "");
         node.put( "axis", i);
-        node.put( "value",  rlib::dps( m.value(i),  ndps));
-        node.put( "zscore", rlib::dps( m.zscore(i), ndps));
-        node.put( "mean",   rlib::dps( m.mean(i),   ndps));
-        node.put( "stdv",   rlib::dps( m.stdv(i),   ndps));
-    }   // end for
 
-    return pnode;
+        rlib::RSD::CPtr rsd;
+        if ( gd)
+        {
+            rsd = gd->rsd(i);
+            node.put( "mean", rlib::dps( rsd->mval(age), ndps));
+            node.put( "stdv", rlib::dps( rsd->zval(age), ndps));
+        }   // end if
+
+        node.put( "value", rlib::dps( value(i), ndps));
+        if ( rsd)
+            node.put( "zscore", rlib::dps( zscore( age, i), ndps));
+    }   // end for
 }   // end write

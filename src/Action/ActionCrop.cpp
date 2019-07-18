@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,49 +25,58 @@
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionCrop;
 using FaceTools::Action::ActionRadialSelect;
-using FaceTools::Action::EventSet;
+using FaceTools::Action::Event;
 using FaceTools::FVS;
 using FaceTools::Vis::FV;
-using FaceTools::FaceModel;
+using FaceTools::FM;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionCrop::ActionCrop( const QString& dn, const QIcon& ico, ActionRadialSelect *rs, QProgressBar* pb)
+ActionCrop::ActionCrop( const QString& dn, const QIcon& ico, ActionRadialSelect *rs)
     : FaceAction(dn, ico), _rsel(rs)
 {
-    if ( pb)
-        setAsync(true, QTools::QProgressUpdater::create(pb));
+    setAsync(true);
 }   // end ctor
 
 
-bool ActionCrop::testEnabled( const QPoint*) const
+bool ActionCrop::checkEnable( Event)
 {
-    //std::cerr << "ActionCrop::testEnabled " << std::boolalpha << (ready1() != nullptr) << " " << _rsel->isChecked() << std::endl;
-    return (ready1() != nullptr) && _rsel->isChecked();
+    assert(_rsel);
+    return MS::selectedView() && _rsel->isChecked();
 }   // end testEnabled
 
 
-bool ActionCrop::doAction( FVS& rset, const QPoint&)
+bool ActionCrop::doBeforeAction( Event)
 {
-    assert(_rsel);
-    assert(rset.size() == 1);
-    FV* fv = rset.first();
-    FaceModel* fm = fv->data();
+    MS::showStatus("Cropping model to selected region...");
+    return true;
+}   // end doBeforeAction
 
+
+void ActionCrop::doAction( Event)
+{
+    storeUndo( this, {Event::GEOMETRY_CHANGE, Event::LANDMARKS_CHANGE, Event::CONNECTIVITY_CHANGE});
     IntSet cfids;
-    _rsel->selectedFaces( fm, cfids);
+    _rsel->selectedFaces( cfids);
 
     // Copy the subset of faces into a new model
     if ( !cfids.empty())
     {
         using namespace RFeatures;
+        FM* fm = MS::selectedModel();
         fm->lockForWrite();
-        ObjModelCopier copier( fm->info()->cmodel());
-        std::for_each( std::begin(cfids), std::end(cfids), [&](int fid){ copier.addTriangle(fid);});
-        ObjModel::Ptr nmodel = copier.getCopiedModel();
-        ObjModelInfo::Ptr nfo = ObjModelInfo::create(nmodel);
-        fm->update( nfo);
+        ObjModelCopier copier( fm->model());
+        std::for_each( std::begin(cfids), std::end(cfids), [&](int fid){ copier.add(fid);});
+        ObjModel::Ptr nmod = copier.copiedModel();
+        fm->update( nmod);
+        fm->moveLandmarksToSurface();
         fm->unlock();
     }   // end if
-
-    return true;
 }   // end doAction
+
+
+void ActionCrop::doAfterAction( Event)
+{
+    MS::showStatus("Finished crop.", 5000);
+    emit onEvent( {Event::GEOMETRY_CHANGE, Event::LANDMARKS_CHANGE, Event::CONNECTIVITY_CHANGE});
+}   // end doAfterAction

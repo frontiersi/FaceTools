@@ -30,7 +30,7 @@ namespace FaceTools {
 
 using FVFlags = std::unordered_map<const Vis::FV*, bool>;
 
-static const float DEFAULT_CAMERA_DISTANCE = 650.0f;
+static const double DEFAULT_CAMERA_DISTANCE = 650.0;
 
 class FaceTools_EXPORT FaceModelViewer : public ModelViewer
 { Q_OBJECT
@@ -41,7 +41,7 @@ public:
     bool detach( Vis::FV*);
 
     const FVS& attached() const { return _attached;}
-    bool isAttached( const Vis::FV* fv) const { return _attached.has(const_cast<Vis::FV*>(fv));}
+    //bool isAttached( const Vis::FV* fv) const { return _attached.has(const_cast<Vis::FV*>(fv));}
     bool isAttached( const FM* fm) const { return _models.count(fm) > 0;}
     Vis::FV* get( const FM* fm) const; // Pointer to view/control of given model or null if model not attached.
 

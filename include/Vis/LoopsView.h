@@ -21,13 +21,12 @@
 #include <FaceTypes.h>
 #include <ModelViewer.h>
 
-namespace FaceTools {
-namespace Vis {
+namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT LoopsView
 {
 public:
-    LoopsView( float lineWidth=1.0f, float red=1.0f, float green=1.0f, float blue=1.0f);
+    LoopsView( float lineWidth=1.0f, double red=1.0, double green=1.0, double blue=1.0);
     LoopsView( const LoopsView&);
     LoopsView& operator=( const LoopsView&);
     virtual ~LoopsView();
@@ -40,30 +39,30 @@ public:
     // Add as a bunch of vertices.
     void addPoints( const std::vector<cv::Vec3f>&);
 
-    // Set/get line width and colour.
+    // Set/get line width to be applied to newly added loops/points.
     void setLineWidth( float lw);
     float lineWidth() const { return _lineWidth;}
 
-    void setColour( float red, float green, float blue);
-    void setColour( const cv::Vec3f& c);
-    const cv::Vec3f& colour() const { return _colour;}
+    // Set/get colour to be applied to newly added loops/points.
+    void setColour( double red, double green, double blue);
+
+    // Change the colour of existing actors.
+    void changeColour( double red, double green, double blue);
 
     void setVisible( bool, ModelViewer*);
     bool visible() const { return _visible;}
 
     void pokeTransform( const vtkMatrix4x4*);
-    void fixTransform();
 
 private:
     bool _visible;
     float _lineWidth;
-    cv::Vec3f _colour;
+    cv::Vec3d _colour;
     std::vector<vtkActor*> _actors;
     std::vector< std::list<cv::Vec3f> > _lines;
     std::vector< std::vector<cv::Vec3f> > _points;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,73 +16,62 @@
  ************************************************************************/
 
 #include <ActionEditLandmarks.h>
+#include <ModelSelector.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <VtkTools.h>
-#include <algorithm>
 using FaceTools::Action::ActionEditLandmarks;
-using FaceTools::Action::EventSet;
+using FaceTools::Action::Event;
 using FaceTools::Action::ActionVisualise;
 using FaceTools::Interactor::LandmarksInteractor;
-using FaceTools::Interactor::ModelViewerInteractor;
-using FaceTools::Interactor::MEEI;
 using FaceTools::Vis::LandmarksVisualisation;
 using FaceTools::FVS;
 using FaceTools::FM;
 using FaceTools::Vis::FV;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionEditLandmarks::ActionEditLandmarks( const QString& dn, const QIcon& ico, MEEI* meei, bool visOnLoad)
-    : ActionVisualise( _vis = new LandmarksVisualisation( dn, ico), visOnLoad),
-     _interactor( new LandmarksInteractor( meei, _vis))
+ActionEditLandmarks::ActionEditLandmarks( const QString& dn, const QIcon& ico, const QKeySequence& ks)
+    : ActionVisualise( dn, ico, _vis = new LandmarksVisualisation, ks)
 {
-    // Leverage this action's reportFinished signal to propagate landmark edits.
-    connect( _interactor, &ModelViewerInteractor::onChangedData, this, &ActionEditLandmarks::doOnEditedLandmark);
-    setRespondToEventIfAllReady( LANDMARKS_ADD);
+    LandmarksInteractor *lint = new LandmarksInteractor( *_vis);
+    connect( lint, &LandmarksInteractor::onUpdated, [this](){ emit onEvent( Event::LANDMARKS_CHANGE);});
+    _interactor = std::shared_ptr<LandmarksInteractor>( lint);
+    addTriggerEvent( Event::LOADED_MODEL);
+    addTriggerEvent( Event::FACE_DETECTED);
+    addTriggerEvent( Event::LANDMARKS_CHANGE);
 }   // end ctor
 
 
 ActionEditLandmarks::~ActionEditLandmarks()
 {
-    delete _interactor;
     delete _vis;
 }   // end dtor
 
 
-bool ActionEditLandmarks::doAction( FVS& fvs, const QPoint& mc)
+bool ActionEditLandmarks::checkState( Event e)
 {
-    const bool aokay = ActionVisualise::doAction( fvs, mc);
-    if ( isChecked())   // Is visualised, ensure all landmarks are refreshed and visible
+    const bool chk = ActionVisualise::checkState( e);
+    _interactor->setEnabled(chk);
+    _vis->setHighlighted( MS::selectedModel());
+    return chk;
+}   // end checkState
+
+
+bool ActionEditLandmarks::doBeforeAction( Event)
+{
+    _vis->updateLandmarks( MS::selectedModel());
+    return true;
+}   // end doBeforeAction
+
+
+void ActionEditLandmarks::doAfterAction( Event)
+{
+    if ( isChecked())
     {
-        for ( FM* fm : fvs.models())
-        {
-            _vis->refreshLandmarks(fm);
-            for ( FV* fv : fm->fvs())
-                _vis->apply( fv);
-        }   // end for
+        MS::setInteractionMode( IMode::CAMERA_INTERACTION);
+        MS::showStatus( "Move landmarks by left-clicking and dragging.");
     }   // end if
-    return aokay;
-}   // end doAction
-
-
-void ActionEditLandmarks::doAfterAction( EventSet& cs, const FVS&, bool)
-{
-    cs.insert( VIEW_CHANGE);
-    _interactor->setEnabled(isChecked());
+    else
+        MS::clearStatus();
 }   // end doAfterAction
-
-
-void ActionEditLandmarks::tellReady( const FV* fv, bool)
-{
-    _vis->refreshLandmarks(fv->data());
-}   // end tellReady
-
-
-void ActionEditLandmarks::doOnEditedLandmark( const FV* fv)
-{
-    EventSet cset;
-    cset.insert(LANDMARKS_CHANGE);
-    FVS fvs;
-    fvs.insert(const_cast<FV*>(fv));
-    emit reportFinished( cset, fvs, true);
-}   // end doOnEditedLandmark

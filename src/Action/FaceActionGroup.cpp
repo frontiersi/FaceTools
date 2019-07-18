@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ using FaceTools::Action::FaceAction;
 
 
 // public
-FaceActionGroup::FaceActionGroup() : _waction(NULL)
+FaceActionGroup::FaceActionGroup() : _waction(nullptr)
 {
 }   // end ctor
 
@@ -30,7 +30,7 @@ FaceActionGroup::FaceActionGroup() : _waction(NULL)
 // protected
 bool FaceActionGroup::addAction( FaceAction* faction)
 {
-    const std::string nm = faction->getDisplayName().toStdString();
+    const std::string nm = faction->displayName().toStdString();
     if ( _actions.count(nm) > 0)
         return false;
 
@@ -52,7 +52,7 @@ void addToWidget( const QList<FaceAction*>& actions, QWidget* widget)
 // public virtual
 QMenu* FaceActionGroup::createMenu() const
 {
-    QMenu* menu = new QMenu( getDisplayName(), NULL);
+    QMenu* menu = new QMenu( displayName(), nullptr);
     addToWidget( _alist, menu);
     return menu;
 }   // end createMenu
@@ -61,7 +61,7 @@ QMenu* FaceActionGroup::createMenu() const
 // public virtual
 QToolBar* FaceActionGroup::createToolBar() const
 {
-    QToolBar* toolbar = new QToolBar( getDisplayName(), NULL);
+    QToolBar* toolbar = new QToolBar( displayName(), nullptr);
     addToWidget( _alist, toolbar);
     return toolbar;
 }   // end createToolBar
@@ -70,15 +70,15 @@ QToolBar* FaceActionGroup::createToolBar() const
 // public
 QAction* FaceActionGroup::qaction()
 {
-    QWidget* w = getWidget();
+    QWidget* w = widget();
     if ( w && !_waction)
     {   // Widget has been overridden in a derived type, so create a default action to show it.
-        _waction = new QAction(NULL);
-        const QIcon* icon = getIcon();
-        if ( icon)
-            _waction->setIcon( *icon);
-        _waction->setText( getDisplayName()); // getDisplayName is class name by default!
-        const QKeySequence* keys = getShortcut();
+        _waction = new QAction(nullptr);
+        const QIcon* ic = icon();
+        if ( ic)
+            _waction->setIcon( *ic);
+        _waction->setText( displayName()); // getDisplayName is class name by default!
+        const QKeySequence* keys = shortcut();
         if ( keys)
             _waction->setShortcut(*keys);
         connect( _waction, &QAction::triggered, w, &QWidget::show);
@@ -107,20 +107,20 @@ void FaceActionGroup::addTo( QToolBar* toolbar) const
 
 
 // public virtual
-QStringList FaceActionGroup::getInterfaceIds() const
+QStringList FaceActionGroup::interfaceIds() const
 {
     QStringList qlist;
     for ( const FaceAction* fa : _alist)
-        qlist << fa->getDisplayName();
+        qlist << fa->displayName();
     return qlist;
-}   // end getInterfaceIds
+}   // end interfaceIds
 
 
 // public virtual
-FaceAction* FaceActionGroup::getInterface( const QString& iname) const
+FaceAction* FaceActionGroup::iface( const QString& iname) const
 {
     const std::string nm = iname.toStdString();
     if ( _actions.count(nm) == 0)
-        return NULL;
+        return nullptr;
     return _actions.at(nm);
-}   // end getInterface
+}   // end iface

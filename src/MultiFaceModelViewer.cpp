@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,9 +16,14 @@
  ************************************************************************/
 
 #include <MultiFaceModelViewer.h>
+#include <FaceModelManager.h>
+#include <ModelSelector.h>
+#include <QHBoxLayout>
 #include <QVBoxLayout>
 using FaceTools::MultiFaceModelViewer;
 using FaceTools::FaceModelViewer;
+using FaceTools::Vis::FV;
+using FaceTools::FM;
 
 namespace {
 QToolButton* makeButton()
@@ -43,29 +48,18 @@ QToolButton* makeButton()
 }   // end namespace
 
 
-// private
-void MultiFaceModelViewer::addCommonButtons( QLayout* l)
-{
-    QToolButton* ss = makeButton();
-    l->addWidget(ss);
-    _action0Buttons.push_back(ss);
-    QToolButton* cb = makeButton();
-    l->addWidget(cb);
-    _action1Buttons.push_back( cb);
-}   // end addCommonButtons
-
-
 // public
 MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent) : QWidget(parent)
 {
-    _v0 = new FMV( this); // Left
-    _v1 = new FMV( this); // Middle
-    _v2 = new FMV( this); // Right
-
-    connect( _v0, &FMV::onAttached, [this](){ setViewerVisible( 0, true);});
-    connect( _v0, &FMV::onDetached, [this](){ setViewerVisible( 0, !_v0->attached().empty());});
-    connect( _v2, &FMV::onAttached, [this](){ setViewerVisible( 2, true);});
-    connect( _v2, &FMV::onDetached, [this](){ setViewerVisible( 2, !_v2->attached().empty());});
+    for ( size_t i = 0; i < 3; ++i) // Left (0), middle (1), and right (2) viewers
+    {
+        _fmvs.push_back( new FMV(this));
+        connect( _fmvs[i], &FMV::onAttached, [=]( FV* fv){ doOnViewerChanged( i, fv);});
+        connect( _fmvs[i], &FMV::onDetached, [=]( FV* fv){ doOnViewerChanged( i, fv);});
+        _modelLists.push_back( new QComboBox(this));
+        connect( _modelLists[i], QOverload<const QString&>::of( &QComboBox::activated),
+                 [=](const QString &txt){ doOnComboBoxChanged( i, txt);});
+    }   // end for
 
     QVBoxLayout* v0layout = new QVBoxLayout;
     v0layout->setContentsMargins(0,0,0,0);
@@ -73,6 +67,10 @@ MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent) : QWidget(parent)
     v1layout->setContentsMargins(0,0,0,0);
     QVBoxLayout* v2layout = new QVBoxLayout;
     v2layout->setContentsMargins(0,0,0,0);
+
+    v0layout->addWidget( _fmvs[0]);
+    v1layout->addWidget( _fmvs[1]);
+    v2layout->addWidget( _fmvs[2]);
 
     _copyButton.resize(4);
     _moveButton.resize(4);
@@ -83,39 +81,32 @@ MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent) : QWidget(parent)
     }   // end for
 
     // Left panel
-    v0layout->addWidget(_v0);
-    QHBoxLayout* h0blayout = new QHBoxLayout;
-    h0blayout->setContentsMargins(0,0,0,0);
-    h0blayout->addStretch();
-    addCommonButtons( h0blayout);
-    h0blayout->addWidget( _copyButton[0]);
-    h0blayout->addWidget( _moveButton[0]);
-    h0blayout->addStretch();
-    v0layout->addLayout(h0blayout);
+    QHBoxLayout* hl0 = new QHBoxLayout;
+    hl0->setContentsMargins(0,0,0,0);
+    hl0->addStretch(1);
+    hl0->addWidget( _modelLists[0],7);
+    hl0->addWidget( _copyButton[0],1);
+    hl0->addWidget( _moveButton[0],1);
+    v0layout->addLayout( hl0);
 
     // Centre panel
-    v1layout->addWidget(_v1);
-    QHBoxLayout* h1blayout = new QHBoxLayout;
-    h1blayout->setContentsMargins(0,0,0,0);
-    h1blayout->addStretch();
-    h1blayout->addWidget( _moveButton[1]);
-    h1blayout->addWidget( _copyButton[1]);
-    addCommonButtons( h1blayout);
-    h1blayout->addWidget( _copyButton[2]);
-    h1blayout->addWidget( _moveButton[2]);
-    h1blayout->addStretch();
-    v1layout->addLayout( h1blayout);
+    QHBoxLayout* hl1 = new QHBoxLayout;
+    hl1->setContentsMargins(0,0,0,0);
+    hl1->addWidget( _moveButton[1],1);
+    hl1->addWidget( _copyButton[1],1);
+    hl1->addWidget( _modelLists[1],6);
+    hl1->addWidget( _copyButton[2],1);
+    hl1->addWidget( _moveButton[2],1);
+    v1layout->addLayout( hl1);
 
     // Right panel
-    v2layout->addWidget(_v2);
-    QHBoxLayout* h2blayout = new QHBoxLayout;
-    h2blayout->setContentsMargins(0,0,0,0);
-    h2blayout->addStretch();
-    h2blayout->addWidget( _moveButton[3]);
-    h2blayout->addWidget( _copyButton[3]);
-    addCommonButtons( h2blayout);
-    h2blayout->addStretch();
-    v2layout->addLayout(h2blayout);
+    QHBoxLayout* hl2 = new QHBoxLayout;
+    hl2->setContentsMargins(0,0,0,0);
+    hl2->addWidget( _moveButton[3],1);
+    hl2->addWidget( _copyButton[3],1);
+    hl2->addWidget( _modelLists[2],7);
+    hl2->addStretch(1);
+    v2layout->addLayout( hl2);
 
     QWidget* w0 = new QWidget;
     w0->setLayout(v0layout);
@@ -141,49 +132,102 @@ MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent) : QWidget(parent)
 }   // end ctor
 
 
-// public
-MultiFaceModelViewer::~MultiFaceModelViewer()
-{
-    _v0->disconnect(this);
-    _v1->disconnect(this);
-    _v2->disconnect(this);
-}   // end dtor
-
-
 // Left viewer
 void MultiFaceModelViewer::setCopyLeftToCentreAction( QAction *action) { _copyButton[0]->setDefaultAction(action);}
 void MultiFaceModelViewer::setMoveLeftToCentreAction( QAction *action) { _moveButton[0]->setDefaultAction(action);}
-void MultiFaceModelViewer::setLeftAction0( QAction *a) { _action0Buttons[0]->setDefaultAction(a);}
-void MultiFaceModelViewer::setLeftAction1( QAction *a) { _action1Buttons[0]->setDefaultAction(a);}
 
 // Centre viewer
 void MultiFaceModelViewer::setMoveCentreToLeftAction( QAction *action) { _moveButton[1]->setDefaultAction(action);}
 void MultiFaceModelViewer::setCopyCentreToLeftAction( QAction *action) { _copyButton[1]->setDefaultAction(action);}
 void MultiFaceModelViewer::setCopyCentreToRightAction( QAction *action) { _copyButton[2]->setDefaultAction(action);}
 void MultiFaceModelViewer::setMoveCentreToRightAction( QAction *action) { _moveButton[2]->setDefaultAction(action);}
-void MultiFaceModelViewer::setCentreAction0( QAction *a) { _action0Buttons[1]->setDefaultAction(a);}
-void MultiFaceModelViewer::setCentreAction1( QAction *a) { _action1Buttons[1]->setDefaultAction(a);}
 
 // Right viewer
 void MultiFaceModelViewer::setMoveRightToCentreAction( QAction *action) { _moveButton[3]->setDefaultAction(action);}
 void MultiFaceModelViewer::setCopyRightToCentreAction( QAction *action) { _copyButton[3]->setDefaultAction(action);}
-void MultiFaceModelViewer::setRightAction0( QAction *a) { _action0Buttons[2]->setDefaultAction(a);}
-void MultiFaceModelViewer::setRightAction1( QAction *a) { _action1Buttons[2]->setDefaultAction(a);}
 
 
-// public slot
-void MultiFaceModelViewer::setViewerVisible( int idx, bool visible)
+// private
+void MultiFaceModelViewer::setViewerVisible( size_t idx, bool visible)
 {
     assert(idx == 0 || idx == 2);
     setUpdatesEnabled(false);   // Pause widget update to lessen appearance of flicker
     QList<int> widths = _splitter->sizes();
+    const int i = int(idx);
 
-    if ( visible && widths[idx] == 0)
-        widths[idx] = widths[1];
-    else if ( !visible && widths[idx] > 0)
-        widths[idx] = 0;
+    if ( visible && widths[i] == 0)
+        widths[i] = widths[1];
+    else if ( !visible && widths[i] > 0)
+        widths[i] = 0;
     _splitter->setSizes( widths);
-    _splitter->widget( idx)->setVisible(visible);
+    _splitter->widget( i)->setVisible(visible);
 
     setUpdatesEnabled(true);
 }   // end setViewerVisible
+
+
+namespace  {
+
+QString currentModelName( const FM* fm)
+{
+    QString cname = FaceTools::FileIO::FMM::filepath(fm).c_str();
+    if ( !fm->isSaved())
+        cname += " (*)";
+    return cname;
+}   // end currentModelName
+
+}   // end namespace
+
+
+// public slot
+void MultiFaceModelViewer::doOnUpdateModelLists( const FM* fm)
+{
+    if ( !fm)
+        return;
+    QString pname;
+    if ( _attachedNames.count(fm) > 0)
+        pname = _attachedNames.at(fm);  // Previous name
+    const QString cname = currentModelName(fm);   // Current (possibly different) name
+
+    bool isAttached = false;
+    const size_t n = _fmvs.size();
+    for ( size_t i = 0; i < n; ++i)
+    {
+        const FMV* fmv = _fmvs.at(i);
+        QComboBox* cbox = _modelLists.at(i);
+        const int listIndex = cbox->findText(pname);    // Will be -1 if adding for first time
+        cbox->removeItem( listIndex);   // remove does nothing if listIndex == -1
+
+        if ( fmv->isAttached(fm))   // Attached to viewer fmv so update the name in the dropdown
+        {
+            cbox->insertItem( listIndex, cname);    // Adds at top if listIndex == -1
+            cbox->setCurrentIndex( listIndex);
+            isAttached = true;
+        }   // end if
+    }   // end for
+
+    _attachedNames.erase(fm);
+    if ( isAttached)
+        _attachedNames[fm] = cname; // Update the name for the attached model
+}   // end doOnUpdateModelLists
+
+
+// private
+void MultiFaceModelViewer::doOnComboBoxChanged( size_t i, const QString &txt)
+{
+    const std::string fname = txt.split( " (*)")[0].toStdString(); // Strip "(*)" if present
+    FM* fm = FaceTools::FileIO::FMM::model( fname);
+    assert(fm);
+    FV* fv = _fmvs[i]->get(fm);
+    assert(fv);
+    FaceTools::Action::ModelSelector::setSelected(fv);
+}   // end doOnComboBoxChanged
+
+
+// private
+void MultiFaceModelViewer::doOnViewerChanged( size_t idx, const FV *fv)
+{
+    doOnUpdateModelLists( fv->data());
+    if ( idx != 1)
+        setViewerVisible( idx, !_fmvs.at(idx)->attached().empty());
+}   // end doOnViewerChanged

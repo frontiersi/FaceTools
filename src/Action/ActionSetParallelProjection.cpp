@@ -16,39 +16,55 @@
  ************************************************************************/
 
 #include <ActionSetParallelProjection.h>
+#include <FaceModelManager.h>
 #include <vtkRenderer.h>
 #include <vtkCamera.h>
 #include <algorithm>
 using FaceTools::Action::ActionSetParallelProjection;
 using FaceTools::Action::FaceAction;
-using FaceTools::FVS;
+using FaceTools::Action::Event;
+using FaceTools::Vis::FV;
 using FaceTools::ModelViewer;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionSetParallelProjection::ActionSetParallelProjection( const QString& dn, const QIcon& ico)
-    : FaceAction( dn, ico)
+ActionSetParallelProjection::ActionSetParallelProjection( const QString& dn, const QIcon& ico, const QKeySequence& ks)
+    : FaceAction( dn, ico, ks)
 {
     setCheckable(true,false);
+    addTriggerEvent(Event::CLOSED_MODEL);
 }   // end ctor
 
 
-bool ActionSetParallelProjection::doAction( FVS&, const QPoint&)
+bool ActionSetParallelProjection::checkState( Event)
 {
-    for ( ModelViewer* viewer : _viewers)
+    if ( FileIO::FMM::numOpen() == 0)
+        return false;
+    return isChecked();
+}   // end checkChecked
+
+
+bool ActionSetParallelProjection::checkEnable( Event)
+{
+    return FileIO::FMM::numOpen() > 0;
+}   // end checkEnabled
+
+
+void ActionSetParallelProjection::doAction( Event)
+{
+    for ( FMV* fmv : MS::viewers())
     {
-        vtkCamera* cam = const_cast<vtkRenderer*>(viewer->getRenderer())->GetActiveCamera();
+        vtkCamera* cam = const_cast<vtkRenderer*>(fmv->getRenderer())->GetActiveCamera();
         if ( isChecked())
         {
             cam->ParallelProjectionOn();
-            RFeatures::CameraParams cp = viewer->getCamera();
-            const double pflen = viewer->getHeight() / tan(cp.fovRads()/2); // The pixel focal length
-            const double ratio = viewer->getHeight() / pflen;
-            const double D = viewer->cameraDistance(); // Distance to focal point (world coords)
+            RFeatures::CameraParams cp = fmv->camera();
+            const double pflen = fmv->getHeight() / tan(cp.fovRads()/2); // The pixel focal length
+            const double ratio = fmv->getHeight() / pflen;
+            const double D = fmv->cameraDistance(); // Distance to focal point (world coords)
             cam->SetParallelScale( D*ratio);
         }   // end if
         else
             cam->ParallelProjectionOff();
-        viewer->updateRender();
-    }   // end else
-    return true;
+    }   // end for
 }   // end doAction

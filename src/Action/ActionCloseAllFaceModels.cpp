@@ -16,25 +16,27 @@
  ************************************************************************/
 
 #include <ActionCloseAllFaceModels.h>
+#include <FaceActionManager.h>
 #include <FaceModelManager.h>
 #include <QMessageBox>
 #include <algorithm>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionCloseAllFaceModels;
+using FaceTools::Action::Event;
 using FaceTools::FileIO::FMM;
-using FaceTools::FVS;
+using FaceTools::Action::FAM;
 using FaceTools::FMS;
 using FaceTools::FM;
+using FaceTools::Action::EventGroup;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionCloseAllFaceModels::ActionCloseAllFaceModels( const QString& dname, QWidget* pw)
-    : FaceAction( dname), _parent(pw)
-{
-}   // end ctor
+ActionCloseAllFaceModels::ActionCloseAllFaceModels( const QString& dname, const QIcon& icon, const QKeySequence& ks)
+    : FaceAction( dname, icon, ks) {}
 
-bool ActionCloseAllFaceModels::testEnabled( const QPoint*) const { return FMM::numOpen() > 0;}
+bool ActionCloseAllFaceModels::checkEnable( Event) { return FMM::numOpen() > 0;}
 
-bool ActionCloseAllFaceModels::doBeforeAction( FVS& fvs, const QPoint&)
+bool ActionCloseAllFaceModels::doBeforeAction( Event)
 {
     bool doshowmsg = false;
     const FMS& models = FMM::opened();
@@ -51,15 +53,28 @@ bool ActionCloseAllFaceModels::doBeforeAction( FVS& fvs, const QPoint&)
     bool doclose = true;
     if ( doshowmsg)
     {
-        static const QString msg = tr("Model(s) have unsaved changes! Close all anyway?");
-        doclose = QMessageBox::Yes == QMessageBox::question( _parent, tr("Unsaved changes!"), msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
-    }   // end if
-
-    if ( doclose)
-    {
-        for ( FM* fm : models)
-            fvs.insert(fm);
+        static const QString msg = tr("Model(s) have unsaved changes! Close anyway?");
+        doclose = QMessageBox::Yes == QMessageBox::warning( static_cast<QWidget*>(parent()), tr("Unsaved changes!"), msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     }   // end if
 
     return doclose;
 }   // end doBeforeAction
+
+
+void ActionCloseAllFaceModels::doAction( Event)
+{
+    UndoStates::clear();
+    for ( const FMV* fmv : MS::viewers())
+    {
+        const FMS fms = fmv->attached().models();   // Copy out since closing
+        for ( const FM* fm : fms)
+            FAM::close( fm);
+    }   // end fmv
+}   // end doAction
+
+
+void ActionCloseAllFaceModels::doAfterAction( Event)
+{
+    MS::setInteractionMode(IMode::CAMERA_INTERACTION);
+    emit onEvent( { Event::CLOSED_MODEL, Event::ALL_VIEWERS, Event::ALL_VIEWS, Event::VIEWER_CHANGE});
+}   // end doAfterAction

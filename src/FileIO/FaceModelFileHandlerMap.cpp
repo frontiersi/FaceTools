@@ -27,7 +27,7 @@ using FaceTools::FileIO::FaceModelFileHandler;
 
 namespace {
 
-// e.g. "*.cc", "*.cpp", "*.cxx"
+// e.g. {"*.cc", "*.cpp", "*.cxx"}
 QStringList createSimpleFilter( const std::unordered_map<QString, QString>& edmap)
 {
     QStringList exts;
@@ -35,6 +35,16 @@ QStringList createSimpleFilter( const std::unordered_map<QString, QString>& edma
     exts.sort();    // Sort alphanumerically
     return exts;
 }   // end createSimpleFilter
+
+
+// e.g. {"cc", "cpp", "cxx"}
+QStringList createRawFilterList( const std::unordered_map<QString, QString>& edmap)
+{
+    QStringList exts;
+    std::for_each( std::begin(edmap), std::end(edmap), [&](const std::pair<QString, QString>& p){ exts << p.first;});
+    exts.sort();    // Sort alphanumerically
+    return exts;
+}   // end createRawFilterList
 
 
 QString createParenthesisedFilter( QStringList& exts)
@@ -71,6 +81,8 @@ QStringList createFilters( const std::unordered_map<QString, QStringSet>& dsmap)
 QStringList FaceModelFileHandlerMap::createSimpleImportFilters() const { return createSimpleFilter(_importExtDescMap);}
 QStringList FaceModelFileHandlerMap::createSimpleExportFilters() const { return createSimpleFilter(_exportExtDescMap);}
 
+QStringList FaceModelFileHandlerMap::createRawImportFilters() const { return createRawFilterList(_importExtDescMap);}
+QStringList FaceModelFileHandlerMap::createRawExportFilters() const { return createRawFilterList(_exportExtDescMap);}
 
 // public
 QString FaceModelFileHandlerMap::createAllImportFilter() const
@@ -120,25 +132,25 @@ QString FaceModelFileHandlerMap::getFilter( const QString& ext) const
 
 
 // public
-FaceModelFileHandler* FaceModelFileHandlerMap::getLoadInterface( const std::string& fname) const
+FaceModelFileHandler* FaceModelFileHandlerMap::readInterface( const std::string& fname) const
 {
     FaceModelFileHandler* fileio = nullptr;
     QString fext = rlib::getExtension(fname).c_str();
     if ( _importExtDescMap.count(fext) == 1 && _fileInterfaces.count(fext) == 1)
         fileio = _fileInterfaces.at(fext);
     return fileio;
-}   // end getLoadInterface
+}   // end readInterface
 
 
 // public
-FaceModelFileHandler* FaceModelFileHandlerMap::getSaveInterface( const std::string& fname) const
+FaceModelFileHandler* FaceModelFileHandlerMap::writeInterface( const std::string& fname) const
 {
     FaceModelFileHandler* fileio = nullptr;
     QString fext = rlib::getExtension(fname).c_str();
     if ( _exportExtDescMap.count(fext) == 1 && _fileInterfaces.count(fext) == 1)
         fileio = _fileInterfaces.at(fext);
     return fileio;
-}   // end getSaveInterface
+}   // end writeInterface
 
 
 // public

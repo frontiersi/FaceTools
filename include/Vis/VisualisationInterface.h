@@ -28,8 +28,7 @@
 #include <FaceTypes.h>
 #include <PluginInterface.h>    // QTools
 
-namespace FaceTools {
-namespace Vis {
+namespace FaceTools { namespace Vis {
 
 // VisualisationInterface is pure virtual to allow it to be a plugin type.
 class FaceTools_EXPORT VisualisationInterface : public QTools::PluginInterface
@@ -40,11 +39,10 @@ public:
     virtual bool isAvailable( const FV*, const QPoint* mc=nullptr) const = 0; // Can visualise for view and mouse coords?
 
     virtual void copy( FV* dst, const FV* src) = 0;         // Copy visualisations directly across from src to dst.
-    virtual void apply( FV*, const QPoint* mc=nullptr) = 0; // Add the visualisation.
-    virtual void clear( FV*) = 0;                           // Clear the visualisation.
+    virtual void apply( FV*, const QPoint* mc=nullptr) = 0; // Add visualisation to viewer.
+    virtual bool purge( FV*, Action::Event) = 0;            // Purge visualisation due to event, returning true on success.
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

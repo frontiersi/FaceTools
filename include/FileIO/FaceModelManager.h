@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@ public:
     static void add( FaceModelFileHandler*);
 
     // Returns true iff given model is currently saved in the preferred file format (according to FaceModelFileHandlerMap).
-    static bool hasPreferredFileFormat( FM*);
+    static bool hasPreferredFileFormat( const FM*);
 
     // Does the given filename have the extension of the preferred file format?
     static bool isPreferredFileFormat( const std::string&);
@@ -46,10 +46,20 @@ public:
     // If fpath not null but empty, try to save using the currently stored file path, and copy into fpath on return.
     // If fpath points to a non-empty string, try to save to this new location and update the model's stored file path.
     // Generates and stores the model hash upon success.
-    static bool write( FM*, std::string* fpath=nullptr);
+    static bool write( const FM*, std::string* fpath=nullptr);
 
     // Returns true iff the file at given path can be read in.
     static bool canRead( const std::string&);
+
+    // Returns true iff the given filepath can be written to using an available file format handler.
+    static bool canWrite( const std::string&);
+
+    // Returns true iff the given filepath can save textures (looks at the extension).
+    static bool canSaveTextures( const std::string&);
+
+    // Returns true iff there is a file hander for the given file (looks at the extension).
+    // (Ignores whether the file exists or not).
+    static bool hasFileHandler( const std::string&);
 
     // Returns true iff the file matching the given filepath is already open.
     static bool isOpen( const std::string&);
@@ -67,7 +77,7 @@ public:
     static FM* model( const std::string&);
 
     // Close given model and release memory (client must check if saved!).
-    static void close( FM*);
+    static void close( const FM*);
 
     // Returns the number of models currently open.
     static size_t numOpen() { return _mdata.size();}
@@ -85,7 +95,7 @@ private:
     static std::unordered_map<FM*, std::string> _mdata;
     static std::unordered_map<std::string, FM*> _mfiles;    // Lookup models by current filepath
     static std::string _err;
-    static void setModelFilepath( FM*, const std::string&);
+    static void _setModelFilepath( const FM*, const std::string&);
 };  // end class
 
 using FMM = FaceModelManager;

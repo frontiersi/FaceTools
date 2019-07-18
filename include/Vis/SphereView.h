@@ -19,7 +19,7 @@
 #define FACE_TOOLS_SPHERE_VIEW_H
 
 #include <ModelViewer.h>
-#include <VtkScalingActor.h>    // QTools
+#include <VtkScalingActor.h>    // RVTK
 #include <vtkSphereSource.h>
 #include <vtkCaptionActor2D.h>
 
@@ -46,7 +46,7 @@ public:
     double scaleFactor() const;
 
     void setCentre( const cv::Vec3f&);
-    cv::Vec3f centre() const;
+    const cv::Vec3f& centre() const;
 
     void setRadius( double);                            // Set radius
     double radius() const;                              // Get radius
@@ -62,6 +62,8 @@ public:
     void setCaption( const QString&);
     std::string caption() const;
 
+    void setCaptionColour( const QColor&);
+
     void setHighlighted( bool);                         // Show the caption (only if already visible).
     bool highlighted() const;
 
@@ -70,12 +72,9 @@ public:
 
     const vtkProp* prop() const;     
 
-    void pokeTransform( const vtkMatrix4x4*);
-    void fixTransform();                                // Fixes transform to Identity
-
 private:
     bool _visible;
-    QTools::VtkScalingActor* _actor;
+    RVTK::VtkScalingActor* _actor;
     vtkNew<vtkSphereSource> _source;
     vtkNew<vtkCaptionActor2D> _caption;
     void init();

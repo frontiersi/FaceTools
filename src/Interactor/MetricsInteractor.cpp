@@ -41,7 +41,7 @@ MetricsInteractor::MetricsInteractor( const MEEI* meei)
 void MetricsInteractor::doOnEnterProp( const FV* fv, const vtkProp* p)
 {
     MetricVisualiser* vis = qobject_cast<MetricVisualiser*>( fv->layer(p));
-    if ( vis && fv == ModelSelector::selected())
+    if ( vis && fv == ModelSelector::selectedView())
     {
         setEnabled(false);  // Prevent interactor from responding to a possible change in prop
         //MCM::setActiveMetric( vis->metricId());

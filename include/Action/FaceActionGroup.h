@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,8 +24,7 @@
 #include <QToolBar>
 #include <unordered_map>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT FaceActionGroup : public FaceActionInterface
 { Q_OBJECT
@@ -35,14 +34,14 @@ public:
     // Create menus / toolbars for the action group. By default, these functions create and return
     // new menus and toolbars containing the group's actions. The returned widgets should be parented
     // to an appropriate host widget. Derived types may override these functions to
-    // return NULL if it isn't appropriate to create menus or toolbars.
+    // return null if it isn't appropriate to create menus or toolbars.
     virtual QMenu* createMenu() const;
     virtual QToolBar* createToolBar() const;
 
-    // If getWidget() is overridden to return something other than NULL, this function will return an
+    // If getWidget() is overridden to return something other than null, this function will return an
     // action with icon taken from getIcon() and name getDisplayName() that when triggered shows the
     // widget. If a keyboard shortcut is defined using getShortcut(), this is added to the action.
-    // If widget() returns NULL (default), this function will also return NULL.
+    // If widget() returns null (default), this function will also return null.
     QAction* qaction();
 
     // By default, these functions add all member actions in this group to the provided widgets.
@@ -51,8 +50,8 @@ public:
     virtual void addTo( QToolBar*) const;
 
     // QTools::PluginInterface
-    QStringList getInterfaceIds() const override;
-    FaceAction* getInterface( const QString&) const override;
+    QStringList interfaceIds() const override;
+    FaceAction* iface( const QString&) const override;
 
 protected slots:
     // Add new FaceAction instances. Returns true iff the action was successfully
@@ -68,7 +67,6 @@ private:
     void operator=( const FaceActionGroup&) = delete;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

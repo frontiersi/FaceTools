@@ -54,48 +54,6 @@ void pokeMatrix( vtkAngleRepresentation3D* rp, vtkMatrix4x4* vm)
 }   // end pokeMatrix
 
 
-void fixMatrix( vtkAngleRepresentation3D* rp)
-{
-    RVTK::transform( rp->GetRay1(), rp->GetRay1()->GetMatrix());
-    RVTK::transform( rp->GetRay2(), rp->GetRay2()->GetMatrix());
-    RVTK::transform( rp->GetArc(), rp->GetArc()->GetMatrix());
-    RVTK::transform( rp->GetTextActor(), rp->GetTextActor()->GetMatrix());
-}   // end fixMatrix
-
-}   // end namespace
-
-
-bool AngleVisualiser::belongs( const vtkProp* p, const FV *fv) const
-{
-    if ( _angle0.count(fv) > 0 && isProp( _angle0.at(fv), p))
-        return true;
-    else if ( _angle1.count(fv) > 0 && isProp( _angle1.at(fv), p))
-        return true;
-    return false;
-}   // end belongs
-
-
-void AngleVisualiser::pokeTransform( const FV *fv, const vtkMatrix4x4* cvm)
-{
-    vtkMatrix4x4* vm = const_cast<vtkMatrix4x4*>(cvm);
-    if ( _angle0.count(fv) > 0)
-        pokeMatrix( _angle0.at(fv), vm);
-    if ( _angle1.count(fv) > 0)
-        pokeMatrix( _angle1.at(fv), vm);
-}   // end pokeTransform
-
-
-void AngleVisualiser::fixTransform( const FV *fv)
-{
-    if ( _angle0.count(fv) > 0)
-        fixMatrix( _angle0.at(fv));
-    if ( _angle1.count(fv) > 0)
-        fixMatrix( _angle1.at(fv));
-}   // end fixTransform
-
-
-namespace {
-
 void highlight( vtkActor* actor, bool v)
 {
     assert(actor);
@@ -104,7 +62,7 @@ void highlight( vtkActor* actor, bool v)
     {
         prop->SetLineWidth(7.0);
         prop->SetColor(1.0,1.0,1.0);
-        prop->SetOpacity(1.0);
+        prop->SetOpacity(0.99);
     }   // end if
     else
     {
@@ -144,45 +102,103 @@ void setAngleProperties( vtkAngleRepresentation3D* rp)
     highlight( rp, false);
     rp->SetPickable(false);
 }   // end setAngleProperties
-
 }   // end namespace
 
-void AngleVisualiser::setHighlighted( const FM* fm)
+
+bool AngleVisualiser::belongs( const vtkProp* p, const FV *fv) const
 {
-    for ( auto& p : _angle0)
-        highlight( p.second, false);
+    if ( _angle0.count(fv) > 0 && isProp( _angle0.at(fv), p))
+        return true;
+    else if ( _angle1.count(fv) > 0 && isProp( _angle1.at(fv), p))
+        return true;
+    return false;
+}   // end belongs
 
-    for ( auto& p : _angle1)
-        highlight( p.second, false);
 
-    if ( fm)
-    {
-        for ( const FV* fv : fm->fvs())
-        {
-            if ( _angle0.count(fv) > 0)
-                highlight( _angle0.at(fv), true);
-            if ( _angle1.count(fv) > 0)
-                highlight( _angle1.at(fv), true);
-        }   // end for
-    }   // end if
+void AngleVisualiser::syncActorsToData(const FV *fv, const cv::Matx44d &d)
+{
+    const cv::Matx44d& bmat = fv->data()->model().transformMatrix();
+    vtkSmartPointer<vtkMatrix4x4> vm = RVTK::toVTK( d * bmat);
+    if ( _angle0.count(fv) > 0)
+        pokeMatrix( _angle0.at(fv), vm);
+    if ( _angle1.count(fv) > 0)
+        pokeMatrix( _angle1.at(fv), vm);
+}   // end syncActorsToData
+
+
+void AngleVisualiser::setHighlighted( const FV* fv, bool v)
+{
+    if ( _angle0.count(fv) > 0)
+        highlight( _angle0.at(fv), v);
+    if ( _angle1.count(fv) > 0)
+        highlight( _angle1.at(fv), v);
 }   // end setHighlighted
 
 
+void AngleVisualiser::doSetVisible( const FV* fv, bool v)
+{
+    if ( _angle0.count(fv) > 0)
+        _angle0.at(fv)->SetVisibility(v);
+    if ( _angle1.count(fv) > 0)
+        _angle1.at(fv)->SetVisibility(v);
+}   // end doSetVisible
+
+
+bool AngleVisualiser::isVisible( const FV *fv) const
+{
+    bool vis = false;
+    if ( _angle0.count(fv) > 0)
+        vis = _angle0.at(fv)->GetVisibility() != 0;
+    if ( _angle1.count(fv) > 0)
+        vis &= _angle1.at(fv)->GetVisibility() != 0;
+    return vis;
+}   // end visible
+
+
+bool AngleVisualiser::isAvailable( const FM* fm) const
+{
+    using SLMK = Landmark::SpecificLandmark;
+    bool b0 = true;
+    if ( _lmks0)
+        b0 = std::all_of( std::begin(*_lmks0), std::end(*_lmks0), [fm]( const SLMK& lm){ return fm->landmarks().has(lm);});
+    bool b1 = true;
+    if ( _lmks1)
+        b1 = std::all_of( std::begin(*_lmks1), std::end(*_lmks1), [fm]( const SLMK& lm){ return fm->landmarks().has(lm);});
+    return b0 && b1;
+}   // end isAvailable
+
+
+void AngleVisualiser::doApply( const FV *fv)
+{
+    if ( _lmks0 && !_lmks0->empty())
+        applyActor( fv, _lmks0, _angle0);
+    if ( _lmks1 && !_lmks1->empty())
+        applyActor( fv, _lmks1, _angle1);
+}   // end doApply
+
+
+void AngleVisualiser::doPurge( const FV *fv)
+{
+    purgeActor( fv, _angle0);
+    purgeActor( fv, _angle1);
+}   // end hide
+
+
 // private
-void AngleVisualiser::apply( FV *fv, const LmkList* ll, std::unordered_map<const FV*, vtkAngleRepresentation3D*>& angles)
+void AngleVisualiser::applyActor( const FV *fv, const LmkList* ll, std::unordered_map<const FV*, vtkAngleRepresentation3D*>& angles)
 {
     const FM* fm = fv->data();
-    cv::Vec3d r0 = *fm->landmarks()->pos( ll->front());
-    cv::Vec3d r1 = *fm->landmarks()->pos( ll->back());
+    cv::Vec3d r0 = fm->landmarks().pos( ll->front());
+    cv::Vec3d r1 = fm->landmarks().pos( ll->back());
     cv::Vec3d cp;
     // Set the centre point according to the given landmark, but if it's < 0,
     // the centre point is set as the point on the surface midway between the endpoints.
     if ( ll->size() == 3)
-        cp = *fm->landmarks()->pos( ll->at(1));
+        cp = fm->landmarks().pos( ll->at(1));
     else
     {
         const cv::Vec3f mp( 0.5 * (r0 + r1));
-        cp = FaceTools::toSurface( fm->kdtree(), mp);
+        cp = FaceTools::toSurface( fm, mp);
     }   // end else
 
     vtkAngleRepresentation3D* angle = angles[fv] = vtkAngleRepresentation3D::New();
@@ -192,38 +208,11 @@ void AngleVisualiser::apply( FV *fv, const LmkList* ll, std::unordered_map<const
 
     setAngleProperties( angle);
     fv->viewer()->add( angle);
-}   // end apply
-
-
-bool AngleVisualiser::isAvailable( const FM* fm) const
-{
-    using SLMK = Landmark::SpecificLandmark;
-    bool b0 = true;
-    if ( _lmks0)
-        b0 = std::all_of( std::begin(*_lmks0), std::end(*_lmks0), [fm]( const SLMK& lm){ return fm->landmarks()->has(lm);});
-    bool b1 = true;
-    if ( _lmks1)
-        b1 = std::all_of( std::begin(*_lmks1), std::end(*_lmks1), [fm]( const SLMK& lm){ return fm->landmarks()->has(lm);});
-    return b0 && b1;
-}   // end isAvailable
-
-
-void AngleVisualiser::apply( FV *fv, const QPoint*)
-{
-    const FM* fm = fv->data();
-    fm->lockForRead();
-    clear(fv); // Ensure removed so can create new actor(s)
-    if ( _lmks0 && !_lmks0->empty())
-        apply( fv, _lmks0, _angle0);
-    if ( _lmks1 && !_lmks1->empty())
-        apply( fv, _lmks1, _angle1);
-    fm->unlock();
-    MetricVisualiser::apply( fv, nullptr);
-}   // end apply
+}   // end applyActor
 
 
 // private
-void AngleVisualiser::clear( FV *fv, std::unordered_map<const FV*, vtkAngleRepresentation3D*>& actors)
+void AngleVisualiser::purgeActor( const FV *fv, std::unordered_map<const FV*, vtkAngleRepresentation3D*>& actors)
 {
     if ( actors.count(fv) > 0)
     {
@@ -232,20 +221,4 @@ void AngleVisualiser::clear( FV *fv, std::unordered_map<const FV*, vtkAngleRepre
         actors.at(fv)->Delete();
         actors.erase(fv);
     }   // end if
-}   // end clear
-
-
-void AngleVisualiser::clear( FV *fv)
-{
-    clear( fv, _angle0);
-    clear( fv, _angle1);
-    MetricVisualiser::clear(fv);
-}   // end clear 
-
-
-void AngleVisualiser::purge( const FM* fm)
-{
-    const FVS& fvs = fm->fvs();
-    std::for_each( std::begin(fvs), std::end(fvs), [this](FV* fv){ this->clear(fv);});
-}   // end purge
-
+}   // end purgeActor

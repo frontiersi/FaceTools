@@ -41,7 +41,7 @@ void MetricCalculatorTypeRegistry::addMCT( MCT* mct)
     QString cat = mct->category().toLower();
     if ( me()->_types.count(cat) > 0)
     {
-        std::cerr << "[WARN] FaceTools::Metric::MetricCalculatorTypeRegistry::add: Overwriting existing!" << std::endl;
+        std::cerr << "[WARN] FaceTools::Metric::MetricCalculatorTypeRegistry::addMCT: Overwriting existing!" << std::endl;
         delete me()->_types.at(cat);
     }   // end if
     me()->_types[cat] = mct;
@@ -60,7 +60,7 @@ MetricCalculatorTypeRegistry::~MetricCalculatorTypeRegistry()
 MCT* MetricCalculatorTypeRegistry::makeMCT( const QString& acat, int id,
                                             const LmkList* lmks0, const LmkList* lmks1)
 {
-    static const std::string werr = "[WARN] FaceTools::Metric::MetricCalculatorTypeRegistry::get: ";
+    static const std::string werr = "[WARN] FaceTools::Metric::MetricCalculatorTypeRegistry::makeMCT: ";
     if ( LDMKS_MAN::count() == 0)
     {
         std::cerr << werr << "Load some landmarks first!" << std::endl;

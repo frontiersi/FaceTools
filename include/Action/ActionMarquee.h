@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,28 +20,25 @@
 
 #include "FaceAction.h"
 #include "CameraWorker.h"
-#include <ModelMoveInteractor.h>
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionMarquee : public FaceAction
 { Q_OBJECT
 public:
-    ActionMarquee( const QString& dname, const QIcon&, Interactor::ModelMoveInteractor*);
+    ActionMarquee( const QString&, const QIcon&);
     ~ActionMarquee() override;
 
-    void addViewer( FaceModelViewer*);  // Add a viewer that marquee mode will be applied to
+    QString toolTip() const override { return "Automatically slowly move the viewer cameras about their current focal points to show off the models.";}
 
-private slots:
-    bool testEnabled( const QPoint* mc=nullptr) const override { return true;}
-    bool doAction( FVS&, const QPoint&) override;
+protected:
+    bool checkState( Event) override;
+    void doAction( Event) override;
 
 private:
     std::unordered_set<CameraWorker*> _workers;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

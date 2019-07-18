@@ -45,8 +45,6 @@ public:
     bool insert( const FM*);            // Insert all FaceView instances belonging to the given FaceModel.
     bool erase( const FM*);             // Erase all FaceView instances belonging to the given FaceModel.
     void clear();                       // Clear contents.
-    size_t includeModelViews();         // Include all FaceViews of all referenced FaceModels; returns new size.
-    size_t includeViewerViews();        // Include all FaceViews of all referenced FaceModelViewers; returns new size.
 
     bool has( const Vis::FV*) const;    // Returns true if the given FaceView is present.
     bool has( const FM*) const;         // Returns true iff at least one FaceView with the given data is present.
@@ -56,7 +54,7 @@ public:
     Vis::FV* first() const;             // Returns *_fvs.begin() or null if empty set.
 
     const FMS& models() const;          // Return the set of models from this set of FaceViews.
-    FMVS dviewers() const;              // Return the viewers that this set's FaceViews are currently attached to.
+    FMVS viewers() const;               // Collect and return the viewers that this set's FaceViews are currently attached to.
     void updateRenderers() const;       // Shortcut to call updateRender on the set of FMVs returned by dviewers.
 
     // Returns the FaceView that the prop belongs to or null if prop not associated with any FV in this set.

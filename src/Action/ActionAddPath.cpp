@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,57 +22,62 @@
 #include <FaceTools.h>
 #include <cassert>
 using FaceTools::Action::FaceAction;
+using FaceTools::Action::Event;
 using FaceTools::Action::ActionAddPath;
-using FaceTools::Action::ActionEditPaths;
-using FaceTools::Action::EventSet;
-using FaceTools::Interactor::PathSetInteractor;
+using FaceTools::Interactor::PathsInteractor;
 using FaceTools::Vis::PathSetVisualisation;
-using FaceTools::FVS;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionAddPath::ActionAddPath( const QString& dn, const QIcon& ico, ActionEditPaths* e)
-    : FaceAction( dn, ico),
-      _vis( static_cast<PathSetVisualisation*>(e->visualisation())),
-      _interactor( e->interactor())
+ActionAddPath::ActionAddPath( const QString& dn, const QIcon& ico,
+                              PathSetVisualisation *vis,
+                              PathsInteractor::Ptr pint)
+    : FaceAction( dn, ico), _vis(vis), _pint(pint)
 {
+    connect( &*_pint, &PathsInteractor::onLeavePath, this, &ActionAddPath::doOnLeavePath);
+    connect( &*_pint, &PathsInteractor::onEnterPath, this, &ActionAddPath::doOnEnterPath);
 }   // end ctor
 
 
-bool ActionAddPath::testEnabled( const QPoint*) const
+bool ActionAddPath::checkEnable( Event)
 {
-    const FV* fv = _interactor->hoverModel();
-    return isReady(fv) && _interactor->hoverPathId() < 0;
-}   // end testEnabled
+    const FV* fv = MS::selectedView();
+    return fv && fv->isPointOnFace( primedMousePos()) && _pint->hoverPath() == nullptr;
+}   // end checkEnabled
 
 
-bool ActionAddPath::doAction( FVS& fvs, const QPoint& p)
+void ActionAddPath::doAction( Event)
 {
-    FV* fv = fvs.first();
-    assert(fv);
-    assert( _interactor->hoverModel() == fv);
-    fvs.clear();
+    storeUndo( this, Event::PATHS_CHANGE);
 
+    FV* fv = MS::selectedView();
     FM* fm = fv->data();
     cv::Vec3f hpos;
     int pid = -1;
-    if ( fv->projectToSurface(p, hpos))
+    if ( fv->projectToSurface( primedMousePos(), hpos))
     {
-        //fm->lockForWrite();
-        pid = fm->paths()->addPath(hpos);
+        fm->lockForWrite();
+        pid = fm->addPath(hpos);
         assert(pid >= 0);
-        fm->setSaved(false);
-        //fm->unlock();
-        fvs.insert( fm);
-
-        _vis->refresh(fm);
-        _interactor->setPathDrag( pid);
-        // The point used to set the initial handle is not
-        // necessarily where the mouse cursor is now.
-        if ( fv->projectToSurface( fv->viewer()->mouseCoords(), hpos))
-            _interactor->moveDragHandle( hpos);
+        fm->unlock();
+        emit onEvent( Event::PATHS_CHANGE);
+        assert( _pint->isEnabled());
+        _pint->setPathDrag( fv, pid);
     }   // end if
-
-    return pid >= 0;
 }   // end doAction
+
+
+void ActionAddPath::doOnLeavePath()
+{
+    setLocked(false);
+    refreshState();
+}   // end doOnLeavePath
+
+
+void ActionAddPath::doOnEnterPath()
+{
+    setLocked(true);
+    refreshState();
+}   // end doOnEnterPath

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,50 +18,51 @@
 #ifndef FACE_TOOLS_FACE_ACTION_MANAGER_H
 #define FACE_TOOLS_FACE_ACTION_MANAGER_H
 
-#include "FaceActionGroup.h"
-#include "ActionExecutionQueue.h"
-#include <BoundingVisualisation.h>
-#include <ViewerInteractionManager.h>
-#include <QMutex>
+#include "FaceAction.h"
+
+/**
+ * IMPORTANT:
+ * Before creating the singleton FaceActionManager, ensure that all FaceModelViewer instances
+ * have been added using ModelSelector::addViewer since all interactors and mouse handlers
+ * will attach themselves to all available viewers on creation.
+ */
 
 namespace FaceTools { namespace Action {
+
+class ModelSelector;
 
 class FaceTools_EXPORT FaceActionManager : public QObject
 { Q_OBJECT
 public:
-    explicit FaceActionManager( FMV *defaultViewer);
-    ~FaceActionManager() override;
+    using Ptr = std::shared_ptr<FaceActionManager>;
 
-    void addViewer( FMV*);
-    QAction* addAction( FaceAction*);       // Return added action's QAction if added okay (duplicates not allowed).
+    // Get (creating if necessary) the static singleton.
+    // Providing the parent widget is only necessary for the first (creating) call.
+    // For calls where the singleton is already present, the parent parameter is ignored.
+    static Ptr get( QWidget* parent=nullptr);
 
-    void close( FM*);
+    static QAction* registerAction( FaceAction*);       // Return added action's QAction if added okay (duplicates not allowed).
 
-signals:
-    void addedAction( FaceAction*);
-    void onUpdateSelected( FM*, bool);
+    static void close( const FM*);
 
 public slots:
-    void doOnSelected( Vis::FV*, bool);
+    void doEvent( EventGroup e=Event::NONE);
 
-private slots:
-    void doOnActionStarting();
-    void doOnChangedData( Vis::FV*);
-    void doOnActionFinished( EventSet, FVS, bool);
+signals:
+    void onUpdate( const FM*);
+    void onRegisteredAction( FaceAction*);
 
 private:
-    Interactor::ViewerInteractionManager *_interactions;
+    static FaceActionManager::Ptr _singleton;
+
+    QWidget *_parent;
     std::unordered_set<FaceAction*> _actions;
-    ActionExecutionQueue _aqueue;
-    QMutex _mutex;
-    Vis::BoundingVisualisation _bvis;
 
-    void processFinishedAction( FaceAction*, EventSet&, FVS&);
-
+    FaceActionManager();
     FaceActionManager( const FaceActionManager&) = delete;
     void operator=( const FaceActionManager&) = delete;
 };  // end class
 
-}}   // end namespace
+}}   // end namespaces
 
 #endif

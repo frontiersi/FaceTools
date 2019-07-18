@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,36 +17,91 @@
 
 #include <ActionToggleCameraActorInteraction.h>
 #include <FaceModelViewer.h>
+#include <FaceModel.h>
 using FaceTools::Action::ActionToggleCameraActorInteraction;
-using FaceTools::Interactor::ModelViewerInteractor;
+using FaceTools::Interactor::ActorMoveHandler;
 using FaceTools::Action::FaceAction;
+using FaceTools::Action::Event;
 using FaceTools::FaceModelViewer;
+using FaceTools::ModelViewer;
+using FaceTools::FM;
 using FaceTools::FVS;
 using FaceTools::Vis::FV;
+using FaceTools::Interactor::MVI;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionToggleCameraActorInteraction::ActionToggleCameraActorInteraction( const QString& dn, const QIcon& ico)
-    : FaceAction( dn, ico)
+ActionToggleCameraActorInteraction::ActionToggleCameraActorInteraction( const QString& dn, const QIcon& ico, const QKeySequence& ks)
+    : FaceAction( dn, ico, ks)
 {
+    _moveHandler = std::shared_ptr<ActorMoveHandler>( new ActorMoveHandler);
+    connect( &*_moveHandler, &ActorMoveHandler::onActorStart, this, &ActionToggleCameraActorInteraction::doOnActorStart);
+    connect( &*_moveHandler, &ActorMoveHandler::onActorStop, this, &ActionToggleCameraActorInteraction::doOnActorStop);
     setCheckable( true, false);
-    // Use this action's reportFinished signal to push through affine transform changes on FaceModels to other actions.
-    connect( &_interactor, &ModelViewerInteractor::onChangedData, this, &ActionToggleCameraActorInteraction::doOnAffineChange);
-    setRespondToEvent( CLOSE_MODEL, false);
 }   // end ctor
 
 
-bool ActionToggleCameraActorInteraction::doAction( FVS&, const QPoint&)
+QString ActionToggleCameraActorInteraction::toolTip() const
 {
-    _interactor.setMoveModels( isChecked());
-    return true;
+    return "When on, click and drag the selected model to change its position or orientation.";
+}   // end toolTip
+
+
+QString ActionToggleCameraActorInteraction::whatsThis() const
+{
+    QStringList htext;
+    htext << "With this option toggled off, mouse clicking and dragging causes the camera to move around.";
+    htext << "When this option is toggled on, clicking and dragging on a model will reposition or reorient it in space.";
+    htext << "Click and drag with the left mouse button to rotate the model in place.";
+    htext << "Click and drag with the right mouse button (or hold down the SHIFT key while left clicking and dragging)";
+    htext << "to shift the model laterally. Click and drag with the middle mouse button (or hold down the CTRL key while";
+    htext << "left or right clicking and dragging) to move the model towards or away from you.";
+    htext << "Note that clicking and dragging off the model's surface will still move the camera around, but that this also";
+    htext << "toggles this option off (any camera action from the menu/toolbar will also toggle this option off).";
+    return tr( htext.join(" ").toStdString().c_str());
+}   // end whatsThis
+
+
+bool ActionToggleCameraActorInteraction::checkState( Event)
+{
+    if ( MS::interactionMode() == IMode::ACTOR_INTERACTION)
+        _moveHandler->setEnabled(true);
+    else
+        _moveHandler->setEnabled(false);
+    return _moveHandler->isEnabled();
+}   // end checkChecked
+
+
+bool ActionToggleCameraActorInteraction::checkEnable( Event)
+{
+    return MS::isViewSelected() || isChecked();
+}   // end checkEnabled
+
+
+void ActionToggleCameraActorInteraction::doAction( Event)
+{
+    if ( isChecked())
+    {
+        MS::showStatus( "Model interaction ACTIVE");
+        MS::setInteractionMode( IMode::ACTOR_INTERACTION, true);
+    }   // end if
+    else
+    {
+        MS::showStatus( "Camera interaction ACTIVE", 5000);
+        MS::setInteractionMode( IMode::CAMERA_INTERACTION);
+    }   // end else
 }   // end doAction
 
 
-void ActionToggleCameraActorInteraction::doOnAffineChange( const FV* fv)
+void ActionToggleCameraActorInteraction::doOnActorStart()
 {
-    EventSet cset;
-    cset.insert(AFFINE_CHANGE);
-    FVS fvs;
-    fvs.insert(const_cast<FV*>(fv));
-    emit reportFinished( cset, fvs, true);
-}   // end doOnAffineChange
+    storeUndo( this, Event::AFFINE_CHANGE, true);
+}   // end doOnActorStart
+
+
+void ActionToggleCameraActorInteraction::doOnActorStop()
+{
+    //std::cerr << "Stopped moving actor" << std::endl;
+    emit onEvent( Event::AFFINE_CHANGE);
+}   // end doOnActorStop
+

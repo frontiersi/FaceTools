@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,13 +25,14 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionBackfaceCulling : public FaceAction
 { Q_OBJECT
 public:
-    ActionBackfaceCulling( const QString& dname="Backface Culling", const QIcon& ico=QIcon());
+    ActionBackfaceCulling( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
 
-private slots:
-    bool testEnabled( const QPoint*) const override { return ready1();}
-    bool testIfCheck( const Vis::FV* fv) const override;
-    bool doAction( FVS&, const QPoint&) override;
-    //void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(VIEW_CHANGE);}
+    QString toolTip() const override { return "Toggles rendering of the surface 'backface' on and off.";}
+
+protected:
+    bool checkState( Event) override;
+    bool checkEnable( Event) override;
+    void doAction( Event) override;
 };  // end class
 
 }}   // end namespace

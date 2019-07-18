@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,45 +26,18 @@ using FaceTools::Vis::WireframeVisualisation;
 using FaceTools::Vis::TextureVisualisation;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
-
-
-BaseVisualisation::BaseVisualisation( const QString& dname, const QIcon& icon, const QKeySequence& keys)
-    : _dname(dname), _icon(nullptr), _keys(nullptr)
-{
-    _icon = new QIcon(icon);
-    _keys = new QKeySequence(keys);
-}   // end ctor
-
-
-BaseVisualisation::BaseVisualisation( const QString& dname, const QIcon& icon)
-    : _dname(dname), _icon(nullptr), _keys(nullptr)
-{
-    _icon = new QIcon(icon);
-}   // end ctor
-
-
-BaseVisualisation::BaseVisualisation( const QString& dname)
-    : _dname(dname), _icon(nullptr), _keys(nullptr)
-{
-}   // end ctor
-
-
-BaseVisualisation::~BaseVisualisation()
-{
-    if ( _icon)
-        delete _icon;
-    if ( _keys)
-        delete _keys;
-}   // end dtor
-
+using FaceTools::Action::Event;
 
 bool BaseVisualisation::isAvailable( const FV* fv, const QPoint*) const { return isAvailable(fv->data());}
 
-void TextureVisualisation::apply( FV* fv, const QPoint*) { fv->setTextured(true);}
-void TextureVisualisation::clear( FV* fv) { fv->setTextured(false); }
+void TextureVisualisation::apply( FV* fv, const QPoint*) { setVisible(fv, true);}
+bool TextureVisualisation::purge( FV* fv, Event) { setVisible(fv, false); return true;}
+void TextureVisualisation::setVisible( FV* fv, bool v) { fv->setTextured( v && fv->canTexture());}
+bool TextureVisualisation::isVisible( const FV* fv) const { return fv->textured() || (!fv->canTexture() && fv->activeSurface() == nullptr);}
 bool TextureVisualisation::belongs( const vtkProp *p, const FV* fv) const { return fv->actor() == p;}
-bool TextureVisualisation::isAvailable( const FM* fm) const { return fm->fvs().first()->canTexture();}
 
-void WireframeVisualisation::apply( FV* fv, const QPoint*) { fv->setWireframe(true);}
-void WireframeVisualisation::clear( FV* fv) { fv->setWireframe(false);}
+void WireframeVisualisation::apply( FV* fv, const QPoint*) { setVisible(fv, true);}
+bool WireframeVisualisation::purge( FV* fv, Event) { setVisible(fv,false); return true;}
+void WireframeVisualisation::setVisible( FV* fv, bool v) { fv->setWireframe( v);}
+bool WireframeVisualisation::isVisible( const FV* fv) const { return fv->wireframe();}
 bool WireframeVisualisation::belongs( const vtkProp *p, const FV* fv) const { return fv->actor() == p;}

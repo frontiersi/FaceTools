@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,10 +16,11 @@
  ************************************************************************/
 
 #include <CurvatureMetricCalculatorType.h>
+#include <ObjModelCurvatureMetrics.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <FeatureUtils.h>   // RFeatures
-#include <FaceModelSurfaceData.h>
+#include <FaceModelCurvature.h>
 #include <sstream>
 using FaceTools::Metric::CurvatureMetricCalculatorType;
 using FaceTools::Metric::MCT;
@@ -40,11 +41,11 @@ MCT* CurvatureMetricCalculatorType::make( int id, const LmkList* l0, const LmkLi
 
 bool CurvatureMetricCalculatorType::canCalculate( const FM* fm, const LmkList* ll) const
 {
-    if ( !FaceModelSurfaceData::isAvailable(fm))
+    if ( FaceModelCurvature::rmetrics(fm) == nullptr)
         return false;
     using SLmk = FaceTools::Landmark::SpecificLandmark;
-    LandmarkSet::Ptr lmks = fm->landmarks();
-    return std::all_of( std::begin(*ll), std::end(*ll), [lmks]( const SLmk& p){ return lmks->has(p);});
+    const LandmarkSet& lmks = fm->landmarks();
+    return std::all_of( std::begin(*ll), std::end(*ll), [&lmks]( const SLmk& p){ return lmks.has(p);});
 }   // end canCalculate
 
 
@@ -53,15 +54,17 @@ namespace  {
 struct RegionParser : public RFeatures::ObjModelBoundaryParser
 {
     explicit RegionParser( const IntSet& bset) : _bset(bset) {}
-    virtual ~RegionParser() {}
+    ~RegionParser() override {}
 
-    bool parseEdge( int fid, int v0, int v1) override
+    bool parseEdge( int fid, const cv::Vec2i& e, int&) override
     {
+        const int v0 = e[0];
+        const int v1 = e[1];
         if ( _bset.count(v0) == 0 || _bset.count(v1) == 0)
             return true;
 
-        const int fid2 = RFeatures::oppositePoly( model, fid, v0, v1);
-        return fid2 >= 0 && _bset.count( model->poly(fid2).opposite(v0,v1)) > 0;
+        const int fid2 = model->oppositePoly( fid, v0, v1);
+        return fid2 >= 0 && _bset.count( model->face(fid2).opposite(v0,v1)) > 0;
     }   // end parseEdge
 
 private:
@@ -73,8 +76,8 @@ private:
 
 void CurvatureMetricCalculatorType::measure( std::vector<double>& dvals, const FM* fm, const LmkList* ll) const
 {
-    LandmarkSet::Ptr lmks = fm->landmarks();
-    const RFeatures::ObjModel* model = fm->info()->cmodel();
+    const LandmarkSet& lmks = fm->landmarks();
+    const RFeatures::ObjModel& model = fm->model();
 
     IntSet bset;
     std::vector<int> pvids;
@@ -86,13 +89,13 @@ void CurvatureMetricCalculatorType::measure( std::vector<double>& dvals, const F
     const auto* pp = &*ll->rbegin();        // Previous point
     for ( const auto& tp : *ll)
     {
-        const cv::Vec3f& v0 = *lmks->pos( *pp);
-        const cv::Vec3f& v1 = *lmks->pos( tp);
+        const cv::Vec3f v0 = lmks.pos( *pp);
+        const cv::Vec3f v1 = lmks.pos( tp);
         mpos += v1; // Get the mean position to seed mesh parsing from
 
         // Get the closest vertices for finding a shortest path along connecting edges
-        const int vtx0 = fm->kdtree()->find( v0);
-        const int vtx1 = fm->kdtree()->find( v1);
+        const int vtx0 = fm->findVertex( v0);
+        const int vtx1 = fm->findVertex( v1);
 
         dspf.setEndPointVertexIndices( vtx1, vtx0);
         dspf.findShortestPath( pvids);
@@ -103,15 +106,15 @@ void CurvatureMetricCalculatorType::measure( std::vector<double>& dvals, const F
 
     // Get the seed polygon for parsing within the demarcated region
     mpos *= 1.0f/ll->size();
-    const int seedVtx = fm->kdtree()->find( mpos);
-    const int seedPoly = *model->getFaceIds(seedVtx).begin();
+    const int seedVtx = fm->findVertex( mpos);
+    const int seedPoly = *model.faces(seedVtx).begin();
 
     // Parse the given region and collect the set of parsed polygon ids
-    IntSet pfaces;
     RegionParser bparser( bset);
-    RFeatures::ObjModelTriangleMeshParser parser( model, &pfaces);
+    RFeatures::ObjModelTriangleMeshParser parser( model);
     parser.setBoundaryParser(&bparser);
     parser.parse( seedPoly);
+    const IntSet& pfaces = parser.parsed();
 
     dvals.resize(4, 0);
     if ( pfaces.empty())
@@ -121,20 +124,24 @@ void CurvatureMetricCalculatorType::measure( std::vector<double>& dvals, const F
     }   // end if
 
     // Now, for each of the parsed faces, collect the required statistic
-    SurfaceData::RPtr sd = FaceModelSurfaceData::rdata(fm); // Scoped read lock
     double v0 = 0.0;
     double v1 = 0.0;
     double v2 = 0.0;
     double v3 = 0.0;
-    for ( int fid : pfaces)
+
     {
-        const double kp1 = sd->metrics->faceKP1FirstOrder(fid);
-        const double kp2 = sd->metrics->faceKP2FirstOrder(fid);
-        v0 += kp1;
-        v1 += kp2;
-        v2 += kp1 + kp2;    // Mean curvature (/2 factored out)
-        v3 += kp1 * kp2;    // Gaussian curvature
-    }   // end for
+        FaceModelCurvature::RPtr sm = FaceModelCurvature::rmetrics(fm);
+        RFeatures::ObjModelCurvatureMetrics metrics( model, fm->manifolds(), *sm);
+        for ( int fid : pfaces)
+        {
+            const double kp1 = metrics.faceKP1FirstOrder(fid);
+            const double kp2 = metrics.faceKP2FirstOrder(fid);
+            v0 += kp1;
+            v1 += kp2;
+            v2 += kp1 + kp2;    // Mean curvature (/2 factored out)
+            v3 += kp1 * kp2;    // Gaussian curvature
+        }   // end for
+    }
 
     dvals[0] = v0/pfaces.size();
     dvals[1] = v1/pfaces.size();

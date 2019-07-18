@@ -19,7 +19,9 @@
 #include <PDFGenerator.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
+#include <Ethnicities.h>
 #include <PhenotypeManager.h>
+#include <Chart.h>
 #include <QtSvg/QSvgGenerator>
 #include <QPixmap>
 #include <QFile>
@@ -48,28 +50,26 @@ Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _model(nullptr)
                                "showNotes", &Report::showNotes);
 
     _lua.new_usertype<MetricSet>( "MetricSet",
-                                  "get", &MetricSet::get);
+                                  "metric", &MetricSet::metric);
 
     _lua.new_usertype<MetricValue>( "MetricValue",
                                     "ndims", &MetricValue::ndims,
                                     "value", &MetricValue::value,
                                     "zscore", &MetricValue::zscore,
-                                    "mean", &MetricValue::mean,
-                                    "stdv", &MetricValue::stdv,
-                                    "source", &MetricValue::source);
+                                    "mean", &MetricValue::mean);
 
     _lua.new_usertype<FM>( "FM",
                            "age", &FM::age,
                            "sex", &FM::sex,
                            "studyId", &FM::studyId,
-                           "ethnicity", &FM::ethnicity,
+                           "maternalEthnicity", &FM::maternalEthnicity,
+                           "paternalEthnicity", &FM::paternalEthnicity,
                            "captureDate", &FM::captureDate,
                            "dateOfBirth", &FM::dateOfBirth,
                            "hasLandmarks", &FM::hasLandmarks,
                            "metrics", &FM::cmetrics,
                            "metricsL", &FM::cmetricsL,
-                           "metricsR", &FM::cmetricsR,
-                           "phenotypes", &FM::phenotypes);
+                           "metricsR", &FM::cmetricsR);
 
     _lua.set_function( "phenotype", PhenotypeManager::cphenotype);
 
@@ -220,8 +220,7 @@ bool Report::generate( const FM* fm, const QString& u3dfile, const QString& pdff
     }   // end if
 
     // Copy the created pdf to the requested location.
-    const bool copyok = QFile::copy( _tmpdir.filePath( "report.pdf"), pdffile);
-    assert( copyok);
+    QFile::copy( _tmpdir.filePath( "report.pdf"), pdffile);
 
     emit onFinishedGenerate( fm, pdffile);
 
@@ -370,15 +369,24 @@ void writeSvg( const QString& imname, QTextStream& os, const QString& caption)
 }   // end namespace
 
 
-// public
 std::string Report::makeScanInfo()
 {
     QString ostr;
     QTextStream os(&ostr);
     os << " \\textbf{Sex:} " << FaceTools::toLongSexString( _model->sex()) << " \\\\" << endl;
-    os << " \\textbf{Ethnicity:} " << _model->ethnicity() << " \\\\" << endl;
+    if ( _model->maternalEthnicity() == _model->paternalEthnicity())
+        os << " \\textbf{Ethnicity:} " << _model->maternalEthnicity() << " \\\\" << endl;
+    else
+    {
+        os << " \\textbf{Maternal Ethnicity:} " << _model->maternalEthnicity() << " \\\\" << endl;
+        os << " \\textbf{Paternal Ethnicity:} " << _model->paternalEthnicity() << " \\\\" << endl;
+    }   // end else
     os << " \\textbf{Birth Date:} " << _model->dateOfBirth().toString("dd MMMM yyyy") << " \\\\" << endl;
     os << " \\textbf{Image Date:} " << _model->captureDate().toString("dd MMMM yyyy") << " \\\\" << endl;
+    const double age = _model->age();
+    const int yrs = int(age);
+    const int mths = int((age - double(yrs)) * 12);
+    os << QString(" \\textbf{Age at Capture:} %1 years %2 months \\\\").arg(yrs).arg(mths) << endl;
     if ( !_model->source().isEmpty())
         os << " \\textbf{Image Source:} " << _model->source() << " \\\\" << endl;
     if ( !_model->studyId().isEmpty())
@@ -388,7 +396,6 @@ std::string Report::makeScanInfo()
 }   // end makeScanInfo
 
 
-// public
 std::string Report::showNotes()
 {
     QString ostr;
@@ -402,7 +409,6 @@ std::string Report::showNotes()
 }   // end showNotes
 
 
-// public
 std::string Report::makeFigure( float wmm, float hmm, const std::string& caption)
 {
     QString qcaption(caption.c_str());
@@ -414,22 +420,13 @@ std::string Report::makeFigure( float wmm, float hmm, const std::string& caption
 }   // end makeFigure
 
 
-// public
 std::string Report::makeChart( int mid, size_t d)
 {
-    const QString& ethn = _model->ethnicity();
-    int8_t sex = _model->sex();
-    QtCharts::QChart* chart = FaceTools::createChart( ethn, sex, d, mid, _model, false/*no title*/);
-    if ( !chart)
-    {
-        qWarning( "No chart produced!");
-        return "";
-    }   // end if
-
     MC::Ptr mc = MCM::metric(mid);
-    const GrowthData* gd = mc->growthData( ethn, sex);
+    GrowthData::CPtr gd = mc->currentGrowthData();
+    Metric::Chart* chart = new Metric::Chart( gd, d, _model);
 
-    QtCharts::QChartView cview(chart);
+    QtCharts::QChartView cview( chart);
     cview.setRenderHint(QPainter::Antialiasing);
 
     static const QRectF outRect( 0,0,570,450);
@@ -468,8 +465,8 @@ std::string Report::makeChart( int mid, size_t d)
     }   // end if
 
     QString demog;
-    if ( !gd->ethnicity().isEmpty())
-        demog = gd->ethnicity() + "; ";
+    if ( gd->ethnicity() > 0)
+        demog = Ethnicities::name( gd->ethnicity()) + "; ";
     demog += toLongSexString( static_cast<Sex>(gd->sex()));
 
     QString src = "\\tiny{\\textit{" + gd->source();

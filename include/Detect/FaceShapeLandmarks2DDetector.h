@@ -37,7 +37,7 @@ public:
     static bool isinit();   // Returns true iff initialised.
 
     static bool detect( const RVTK::OffscreenModelViewer&,
-                        const RFeatures::ObjModelKDTree*,
+                        const FM*,
                         Landmark::LandmarkSet&, // The landmarks to update.
                         const IntSet& ulmks);   // Only landmark IDs in this set will be updated.
 

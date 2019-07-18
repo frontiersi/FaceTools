@@ -16,72 +16,74 @@
  ************************************************************************/
 
 #include <ActionRenamePath.h>
-#include <ActionEditPaths.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <QInputDialog>
 #include <cassert>
-using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionRenamePath;
-using FaceTools::Action::ActionEditPaths;
-using FaceTools::Action::EventSet;
-using FaceTools::Interactor::PathSetInteractor;
+using FaceTools::Action::FaceAction;
+using FaceTools::Action::Event;
+using FaceTools::Interactor::PathsInteractor;
 using FaceTools::Vis::PathSetVisualisation;
 using FaceTools::FVS;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionRenamePath::ActionRenamePath( const QString& dn, const QIcon& ico, ActionEditPaths *e, QWidget *parent)
-    : FaceAction(dn, ico), _editor(e), _parent(parent)
+ActionRenamePath::ActionRenamePath( const QString& dn, const QIcon& ico, PathsInteractor::Ptr pint)
+    : FaceAction(dn, ico), _pint(pint)
 {
+    connect( &*_pint, &PathsInteractor::onLeavePath, this, &ActionRenamePath::doOnLeavePath);
+    connect( &*_pint, &PathsInteractor::onEnterPath, this, &ActionRenamePath::doOnEnterPath);
 }   // end ctor
 
 
-bool ActionRenamePath::testEnabled( const QPoint*) const
+bool ActionRenamePath::checkEnable( Event)
 {
-    bool enabled = false;
-    assert(_editor);
-    if ( _editor->isChecked() && gotReady())
-    {
-        const FV* fv = _editor->interactor()->hoverModel();
-        enabled = fv && isReady(fv) && _editor->interactor()->hoverPathId() >= 0;
-    }   // end if
-    return enabled;
-}   // end testEnabled
+    const FV* fv = _pint->view();
+    return fv == MS::selectedView() && _pint->hoverPath();
+}   // end checkEnabled
 
 
-bool ActionRenamePath::doAction( FVS& fvs, const QPoint&)
+void ActionRenamePath::doAction( Event)
 {
-    assert(_editor);
-    assert(fvs.size() == 1);
-    FV* fv = fvs.first();
-    assert(fv);
-    assert(fv == _editor->interactor()->hoverModel());
-    fvs.clear();
-
+    storeUndo(this, Event::PATHS_CHANGE);
+    const FV* fv = MS::selectedView();
     FM* fm = fv->data();
-
-    const int pid = _editor->interactor()->hoverPathId();
+    const int pid = _pint->hoverPath()->pathId();
     assert(pid >= 0);
 
-    //fm->lockForRead();
-    QString clabel = fm->paths()->path(pid)->name.c_str();
-    //fm->unlock();
+    fm->lockForRead();
+    QString clabel = fm->paths().path(pid)->name.c_str();
+    fm->unlock();
+
+    QWidget* prnt = static_cast<QWidget*>(parent());
     bool ok = false;
-    QString nlabel = QInputDialog::getText( _parent, tr("Rename path"), tr("New path name:"), QLineEdit::Normal, clabel, &ok);
+    QString nlabel = QInputDialog::getText( prnt, tr("Rename path"), tr("New path name:"), QLineEdit::Normal, clabel, &ok);
     if ( !ok)
         nlabel = "";
 
     if ( !nlabel.isEmpty() && nlabel != clabel)
     {
-        //fm->lockForWrite();
-        fm->paths()->path(pid)->name = nlabel.toStdString();
-        fm->setSaved(false);
-        fvs.insert(fm);
-        _editor->interactor()->setCaptionInfo( fm, pid);
-        //fm->unlock();
+        fm->lockForWrite();
+        fm->renamePath( pid, nlabel);
+        fm->unlock();
+        emit onEvent( Event::PATHS_CHANGE);
     }   // end if
-
-    return true;
 }   // end doAction
+
+
+void ActionRenamePath::doOnLeavePath()
+{
+    setLocked(true);
+    refreshState();
+}   // end doOnLeavePath
+
+
+void ActionRenamePath::doOnEnterPath()
+{
+    setLocked(false);
+    refreshState();
+}   // end doOnEnterPath
+

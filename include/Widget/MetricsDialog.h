@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,8 @@
 #define FACETOOLS_WIDGET_METRICS_DIALOG_H
 
 #include <FaceTypes.h>
+#include <ChartDialog.h>
+#include <PhenotypesDialog.h>
 #include <QTableWidgetItem>
 #include <QDialog>
 
@@ -33,31 +35,32 @@ public:
     ~MetricsDialog() override;
 
     void setShowScanInfoAction( QAction*);
-    void setShowMetricsAction( QAction*);
-    void setDetectedOnlyEnabled( bool);
+    void highlightRow( int metricId);
 
 signals:
-    void onShowPhenotypes();
-    void onShowChart();
-    // Emitted whenever the ethnicity ignored checkbox is changed, and immediately before onMatchedPhenotypes is emitted.
-    void onEthnicityIgnored( bool);
-    // Emit a refreshed set of phenotype IDs that match to the currently selected model.
-    void onShowingPhenotypes( const IntSet&);
-    void onRefreshedMetrics();
+    void onSelectedMetric( int);
+    void onSetMetricGrowthData();
+    void onChangedMetricVisibility( int, bool);
 
 public slots:
+    void show();
+    void hide();
     void refresh();
 
+protected:
+    void closeEvent( QCloseEvent*) override;
+
 private slots:
-    void doOnUserSelectedSyndrome();
-    void doOnUserSelectedHPOTerm();
-    void doOnSetAllChecked(bool);
-    void sortOnColumn( int);
-    void doOnItemChanged( QTableWidgetItem*);
-    void doOnSetCurrentMetric( int);   // Pass in metric ID
-    void doOnClickedFlipCombosButton();
-    void doOnEthnicityIgnored();
-    void doOnClickedMatchButton();
+    void _doOnUserSelectedSyndrome();
+    void _doOnUserSelectedHPOTerm();
+    void _doOnSetAllChecked(bool);
+    void _sortOnColumn( int);
+    void _doOnItemChanged( QTableWidgetItem*);
+    void _doOnClickedFlipCombosButton();
+    void _doOnClickedMatchButton();
+    void _doOnClickedUseSubjectDemographicsButton();
+    void _doOnShowPhenotypes();
+    void _doOnShowChart();
 
 private:
     Ui::MetricsDialog *_ui;
@@ -65,13 +68,16 @@ private:
     bool _syndromeToPhenotype;  // Track combo box reordering
     IntSet _mpids;  // Matched set of phenotype IDs
 
-    void appendRow( int);
-    void populateHPOs( const IntSet&);
-    void populateSyndromes( const IntSet&);
-    void resetIdRowMap();
-    void highlightRow( int);
-    void setSelectedRow( int); // Pass in row ID
-    void populate();
+    PhenotypesDialog *_pdialog;
+    ChartDialog *_cdialog;
+
+    void _appendRow( int);
+    void _populateHPOs( const IntSet&);
+    void _populateSyndromes( const IntSet&);
+    void _resetIdRowMap();
+    void _setSelectedRow( int); // Pass in row ID
+    void _populate();
+    void _refreshPhenotypeList();
 };  // end class
 
 }}  // end namespaces

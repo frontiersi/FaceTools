@@ -20,44 +20,29 @@
 #include <vtkRenderWindow.h>
 using FaceTools::Action::ActionToggleStereoRendering;
 using FaceTools::Action::FaceAction;
-using FaceTools::Vis::FV;
-using FaceTools::FVS;
+using FaceTools::Action::Event;
 using FaceTools::FMV;
 
 
-ActionToggleStereoRendering::ActionToggleStereoRendering( const QString& dn, const QIcon& ico)
-    : FaceAction( dn, ico), _sren(false)
-{
-    setCheckable( true, false);
-}   // end ctor
-
-
 namespace {
-
 void setStereoRendering( FMV* v, bool enable)
 {
     vtkRenderWindow* rwin = v->getRenderWindow();
     rwin->SetStereoRender(enable);
-    v->updateRender();
 }   // end setStereoRendering
-
 }   // end namespace
 
 
-void ActionToggleStereoRendering::addViewer( FMV* v)
+ActionToggleStereoRendering::ActionToggleStereoRendering( const QString& dn, const QIcon& ico)
+    : FaceAction( dn, ico)
 {
-    _viewers.insert(v);
-    setStereoRendering( v, _sren);
-}   // end addViewer
+    setCheckable( true, false);
+    doAction( Event::NONE);
+}   // end ctor
 
 
-bool ActionToggleStereoRendering::testIfCheck( const FV*) const { return _sren;}
-
-
-bool ActionToggleStereoRendering::doAction( FVS&, const QPoint&)
+void ActionToggleStereoRendering::doAction( Event)
 {
-    _sren = isChecked();
-    for ( FMV* v : _viewers)
-        setStereoRendering( v, _sren);
-    return true;
+    for ( FMV* v : ModelSelector::viewers())
+        setStereoRendering( v, isChecked());
 }   // end doAction

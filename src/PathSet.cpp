@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 #include <Transformer.h>    // RFeatures
 using FaceTools::PathSet;
 using FaceTools::Path;
+using FaceTools::FM;
 using PathPair = std::pair<int, Path>;
 using RFeatures::ObjModelKDTree;
 
@@ -30,8 +31,16 @@ PathSet::Ptr PathSet::create()
 }   // end create
 
 
+PathSet::Ptr PathSet::deepCopy() const
+{
+    PathSet* pths = new PathSet;
+    *pths = *this;
+    return Ptr( pths, [](PathSet* d){ delete d;});
+}   // end deepCopy
+
+
 // private
-PathSet::PathSet() : _sid(0)
+PathSet::PathSet() : _sid(0), _aid(-1)
 {
 }   // end ctor
 
@@ -40,10 +49,10 @@ PathSet::PathSet() : _sid(0)
 PathSet::~PathSet(){}
 
 
-void PathSet::recalculate( const ObjModelKDTree *kdt)
+void PathSet::recalculate( const FM* fm)
 {
     for ( auto& p : _paths)
-        p.second.recalculate( kdt);
+        p.second.recalculate( fm);
 }   // end recalculate
 
 
@@ -56,7 +65,17 @@ int PathSet::setPath( const Path& path)
 }   // end setPath
 
 
-int PathSet::addPath( const cv::Vec3f& v) { return setPath( Path( _sid++, v));}
+int PathSet::addPath( const cv::Vec3f& v)
+{
+    return setPath( Path( _sid++, v));
+}   // end addPath
+
+
+void PathSet::setActivePath( int pid)
+{
+    _aid = pid;
+    assert( _ids.count(pid) > 0);
+}   // end setActivePath
 
 
 bool PathSet::removePath( int id)
@@ -67,6 +86,15 @@ bool PathSet::removePath( int id)
     _ids.erase(id);
     return true;
 }   // end removePath
+
+
+bool PathSet::renamePath( int id, const std::string& nm)
+{
+    if ( _ids.count(id) == 0)
+        return false;
+    _paths.at(id).name = nm;
+    return true;
+}   // end renamePath
 
 
 Path* PathSet::path( int pid)
@@ -96,7 +124,7 @@ void PathSet::transform( const cv::Matx44d& T)
 }   // end transform
 
 
-void PathSet::write( PTree& pathsNode)
+void PathSet::write( PTree& pathsNode) const
 {
     std::for_each( std::begin(_paths), std::end(_paths), [&](const PathPair& p){ pathsNode << p.second;});
 }   // end operator<<

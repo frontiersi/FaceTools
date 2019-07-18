@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,56 +16,109 @@
  ************************************************************************/
 
 #include <ActionToggleScalarLegend.h>
-#include <SurfaceDataMapper.h>
+#include <SurfaceMetricsMapper.h>
 #include <FaceModelViewer.h>
+#include <FaceTools.h>
+#include <vtkTextProperty.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionToggleScalarLegend;
 using FaceTools::Action::FaceAction;
-using FaceTools::Vis::SurfaceDataMapper;
+using FaceTools::Action::Event;
+using FaceTools::Vis::SurfaceMetricsMapper;
 using FaceTools::Vis::FV;
 using FaceTools::FMVS;
 using FaceTools::FMV;
-using FaceTools::FVS;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionToggleScalarLegend::ActionToggleScalarLegend( const QString& dn, FMV* v)
+ActionToggleScalarLegend::ActionToggleScalarLegend( const QString& dn)
     : FaceAction( dn)
 {
-    if ( v)
-        addViewer(v);
     setCheckable(true,true);
-    setRespondToEvent( VIEW_CHANGE, [this](const FVS&){ return this->isChecked();});
-    setRespondToEvent( VIEWER_CHANGE, [this](const FVS&){ return this->isChecked();});
+    for ( FMV* fmv : MS::viewers())
+        _legends[fmv] = new RVTK::ScalarLegend( fmv->getRenderWindow()->GetInteractor());
 }   // end ctor
 
 
-bool ActionToggleScalarLegend::doAction( FVS&, const QPoint&)
+ActionToggleScalarLegend::~ActionToggleScalarLegend()
 {
-    if ( !isChecked())
-    {
-        std::for_each( std::begin(_viewers), std::end(_viewers), [](FMV* v){ v->showLegend(false); v->updateRender();});
-        return true;
-    }   // end if
+    for ( const auto& p : _legends)
+        delete p.second;
+}   // end dtor
 
-    for ( FMV *vwr : _viewers)
-    {
-        SurfaceDataMapper *sdm = nullptr;
-        for ( FV *fv : vwr->attached())
-        {
-            if ( (sdm = fv->activeSurface()))
-                break;
-        }   // end for
+namespace  {
 
+void setTextColours( vtkTextProperty* tp, const QColor& bg, const QColor& fg)
+{
+    tp->SetBackgroundColor( bg.redF(), bg.greenF(), bg.blueF());
+    tp->SetColor( fg.redF(), fg.greenF(), fg.blueF());
+}   // end setTextColours
+
+void updateTitleProperties( vtkTextProperty* tp)
+{
+    tp->SetFontFamilyToCourier();
+    tp->SetFontSize(16);
+    tp->SetBold(true);
+    tp->SetItalic(false);
+}   // end updateTitleProperties
+
+void updateLabelProperties( vtkTextProperty* tp)
+{
+    tp->SetFontFamilyToCourier();
+    tp->SetItalic(false);
+    tp->SetBold(false);
+    tp->SetFontSize(14);
+}   // end updateLabelProperties
+
+}   // end namespace
+
+
+bool ActionToggleScalarLegend::checkState( Event)
+{
+    for ( const auto& p : _legends)
+    {
+        RVTK::ScalarLegend* legend = p.second;
         bool showLegend = false;
-        if ( sdm && sdm->isScalarMapping())
+
+        if ( isChecked())
         {
-            vwr->setLegend( sdm->label(), sdm->scalarLookupTable());
-            showLegend = true;
+            SurfaceMetricsMapper *smm = nullptr;
+            for ( FV *fv : p.first->attached())
+            {
+                if ( (smm = fv->activeSurface()))
+                    break;
+            }   // end for
+
+            if ( smm && smm->isScalarMapping())
+            {
+                // Set the legend title and colours lookup table for the scalar legend.
+                legend->setTitle( smm->label());
+                legend->setLookupTable( smm->scalarLookupTable());
+                showLegend = true;
+            }   // end if
         }   // end if
 
-        vwr->showLegend( showLegend);
-        vwr->updateRender();
+        updateTitleProperties( legend->titleProperty());
+        updateLabelProperties( legend->labelProperty());
+
+        const QColor bg = p.first->backgroundColour();
+        const QColor fg = chooseContrasting( bg);
+        setTextColours( legend->titleProperty(), bg, fg);
+        setTextColours( legend->labelProperty(), bg, fg);
+
+        legend->setVisible( showLegend);
     }   // end for
-    return true;
-}   // end doAction
+
+    return isChecked();
+}   // end checkChecked
+
+
+bool ActionToggleScalarLegend::checkEnable( Event)
+{
+    for ( const auto& p : _legends)
+        for ( const FV *fv : p.first->attached())
+            if ( fv->activeSurface() && fv->activeSurface()->isScalarMapping())
+                return true;
+    return false;
+}   // end checkEnabled

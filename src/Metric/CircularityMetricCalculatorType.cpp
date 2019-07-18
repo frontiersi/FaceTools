@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,24 +40,24 @@ MCT* CircularityMetricCalculatorType::make( int id, const LmkList* l0, const Lmk
 bool CircularityMetricCalculatorType::canCalculate( const FM* fm, const LmkList* ll) const
 {
     using SLmk = FaceTools::Landmark::SpecificLandmark;
-    LandmarkSet::Ptr lmks = fm->landmarks();
-    return std::all_of( std::begin(*ll), std::end(*ll), [lmks]( const SLmk& p){ return lmks->has(p);});
+    const LandmarkSet& lmks = fm->landmarks();
+    return std::all_of( std::begin(*ll), std::end(*ll), [&lmks]( const SLmk& p){ return lmks.has(p);});
 }   // end canCalculate
 
 
 void CircularityMetricCalculatorType::measure( std::vector<double>& dvals, const FM* fm, const LmkList* ll) const
 {
-    LandmarkSet::Ptr lmks = fm->landmarks();
+    const LandmarkSet& lmks = fm->landmarks();
 
-    const auto* pp = &*ll->rbegin();        // Previous point
-    const cv::Vec3f& fv = *lmks->pos( *pp); // Final point
+    const auto* pp = &*ll->rbegin();     // Previous point
+    const cv::Vec3f fv = lmks.pos( *pp); // Final point
 
     double area = 0;
     double perim = 0;
     for ( const auto& tp : *ll)
     {
-        const cv::Vec3f& v0 = *lmks->pos( *pp);
-        const cv::Vec3f& v1 = *lmks->pos( tp);
+        const cv::Vec3f v0 = lmks.pos( *pp);
+        const cv::Vec3f v1 = lmks.pos( tp);
 
         perim += cv::norm(v1 - v0);
         area += RFeatures::calcTriangleArea( v0, v1, fv);

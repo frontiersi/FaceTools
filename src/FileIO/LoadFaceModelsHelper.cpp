@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,11 +17,10 @@
 
 #include <LoadFaceModelsHelper.h>
 #include <FaceModelManager.h>
-#include <ModelSelector.h>
 #include <FaceModel.h>
 #include <QMessageBox>
 using FaceTools::FileIO::LoadFaceModelsHelper;
-using FaceTools::FaceModel;
+using FaceTools::FM;
 
 LoadFaceModelsHelper::LoadFaceModelsHelper( QWidget* parent) : _parent(parent) {}
 
@@ -76,13 +75,9 @@ size_t LoadFaceModelsHelper::loadModels()
     _failnames.clear();
     for ( const QString& fname : _filenames)
     {
-        FaceModel* fm = FMM::read( fname.toStdString());   // Blocks
+        FM* fm = FMM::read( fname.toStdString());   // Blocks
         if ( fm)
-        {
-            Vis::FV* fv = Action::ModelSelector::addFaceView(fm);
-            Action::ModelSelector::setSelected(fv, true);
-            _loaded.insert( fv);
-        }   // end if
+            _loaded.insert( fm);
         else
             _failnames[FMM::error().c_str()] << fname;
     }   // end for
@@ -112,7 +107,3 @@ void LoadFaceModelsHelper::showLoadErrors()
     }   // end for
     _failnames.clear();
 }   // end showLoadErrors
-
-
-QString LoadFaceModelsHelper::createImportFilters() const { return FMM::fileFormats().createImportFilters();}
-QStringList LoadFaceModelsHelper::createSimpleImportFilters() const { return FMM::fileFormats().createSimpleImportFilters();}

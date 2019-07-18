@@ -129,7 +129,6 @@ void PhenotypesDialog::highlightRow( int rowid)
     _chid = -1;
     _ui->remarksTextEdit->clear();
     _ui->criteriaTextEdit->clear();
-    _ui->synonymsTextEdit->clear();
 
     if ( rowid >= 0)
     {
@@ -142,9 +141,13 @@ void PhenotypesDialog::highlightRow( int rowid)
         _ui->table->item(rowid, METRICS_COL)->setBackgroundColor( bg);
 
         Phenotype::Ptr hpo = HPOMan::phenotype( _chid);
-        _ui->remarksTextEdit->setPlainText( hpo->remarks());
         _ui->criteriaTextEdit->setPlainText( hpo->criteria());
-        _ui->synonymsTextEdit->setPlainText( hpo->synonyms().join("; "));
+
+        QString remarks;
+        if ( !hpo->remarks().isEmpty())
+            remarks = hpo->remarks() + "\n\n";
+        remarks += "Synonyms: " + hpo->synonyms().join("; ");
+        _ui->remarksTextEdit->setPlainText( remarks);
     }   // end if
 }   // end highlightRow
 

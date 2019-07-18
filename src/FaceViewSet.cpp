@@ -194,31 +194,6 @@ void FaceViewSet::clear()
 
 
 // public
-size_t FaceViewSet::includeModelViews()
-{
-    for ( const FM* fm : _fms)
-    {
-        for ( FV* fv : fm->fvs())
-        {
-            _fvs.insert(fv);
-            _fmm[fm].insert(fv);
-        }   // end for
-    }   // end for
-    return _fvs.size();
-}   // end includeModelViews
-
-
-// public
-size_t FaceViewSet::includeViewerViews()
-{
-    FMVS vwrs = dviewers();
-    for ( FMV* viewer : vwrs)
-        this->insert( viewer->attached());
-    return size();
-}   // end includeViewerViews
-
-
-// public
 FV* FaceViewSet::first() const
 {
     FV* fv = nullptr;
@@ -233,19 +208,19 @@ const FMS& FaceViewSet::models() const { return _fms;}
 
 
 // public
-FMVS FaceViewSet::dviewers() const
+FMVS FaceViewSet::viewers() const
 {
     FMVS viewers;
     std::for_each( std::begin(_fvs), std::end(_fvs), [&](FV* fv){ viewers.insert(fv->viewer());});
     viewers.erase(nullptr);    // Ensure no null entries (though there shouldn't be any).
     return viewers;
-}   // end dviewers
+}   // end viewers
 
 
 // public
 void FaceViewSet::updateRenderers() const
 {
-    FMVS vwrs = dviewers();
+    FMVS vwrs = viewers();
     std::for_each( std::begin(vwrs), std::end(vwrs), [](FMV *v){ v->updateRender();});
 }   // end updateRenderers
 
@@ -253,12 +228,13 @@ void FaceViewSet::updateRenderers() const
 // public
 FV* FaceViewSet::find( const vtkProp* prop) const
 {
-    if ( !prop)
-        return nullptr;
-    for ( FV* fv : _fvs)
+    if ( prop)
     {
-        if ( (fv->actor() == prop) || fv->layer( prop))
-            return fv;
-    }   // end for
+        for ( FV* fv : _fvs)
+        {
+            if ( (fv->actor() == prop) || fv->layer( prop))
+                return fv;
+        }   // end for
+    }   // end if
     return nullptr;
 }   // end find

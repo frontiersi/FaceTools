@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,12 +25,19 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionSetFocus : public FaceAction
 { Q_OBJECT
 public:
-    ActionSetFocus( const QString& dname, const QIcon& icon=QIcon());
+    ActionSetFocus( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
 
-protected slots:
-    bool testEnabled( const QPoint*) const override;
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(CAMERA_CHANGE);}
+    QString toolTip() const override { return "Set the camera focus to the chosen point.";}
+
+    static void setFocus( FMV*, const cv::Vec3f&);
+
+protected:
+    bool checkEnable( Event) override;
+    bool doBeforeAction( Event) override;
+    void doAction( Event) override;
+
+private:
+    QPoint _mpos;
 };  // end class
 
 }}   // end namespace

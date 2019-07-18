@@ -16,62 +16,61 @@
  ************************************************************************/
 
 #include <SurfaceVisualisation.h>
-#include <FaceModelSurfaceData.h>
-#include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <vtkDataSetAttributes.h>
-#include <vtkCellData.h>
-#include <vtkMapper.h>
-#include <algorithm>
-#include <cassert>
-using RFeatures::ObjModelCurvatureMetrics;
-using FaceTools::Vis::SurfaceDataMapper;
+using FaceTools::Vis::SurfaceMetricsMapper;
 using FaceTools::Vis::BaseVisualisation;
 using FaceTools::Vis::SurfaceVisualisation;
 using FaceTools::Vis::FV;
-using FaceTools::FaceModelSurfaceData;
-using FaceTools::SurfaceData;
-using FaceTools::FVS;
 using FaceTools::FM;
+using FaceTools::Action::Event;
 
 
-SurfaceVisualisation::SurfaceVisualisation( SurfaceDataMapper::Ptr sm, const QIcon& icon)
-    : BaseVisualisation( sm->label().c_str(), icon), _smapper( sm)
+SurfaceVisualisation::SurfaceVisualisation( SurfaceMetricsMapper::Ptr smm)
+    : _smm( smm)
 {}   // end ctor
 
 
 // public
+bool SurfaceVisualisation::isAvailable( const FM* fm) const
+{
+    return _smm->isAvailable(fm);
+}   // end isAvailable
+
+
 void SurfaceVisualisation::apply( FV* fv, const QPoint*)
 {
     if ( !_mapped.has(fv))
     {
-        if ( _smapper->mapMetrics(fv))
+        if ( _smm->mapMetrics(fv))
             _mapped.insert(fv);
     }   // end if
-
-    if ( _mapped.has(fv))
-        fv->setActiveSurface( _smapper.get());
 }   // end apply
 
 
+bool SurfaceVisualisation::purge( FV* fv, Event e)
+{
+    if ( _smm->purge( fv->data(), e))
+        _mapped.erase(fv);
+    return !_mapped.has(fv);
+}   // end purge
+
+
+void SurfaceVisualisation::setVisible( FV* fv, bool v)
+{
+    assert(fv);
+    const SurfaceMetricsMapper* csmm = fv->activeSurface();
+    if ( v)
+    {
+        if ( _mapped.has(fv) && csmm != _smm.get())
+            fv->setActiveSurface( _smm.get());
+    }   // end if
+    else if ( csmm == _smm.get())
+        fv->setActiveSurface( nullptr);
+}   // end setVisible
+
+
 // public
-void SurfaceVisualisation::clear( FV* fv)
+bool SurfaceVisualisation::isVisible( const FV *fv) const
 {
-    if ( fv->activeSurface() == _smapper.get())
-        fv->setActiveSurface(nullptr);
-}   // end clear
-
-
-// protected
-void SurfaceVisualisation::purge( FV* fv)
-{
-    clear(fv);
-    _mapped.erase(fv);
-}   // end purge
-
-
-// protected
-void SurfaceVisualisation::purge( const FM* fm)
-{
-    _smapper->purge(fm);
-}   // end purge
+    return fv->activeSurface() == _smm.get();
+}   // end isVisible

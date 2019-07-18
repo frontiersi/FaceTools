@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,26 +19,26 @@
 #define FACE_TOOLS_ACTION_TOGGLE_SCALAR_LEGEND_H
 
 #include "FaceAction.h"
+#include <ScalarLegend.h>   // RVTK
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionToggleScalarLegend : public FaceAction
 { Q_OBJECT
 public:
-    ActionToggleScalarLegend( const QString& dname="Scalar Legend On/Off", FMV* mv=nullptr);
+    explicit ActionToggleScalarLegend( const QString&);
+    ~ActionToggleScalarLegend() override;
 
-    void addViewer( FMV* v) { _viewers.insert(v);}
+    QString toolTip() const override { return "Toggle the display of the legend for scalar colour mappings.";}
 
-protected slots:
-    bool testEnabled( const QPoint *mc=nullptr) const override { return true;}
-    bool doAction( FVS&, const QPoint&) override;
+protected:
+    bool checkEnable( Event) override;
+    bool checkState( Event) override;
 
 private:
-    FMVS _viewers;
+    std::unordered_map<FMV*, RVTK::ScalarLegend*> _legends;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

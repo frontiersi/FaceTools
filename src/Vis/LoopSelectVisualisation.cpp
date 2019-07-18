@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,6 @@
  ************************************************************************/
 
 #include <LoopSelectVisualisation.h>
-#include <ActionVisualise.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <VtkTools.h>
@@ -25,22 +24,17 @@
 using FaceTools::Vis::LoopSelectVisualisation;
 using FaceTools::Vis::LoopsView;
 using FaceTools::Vis::FV;
-using FaceTools::ModelViewer;
-using FaceTools::FaceModelViewer;
-using FaceTools::Action::ActionVisualise;
 using FaceTools::FM;
+using FaceTools::Action::Event;
 
 
-LoopSelectVisualisation::LoopSelectVisualisation( const QString& dname, const QIcon& icon, double srad)
-    : BaseVisualisation(dname, icon), _srad(srad)
-{
-}   // end ctor
+LoopSelectVisualisation::LoopSelectVisualisation( double srad) : _srad(srad) {}
 
 
 LoopSelectVisualisation::~LoopSelectVisualisation()
 {
     while (!_lviews.empty())
-        purge( const_cast<FV*>(_lviews.begin()->first));
+        purge( const_cast<FV*>(_lviews.begin()->first), Event::NONE);
 }   // end dtor
 
 
@@ -52,11 +46,10 @@ bool LoopSelectVisualisation::belongs( const vtkProp* prop, const FV* fv) const
 
 void LoopSelectVisualisation::copy( FV* fv, const FV* s)
 {
-    purge(fv);
+    purge(fv, Event::NONE);
     assert(_lviews.count(s) > 0);
     _lviews[fv] = new LoopsView( *_lviews.at(s));
     _sviews[fv] = new SphereView( *_sviews.at(s));
-    _sviews[fv]->setResolution(101);
     setHighlighted( fv, false);
 }   // end copy
 
@@ -66,8 +59,9 @@ void LoopSelectVisualisation::apply( FV* fv, const QPoint*)
     if ( _lviews.count(fv) == 0)
     {
         _lviews[fv] = new LoopsView( 4.0f);
-        _sviews[fv] = new SphereView( cv::Vec3f(0,0,0), _srad);
+        _sviews[fv] = new SphereView( cv::Vec3f(0,0,0), _srad, true/*pickable*/, true/*fixed scale*/);
         _sviews[fv]->setResolution(101);
+        _sviews[fv]->setOpacity(0.99);
     }   // end if
     _sviews.at(fv)->setVisible( true, fv->viewer());
     _lviews.at(fv)->setVisible( true, fv->viewer());
@@ -75,14 +69,41 @@ void LoopSelectVisualisation::apply( FV* fv, const QPoint*)
 }   // end apply
 
 
-void LoopSelectVisualisation::clear( FV* fv)
+bool LoopSelectVisualisation::purge( FV* fv, Event)
+{
+    if (_lviews.count(fv) > 0)
+    {
+        _lviews.at(fv)->setVisible( false, fv->viewer());
+        delete _lviews.at(fv);
+        _lviews.erase(fv);
+        _sviews.at(fv)->setVisible( false, fv->viewer());
+        delete _sviews.at(fv);
+        _sviews.erase(fv);
+    }   // end if
+    return true;
+}   // end purge
+
+
+void LoopSelectVisualisation::setVisible( FV* fv, bool v)
 {
     if ( _sviews.count(fv) > 0)
     {
-        _sviews.at(fv)->setVisible( false, fv->viewer());
-        _lviews.at(fv)->setVisible( false, fv->viewer());
+        _sviews.at(fv)->setVisible( v, fv->viewer());
+        _lviews.at(fv)->setVisible( v, fv->viewer());
     }   // end if
-}   // end clear
+}   // end setVisible
+
+
+bool LoopSelectVisualisation::isVisible( const FV* fv) const
+{
+    bool vis = false;
+    if ( _sviews.count(fv) > 0)
+    {
+        vis = _sviews.at(fv)->visible();
+        assert( vis ==_lviews.at(fv)->visible());
+    }   // end if
+    return vis;
+}   // end isVisible
 
 
 void LoopSelectVisualisation::setReticule( const FV* fv, const cv::Vec3f& rpos)
@@ -112,60 +133,27 @@ void LoopSelectVisualisation::setPickable( const FV* fv, bool v)
 }   // end setPickable
 
 
-bool LoopSelectVisualisation::setHighlighted( const FV* fv, bool hval)
+void LoopSelectVisualisation::setHighlighted( const FV* fv, bool hval)
 {
-    if ( _lviews.count(fv) == 0)
-        return false;
-
-    cv::Vec3f colour(0.0f, 0.6f, 0.0f); // non-highlight colour
-    if ( hval)
-        colour = cv::Vec3f( 0.9f, 0.2f, 0.4f);
-
-    bool setcolour = false;
-    if ( colour != _lviews[fv]->colour())
+    if ( _lviews.count(fv) > 0)
     {
-        _sviews[fv]->setColour( colour[0], colour[1], colour[2]);
+        const cv::Vec3d col = hval ? cv::Vec3d(0.9, 0.2, 0.4) : cv::Vec3d(0.0, 0.6, 0.0);
         _sviews[fv]->setOpacity(0.5);
-        _lviews[fv]->setColour( colour);
-        setcolour = true;
+        _sviews[fv]->setColour( col[0], col[1], col[2]);
+        _lviews[fv]->setColour( col[0], col[1], col[2]);
+        _lviews[fv]->changeColour( col[0], col[1], col[2]);
     }   // end if
-    return setcolour;
 }   // end setHighlighted
 
 
-// protected
-void LoopSelectVisualisation::pokeTransform( const FV* fv, const vtkMatrix4x4* vm)
+void LoopSelectVisualisation::syncActorsToData(const FV *fv, const cv::Matx44d &d)
 {
     if (_lviews.count(fv) > 0)
     {
+        const cv::Matx44d& bmat = fv->data()->model().transformMatrix();
+        const cv::Matx44d cm = d * bmat;
+        vtkSmartPointer<vtkMatrix4x4> vm = RVTK::toVTK( cm);
+        _sviews.at(fv)->setCentre( RFeatures::transform(cm, _sviews.at(fv)->centre()));
         _lviews.at(fv)->pokeTransform(vm);
-        _sviews.at(fv)->pokeTransform(vm);
     }   // end if
-}   // end pokeTransform
-
-
-// protected
-void LoopSelectVisualisation::fixTransform( const FV* fv)
-{
-    if (_lviews.count(fv) > 0)
-    {
-        _lviews.at(fv)->fixTransform();
-        _sviews.at(fv)->fixTransform();
-    }   // end if
-}   // end fixTransform
-
-
-// protected
-void LoopSelectVisualisation::purge( FV* fv)
-{
-    if (_lviews.count(fv) > 0)
-    {
-        _lviews.at(fv)->setVisible( false, fv->viewer());
-        delete _lviews.at(fv);
-        _lviews.erase(fv);
-        _sviews.at(fv)->setVisible( false, fv->viewer());
-        delete _sviews.at(fv);
-        _sviews.erase(fv);
-    }   // end if
-}   // end purge
-
+}   // end syncActorsToData

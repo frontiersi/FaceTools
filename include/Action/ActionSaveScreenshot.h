@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,34 +18,21 @@
 #ifndef FACE_TOOLS_ACTION_SAVE_SCREENSHOT_H
 #define FACE_TOOLS_ACTION_SAVE_SCREENSHOT_H
 
-/**
- * Save as image snapshots the renderers for the actioned actioned Vis::FVs.
- * If multiple viewers are added, the screenshot is generated from a horizontal
- * concatenation of the images from the added viewers (left to right in additive order).
- */
-
 #include "FaceAction.h"
 
-namespace FaceTools {
-namespace Action {
+namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionSaveScreenshot : public FaceAction
 { Q_OBJECT
 public:
-    // If no viewers are added, screenshots are saved from viewers of the FVS passed in to doAction.
-    ActionSaveScreenshot( const QString& dname, const QIcon& icon, FMV* mv=nullptr);
+    ActionSaveScreenshot( const QString& debugName, const QIcon&);
 
-    void addViewer( FMV* v) { _viewers.push_back(v);}
-   
-public slots:
-    bool testEnabled( const QPoint*) const override { return true;}
-    bool doAction( FVS&, const QPoint&) override;
+    QString toolTip() const override { return "Take a concatenated snapshot from the visible viewers, and save the image to file.";}
 
-private:
-    std::vector<FMV*> _viewers;
+protected:
+    void doAction( Event) override;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif

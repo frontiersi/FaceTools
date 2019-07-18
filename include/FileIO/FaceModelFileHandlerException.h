@@ -27,8 +27,7 @@
 #include <string>
 #include <stdexcept>
 
-namespace FaceTools {
-namespace FileIO {
+namespace FaceTools { namespace FileIO {
 
 class FaceTools_EXPORT FaceModelFileHandlerException : public std::runtime_error
 {
@@ -41,7 +40,6 @@ private:
     const std::string _ext;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

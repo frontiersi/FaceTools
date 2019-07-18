@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,13 +30,15 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionAlignLandmarks : public FaceAction
 { Q_OBJECT
 public:
-    // Async if pb not null.
-    ActionAlignLandmarks( const QString& dname="Align Landmarks", const QIcon& icon=QIcon(), QProgressBar* pb=nullptr);
+    ActionAlignLandmarks( const QString&, const QIcon&);
 
-protected slots:
-    bool testEnabled( const QPoint*) const override;
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(AFFINE_CHANGE);}
+    QString toolTip() const override { return "Use Procrustes superimposition to align the landmarks of other models in the same viewer as the selected model with it.";}
+
+protected:
+    bool checkEnable( Event) override;
+    bool doBeforeAction( Event) override;
+    void doAction( Event) override;
+    void doAfterAction( Event) override;
 };  // end class
 
 }}   // end namespace

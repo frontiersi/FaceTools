@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,20 +17,30 @@
 
 #include <LandmarkSet.h>
 #include <FaceTools.h>
-#include <Transformer.h>  // RFeatures
+#include <FaceModel.h>
 #include <ObjModelSurfacePointFinder.h>
 #include <Orientation.h>
 using FaceTools::Landmark::LandmarkSet;
 using FaceTools::Landmark::Landmark;
 using FaceTools::Landmark::SpecificLandmark;
 using FaceTools::FaceLateral;
+using FaceTools::FM;
 using LDMRK_PAIR = std::pair<int, cv::Vec3f>;
 #include <algorithm>
 #include <cassert>
 
 LandmarkSet::Ptr LandmarkSet::create() { return Ptr( new LandmarkSet, [](LandmarkSet* d){ delete d;});}
 
-LandmarkSet::LandmarkSet() {}
+
+LandmarkSet::Ptr LandmarkSet::deepCopy() const
+{
+    LandmarkSet* lmks = new LandmarkSet;
+    *lmks = *this;
+    return Ptr( lmks, [](LandmarkSet* d){ delete d;});
+}   // end deepCopy
+
+
+LandmarkSet::LandmarkSet() : _tmat(cv::Matx44d::eye()), _imat(cv::Matx44d::eye()) {}
 
 
 bool LandmarkSet::has( int id, FaceLateral lat) const
@@ -58,7 +68,6 @@ bool LandmarkSet::has( int id, FaceLateral lat) const
 bool LandmarkSet::has( const SpecificLandmark& p) const { return has(p.id, p.lat);}
 
 
-// private
 const LandmarkSet::LDMRKS& LandmarkSet::lateral( FaceLateral lat) const
 {
     const LDMRKS* lmks = nullptr;
@@ -96,7 +105,7 @@ bool LandmarkSet::set( int id, const cv::Vec3f& v, FaceLateral lat)
     if ( !lmk->isBilateral())
         lat = FACE_LATERAL_MEDIAL;
 
-    lateral(lat)[id] = v;
+    lateral(lat)[id] = RFeatures::transform( _imat, v);
     _names.insert(lmk->name());
     _codes.insert(lmk->code());
     _ids.insert(id);
@@ -137,29 +146,51 @@ void LandmarkSet::clear()
 }   // end clear
 
 
-const cv::Vec3f* LandmarkSet::pos( int id, FaceLateral lat) const
+cv::Vec3f LandmarkSet::pos( int id, FaceLateral lat) const
 {
-    if ( LDMKS_MAN::landmark(id)->isBilateral() && lat == FACE_LATERAL_MEDIAL)
-    {
-        std::cerr << "[WARNING] FaceTools::Landmark::LandmarkSet::pos: Requested landmark is bilateral but requested medial!" << std::endl;
-        return nullptr;
-    }   // end if
-
-    if (!has(id, lat))
-        return nullptr;
-    return &lateral(lat).at(id);
+    return RFeatures::transform( _tmat, upos( id, lat));
 }   // end pos
 
-const cv::Vec3f* LandmarkSet::pos( const QString& lmcode, FaceLateral lat) const { return pos( LDMKS_MAN::landmark(lmcode)->id(), lat);}
 
-const cv::Vec3f* LandmarkSet::pos( const SpecificLandmark& sl) const { return pos( sl.id, sl.lat);}
-
-
-const cv::Vec3f* LandmarkSet::posSomeMedial() const
+const cv::Vec3f& LandmarkSet::upos( int id, FaceLateral lat) const
 {
+    static const cv::Vec3f ZEROV(0,0,0);
+    if ( LDMKS_MAN::landmark(id)->isBilateral() && lat == FACE_LATERAL_MEDIAL)
+    {
+        std::cerr << "[ERROR] FaceTools::Landmark::LandmarkSet::pos: Requested landmark is bilateral but requested medial!" << std::endl;
+        assert(false);
+        return ZEROV;
+    }   // end if
+
+    assert(has(id, lat));
+    if (!has(id, lat))
+        return ZEROV;
+
+    return lateral(lat).at(id);
+}   // end upos
+
+
+cv::Vec3f LandmarkSet::pos( const QString& lmcode, FaceLateral lat) const
+{
+    return pos( LDMKS_MAN::landmark(lmcode)->id(), lat);
+}   // end pos
+
+
+const cv::Vec3f& LandmarkSet::upos( const QString& lmcode, FaceLateral lat) const
+{
+    return upos( LDMKS_MAN::landmark(lmcode)->id(), lat);
+}   // end upos
+
+
+cv::Vec3f LandmarkSet::pos( const SpecificLandmark& sl) const { return pos( sl.id, sl.lat);}
+
+
+cv::Vec3f LandmarkSet::posSomeMedial() const
+{
+    assert( !_lmksM.empty());
     if ( _lmksM.empty())
-        return nullptr;
-    return &_lmksM.begin()->second;
+        return cv::Vec3f(0,0,0);
+    return _lmksM.begin()->second;
 }   // end posSomeMedial
 
 
@@ -168,15 +199,16 @@ cv::Vec3f LandmarkSet::rightVec() const
     if ( empty())
         return cv::Vec3f(1,0,0);
 
-    cv::Vec3f rv;
+    cv::Vec3f rv(0,0,0);
     for ( const auto& p : _lmksL)
     {
-        const cv::Vec3f& lpos = p.second;
-        const cv::Vec3f& rpos = _lmksR.at(p.first);
-        // Landmarks further apart laterally will have greater influence
-        // over the determination of this vector.
+        int lmid = p.first;
+        cv::Vec3f lpos = pos( lmid, FACE_LATERAL_LEFT);
+        cv::Vec3f rpos = pos( lmid, FACE_LATERAL_RIGHT);
+        // Landmarks further apart laterally more greatly influence the determination of this vector.
         rv += rpos - lpos;
     }   // end for
+
     cv::Vec3f urv;
     cv::normalize( rv, urv);
     return urv;
@@ -220,7 +252,7 @@ cv::Vec3f LandmarkSet::eyeVec() const
     if ( hasCode(P))
     {
         const int id = LDMKS_MAN::landmark(P)->id(); // Get the id of the pupil landmark
-        v = *pos( id, FACE_LATERAL_RIGHT) - *pos( id, FACE_LATERAL_LEFT);
+        v = pos( id, FACE_LATERAL_RIGHT) - pos( id, FACE_LATERAL_LEFT);
     }   // end if
     return v;
 }   // end eyeVec
@@ -230,19 +262,19 @@ cv::Vec3f LandmarkSet::superiorMean() const
 {
     cv::Vec3f m(0,0,0);
     if ( hasCode(MSO))
-        m += *pos( MSO, FACE_LATERAL_LEFT) + *pos( MSO, FACE_LATERAL_RIGHT);
+        m += pos( MSO, FACE_LATERAL_LEFT) + pos( MSO, FACE_LATERAL_RIGHT);
     if ( hasCode(EX))
-        m += *pos(  EX, FACE_LATERAL_LEFT) + *pos(  EX, FACE_LATERAL_RIGHT);
+        m += pos(  EX, FACE_LATERAL_LEFT) + pos(  EX, FACE_LATERAL_RIGHT);
     if ( hasCode(EN))
-        m += *pos(  EN, FACE_LATERAL_LEFT) + *pos(  EN, FACE_LATERAL_RIGHT);
+        m += pos(  EN, FACE_LATERAL_LEFT) + pos(  EN, FACE_LATERAL_RIGHT);
     if ( hasCode(G))
-        m += *pos(   G);
+        m += pos(   G);
     if ( hasCode(N))
-        m += *pos(   N);
+        m += pos(   N);
     if ( hasCode(SE))
-        m += *pos(  SE);
+        m += pos(  SE);
     if ( hasCode(MND))
-        m += *pos( MND);
+        m += pos( MND);
     return m * 1.0f/10;
 }   // end superiorMean
 
@@ -251,19 +283,19 @@ cv::Vec3f LandmarkSet::inferiorMean() const
 {
     cv::Vec3f m(0,0,0);
     if ( hasCode(AC))
-        m += *pos(  AC, FACE_LATERAL_LEFT) + *pos(  AC, FACE_LATERAL_RIGHT);
+        m += pos(  AC, FACE_LATERAL_LEFT) + pos(  AC, FACE_LATERAL_RIGHT);
     if ( hasCode(CPH))
-        m += *pos( CPH, FACE_LATERAL_LEFT) + *pos( CPH, FACE_LATERAL_RIGHT);
+        m += pos( CPH, FACE_LATERAL_LEFT) + pos( CPH, FACE_LATERAL_RIGHT);
     if ( hasCode(CH))
-        m += *pos(  CH, FACE_LATERAL_LEFT) + *pos(  CH, FACE_LATERAL_RIGHT);
+        m += pos(  CH, FACE_LATERAL_LEFT) + pos(  CH, FACE_LATERAL_RIGHT);
     if ( hasCode(LS))
-        m += *pos(  LS);
+        m += pos(  LS);
     if ( hasCode(LI))
-        m += *pos(  LI);
+        m += pos(  LI);
     if ( hasCode(STS))
-        m += (*pos( STS) + *pos( STI)) * 0.5f;
+        m += (pos( STS) + pos( STI)) * 0.5f;
     if ( hasCode(SL))
-        m += *pos(  SL);
+        m += pos(  SL);
     return m * 1.0f/10;
 }   // end inferiorMean
 
@@ -274,47 +306,42 @@ cv::Vec3f LandmarkSet::fullMean() const
 }   // end fullMean
 
 
-bool LandmarkSet::translate( int id, FaceLateral lat, const cv::Vec3f& t)
+void LandmarkSet::swapLaterals()
 {
-    if (!has(id,lat))
-        return false;
-    lateral(lat).at(id) += t;
-    return true;
-}   // end translate
+    const auto tmp = _lmksL;
+    _lmksL = _lmksR;
+    _lmksR = tmp;
+}   // end swapLaterals
 
 
-void LandmarkSet::translate( const cv::Vec3f& t)
-{
-    for ( auto& p : _lmksL)
-        translate( p.first, FACE_LATERAL_LEFT, t);
-    for ( auto& p : _lmksM)
-        translate( p.first, FACE_LATERAL_MEDIAL, t);
-    for ( auto& p : _lmksR)
-        translate( p.first, FACE_LATERAL_RIGHT, t);
-}   // end translate
-
-
-void LandmarkSet::transform( const cv::Matx44d& T)
-{
-    const RFeatures::Transformer mover(T);
-    for ( auto& p : _lmksL)
-        mover.transform( _lmksL.at(p.first));
-    for ( auto& p : _lmksM)
-        mover.transform( _lmksM.at(p.first));
-    for ( auto& p : _lmksR)
-        mover.transform( _lmksR.at(p.first));
-}   // end transform
-
-
-void LandmarkSet::moveToSurface( const RFeatures::ObjModelKDTree* kdt)
+void LandmarkSet::moveToSurface( const FM* fm)
 {
     for ( const auto& p : _lmksL)
-        _lmksL.at(p.first) = FaceTools::toSurface( kdt, p.second);
+        _lmksL.at(p.first) = RFeatures::transform( _imat, FaceTools::toSurface( fm, RFeatures::transform( _tmat, p.second)));
     for ( const auto& p : _lmksM)
-        _lmksM.at(p.first) = FaceTools::toSurface( kdt, p.second);
+        _lmksM.at(p.first) = RFeatures::transform( _imat, FaceTools::toSurface( fm, RFeatures::transform( _tmat, p.second)));
     for ( const auto& p : _lmksR)
-        _lmksR.at(p.first) = FaceTools::toSurface( kdt, p.second);
+        _lmksR.at(p.first) = RFeatures::transform( _imat, FaceTools::toSurface( fm, RFeatures::transform( _tmat, p.second)));
 }   // end moveToSurface
+
+
+void LandmarkSet::addTransformMatrix(const cv::Matx44d &tmat)
+{
+    _tmat = tmat * _tmat;
+    _imat = _tmat.inv();
+}   // end addTransformMatrix
+
+
+void LandmarkSet::fixTransformMatrix()
+{
+    for ( auto& p : _lmksL)
+        RFeatures::transform( _tmat, p.second);
+    for ( auto& p : _lmksM)
+        RFeatures::transform( _tmat, p.second);
+    for ( auto& p : _lmksR)
+        RFeatures::transform( _tmat, p.second);
+    _tmat = _imat = cv::Matx44d::eye();
+}   // end fixTransformMatrix
 
 
 // Write out the landmarks to record.
@@ -322,13 +349,13 @@ void LandmarkSet::write( PTree& lnodes) const
 {
     PTree& llat = lnodes.put("LeftLateral", "");
     for ( const auto& p : _lmksL)
-        RFeatures::putNamedVertex( llat, LDMKS_MAN::landmark(p.first)->code().toStdString(), p.second);
+        RFeatures::putNamedVertex( llat, LDMKS_MAN::landmark(p.first)->code().toStdString(), RFeatures::transform( _tmat, p.second));
     PTree& mlat = lnodes.put("Medial", "");
     for ( const auto& p : _lmksM)
-        RFeatures::putNamedVertex( mlat, LDMKS_MAN::landmark(p.first)->code().toStdString(), p.second);
+        RFeatures::putNamedVertex( mlat, LDMKS_MAN::landmark(p.first)->code().toStdString(), RFeatures::transform( _tmat, p.second));
     PTree& rlat = lnodes.put("RightLateral", "");
     for ( const auto& p : _lmksR)
-        RFeatures::putNamedVertex( rlat, LDMKS_MAN::landmark(p.first)->code().toStdString(), p.second);
+        RFeatures::putNamedVertex( rlat, LDMKS_MAN::landmark(p.first)->code().toStdString(), RFeatures::transform( _tmat, p.second));
 }   // end write
 
 

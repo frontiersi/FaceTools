@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,28 +27,22 @@ using FaceTools::Vis::PathSetView;
 using FaceTools::Vis::PathView;
 using FaceTools::Vis::FV;
 using FaceTools::FMV;
-using FaceTools::FVS;
 using FaceTools::FM;
 using FaceTools::Path;
-
-
-PathSetVisualisation::PathSetVisualisation( const QString& dname, const QIcon& icon)
-    : BaseVisualisation(dname, icon)
-{
-}   // end ctor
+using FaceTools::Action::Event;
 
 
 PathSetVisualisation::~PathSetVisualisation()
 {
     while (!_views.empty())
-        purge( const_cast<FV*>(_views.begin()->first));
+        purge( const_cast<FV*>(_views.begin()->first), Event::NONE);
 }   // end dtor
 
 
 bool PathSetVisualisation::isAvailable( const FM* fm) const
 {
     assert(fm);
-    return !fm->paths()->empty();
+    return !fm->paths().empty();
 }   // end isAvailable
 
 
@@ -67,14 +61,35 @@ void PathSetVisualisation::apply( FV* fv, const QPoint*)
 }   // end apply
 
 
-void PathSetVisualisation::clear( FV* fv)
+bool PathSetVisualisation::purge( FV* fv, Event)
+{
+    if ( hasView(fv))
+    {
+        _views.at(fv)->setVisible( false, fv->viewer());
+        delete _views.at(fv);
+        _views.erase(fv);
+    }   // end if
+    return true;
+}   // end purge
+
+
+void PathSetVisualisation::setVisible( FV* fv, bool v)
 {
     if ( hasView(fv))
     {
         FMV* viewer = fv->viewer();
-        _views.at(fv)->setVisible( false, viewer);
+        _views.at(fv)->setVisible( v, viewer);
     }   // end if
-}   // end clear
+}   // end setVisible
+
+
+bool PathSetVisualisation::isVisible( const FV *fv) const
+{
+    bool vis = false;
+    if ( hasView(fv))
+        vis = _views.at(fv)->isVisible();
+    return vis;
+}   // end isVisible
 
 
 // public
@@ -101,14 +116,9 @@ void PathSetVisualisation::updatePath( const FM* fm, int pathId)
 
 void PathSetVisualisation::refresh( const FM* fm)
 {
-    assert(fm);
     for ( FV* fv : fm->fvs())
-    {
-        if ( !hasView(fv))  // Ensure the PathSetView is present
-            apply(fv,nullptr);
-        else
+        if ( hasView(fv))
             _views.at(fv)->refresh();
-    }   // end for
 }   // end refresh
 
 
@@ -169,32 +179,11 @@ PathView::Handle* PathSetVisualisation::pathHandle1( const FV* fv, int pid) cons
 }   // end pathHandle1
 
 
-// protected
-void PathSetVisualisation::pokeTransform( const FV* fv, const vtkMatrix4x4* m)
+void PathSetVisualisation::syncActorsToData(const FV *fv, const cv::Matx44d &d)
 {
     if ( hasView(fv))
-        _views.at(fv)->pokeTransform(m);
-}   // end pokeTransform
-
-
-// protected
-void PathSetVisualisation::fixTransform( const FV* fv)
-{
-    if ( hasView(fv))
-        _views.at(fv)->fixTransform();
-}   // end fixTransform
-
-
-// protected
-void PathSetVisualisation::purge( FV* fv)
-{
-    if ( hasView(fv))
-    {
-        _views.at(fv)->setVisible( false, fv->viewer());
-        delete _views.at(fv);
-        _views.erase(fv);
-    }   // end if
-}   // end purge
+        _views.at(fv)->refresh( d);
+}   // end syncActorsToData
 
 
 // private

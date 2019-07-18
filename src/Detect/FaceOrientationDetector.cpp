@@ -18,6 +18,7 @@
 #include <FaceOrientationDetector.h>
 #include <FaceFinder2D.h>
 #include <FaceTools.h>
+#include <FaceModel.h>
 #include <LandmarksManager.h>
 #include <ObjModelSurfacePointFinder.h> // RFeatures
 #include <FeatureUtils.h>               // RFeatures
@@ -25,9 +26,9 @@
 #include <iostream>
 #include <cassert>
 #include <cmath>
-using KDT = RFeatures::ObjModelKDTree;
 using RFeatures::ObjModel;
 using RFeatures::Orientation;
+using FaceTools::FM;
 using FaceTools::Detect::FaceFinder2D;
 using FaceTools::Landmark::LandmarkSet;
 using FD = FaceTools::Detect::FeaturesDetector;
@@ -127,10 +128,10 @@ bool detect2DEyes( const cv::Mat_<byte>& img, cv::Point2f& f0, cv::Point2f& f1)
 
 
 // public
-FaceOrientationDetector::FaceOrientationDetector( const KDT* kdt, float orng, float dfact)
-    : _vwr( cv::Size(400,400), orng), _kdt(kdt), _orng(orng), _dfact(orng/dfact), _nvec(0,0,1)
+FaceOrientationDetector::FaceOrientationDetector( const FM* fm, float orng, float dfact)
+    : _vwr( cv::Size(400,400), orng), _model(fm), _orng(orng), _dfact(orng/dfact), _nvec(0,0,1)
 {
-    _vwr.setModel(kdt->model());
+    _vwr.setModel( fm->model());
     setLandmarksToUpdate();
 }   // end ctor
 
@@ -233,7 +234,7 @@ bool FaceOrientationDetector::detect( LandmarkSet& lmks)
 
             i++;
             if ( i < MAX_OALIGN)    // Find a different normal to try a better alignment for eye detection and orientation
-                FaceTools::findNormal( _kdt, _v0, _v1, _nvec);
+                FaceTools::findNormal( _model, _v0, _v1, _nvec);
         }   // end if
         else
         {
@@ -267,7 +268,7 @@ bool FaceOrientationDetector::detect( LandmarkSet& lmks)
         setCameraToFace( sdrng); // Set camera to detection range
         //RFeatures::showImage( _vwr.snapshot(), "Pre-detection", true);
 
-        if ( !FLD::detect( _vwr, &*_kdt, lmks, _ulmks))
+        if ( !FLD::detect( _vwr, _model, lmks, _ulmks))
         {
             _err = "Landmark detection failed!";
             std::cerr << errhead << _err;
@@ -276,10 +277,10 @@ bool FaceOrientationDetector::detect( LandmarkSet& lmks)
         {
             detected = true;
             // Update orientation from the discovered landmarks
-            _v0 = *lmks.pos( FaceTools::Landmark::P, FACE_LATERAL_LEFT);
-            _v1 = *lmks.pos( FaceTools::Landmark::P, FACE_LATERAL_RIGHT);
+            _v0 = lmks.pos( FaceTools::Landmark::P, FACE_LATERAL_LEFT);
+            _v1 = lmks.pos( FaceTools::Landmark::P, FACE_LATERAL_RIGHT);
 
-            FaceTools::findNormal( _kdt, _v0, _v1, _nvec);
+            FaceTools::findNormal( _model, _v0, _v1, _nvec);
             cv::normalize( snvec + _nvec, _nvec);
             /*
             setCameraToFace( sdrng);

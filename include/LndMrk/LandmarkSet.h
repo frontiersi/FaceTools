@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,6 +33,8 @@ public:
     using Ptr = std::shared_ptr<LandmarkSet>;
     static Ptr create();
 
+    Ptr deepCopy() const;
+
     // Add/change position of landmark with given id on given lateral.
     // If landmark is not bilateral, the FaceLateral argument may be ignored.
     // Returns true iff landmark with given id on the given lateral exists.
@@ -46,20 +48,28 @@ public:
     // Remove all landmarks from the set.
     void clear();
 
+    // Return the full set of landmarks for one lateral.
+    const std::unordered_map<int, cv::Vec3f>& lateral( FaceLateral) const;
+
     // Return the position of the landmark for the given lateral.
     // The FACE_LATERAL_MEDIAL constant does not need to be specified if the
     // landmark is medial. Note though that only the given lateral is checked.
-    // Returns null if the landmark is not present (on the given lateral).
-    const cv::Vec3f* pos( int id, FaceLateral=FACE_LATERAL_MEDIAL) const;
+    cv::Vec3f pos( int id, FaceLateral=FACE_LATERAL_MEDIAL) const;
+
+    // Return the untransformed position for the given landmark.
+    const cv::Vec3f& upos( int id, FaceLateral=FACE_LATERAL_MEDIAL) const;
 
     // Alternative usage takes a landmark code.
-    const cv::Vec3f* pos( const QString& lmcode, FaceLateral=FACE_LATERAL_MEDIAL) const;
+    cv::Vec3f pos( const QString& lmcode, FaceLateral=FACE_LATERAL_MEDIAL) const;
+
+    // Return the untransformed position for the given landmark.
+    const cv::Vec3f& upos( const QString& lmcode, FaceLateral=FACE_LATERAL_MEDIAL) const;
 
     // Another alternative.
-    const cv::Vec3f* pos( const SpecificLandmark&) const;
+    cv::Vec3f pos( const SpecificLandmark&) const;
 
     // Return the position of some random medial landmark if one exists, else null.
-    const cv::Vec3f* posSomeMedial() const;
+    cv::Vec3f posSomeMedial() const;
 
     // Convenience function to return the interpupil difference vector (from left to right eye),
     // or the zero vector if landmarks not available.
@@ -74,7 +84,7 @@ public:
     // Calculate the normal vector as rightVec X upVec.
     cv::Vec3f normVec() const;
 
-    // Calculate and return orientation (normVec and upVec, but more efficiently calculated).
+    // Calculate and return orientation.
     RFeatures::Orientation orientation() const;
 
     // Get the mean position of the landmarks in the superior (top face) group.
@@ -102,11 +112,14 @@ public:
     cv::Vec3f fullMean() const; // Simply (superiorMean + inferiorMean)/2
 
     // Add translation vector v to specified landmark (returns false if landmark not present).
-    bool translate( int id, FaceLateral, const cv::Vec3f&);
-    void translate( const cv::Vec3f&);     // Add translation vector v to all landmarks
-    void transform( const cv::Matx44d&);   // Transform landmarks according to the given matrix.
+    //bool translate( int id, FaceLateral, const cv::Vec3f&);
+    void swapLaterals();                   // Swap the left and right laterals.
 
-    void moveToSurface( const RFeatures::ObjModelKDTree*);
+    void moveToSurface( const FM*);
+
+    void addTransformMatrix( const cv::Matx44d&);
+    void fixTransformMatrix();
+    const cv::Matx44d& transformMatrix() const { return _tmat;}
 
     // Get the names/codes/ids of landmarks in this set.
     const QStringSet& names() const { return _names;}
@@ -133,19 +146,20 @@ public:
 private:
     IntSet _ids;
     QStringSet _names, _codes;
+    cv::Matx44d _tmat;  // Transform matrix
+    cv::Matx44d _imat;  // Inverse transform matrix
     using LDMRKS = std::unordered_map<int, cv::Vec3f>;
     LDMRKS _lmksL;  // Left lateral
     LDMRKS _lmksM;  // Medial (none)
     LDMRKS _lmksR;  // Right lateral
 
-    const std::unordered_map<int, cv::Vec3f>& lateral( FaceLateral) const;
     std::unordered_map<int, cv::Vec3f>& lateral( FaceLateral);
+    bool readLateral( const PTree&, FaceLateral);
 
     LandmarkSet();
     ~LandmarkSet(){}
-    LandmarkSet( const LandmarkSet&) = delete;
-    void operator=( const LandmarkSet&) = delete;
-    bool readLateral( const PTree&, FaceLateral);
+    LandmarkSet( const LandmarkSet&) = default;
+    LandmarkSet& operator=( const LandmarkSet&) = default;
 };  // end class
 
 }}   // end namespace

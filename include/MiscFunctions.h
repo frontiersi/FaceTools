@@ -83,7 +83,7 @@ FaceTools_EXPORT void getVertices( const RFeatures::ObjModel*, const std::vector
 FaceTools_EXPORT bool getVertexIndices( const RFeatures::ObjModel*, const std::vector<cv::Vec3f>& vs, std::vector<int>& vidxs);
 
 // As getVertexIndices but looks for nearest vertices if they cannot be found directly via hash lookup.
-FaceTools_EXPORT void findNearestVertexIndices( const RFeatures::ObjModelKDTree&, const std::vector<cv::Vec3f>& vs, std::vector<int>& vidxs);
+//FaceTools_EXPORT void findNearestVertexIndices( const RFeatures::ObjModelKDTree&, const std::vector<cv::Vec3f>& vs, std::vector<int>& vidxs);
 
 // Replace any black in m with the mean value of m not counting the black (0) pixels
 FaceTools_EXPORT cv::Mat_<byte> removeBlackBackground( const cv::Mat_<byte>& m);
@@ -102,19 +102,19 @@ FaceTools_EXPORT cv::Mat rotateUpright( const cv::Mat& img, const cv::RotatedRec
 // Find the entry in uvidxs (giving unique vertex indices into omodel) that
 // is roughly equidistant from the endpoints of the path. Entries in uvidxs
 // do not have to form a connected path over the surface of the model.
-FaceTools_EXPORT int findMidway( const RFeatures::ObjModel*, const std::vector<int>& uvidxs);
+FaceTools_EXPORT int findMidway( const RFeatures::ObjModel&, const std::vector<int>& uvidxs);
 
 // Gets the shortest path over the surface of the model between v0 and v1, setting the resulting
 // unique vertex IDs in uvidxs, and returning the location of the vector approximately midway along
 // this path between the two endpoints v0 and v1.
-FaceTools_EXPORT cv::Vec3f getShortestPath( const RFeatures::ObjModel*, int v0, int v1, std::vector<int>& uvidxs);
+FaceTools_EXPORT cv::Vec3f getShortestPath( const RFeatures::ObjModel&, int v0, int v1, std::vector<int>& uvidxs);
 
 // Given a 3D triangle identifed by the given three corner points (with base given by v1 - v0)
 // derive the direction vector whose magnitude also gives the triangle's height.
 FaceTools_EXPORT cv::Vec3f calcDirectionVectorFromBase( const cv::Vec3f& v0, const cv::Vec3f& v1, const cv::Vec3f& apex);
 
 // Find, and return the index of the vertex maximally distant from svidx in the direction of growVec.
-FaceTools_EXPORT int growOut( const RFeatures::ObjModel*, const cv::Vec3f& growVec, int svidx);
+FaceTools_EXPORT int growOut( const RFeatures::ObjModel&, const cv::Vec3f& growVec, int svidx);
 
 // Copy contents of vtkIdList (assumed to be integers) to given std::vector.
 // Returns the number of elements copied in. Does not clear contents of vector first.

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,8 +18,6 @@
 #include <MetricSet.h>
 using FaceTools::Metric::MetricSet;
 using FaceTools::Metric::MetricValue;
-#include <algorithm>
-#include <iostream>
 
 MetricSet::Ptr MetricSet::create() { return Ptr( new MetricSet, [](MetricSet* d){ delete d;});}
 
@@ -34,12 +32,12 @@ void MetricSet::set( const MetricValue& m)
 size_t MetricSet::add( const MetricSet& ms)
 {
     for ( int id : ms.ids())
-        set( *ms.get(id));
+        set( ms.metric(id));
     return ms.size();
 }   // end add
 
 
-const MetricValue* MetricSet::get( int id) const { return has(id) ? &_metrics.at(id) : nullptr;}
+const MetricValue& MetricSet::metric( int id) const { return _metrics.at(id);}
 
 
 bool MetricSet::erase( int id)
@@ -54,15 +52,13 @@ bool MetricSet::erase( int id)
 
 void MetricSet::reset()
 {
-    IntSet ids = _ids;
-    for ( int id : ids)
-        erase(id);
+    _metrics.clear();
+    _ids.clear();
 }   // end reset
 
 
-PTree& FaceTools::Metric::operator<<( PTree& mnodes, const MetricSet& ms)
+void MetricSet::write( PTree& node, double age) const
 {
-    const IntSet& ids = ms.ids();
-    std::for_each( std::begin(ids), std::end(ids), [&](int id){ mnodes << *ms.get(id);});
-    return mnodes;
-}   // end operator<<
+    for ( int id : _ids)
+        metric(id).write(node, age);
+}   // end write

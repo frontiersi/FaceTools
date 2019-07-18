@@ -18,8 +18,8 @@
 #include <CheckAllTableHeader.h>
 using FaceTools::Widget::CheckAllTableHeader;
 
-CheckAllTableHeader::CheckAllTableHeader( QWidget *parent)
-    : QHeaderView( Qt::Horizontal, parent), _on(false)
+CheckAllTableHeader::CheckAllTableHeader( QWidget *parent, bool useEye)
+    : QHeaderView( Qt::Horizontal, parent), _on(false), _useEye(useEye)
 {
     setSectionsClickable(true);
     connect( this, &QHeaderView::sectionClicked, this, [this](int lidx){ if (lidx == 0){ setAllChecked(!_on);}});
@@ -45,9 +45,20 @@ void CheckAllTableHeader::paintSection( QPainter *painter, const QRect &rect, in
     if (lidx == 0)
     {
         QStyleOptionButton option;
-        option.rect = QRect(0,0,18,18);
-        //option.state = _on ? QStyle::State_On : QStyle::State_Off;
-        //style()->drawPrimitive( QStyle::PE_IndicatorCheckBox, &option, painter);
-        style()->drawItemPixmap( painter, option.rect, 0, QPixmap(":/icons/EYE"));
+        const double ct = double(rect.height())/6;
+        const int hh = int( 4*ct + 0.5);
+
+        option.rect = QRect( int(ct), int(ct), hh, hh);
+        option.state = _on ? QStyle::State_On : QStyle::State_Off;
+
+        if ( _useEye)
+        {
+            QString visIcon = hh <= 20 ? ":/icons/VISIBLE_SMALL" : ":/icons/VISIBLE";
+            QString invisIcon = hh <= 20 ? ":/icons/INVISIBLE_SMALL" : ":/icons/INVISIBLE";
+            QPixmap pmap = _on ? QPixmap( visIcon).scaled(hh,hh) : QPixmap(invisIcon).scaled(hh,hh);
+            style()->drawItemPixmap( painter, option.rect, 0, pmap);
+        }   // end if
+        else
+            style()->drawPrimitive( QStyle::PE_IndicatorCheckBox, &option, painter);
     }   // end if
 }   // end paintSection

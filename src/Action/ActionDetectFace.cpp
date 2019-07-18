@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,45 +18,53 @@
 #include <ActionDetectFace.h>
 #include <FaceOrientationDetector.h>
 #include <FaceShapeLandmarks2DDetector.h>
+#include <FaceModelViewer.h>
+#include <ModelSelector.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <QMessageBox>
 #include <cassert>
 using FaceTools::Action::ActionDetectFace;
-using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
+using FaceTools::Action::UndoState;
+using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
-using FaceTools::FVS;
-using FaceTools::FMS;
 using FaceTools::FM;
 using FaceTools::Detect::FaceOrientationDetector;
 using FLD = FaceTools::Detect::FaceShapeLandmarks2DDetector;
 using FD = FaceTools::Detect::FeaturesDetector;
 using FaceTools::Widget::DetectionCheckDialog;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionDetectFace::ActionDetectFace( const QString& dn, const QIcon& icon, QWidget *parent, QProgressBar* pb)
-    : FaceAction(dn, icon), _parent(parent), _cdialog( new DetectionCheckDialog(parent))
+ActionDetectFace::ActionDetectFace( const QString& dn, const QIcon& icon)
+    : FaceAction(dn, icon), _cdialog(nullptr)
 {
-    if ( pb)
-        setAsync( true, QTools::QProgressUpdater::create(pb));
+    setAsync( true);
 }   // end ctor
 
 
-bool ActionDetectFace::testReady( const FV* fv) { return fv->canTexture();}
-
-bool ActionDetectFace::testEnabled( const QPoint*) const { return FD::isinit() && FLD::isinit() && ready1();}
-
-
-bool ActionDetectFace::doBeforeAction( FVS& fvs, const QPoint&)
+void ActionDetectFace::postInit()
 {
-    assert(fvs.size() == 1);
-    FM* fm = fvs.first()->data();
+    QWidget* p = static_cast<QWidget*>(parent());
+    _cdialog = new DetectionCheckDialog(p);
+}   // end postInit
+
+
+bool ActionDetectFace::checkEnable( Event)
+{
+    return FD::isinit() && FLD::isinit() && MS::isViewSelected() && MS::selectedView()->canTexture();
+}   // end checkEnabled
+
+
+bool ActionDetectFace::doBeforeAction( Event)
+{
+    FM* fm = MS::selectedModel();
     fm->lockForRead();
     _ulmks.clear();
     _err = "";
 
-    if ( fm->landmarks()->empty())
+    if ( fm->landmarks().empty())
         _ulmks = LDMKS_MAN::ids();
     else // Warn if about to overwrite!
     {
@@ -64,60 +72,74 @@ bool ActionDetectFace::doBeforeAction( FVS& fvs, const QPoint&)
             _ulmks = _cdialog->landmarks(); // Copy out
     }   // end if
     fm->unlock();
-    return !_ulmks.empty();
+
+    const bool doAct = !_ulmks.empty();
+    if ( doAct)
+        MS::showStatus("Detecting face...");
+    return doAct;
 }   // end doBeforeAction
 
 
-bool ActionDetectFace::doAction( FVS& fvs, const QPoint&)
+void ActionDetectFace::doAction( Event)
 {
-    assert(fvs.size() == 1);
-    FM* fm = fvs.first()->data();
-    fvs.clear();
+    //storeUndo( this, {Event::LANDMARKS_CHANGE, Event::ORIENTATION_CHANGE, Event::METRICS_CHANGE}, false);
+    storeUndo( this, {Event::LANDMARKS_CHANGE, Event::ORIENTATION_CHANGE, Event::METRICS_CHANGE});
+    FM* fm = MS::selectedModel();
     _err = redetectLandmarks( fm, &_ulmks);
-    if ( _err.empty())
-        fvs.insert(fm);
-    return _err.empty();
 }   // end doAction
 
 
 // public static
 std::string ActionDetectFace::redetectLandmarks( FM* fm, const IntSet *ulmks)
 {
-    fm->lockForWrite();
-
-    const RFeatures::ObjModelKDTree* kdt = fm->kdtree();
-    FaceOrientationDetector faceDetector( kdt, 650.0f, 0.3f);
-    Landmark::LandmarkSet& lmks = *fm->landmarks();
-    fm->clearMeta();
-
-    // Specifiy the set of landmarks to be updated.
-    if ( ulmks)
-        faceDetector.setLandmarksToUpdate( *ulmks);
-
+    Landmark::LandmarkSet::Ptr lmks = Landmark::LandmarkSet::create();
     std::string errstr = "";
-    if ( faceDetector.detect( lmks))
+
+    fm->lockForRead();
+    FaceOrientationDetector faceDetector( fm, DEFAULT_CAMERA_DISTANCE, 0.3f);
+    if ( ulmks) // Specify the set of landmarks to be updated.
+        faceDetector.setLandmarksToUpdate( *ulmks);
+    const bool detectedOkay = faceDetector.detect( *lmks);
+    fm->unlock();
+
+    if ( detectedOkay)
     {
-        const RFeatures::Orientation on = lmks.orientation();
-        const cv::Vec3f centre = lmks.fullMean();
-        cv::Matx44d m = RFeatures::toStandardPosition( on.nvec(), on.uvec(), centre);
-        fm->transform(m);
+        // The landmarks are transformed by T from standard position.
+        const cv::Matx44d T = lmks->orientation().asMatrix( lmks->fullMean());
+        const cv::Matx44d Tinv = T.inv();
+        // So transform them back into standard position...
+        lmks->addTransformMatrix( Tinv);
+        lmks->fixTransformMatrix(); // Sets the internal matrix back to I
+        // Before setting the transform matrix back. Note that calling FM::addTransformMatrix(Tinv)
+        // also adds the inverse of T to lmks meaning that the final transform matrix will be set
+        // back to the identity matrix.
+        lmks->addTransformMatrix( T);
+
+        fm->lockForWrite();
+        fm->setLandmarks(lmks);        // LANDMARKS_CHANGE | FACE_DETECTED
+        fm->addTransformMatrix(Tinv);
+        fm->fixOrientation();          // ORIENTATION_CHANGE
+        fm->clearMetrics();            // METRICS_CHANGE
+        fm->unlock();
     }   // end if
     else
         errstr = faceDetector.error();
 
-    fm->unlock();
     return errstr;
 }   // end redetectLandmarks
 
 
-void ActionDetectFace::doAfterAction( EventSet& cset, const FVS&, bool v)
+void ActionDetectFace::doAfterAction( Event)
 {
-    if ( v)
-        cset.insert(FACE_DETECTED);
+    if ( _err.empty())
+    {
+        MS::clearStatus();
+        MS::setInteractionMode( IMode::CAMERA_INTERACTION);
+        emit onEvent( {Event::LANDMARKS_CHANGE, Event::FACE_DETECTED, Event::ORIENTATION_CHANGE, Event::METRICS_CHANGE});
+    }   // end if
     else
-        QMessageBox::warning(_parent, tr("Face Detection Failed!"), tr( _err.c_str()));
-
-    cset.insert(ORIENTATION_CHANGE);
-    cset.insert(LANDMARKS_ADD);
-    cset.insert(AFFINE_CHANGE);
+    {
+        QMessageBox::warning( static_cast<QWidget*>(parent()), tr("Face Detection Failed!"), tr( _err.c_str()));
+        MS::showStatus("Face Detection Failed!", 10000);
+    }   // end else
 }   // end doAfterAction

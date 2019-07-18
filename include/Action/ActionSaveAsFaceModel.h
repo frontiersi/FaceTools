@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,19 +26,21 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionSaveAsFaceModel : public FaceAction
 { Q_OBJECT
 public:
-    ActionSaveAsFaceModel( const QString& dname, const QIcon&, QWidget *parent=nullptr);
+    ActionSaveAsFaceModel( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence::SaveAs);
 
-signals:
-    void onSavedAs( const Vis::FV*);
+    QString toolTip() const override { return "Save the selected model to a new file.";}
 
-protected slots:
-    bool doBeforeAction( FVS&, const QPoint&) override;
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet&, const FVS&, bool) override;
+    QString whatsThis() const override;
+
+protected:
+    bool checkEnable( Event) override;
+    bool doBeforeAction( Event) override;
+    void doAction( Event) override;
+    void doAfterAction( Event) override;
 
 private:
-    QWidget *_parent;
     std::string _filename;
+    EventGroup _egrp;
 };  // end class
 
 }}   // end namespace

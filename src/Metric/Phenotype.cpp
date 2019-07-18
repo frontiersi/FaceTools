@@ -17,6 +17,7 @@
 
 #include <Phenotype.h>
 #include <FaceModel.h>
+#include <Ethnicities.h>
 #include <MetricCalculatorManager.h>
 using FaceTools::Metric::Phenotype;
 using FaceTools::Metric::MetricSet;
@@ -31,18 +32,14 @@ Phenotype::Phenotype() : _id(-1)
 {
     // Register MetricSet for Phenotype determination function:
     _lua.new_usertype<MetricSet>( "MetricSet",
-                                  "get", &MetricSet::get);
+                                  "metric", &MetricSet::metric);
 
     _lua.new_usertype<MetricValue>( "MetricValue",
                                     "ndims", &MetricValue::ndims,
-                                    "value", &MetricValue::value,
-                                    "zscore", &MetricValue::zscore,
                                     "mean", &MetricValue::mean,
-                                    "stdv", &MetricValue::stdv);
+                                    "value", &MetricValue::value,
+                                    "zscore", &MetricValue::zscore);
 }   // end ctor
-
-
-Phenotype::~Phenotype() { }   // end dtor
 
 
 // public static
@@ -109,32 +106,49 @@ Phenotype::Ptr Phenotype::load( const QString& fpath)
 }   // end load
 
 
-bool Phenotype::isPresent( const MetricSet* mlat, const MetricSet* llat, const MetricSet* rlat) const
+bool Phenotype::hasMeasurements( const FM* fm) const
 {
-    if ( !_determine.valid())
-        return false;
+    const MetricSet& mlat = fm->cmetrics();
+    const MetricSet& llat = fm->cmetricsL();
+    const MetricSet& rlat = fm->cmetricsR();
 
-    // Only evaluate if all the metrics are available for the phenotype
+    // Only evaluate if all the measurements are available for this indication
     for ( int mid : _metrics)
     {
-        if ( MCM::metric(mid) && MCM::metric(mid)->isBilateral())
+        assert( MCM::metric(mid));
+        if ( MCM::metric(mid)->isBilateral())
         {
-            if ( !llat->get(mid) || !rlat->get(mid))
+            if ( !llat.has(mid) || !rlat.has(mid))
                 return false;
         }   // end if
         else
         {
-            if ( !mlat->get(mid))
+            if ( !mlat.has(mid))
                 return false;
         }   // end else
     }   // end for
 
-    bool v = false;
+    return true;
+}   // end hasMeasurements
+
+
+bool Phenotype::isPresent( const FM* fm) const
+{
+    if ( !_determine.valid())
+        return false;
+
+    if ( !hasMeasurements(fm))
+        return false;
+
+    bool present = false;
     try
     {
-        sol::function_result result = _determine( mlat, llat, rlat);
+        const MetricSet* mlat = &fm->cmetrics();
+        const MetricSet* llat = &fm->cmetricsL();
+        const MetricSet* rlat = &fm->cmetricsR();
+        sol::function_result result = _determine( fm->age(), mlat, llat, rlat);
         if ( result.valid())
-            v = result;
+            present = result;
         else
             std::cerr << "[WARN] FaceTools::Metric::Phenotype::isPresent: Invalid result from function!" << std::endl;
     }   // end try
@@ -144,20 +158,49 @@ bool Phenotype::isPresent( const MetricSet* mlat, const MetricSet* llat, const M
         std::cerr << "\t" << e.what() << std::endl;
     }   // end catch
 
-    std::cerr << "Phenotype check: " << name().toStdString() << " (" << id() << ") " << (v ? " [PRESENT]" : "") << std::endl;
+    if ( present)
+        std::cerr << QString( "%1 (%2) is present").arg( name()).arg( id()).toStdString() << std::endl;
 
-    return v;
+    return present;
 }   // end isPresent
 
 
-bool Phenotype::isDemographicMatch( const FM* fm) const
+bool Phenotype::isSexMatch( int8_t sex) const
 {
-    const QString lethn = fm->ethnicity().toLower();
+    if ( sex == UNKNOWN_SEX)
+        return false;
     for ( int mid : _metrics)
     {
-        const GrowthData* gd = MCM::metric(mid)->growthData(fm);
-        if ( !gd || gd->ethnicity().toLower() != lethn)
+        MC::Ptr mc = MCM::metric(mid);
+        GrowthData::CPtr gd = mc->currentGrowthData();  // May be null
+        if ( !gd || ( gd->sex() != sex && gd->sex() != (FEMALE_SEX | MALE_SEX)))
             return false;
     }   // end for
     return true;
-}   // end isDemographicMatch
+}   // end isSexMatch
+
+
+bool Phenotype::isAgeMatch( double age) const
+{
+    for ( int mid : _metrics)
+    {
+        MC::Ptr mc = MCM::metric(mid);
+        GrowthData::CPtr gd = mc->currentGrowthData();  // May be null
+        if ( !gd->isWithinAgeRange(age))
+            return false;
+    }   // end for
+    return true;
+}   // end isAgeMatch
+
+
+bool Phenotype::isEthnicityMatch( int ethn) const
+{
+    for ( int mid : _metrics)
+    {
+        MC::Ptr mc = MCM::metric(mid);
+        GrowthData::CPtr gd = mc->currentGrowthData();  // May be null
+        if ( !gd || !Ethnicities::belongs( gd->ethnicity(), ethn))
+            return false;
+    }   // end for
+    return true;
+}   // end isEthnicityMatch

@@ -22,164 +22,110 @@
 #include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionVisualise;
-using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
+using FaceTools::Action::Event;
 using FaceTools::Vis::BaseVisualisation;
 using FaceTools::Vis::FV;
 using FaceTools::FMVS;
 using FaceTools::FVS;
 using FaceTools::FMS;
 using FaceTools::FM;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionVisualise::ActionVisualise( BaseVisualisation* vis, bool visOnLoad)
-    : FaceAction( vis->getDisplayName(), vis->getIcon()), _vis(vis)
+ActionVisualise::ActionVisualise( const QString& dn, const QIcon& ic, BaseVisualisation* vis, const QKeySequence& ks)
+    : FaceAction( dn, ic, ks), _vis(vis)
 {
     assert(vis);
     setCheckable( true, false);
-    setVisible( vis->isUIVisible());
-    setPurgeOnEvent(GEOMETRY_CHANGE);
-
-    if ( visOnLoad)
-    {
-        TestFVSTrue loadResponsePredicate = [=]( const FVS& fvs)
-        {
-            const FMS& fms = fvs.models();
-            assert(fms.size() == 1);    // LOADED_MODEL events are only ever a single model.
-            const FM* fm = *fms.begin();
-            return vis->allowShowOnLoad( fm);
-        };  // end loadResponsePredicate
-        setRespondToEventIf( LOADED_MODEL, loadResponsePredicate, true);
-    }   // end if
 }   // end ctor
 
 
 // private
-bool ActionVisualise::isVisAvailable( const FM* fm) const
-{
-    fm->lockForRead();
-    const bool isa = fm && _vis->isAvailable(fm);
-    fm->unlock();
-    return isa;
-}   // end isVisAvailable
-
-
-// private
-bool ActionVisualise::isVisAvailable( const FV* fv, const QPoint* mc) const
+bool ActionVisualise::isVisAvailable( const FV* fv) const
 {
     bool isa = false;
     const FM* fm = fv ? fv->data() : nullptr;
     if ( fm)
     {
-        if ( !mc)
-            isa = isVisAvailable( fm);
-        else
-        {
-            fm->lockForRead();
-            isa = _vis->isAvailable(fv, mc);
-            fm->unlock();
-        }   // end else
+        fm->lockForRead();
+        QPoint mpos = primedMousePos();
+        isa = _vis->isAvailable( fv, &mpos);
+        fm->unlock();
     }   // end if
     return isa;
 }   // end isVisAvailable
 
 
-// private
-// Returns true iff the contents of the FaceViewSet matches the visualisation's specification
-// for models/views, and the models/views meet the visualisation criteria.
-bool ActionVisualise::isVisAvailable( const FVS& fvs, const QPoint* mc) const
+bool ActionVisualise::checkState( Event e)
 {
-    if ( fvs.empty())
-        return false;
-
-    bool allowed = false;
-    if ( _vis->applyToSelectedModel())
+    const FV* fv = MS::selectedView();
+    if ( fv && _vis->isVisible(fv))
     {
-        const FMS& fms = fvs.models();
-        allowed = std::all_of( std::begin(fms), std::end(fms), [this](const FM* fm){ return this->isVisAvailable(fm);});
+        _vis->checkState( fv);
+        return true;
     }   // end if
-    else
-        allowed = std::all_of( std::begin(fvs), std::end(fvs), [=](const FV* fv){ return this->isVisAvailable(fv, mc);});
-    return allowed;
-}   // end isVisAvailable
+    return fv && isTriggerEvent(e) && isVisAvailable(fv);
+}   // end checkState
 
 
-bool ActionVisualise::testReady( const FV* fv) { return fv && (fv->isApplied(_vis) || isVisAvailable(fv->data()));}
-
-
-void ActionVisualise::tellReady( const FV* fv, bool v)
+bool ActionVisualise::checkEnable( Event)
 {
-    if ( _vis->applyOnReady())
-    {
-        setChecked(v);
-        toggleVis( const_cast<FV*>(fv), nullptr);
-    }   // end if
-}   // end tellReady
-
-
-bool ActionVisualise::testEnabled( const QPoint* mc) const { return isVisAvailable( ready(), mc);}
-bool ActionVisualise::testIfCheck( const FV* fv) const { return fv && fv->isApplied(_vis);}
+    const FV* fv = MS::selectedView();
+    return isChecked() || ( fv && isVisAvailable( fv));
+}   // end checkEnabled
 
 
 // private
 bool ActionVisualise::toggleVis( FV* fv, const QPoint* mc)
 {
-    const bool appliedPre = fv->isApplied(_vis);
-
-    // If this visualisation isn't toggled, or it's exclusive, then the current exclusive visualisation must first be removed.
-    if ( isExclusive())
-    {
-        if ( fv->exvis() != nullptr)
-            fv->remove(fv->exvis());
-    }   // end if
-
+    const bool appliedPre = _vis->isVisible(fv);
     if ( isChecked() || !_vis->isToggled())
         fv->apply( _vis, mc);
     else
-        fv->remove( _vis);
-
-    const bool appliedPost = fv->isApplied(_vis);
-    setChecked( appliedPost);
-    return appliedPre != appliedPost;    // Returns true if there's been a change in visualisation application state
+        _vis->setVisible( fv, false);
+    // Returns true if there was a change in the visibility of the visualisation.
+    return appliedPre != _vis->isVisible(fv);
 }   // end toggleVis
 
 
-bool ActionVisualise::doAction( FVS& fvs, const QPoint& mc)
+void ActionVisualise::doAction( Event /*e*/)
 {
-    setViewsToProcess( fvs);
-    std::for_each( std::begin(fvs), std::end(fvs), [&](FV* f){ toggleVis(f, &mc);});
-    return !fvs.empty();
+    //std::cerr << "ActionVisualise::doAction on event [ " << EventChecker(e).name() << " ]" << std::endl;
+    int xev = int(Event::NONE);
+
+    FV* sfv = MS::selectedView();
+    FVS fvs;
+    fvs.insert(sfv);
+
+    if ( _vis->applyToSelectedModel())
+    {
+        fvs = sfv->data()->fvs();
+        xev = int(Event::ALL_VIEWS);
+    }   // end if
+
+    if ( _vis->applyToAllInViewer())
+    {
+        FVS afvs;
+        for ( const FV* fv : fvs)
+            afvs.insert( fv->viewer()->attached());
+        fvs.insert(afvs);
+        xev |= int(Event::ALL_VIEWERS);
+    }   // end if
+
+    QPoint mc = primedMousePos();
+    for ( FV* fv : fvs)
+    {
+        if ( _vis->isAvailable( fv, &mc))
+            toggleVis( fv, &mc);
+    }   // end for
+
+    emit onEvent( Event(int(Event::VIEW_CHANGE) | xev));
 }   // end doAction
 
 
-void ActionVisualise::purge( const FM* fm)
+void ActionVisualise::purge( const FM* fm, Event e)
 {
-    const FVS& fvs = fm->fvs();
-    // Don't remove the visualisation (e.g. fv->remove(_vis)), because this will remove the layer
-    // and purging is done as part of a reset operation so visualisation layers should remain so
-    // they can be reapplied in FaceView::reset after rebuilding of the actor.
-    std::for_each( std::begin(fvs), std::end(fvs), [=](FV* fv){ _vis->purge(fv);});
-    _vis->purge(fm);
+    for ( FV* fv : fm->fvs())
+        fv->purge( _vis, e);  // Calls _vis->purge(fv, e)
 }   // end purge
-
-
-void ActionVisualise::clean( const FM* fm)
-{
-    const FVS& fvs = fm->fvs();
-    std::for_each( std::begin(fvs), std::end(fvs), [=](FV* fv){ fv->remove(_vis);});    // Removing the visualisation layer okay here.
-    std::for_each( std::begin(fvs), std::end(fvs), [=](FV* fv){ _vis->purge(fv);});
-    _vis->purge(fm);
-}   // end clean
-
-
-// protected
-size_t ActionVisualise::setViewsToProcess( FVS& fvs) const
-{
-    if ( _vis->applyToSelectedModel())
-        fvs.includeModelViews();
-    if ( _vis->applyToAllInViewer())
-        fvs.includeViewerViews();
-    if ( _vis->applyToSelectedModel())
-        fvs.includeModelViews();
-    return fvs.size();
-}   // end setViewsToProcess

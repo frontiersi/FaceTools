@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,9 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionOrientCameraToFace : public FaceAction
 { Q_OBJECT
 public:
-    ActionOrientCameraToFace( const QString& dname="Orient Camera to Face", const QIcon& icon=QIcon(), double d=500., double r=0.);
+    ActionOrientCameraToFace( const QString&, const QIcon&, double d=500., double r=0., const QKeySequence& ks=QKeySequence());
+
+    QString toolTip() const override { return "Orient the camera to look at the selected face.";}
 
     // Set/get the distance in world units to the face centre point
     // for the new position of the camera when transformed.
@@ -43,10 +45,11 @@ public:
     void setAngleAboutUpVector( double rads) { _urads = rads;}
     double angleAboutUpVector() const { return _urads;}
 
-protected slots:
-    bool testReady( const Vis::FV*) override { return true;}
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override{ cs.insert(CAMERA_CHANGE);}
+    static void orientToFace( const Vis::FV*, double distance, double rads=0.0);
+
+protected:
+    bool checkEnable( Event) override;
+    void doAction( Event) override;
 
 private:
     double _distance;

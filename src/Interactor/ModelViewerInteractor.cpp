@@ -16,72 +16,60 @@
  ************************************************************************/
 
 #include <ModelViewerInteractor.h>
+#include <ModelSelector.h>
 #include <ModelViewer.h>
-#include <cassert>
 using FaceTools::Interactor::ModelViewerInteractor;
-using FaceTools::ModelViewer;
+using FaceTools::Vis::FV;
+using FaceTools::FMV;
+using MS = FaceTools::Action::ModelSelector;
 
-ModelViewerInteractor::ModelViewerInteractor( ModelViewer* mv, QStatusBar* sb)
-    : _viewer(nullptr), _sbar(sb), _ilock(0)
+
+ModelViewerInteractor::ModelViewerInteractor() : _vwr(nullptr)
 {
-    setViewer(mv);
+    for ( FMV* mv : MS::viewers())
+    {
+        _vwrs[mv->getRenderWindow()] = mv;
+        static_cast<ModelViewer*>(mv)->attach(this);
+    }   // end for
+    _vwr = MS::defaultViewer();
 }   // end ctor
 
 
 ModelViewerInteractor::~ModelViewerInteractor()
 {
-//    setViewer(nullptr);
+    for ( FMV* mv : MS::viewers())
+        static_cast<ModelViewer*>(mv)->detach(this);
+    _vwrs.clear();
 }   // end dtor
 
 
-void ModelViewerInteractor::setViewer( ModelViewer* viewer)
+void ModelViewerInteractor::mouseEnter( const QTools::VtkActorViewer *v)
 {
-    if ( viewer == _viewer)
-        return;
+    assert(_vwrs.count(v->getRenderWindow()) > 0);
+    FMV* vwr = _vwrs.at(v->getRenderWindow());
+    _vwr = vwr;
+    enterViewer(vwr);
+}   // end mouseEnter
 
-    if ( _viewer)
+
+void ModelViewerInteractor::mouseLeave( const QTools::VtkActorViewer *v)
+{
+    assert(_vwrs.count(v->getRenderWindow()) > 0);
+    FMV* vwr = _vwrs.at(v->getRenderWindow());
+    if ( _vwr == vwr)
+        leaveViewer(vwr);
+}   // end mouseLeave
+
+
+FV* ModelViewerInteractor::viewFromActor( const vtkProp3D* prop) const
+{
+    FV* fv = nullptr;
+    FMV* fmv = static_cast<FMV*>(mouseViewer());
+    if ( fmv)
     {
-        _viewer->detach(this);
-        onDetached();
+        fv = fmv->attached().find(prop);
+        if ( fv && fv->actor() != prop)
+            fv = nullptr;
     }   // end if
-
-    _viewer = viewer;
-
-    if ( _viewer)
-    {
-        _viewer->attach(this);
-        onAttached();
-    }   // end if
-}   // end setViewer
-
-
-void ModelViewerInteractor::setInteractionLocked( bool dolock)
-{
-    if ( _viewer)
-    {
-        _viewer->unlockInteraction(_ilock);
-        if ( dolock)
-            _ilock = _viewer->lockInteraction();
-    }   // end if
-}   // end setInteractionLocked
-
-
-bool ModelViewerInteractor::isInteractionLocked() const
-{
-    return _viewer && _viewer->isInteractionLocked();
-}   // end isInteractionLocked
-
-
-void ModelViewerInteractor::showStatus( const QString& msg, int tmsecs)
-{
-    if ( _sbar)
-        _sbar->showMessage( msg, tmsecs);
-}   // end showStatus
-
-
-void ModelViewerInteractor::clearStatus()
-{
-    if ( _sbar)
-        _sbar->clearMessage();
-}   // end clearStatus
-
+    return fv;
+}   // end viewFromActor

@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>816</width>
-    <height>365</height>
+    <width>850</width>
+    <height>488</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -28,32 +28,54 @@
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2">
+  <property name="sizeGripEnabled">
+   <bool>true</bool>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1,0,0">
    <item>
-    <widget class="QTableWidget" name="table"/>
+    <widget class="QTableWidget" name="table">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>662</width>
+       <height>360</height>
+      </size>
+     </property>
+     <attribute name="horizontalHeaderMinimumSectionSize">
+      <number>10</number>
+     </attribute>
+     <attribute name="horizontalHeaderDefaultSectionSize">
+      <number>10</number>
+     </attribute>
+    </widget>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_5">
      <item>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_4">
+        <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="0,1">
          <item>
           <widget class="QLabel" name="label_2">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="minimumSize">
             <size>
-             <width>150</width>
+             <width>120</width>
              <height>0</height>
             </size>
            </property>
-           <property name="maximumSize">
-            <size>
-             <width>150</width>
-             <height>16777215</height>
-            </size>
-           </property>
            <property name="text">
-            <string>Related to Syndrome</string>
+            <string>Syndromic Relationships</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -66,14 +88,14 @@
             <bool>false</bool>
            </property>
            <property name="sizePolicy">
-            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
            <property name="minimumSize">
             <size>
-             <width>0</width>
+             <width>474</width>
              <height>0</height>
             </size>
            </property>
@@ -91,23 +113,23 @@
         </layout>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,1">
          <item>
           <widget class="QLabel" name="label">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="minimumSize">
             <size>
-             <width>150</width>
+             <width>120</width>
              <height>0</height>
             </size>
            </property>
-           <property name="maximumSize">
-            <size>
-             <width>150</width>
-             <height>16777215</height>
-            </size>
-           </property>
            <property name="text">
-            <string>Related to Phenotype</string>
+            <string>Phenotype Relationships</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -120,7 +142,7 @@
             <bool>false</bool>
            </property>
            <property name="sizePolicy">
-            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -148,16 +170,16 @@
      </item>
      <item>
       <widget class="QToolButton" name="flipButton">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="minimumSize">
         <size>
-         <width>48</width>
-         <height>48</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>48</width>
-         <height>48</height>
+         <width>0</width>
+         <height>0</height>
         </size>
        </property>
        <property name="toolTip">
@@ -190,249 +212,184 @@ QToolButton:hover{
     </layout>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_2">
+    <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,0,0,4,0">
+     <property name="spacing">
+      <number>6</number>
+     </property>
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout">
+      <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0">
+       <property name="spacing">
+        <number>16</number>
+       </property>
+       <property name="rightMargin">
+        <number>10</number>
+       </property>
        <item>
-        <spacer name="horizontalSpacer_2">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>40</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item>
-        <widget class="QLabel" name="label_3">
-         <property name="toolTip">
-          <string>Restrict the list of phenotypes to just those detected on the current subject.</string>
-         </property>
-         <property name="text">
-          <string>Matched Phenotypes Only</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="matchedCheckBox">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
+        <widget class="QToolButton" name="showPhenotypesButton">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>0</height>
-          </size>
-         </property>
          <property name="toolTip">
-          <string>Restrict the list of phenotypes to just those detected on the current subject.</string>
+          <string>Show Human Phenotype Ontology Terms.</string>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QToolButton{
+	border: none;
+}
+QToolButton:hover{
+	border: 1px solid #8f8f91;
+	border-radius: 4px;
+}
+</string>
          </property>
          <property name="text">
-          <string/>
+          <string>...</string>
+         </property>
+         <property name="icon">
+          <iconset resource="../FaceTools_res.qrc">
+           <normaloff>:/icons/FACEQ</normaloff>:/icons/FACEQ</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>27</width>
+           <height>27</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QToolButton" name="showChartButton">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="toolTip">
+          <string>Show Growth Curves</string>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QToolButton{
+	border: none;
+}
+QToolButton:hover{
+	border: 1px solid #8f8f91;
+	border-radius: 4px;
+}
+</string>
+         </property>
+         <property name="text">
+          <string>...</string>
+         </property>
+         <property name="icon">
+          <iconset resource="../FaceTools_res.qrc">
+           <normaloff>:/icons/CHART</normaloff>:/icons/CHART</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>27</width>
+           <height>27</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QToolButton" name="showScanInfoButton">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="toolTip">
+          <string>Show Model Info</string>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QToolButton{
+	border: none;
+}
+QToolButton:hover{
+	border: 1px solid #8f8f91;
+	border-radius: 4px;
+}
+</string>
+         </property>
+         <property name="text">
+          <string>...</string>
+         </property>
+         <property name="icon">
+          <iconset resource="../FaceTools_res.qrc">
+           <normaloff>:/icons/MODEL_INFO</normaloff>:/icons/MODEL_INFO</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>27</width>
+           <height>27</height>
+          </size>
          </property>
         </widget>
        </item>
       </layout>
      </item>
      <item>
-      <widget class="QToolButton" name="showMetricsButton">
-       <property name="minimumSize">
-        <size>
-         <width>27</width>
-         <height>27</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>27</width>
-         <height>27</height>
-        </size>
-       </property>
-       <property name="toolTip">
-        <string>Visualise Metrics</string>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QToolButton{
-	border: none;
-}
-QToolButton:hover{
-	border: 1px solid #8f8f91;
-	border-radius: 4px;
-}
-QToolButton:checked{
-	border: 1px solid #8f8f91;
-	border-radius: 4px;
-	background-color: rgb(211, 215, 207);
-}</string>
-       </property>
-       <property name="text">
-        <string>...</string>
-       </property>
-       <property name="icon">
-        <iconset resource="../FaceTools_res.qrc">
-         <normaloff>:/icons/METRICS</normaloff>:/icons/METRICS</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>27</width>
-         <height>27</height>
-        </size>
+      <widget class="Line" name="line">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QToolButton" name="showChartButton">
-       <property name="minimumSize">
-        <size>
-         <width>27</width>
-         <height>27</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>27</width>
-         <height>27</height>
-        </size>
-       </property>
+      <widget class="QCheckBox" name="useSubjectDemographicsCheckBox">
        <property name="toolTip">
-        <string>Show Growth Curves</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, a set of metric growth curves from those available is automatically chosen to most narrowly match the current subject's sex and ethnicity.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
-       <property name="styleSheet">
-        <string notr="true">QToolButton{
-	border: none;
-}
-QToolButton:hover{
-	border: 1px solid #8f8f91;
-	border-radius: 4px;
-}
-</string>
+       <property name="whatsThis">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, growth curve statistics will be automatically set for each metric to most narrowly match the subject's sex and ethnicity, and the available set of statistics for each metric will be constrained to only those that are compatible with the current subject's sex and ethnicity.&lt;/p&gt;&lt;p&gt;Note that when automatically matching to the available statistics, a match to sex is preferred over a match to ethnicity, however the user can manually select a different set of growth curves from the compatible list. If this option is unchecked, the user can select the growth curves to use for each metric from all available statistics.&lt;/p&gt;&lt;p&gt;The currently set growth curves for a metric are used to calculate the statistics (Z scores) for the metric.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
-        <string>...</string>
+        <string>Use Subject Demographics</string>
        </property>
-       <property name="icon">
-        <iconset resource="../FaceTools_res.qrc">
-         <normaloff>:/icons/CHART</normaloff>:/icons/CHART</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>27</width>
-         <height>27</height>
-        </size>
+       <property name="checked">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QToolButton" name="showPhenotypesButton">
+      <widget class="QCheckBox" name="matchedCheckBox">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="minimumSize">
         <size>
-         <width>27</width>
-         <height>27</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>27</width>
-         <height>27</height>
+         <width>0</width>
+         <height>0</height>
         </size>
        </property>
        <property name="toolTip">
-        <string>Show Human Phenotype Ontology Terms.</string>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QToolButton{
-	border: none;
-}
-QToolButton:hover{
-	border: 1px solid #8f8f91;
-	border-radius: 4px;
-}
-</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Restrict the list of phenotypic indications shown in the dropdown list to just those that have been detected on the current subject.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
-        <string>...</string>
-       </property>
-       <property name="icon">
-        <iconset resource="../FaceTools_res.qrc">
-         <normaloff>:/icons/FACEQ</normaloff>:/icons/FACEQ</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>27</width>
-         <height>27</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QToolButton" name="showScanInfoButton">
-       <property name="minimumSize">
-        <size>
-         <width>27</width>
-         <height>27</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>27</width>
-         <height>27</height>
-        </size>
-       </property>
-       <property name="toolTip">
-        <string>Show Model Info</string>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QToolButton{
-	border: none;
-}
-QToolButton:hover{
-	border: 1px solid #8f8f91;
-	border-radius: 4px;
-}
-</string>
-       </property>
-       <property name="text">
-        <string>...</string>
-       </property>
-       <property name="icon">
-        <iconset resource="../FaceTools_res.qrc">
-         <normaloff>:/icons/MODEL_INFO</normaloff>:/icons/MODEL_INFO</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>27</width>
-         <height>27</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="ignoreEthnicityCheckBox">
-       <property name="font">
-        <font>
-         <weight>50</weight>
-         <bold>false</bold>
-        </font>
-       </property>
-       <property name="toolTip">
-        <string>Ignore the ethnicity of the current subject when matching phenotypes or plotting on growth curves.</string>
-       </property>
-       <property name="text">
-        <string>Ignore Ethnicity</string>
+        <string>Show Only Criteria Matched Phenotype Relationships</string>
        </property>
       </widget>
      </item>
      <item>
       <widget class="QDialogButtonBox" name="buttonBox">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="standardButtons">
         <set>QDialogButtonBox::Close</set>
        </property>
@@ -450,15 +407,15 @@ QToolButton:hover{
    <sender>buttonBox</sender>
    <signal>clicked(QAbstractButton*)</signal>
    <receiver>MetricsDialog</receiver>
-   <slot>accept()</slot>
+   <slot>close()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>557</x>
-     <y>405</y>
+     <x>559</x>
+     <y>460</y>
     </hint>
     <hint type="destinationlabel">
-     <x>303</x>
-     <y>213</y>
+     <x>339</x>
+     <y>242</y>
     </hint>
    </hints>
   </connection>

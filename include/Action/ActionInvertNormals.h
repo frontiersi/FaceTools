@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,11 +25,17 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionInvertNormals : public FaceAction
 { Q_OBJECT
 public:
-    ActionInvertNormals( const QString& dname, const QIcon& icon=QIcon(), QProgressBar* pb=nullptr);  // Async if pb not null
+    ActionInvertNormals( const QString&, const QIcon&);
 
-private slots:
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(GEOMETRY_CHANGE);}
+    QString toolTip() const override { return "Flip the 'outward facing' direction of the selected model by reversing the ordering of stored vertices on the triangles.";}
+
+    static void invertNormals( RFeatures::ObjModel::Ptr);
+
+protected:
+    bool checkEnable( Event) override;
+    bool doBeforeAction( Event) override;
+    void doAction( Event) override;
+    void doAfterAction( Event) override;
 };  // end class
 
 }}   // end namespace

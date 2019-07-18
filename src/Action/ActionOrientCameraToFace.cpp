@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,42 +22,44 @@
 #include <Transformer.h>    // RFeatures
 #include <algorithm>
 using FaceTools::Action::ActionOrientCameraToFace;
-using FaceTools::Action::EventSet;
 using FaceTools::Action::FaceAction;
-using FaceTools::FVS;
+using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
 using FaceTools::ModelViewer;
+using MS = FaceTools::Action::ModelSelector;
 
 
-ActionOrientCameraToFace::ActionOrientCameraToFace( const QString& dn, const QIcon& ico, double d, double r)
-    : FaceAction( dn, ico), _distance(d), _urads(r)
+ActionOrientCameraToFace::ActionOrientCameraToFace( const QString& dn, const QIcon& ico, double d, double r, const QKeySequence& ks)
+    : FaceAction( dn, ico, ks), _distance(d), _urads(r)
 {
 }   // end ctor
 
 
-bool ActionOrientCameraToFace::doAction( FVS& fvs, const QPoint&)
+bool ActionOrientCameraToFace::checkEnable( Event)
 {
-    assert(fvs.size() == 1);
-    const FV* fv = fvs.first();
+    return MS::isViewSelected();
+}   // end checkEnabled
+
+
+void ActionOrientCameraToFace::doAction(Event)
+{
+    orientToFace( MS::selectedView(), _distance, _urads);
+    emit onEvent( Event::CAMERA_CHANGE);
+}   // end doAction
+
+
+void ActionOrientCameraToFace::orientToFace( const FV *fv, double dist, double rads)
+{
     const FM* fm = fv->data();
 
-    double d = _distance;
-    RFeatures::Orientation on(cv::Vec3f(0,0,1), cv::Vec3f(0,1,0));
-    cv::Vec3f focus(0,0,0);
     fm->lockForRead();
-    if ( !fm->landmarks()->empty())
-    {
-        on = fm->landmarks()->orientation();
-        focus = fm->landmarks()->fullMean();
-    }   // end if
+    const cv::Vec3f focus = fm->icentre();
+    RFeatures::Orientation on = fm->orientation();
     fm->unlock();
 
     // Rotate the orientation about its up vector by the set amount.
-    RFeatures::Transformer transformer( _urads, on.uvec());
-    on.rotate( transformer.matrix());
+    on.rotate( RFeatures::Transformer( rads, on.uvec()).matrix());
 
     // Set the camera as needed.
-    fv->viewer()->setCamera( focus, on.nvec(), on.uvec(), d);
-
-    return true;
-}   // end doAction
+    fv->viewer()->setCamera( focus, on.nvec(), on.uvec(), dist);
+}   // end orientToFace

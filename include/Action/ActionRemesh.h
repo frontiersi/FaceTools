@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,18 +25,20 @@ namespace FaceTools { namespace Action {
 class FaceTools_EXPORT ActionRemesh : public FaceAction
 { Q_OBJECT
 public:
-    ActionRemesh( const QString& dname="Remesh", const QIcon& icon=QIcon(), QProgressBar* pb=nullptr);   // Async if pb not null
+    ActionRemesh( const QString&, const QIcon&);
 
     double maxTriangleArea() const { return _maxtarea;}
 
-private slots:
-    bool doAction( FVS&, const QPoint&) override;
-    void doAfterAction( EventSet& cs, const FVS&, bool) override { cs.insert(GEOMETRY_CHANGE);}
+protected slots:
+    bool checkEnable( Event) override;
+    bool doBeforeAction( Event) override;
+    void doAction( Event) override;
+    void doAfterAction() override;
 
 private:
     double _maxtarea;
 };  // end class
 
-}}   // end namespace
+}}   // end namespaces
 
 #endif

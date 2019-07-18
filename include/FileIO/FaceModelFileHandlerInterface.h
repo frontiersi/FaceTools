@@ -35,6 +35,7 @@ public:
     // Override either or both to declare if can import or export.
     virtual bool canRead() const = 0;
     virtual bool canWrite() const = 0;
+    virtual bool canWriteTextures() const = 0;
 
     // Returns error string on failed read/write.
     virtual QString error() const = 0;
@@ -42,11 +43,11 @@ public:
     virtual double version() const = 0; // File version read in
 
     // Read and/or write according to whether canImport() and canExport() are
-    // overridden. If read() returns a NULL model, error() should be used to
+    // overridden. If read() returns a null model, error() should be used to
     // find out why no model could be created. Similarly, if write() returns
     // false, use error() to get the nature of the issue.
-    virtual FaceModel* read( const QString& filepath) = 0;               // Must override if canRead overridden to true
-    virtual bool write( const FaceModel*, const QString& filepath) = 0;  // Must override if canWrite overridden to true
+    virtual FM* read( const QString& filepath) = 0;               // Must override if canRead overridden to true
+    virtual bool write( const FM*, const QString& filepath) = 0;  // Must override if canWrite overridden to true
 };  // end class
 
 }}   // end namespace

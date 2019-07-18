@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,200 +24,96 @@
 #include <LandmarkSet.h>
 #include <cassert>
 using FaceTools::Action::ActionRadialSelect;
-using FaceTools::Action::EventSet;
 using FaceTools::Action::ActionVisualise;
+using FaceTools::Action::Event;
 using FaceTools::Vis::LoopSelectVisualisation;
 using FaceTools::Interactor::RadialSelectInteractor;
-using FaceTools::Interactor::MEEI;
+using FaceTools::Interactor::FVI;
 using FaceTools::Landmark::LandmarkSet;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
 using FaceTools::FM;
 using FaceTools::FaceLateral;
+using MS = FaceTools::Action::ModelSelector;
 
 
-const double ActionRadialSelect::MIN_RADIUS = 7.0;
-
-
-ActionRadialSelect::ActionRadialSelect( const QString& dn, const QIcon& ico, MEEI* meei, QStatusBar* sbar)
-    : ActionVisualise( _vis = new LoopSelectVisualisation( dn, ico)),
-      _interactor( new RadialSelectInteractor( meei, _vis, sbar)),
-      _radius(50)
+ActionRadialSelect::ActionRadialSelect( const QString& dn, const QIcon& ico)
+    : ActionVisualise( dn, ico, _vis = new LoopSelectVisualisation)
 {
-    // Since this is an ActionVisualise, GEOMETRY_CHANGE events will cause everything to be purged.
-    // In the case of an AFFINE_CHANGE though, we only need to adjust the centre of the region selector
-    // since the boundary is defined in terms of vertex indices.
-    connect( meei, &MEEI::onEnterModel, [=](){ this->testSetEnabled( &meei->viewer()->mouseCoords());});
-    connect( meei, &MEEI::onLeaveModel, [this](){ this->testSetEnabled( nullptr);});
-
-    connect( _interactor, &RadialSelectInteractor::onIncreaseRadius, this, &ActionRadialSelect::doOnIncreaseRadius);
-    connect( _interactor, &RadialSelectInteractor::onDecreaseRadius, this, &ActionRadialSelect::doOnDecreaseRadius);
-    connect( _interactor, &RadialSelectInteractor::onSetCentre, this, &ActionRadialSelect::doOnSetCentre);
-
-    // Upon a change in model geometry, process this action setting check state to false because the region
-    // selector will no longer be valid (or even present since ActionVisualise mandates a prior call to
-    // purge on changes to geometry which will remove the corresponding region selector from the hash table).
-    setRespondToEvent( GEOMETRY_CHANGE, false);
+    addPurgeEvent( Event::GEOMETRY_CHANGE);
 }   // end ctor
 
 
 ActionRadialSelect::~ActionRadialSelect()
 {
-    delete _interactor;
     delete _vis;
 }   // end dtor
 
 
-// public
-double ActionRadialSelect::radius( const FM* fm) const
+double ActionRadialSelect::radius() const { return _interactor ? _interactor->radius() : 0.0;}
+cv::Vec3f ActionRadialSelect::centre() const { return _interactor ? _interactor->centre() : cv::Vec3f(0,0,0);}
+size_t ActionRadialSelect::selectedFaces( IntSet& fs) const { return _interactor ? _interactor->selectedFaces(fs) : 0;}
+
+
+bool ActionRadialSelect::checkEnable( Event e)
 {
-    assert(_rsels.count(fm) > 0);
-    return _rsels.at(fm)->radius();
-}   // end radius
+    return ActionVisualise::checkEnable(e);
+}   // end checkEnable
 
 
-// public
-cv::Vec3f ActionRadialSelect::centre( const FM* fm) const
+void ActionRadialSelect::doAction( Event e)
 {
-    assert(_rsels.count(fm) > 0);
-    fm->lockForRead();
-    cv::Vec3f v = _rsels.at(fm)->centre( fm->info()->cmodel());
-    fm->unlock();
-    return v;
-}   // end centre
+    ActionVisualise::doAction( e);
 
-
-// public
-void ActionRadialSelect::selectedFaces( const FM* fm, IntSet& fs) const
-{
-    assert(_rsels.count(fm) > 0);
-    fm->lockForRead();
-    _rsels.at(fm)->selectedFaces( fm->info()->cmodel(), fs);
-    fm->unlock();
-}   // end selectedFaces
-
-
-bool ActionRadialSelect::doAction( FVS& fvs, const QPoint& mc)
-{
-    assert(fvs.size() == 1);
-    const FV* fv = fvs.first();
+    const FV* fv = MS::selectedView();
     const FM* fm = fv->data();
-    const cv::Vec3f cn = fm->centre();
-    cv::Vec3f cpos = _rsels.count(fm) > 0 ? centre(fm) : fm->findClosestSurfacePoint( cn);
 
-    fm->lockForRead();
-
-    const LandmarkSet::Ptr lmks = fm->landmarks();
-    // In the first case, select as the centre the point projected onto the surface my the
-    // given 2D point (mouse coords). In the second instance, use pronasale if available,
-    // otherwise just use the point on the surface closest to the model's centre.
-    if ( !fv->projectToSurface( mc, cpos))
-    {
-        if ( lmks->hasCode( Landmark::PRN))
-            cpos = *lmks->pos( Landmark::PRN);
-    }   // end if
-
-    if ( _rsels.count(fm) == 0)
-    {
-        const int sv = fm->kdtree()->find( cpos);
-        _rsels[fm] = RFeatures::ObjModelRegionSelector::create( fm->info()->cmodel(), sv);
-    }   // end if
-
-    // If landmarks set, get the radius as 2.3 times the distance between pronasale and pupils.
-    double rad = _radius;
-    if ( lmks->hasCode( Landmark::P) && lmks->hasCode( Landmark::PRN))
-    {
-        cv::Vec3f mp = 0.5f * (*lmks->pos(Landmark::P, FACE_LATERAL_LEFT) + *lmks->pos(Landmark::P, FACE_LATERAL_RIGHT));
-        rad = 2.3 * cv::norm( mp - *lmks->pos(Landmark::PRN));
-    }   // end if
-    _rsels[fm]->setRadius( fm->info()->cmodel(), rad);
-
-    fm->unlock();
-
-    bool actioned = ActionVisualise::doAction( fvs, mc);
     if ( isChecked())
-        doOnSetCentre( fv, cpos);
-    return actioned;
+    {
+        fm->lockForRead();
+        cv::Vec3f cpos = centre();
+        const LandmarkSet& lmks = fm->landmarks();
+
+        const QPoint& mpos = primedMousePos();
+        // In the first case, select as the centre the point projected onto the surface my the
+        // given 2D point (mouse coords). In the second instance, use pronasale if available,
+        // otherwise just use the point on the surface closest to the model's centre.
+        if ( !fv->projectToSurface( mpos, cpos) && lmks.hasCode( Landmark::PRN))
+            cpos = lmks.pos( Landmark::PRN);
+        else
+            cpos = fm->findClosestSurfacePoint(cpos);
+
+        // If landmarks set, get the radius as 2.3 times the distance between pronasale and pupils.
+        double rad = radius();
+        if ( lmks.hasCode( Landmark::P) && lmks.hasCode( Landmark::PRN))
+        {
+            cv::Vec3f mp = 0.5f * (lmks.pos(Landmark::P, FACE_LATERAL_LEFT) + lmks.pos(Landmark::P, FACE_LATERAL_RIGHT));
+            rad = 2.3 * cv::norm( mp - lmks.pos(Landmark::PRN));
+        }   // end if
+
+        if ( !_interactor || _interactor->model() != fm)
+        {
+            _interactor = std::shared_ptr<RadialSelectInteractor>( new RadialSelectInteractor( *_vis, fm));
+            rad = radius();
+        }   // end if
+        fm->unlock();
+
+        _interactor->set( cpos, rad);   // Causes visualisation to be updated
+    }   // end isChecked
 }   // end doAction
 
 
-void ActionRadialSelect::doAfterAction( EventSet& cs, const FVS& fvs, bool v)
+void ActionRadialSelect::doAfterAction( Event e)
 {
-    ActionVisualise::doAfterAction( cs, fvs, v);
-    _interactor->setEnabled( isChecked());
+    ActionVisualise::doAfterAction( e);
+    MS::clearStatus();
+    if ( isChecked())
+        MS::showStatus( "Reposition area by left-click and dragging the centre handle; change radius using the mouse wheel.");
 }   // end doAfterAction
 
 
-void ActionRadialSelect::purge( const FM* fm)
+void ActionRadialSelect::purge( const FM* fm, Event e)
 {
-    ActionVisualise::purge(fm);
-    _rsels.erase(fm);
+    _interactor = nullptr;
+    ActionVisualise::purge(fm, e);
 }   // end purge
-
-
-// private slot
-void ActionRadialSelect::doOnIncreaseRadius( const FV* fv)
-{
-    const FM* fm = fv->data();
-    setRadius( fm, _rsels.at(fm)->radius() + 1.5);
-}   // end doOnIncreaseRadius
-
-
-// private slot
-void ActionRadialSelect::doOnDecreaseRadius( const FV* fv)
-{
-    const FM* fm = fv->data();
-    setRadius( fm, std::max( _rsels.at(fm)->radius() - 1.5, MIN_RADIUS));
-}   // end doOnDecreaseRadius
-
-
-// private
-void ActionRadialSelect::setRadius( const FM* fm, double nrad)
-{
-    _radius = nrad;
-    fm->lockForRead();
-    _rsels.at(fm)->setRadius( fm->info()->cmodel(), nrad);    // Change the selected radius
-    fm->unlock();
-    updateVis(fm);
-}   // end setRadius
-
-
-// private slot
-void ActionRadialSelect::doOnSetCentre( const FV* fv, const cv::Vec3f& v)
-{
-    const FM* fm = fv->data();
-    fm->lockForRead();
-    int cvidx = fm->kdtree()->find(v);
-    cv::Vec3f offset = v - fm->info()->cmodel()->vtx(cvidx);    // Required offset from the vertex
-    fm->unlock();
-    _rsels.at(fm)->setCentre( fm->info()->cmodel(), cvidx, offset);  // Offset is stored in local coordinate frame (wrt vertex).
-    updateVis(fm);
-}   // end doOnSetCentre
-
-
-// private
-void ActionRadialSelect::updateVis( const FM* fm)
-{
-    assert(_rsels.count(fm) > 0);
-    if ( _rsels.count(fm) == 0)
-        return;
-
-    // Get the boundary as a vector of vertices
-    const IntSet* vidxs = _rsels.at(fm)->boundary();
-    std::vector<cv::Vec3f> pts;
-    fm->lockForRead();
-    const RFeatures::ObjModel* cmodel = fm->info()->cmodel();
-    std::for_each( std::begin(*vidxs), std::end(*vidxs), [&](int v){ pts.push_back(cmodel->vtx(v));});
-
-    // Get the centre vertex
-    cv::Vec3f v = _rsels.at(fm)->centre( cmodel);
-
-    for ( const FV* fv : fm->fvs())
-    {
-        _vis->setReticule( fv, v);
-        _vis->setPoints( fv, pts);
-    }   // end for
-
-    fm->updateRenderers();
-    fm->unlock();
-}   // end updateVis

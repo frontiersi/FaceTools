@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,28 +21,25 @@
 #include "BaseVisualisation.h"
 #include "LoopsView.h"
 
-namespace FaceTools {
-namespace Vis {
+namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT OutlinesVisualisation : public BaseVisualisation
 { Q_OBJECT
 public:
-    OutlinesVisualisation( const QString &dname, const QIcon &icon, const QKeySequence &keys);
     ~OutlinesVisualisation() override;
 
     void apply( FV*, const QPoint* mc=nullptr) override;
-    void clear( FV*) override;
+    bool purge( FV*, Action::Event) override;
 
-    void pokeTransform( const FV*, const vtkMatrix4x4*) override;
-    void fixTransform( const FV*) override;
+    void setVisible( FV*, bool) override;
+    bool isVisible( const FV*) const override;
 
-    void purge( FV*) override;
+    void syncActorsToData( const FV*, const cv::Matx44d& d=cv::Matx44d::eye()) override;
 
 private:
     std::unordered_map<const FV*, LoopsView*> _views;
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespace
 
 #endif

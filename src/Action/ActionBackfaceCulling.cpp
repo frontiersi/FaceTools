@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,73 +18,75 @@
 #include <ActionBackfaceCulling.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
+#include <Landmark.h>
 #include <FaceView.h>
 #include <cassert>
 using FaceTools::Action::ActionBackfaceCulling;
 using FaceTools::Action::FaceAction;
-using FaceTools::FaceModelViewer;
-using FaceTools::FMVS;
+using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
-using FaceTools::FVS;
+using FaceTools::FMVS;
 using FaceTools::FMV;
+using FaceTools::FM;
+using MS = FaceTools::Action::ModelSelector;
 
-
-ActionBackfaceCulling::ActionBackfaceCulling( const QString& dn, const QIcon& ico)
-    : FaceAction( dn, ico)
+namespace {
+bool shouldTurnOn( const FM* fm)
 {
-    setCheckable( true, false);
+    // Don't respond if the landmark isn't present.
+    if ( !fm->landmarks().hasCode( FaceTools::Landmark::G))
+        return false;
 
     // If the face normal is in the same space half as the orientation normal,
     // then we want to automatically turn on backface culling.
-    TestFVSTrue tfvs = []( const FVS& fvs)
-    {
-        if ( fvs.size() != 1)
-            return false;
+    // Find a polygon at the glabella
+    const cv::Vec3f v = fm->landmarks().pos( FaceTools::Landmark::G);
 
-        // Find a polygon at the glabella
-        FM* fm = fvs.first()->data();
-        const cv::Vec3f* v = fm->landmarks()->pos( Landmark::G);
+    // Calculate the norm given by the ordering of the vertices on the polygon.
+    const RFeatures::ObjModel& model = fm->model();
+    const int vidx = fm->findVertex(v);
+    const cv::Vec3f fnrm = model.calcFaceNorm( *model.faces(vidx).begin());
 
-        // Don't respond if the landmark isn't present.
-        if ( !v)
-            return false;
+    // If normal in same direction (positive inner product) as orientation, respond (return true).
+    const cv::Vec3f onrm = fm->landmarks().orientation().nvec();
 
-        // Calculate the norm given by the ordering of the vertices on the polygon.
-        const RFeatures::ObjModel* model = fm->info()->cmodel();
-        int vidx = fm->kdtree()->find(*v);
-        const cv::Vec3f fnrm = model->calcFaceNorm( *model->getFaceIds(vidx).begin());
+    return onrm.dot(fnrm) > 0;
+}   // end shouldTurnOn
+}   // end namespace
 
-        // If normal in same direction (positive inner product) as orientation, respond (return true).
-        const cv::Vec3f onrm = fm->landmarks()->orientation().nvec();
 
-        return onrm.dot(fnrm) > 0;
-    };  // end tfvs
-
-    setRespondToEventIf( GEOMETRY_CHANGE, tfvs, true);
-    setRespondToEventIf( ORIENTATION_CHANGE, tfvs, true);
-    //setRespondToEventIf( VIEWER_CHANGE, tfvs, true);
+ActionBackfaceCulling::ActionBackfaceCulling( const QString& dn, const QIcon& ico, const QKeySequence& ks)
+    : FaceAction( dn, ico, ks)
+{
+    setCheckable( true, false);
+    addTriggerEvent( Event::FACE_DETECTED);
+    addTriggerEvent( Event::LOADED_MODEL);
 }   // end ctor
 
 
-bool ActionBackfaceCulling::testIfCheck( const FV* fv) const
+bool ActionBackfaceCulling::checkState( Event e)
 {
-    return fv && fv->backfaceCulling();
-}   // end testIfCheck
+    return ( MS::isViewSelected() && (MS::selectedView()->backfaceCulling() ||
+           (isTriggerEvent(e) && shouldTurnOn( MS::selectedModel()))));
+}   // end checkState
 
 
-bool ActionBackfaceCulling::doAction( FVS& fvs, const QPoint&)
+bool ActionBackfaceCulling::checkEnable( Event)
 {
-    // Apply to all FaceViews in all directly selected viewers.
+    return MS::isViewSelected();
+}   // end checkEnable
+
+
+void ActionBackfaceCulling::doAction( Event)
+{
     const bool ischecked = isChecked();
-    FMVS fmvs = fvs.dviewers();
-    fvs.clear();
-    for ( const FMV* v : fmvs)
+    const FMV* fmv = MS::selectedView()->viewer();
+
+    // Apply to all FaceViews of all models in the selected FaceView's viewer.
+    for ( FV* afv : fmv->attached())
     {
-        for ( FV* f : v->attached())
-        {
-            f->setBackfaceCulling( ischecked);
-            fvs.insert(f);
-        }   // end for
+        const FM* fm = afv->data();
+        for ( FV* fv : fm->fvs()) // All views of this model
+            fv->setBackfaceCulling( ischecked);
     }   // end for
-    return true;
 }   // end doAction

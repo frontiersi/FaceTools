@@ -35,6 +35,8 @@ private:
     static std::shared_ptr<MetricCalculatorTypeRegistry> me();
     MetricCalculatorTypeRegistry(){}
     ~MetricCalculatorTypeRegistry();
+    MetricCalculatorTypeRegistry( const MetricCalculatorTypeRegistry&) = delete;
+    void operator=( const MetricCalculatorTypeRegistry&) = delete;
 };  // end class
 
 }}  // end namespaces

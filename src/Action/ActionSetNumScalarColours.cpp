@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,53 +16,60 @@
  ************************************************************************/
 
 #include <ActionSetNumScalarColours.h>
-#include <SurfaceDataMapper.h>
+#include <SurfaceMetricsMapper.h>
 #include <FaceView.h>
 #include <cassert>
 using FaceTools::Action::ActionSetNumScalarColours;
 using FaceTools::Action::FaceAction;
+using FaceTools::Action::Event;
 using FaceTools::FVS;
 using FaceTools::Vis::FV;
-using FaceTools::Vis::SurfaceDataMapper;
+using FaceTools::Vis::SurfaceMetricsMapper;
 
 
-ActionSetNumScalarColours::ActionSetNumScalarColours( const QString& dname, QWidget* parent)
-    : FaceAction( dname), _spinBox(new QSpinBox(parent))
+ActionSetNumScalarColours::ActionSetNumScalarColours( const QString& dname)
+    : FaceAction( dname), _spinBox(nullptr) {}
+
+
+void ActionSetNumScalarColours::postInit()
 {
+    QWidget* p = static_cast<QWidget*>(parent());
+    _spinBox = new QSpinBox(p);
     _spinBox->setAlignment( Qt::AlignRight);
-    _spinBox->setRange( 2, 80);
+    _spinBox->setRange( 2, 99);
     _spinBox->setSingleStep( 1);
     _spinBox->setButtonSymbols(QAbstractSpinBox::PlusMinus);
-}   // end ctor
+    _spinBox->setEnabled(false);
+}   // end postInit
 
 
-bool ActionSetNumScalarColours::testReady( const FV* fv)
+bool ActionSetNumScalarColours::checkEnable( Event)
 {
-    SurfaceDataMapper* sdm = fv->activeSurface();
-    return sdm && sdm->isScalarMapping();
-}   // end testReady
-
-
-void ActionSetNumScalarColours::tellReady( const FV* fv, bool v)
-{
+    _spinBox->setEnabled(false);
     _spinBox->disconnect(this);
     _spinBox->setValue( 0);
-    if ( v)
+    const FV* fv = ModelSelector::selectedView();
+    const SurfaceMetricsMapper* smm = fv ? fv->activeSurface() : nullptr;
+    const bool enabled = smm && smm->isScalarMapping();
+    if ( enabled)
     {
-        _spinBox->setValue( (int)fv->activeSurface()->numColours());
-        connect( _spinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &ActionSetNumScalarColours::updateFaceViewFromWidget);
+        _spinBox->setEnabled(true);
+        _spinBox->setValue( static_cast<int>(fv->activeSurface()->numColours()));
+        connect( _spinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+                     this, &ActionSetNumScalarColours::updateFaceViewFromWidget);
     }   // end if
-}   // end tellReady
+    return enabled;
+}   // end checkEnabled
 
 
 void ActionSetNumScalarColours::updateFaceViewFromWidget( int v)
 {
     assert( isEnabled());
-    FV* fv = ready().first();
+    const FV* fv = ModelSelector::selectedView();
     assert(fv);
-    SurfaceDataMapper* sdm = fv->activeSurface();
-    assert(sdm);
-    sdm->setNumColours( v);
-    sdm->rebuild();
+    SurfaceMetricsMapper* smm = fv->activeSurface();
+    assert(smm);
+    smm->setNumColours( static_cast<size_t>(v));
+    smm->rebuild();
 }   // end updateFaceViewFromWidget
 

@@ -18,35 +18,38 @@
 #ifndef FACE_TOOLS_LANDMARKS_INTERACTOR_H
 #define FACE_TOOLS_LANDMARKS_INTERACTOR_H
 
-#include "ModelEntryExitInteractor.h"
+#include "FaceViewInteractor.h"
 #include <LandmarksVisualisation.h>
+#include <QObject>
 
 namespace FaceTools { namespace Interactor {
 
-class FaceTools_EXPORT LandmarksInteractor : public ModelViewerInteractor
+class FaceTools_EXPORT LandmarksInteractor : public FaceViewInteractor
 { Q_OBJECT
 public:
-    LandmarksInteractor( MEEI*, Vis::LandmarksVisualisation*);
+    explicit LandmarksInteractor( Vis::LandmarksVisualisation&);
 
-    // Get the ID of the landmark being hovered over (if any).
-    // Returns -1 if no handle hovered over. Use hoverModel() to get associated model.
-    int hoverId() const { return _hover;}
-    Vis::FV* hoverModel() const { return _meei->model();}
+signals:
+    void onUpdated( int);   // Provides ID of updated landmark.
 
-private slots:
-    void doOnEnterLandmark( const Vis::FV*, const vtkProp*);
-    void doOnLeaveLandmark( const Vis::FV*, const vtkProp*);
+protected:
+    void enterProp( Vis::FV*, const vtkProp*) override;
+    void leaveProp( Vis::FV*, const vtkProp*) override;
+
+    bool leftButtonDown() override;
+    bool leftButtonUp() override;
+    bool leftDrag() override;
 
 private:
-    bool leftButtonDown( const QPoint&) override;
-    bool leftButtonUp( const QPoint&) override;
-    bool leftDrag( const QPoint&) override;
-
-    MEEI *_meei;
-    Vis::LandmarksVisualisation *_vis;
+    Vis::LandmarksVisualisation &_vis;
     int _drag, _hover;  // IDs of the landmarks being dragged and hovered over.
+    cv::Vec3f _dpos;
     FaceLateral _lat;
-    Vis::FV* _view;
+
+    // Landmark events are always for the currently selected model.
+    void landmarkMove( int, FaceLateral, const cv::Vec3f&);
+    void enterLandmark( int, FaceLateral);
+    void leaveLandmark( int, FaceLateral);
 };  // end class
 
 }}   // end namespaces
