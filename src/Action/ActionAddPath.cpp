@@ -44,7 +44,9 @@ ActionAddPath::ActionAddPath( const QString& dn, const QIcon& ico,
 bool ActionAddPath::checkEnable( Event)
 {
     const FV* fv = MS::selectedView();
-    return fv && fv->isPointOnFace( primedMousePos()) && _pint->hoverPath() == nullptr;
+    if ( MS::interactionMode() == IMode::ACTOR_INTERACTION || !fv)
+        return false;
+    return fv->isPointOnFace( primedMousePos()) && _pint->hoverPath() == nullptr;
 }   // end checkEnabled
 
 

@@ -35,9 +35,13 @@ public:
     ~Chart() override;
 
     /**
-     * Add the given title.
+     * Set this chart to have the default rich text formatted title
+     * with components taken from the static functions below.
      */
-    void addTitle( const QString&);
+    void addTitle();
+
+    QString makeRichTextTitleString() const;
+    QString makeLatexTitleString( int footnotemark=0) const;
 
 private:
     GrowthData::CPtr _gdata;

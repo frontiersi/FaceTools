@@ -32,21 +32,19 @@ ActionUpdateU3D::ActionUpdateU3D() : FaceAction( "U3D Updater")
     addPurgeEvent( Event::FACE_DETECTED);
     addTriggerEvent( Event::GEOMETRY_CHANGE);
     addTriggerEvent( Event::FACE_DETECTED);
-    setAsync(true);
+    setAsync( true, true);  // Reentrant!
 }   // end ctor
 
 
 bool ActionUpdateU3D::checkEnable( Event)
 {
-    return U3DCache::isAvailable();
+    return U3DCache::isAvailable() && MS::selectedModel();
 }   // end checkEnabled
 
 
 void ActionUpdateU3D::doAction( Event)
 {
-    const FM* fm = MS::selectedModel();
-    if ( U3DCache::u3dfilepath(fm)->isEmpty())
-        U3DCache::refresh(fm, true);    // Blocks
+    U3DCache::refresh( MS::selectedModel(), true);
 }   // end doAction
 
 

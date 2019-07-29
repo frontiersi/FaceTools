@@ -64,17 +64,20 @@ QString ActionToggleCameraActorInteraction::whatsThis() const
 
 bool ActionToggleCameraActorInteraction::checkState( Event)
 {
-    if ( MS::interactionMode() == IMode::ACTOR_INTERACTION)
-        _moveHandler->setEnabled(true);
-    else
-        _moveHandler->setEnabled(false);
+    const FM* fm = MS::selectedModel();
+    // Always disable actor moving if the selected model has more than 1 view
+    if ( fm && fm->fvs().size() > 1)
+        MS::setInteractionMode(IMode::CAMERA_INTERACTION);
+    // Sync the move handler
+    _moveHandler->setEnabled( MS::interactionMode() == IMode::ACTOR_INTERACTION);
     return _moveHandler->isEnabled();
-}   // end checkChecked
+}   // end checkState
 
 
 bool ActionToggleCameraActorInteraction::checkEnable( Event)
 {
-    return MS::isViewSelected() || isChecked();
+    const FM* fm = MS::selectedModel();
+    return (fm && fm->fvs().size() == 1) || isChecked();
 }   // end checkEnabled
 
 
@@ -95,7 +98,7 @@ void ActionToggleCameraActorInteraction::doAction( Event)
 
 void ActionToggleCameraActorInteraction::doOnActorStart()
 {
-    storeUndo( this, Event::AFFINE_CHANGE, true);
+    storeUndo( this, Event::AFFINE_CHANGE);
 }   // end doOnActorStart
 
 

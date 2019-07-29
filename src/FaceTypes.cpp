@@ -117,16 +117,11 @@ EventGroup::EventGroup( Event e0, Event e1, Event e2, Event e3, Event e4) : _E(e
 }   // end ctor
 
 
-void EventGroup::clear() { _E = Event::NONE;}
-
-
-bool EventGroup::has( EventGroup e) const { return int(e.event()) & int(_E);}
-
+bool EventGroup::has( EventGroup e) const { return (int(e.event()) & int(_E)) > 0;}
 
 bool EventGroup::is( EventGroup e) const { return _E == e.event();}
 
-
-Event EventGroup::add( EventGroup ec) { _E = Event(int(_E) | int(ec.event())); return _E;}
+Event EventGroup::add( EventGroup ec) { return (_E = Event(int(_E) | int(ec.event())));}
 
 
 std::string EventGroup::name() const
@@ -179,6 +174,8 @@ std::string EventGroup::name() const
         nms.push_back("REPORT_CREATED");
     if ( has(Event::METADATA_CHANGE))
         nms.push_back("METADATA_CHANGE");
+    if ( has(Event::ASSESSMENT_CHANGE))
+        nms.push_back("ASSESSMENT_CHANGE");
     if ( has(Event::U3D_MODEL_CHANGE))
         nms.push_back("U3D_MODEL_CHANGE");
     if ( has(Event::ALL_VIEWS))
@@ -200,8 +197,8 @@ std::string EventGroup::name() const
     return nm;
 }   // end name
 
-
-void EventGroup::operator()()
+/*
+bool EventGroup::operator()( const std::function<bool(Event)>& checkEvent)
 {
     if ( has(Event::ACT_CANCELLED))
         checkEvent(Event::ACT_CANCELLED);
@@ -247,6 +244,8 @@ void EventGroup::operator()()
         checkEvent(Event::REPORT_CREATED);
     if ( has(Event::METADATA_CHANGE))
         checkEvent(Event::METADATA_CHANGE);
+    if ( has(Event::ASSESSMENT_CHANGE))
+        checkEvent(Event::ASSESSMENT_CHANGE);
     if ( has(Event::U3D_MODEL_CHANGE))
         checkEvent(Event::U3D_MODEL_CHANGE);
     if ( has(Event::ALL_VIEWS))
@@ -254,3 +253,4 @@ void EventGroup::operator()()
     if ( has(Event::ALL_VIEWERS))
         checkEvent(Event::ALL_VIEWERS);
 }   // end operator()
+*/

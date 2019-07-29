@@ -99,7 +99,7 @@ bool ActionAlignLandmarks::checkEnable( Event)
     {
         const FM* fm = fv->data();
         fm->lockForRead();
-        const LandmarkSet& lmks = fm->landmarks();
+        const LandmarkSet& lmks = fm->currentAssessment()->landmarks();
         if ( !lmks.empty())
         {
             // Get the other models from the viewer.
@@ -109,7 +109,7 @@ bool ActionAlignLandmarks::checkEnable( Event)
             for ( const FM* fm2 : fms)
             {
                 fm2->lockForRead();
-                ready = !fm2->landmarks().empty();
+                ready = !fm2->currentAssessment()->landmarks().empty();
                 fm2->unlock();
                 if ( ready)
                     break;
@@ -135,7 +135,7 @@ void ActionAlignLandmarks::doAction( Event)
 
     FM* tfm = fv->data();   // Target model whose landmarks we want the other models' landmarks to align with.
     tfm->lockForRead();
-    ObjModel::Ptr tlmks = makeLandmarksModel( tfm->landmarks());    // Create the target landmarks model
+    ObjModel::Ptr tlmks = makeLandmarksModel( tfm->currentAssessment()->landmarks());    // Create the target landmarks model
     tfm->unlock();
 
     FMS fms = fv->viewer()->attached().models(); // Get models from the same viewer as the target model
@@ -146,7 +146,7 @@ void ActionAlignLandmarks::doAction( Event)
     for ( FM* fm : fms)
     {
         fm->lockForRead();
-        lmods[fm] = makeLandmarksModel( fm->landmarks());
+        lmods[fm] = makeLandmarksModel( fm->currentAssessment()->landmarks());
         fm->unlock();
     }   // end for
 

@@ -46,7 +46,8 @@ FaceAction::FaceAction( const QString& dn, const QIcon& ico, const QKeySequence&
 // private
 void FaceAction::pinit()
 {
-    _init = _doasync = _isRunning = false;
+    _init = _doasync = _reentrant = false;
+    _runCount = 0;
     _unlocked = _reqConfirm = true;
     _pevents = _tevents = Event::NONE;
     if ( _dname.isEmpty())
@@ -106,6 +107,13 @@ bool FaceAction::isTriggerEvent( EventGroup e) const { return EventGroup(Event(_
 
 
 // protected
+void FaceAction::setAsync( bool async, bool reentrant)
+{
+    _doasync = async;
+    _reentrant = async && reentrant;
+}   // end setAsync
+
+
 void FaceAction::init( QWidget* parent) // Called by FaceActionManager after constructor finished
 {
     connect( &_action, &QAction::triggered, [this](){ execute(Event::USER);});
@@ -155,7 +163,7 @@ bool FaceAction::execute( Event e)
 
     assert( e == Event::USER || isTriggerEvent(e));
 
-    _isRunning = true;
+    _runCount++;
     _action.setEnabled(false);
     bool enteredDoAction = false;
 
@@ -167,7 +175,7 @@ bool FaceAction::execute( Event e)
 #ifndef NDEBUG
         std::cerr << "  ! " << debugName() << std::endl;
 #endif
-        _isRunning = false;
+        _runCount--;
         refreshState();
         emit onEvent( Event::ACT_CANCELLED);
     }   // end if
@@ -225,7 +233,7 @@ void FaceAction::endExecute( Event e)   // Always in GUI thread
 #ifndef NDEBUG
     std::cerr << " <= " << debugName() << " thread ID = " << QThread::currentThreadId() << std::endl;
 #endif
-    _isRunning = false;
+    _runCount--;
     refreshState();
     emit onEvent( Event::ACT_COMPLETE);
 }   // end endExecute

@@ -37,6 +37,8 @@ void ActionShowScanInfo::postInit()
     QWidget* p = static_cast<QWidget*>(parent());
     _dialog = new ScanInfoDialog(p);
     connect( _dialog, &ScanInfoDialog::onUpdated, [this](){ emit onEvent(Event::METADATA_CHANGE);});
+    connect( _dialog, &ScanInfoDialog::onAssessmentChanged, [this](){ emit onEvent(Event::ASSESSMENT_CHANGE);});
+    connect( _dialog, &ScanInfoDialog::onCopiedLandmarks, [this](){ emit onEvent(Event::LANDMARKS_CHANGE);});
 }   // end postInit
 
 
@@ -87,3 +89,9 @@ void ActionShowScanInfo::doAction( Event)
     _dialog->raise();
     _dialog->activateWindow();
 }   // end doAction
+
+
+void ActionShowScanInfo::doAfterAction( Event)
+{
+    MS::showStatus( "Showing Assessment Information", 5000);
+}   // end doAfterAction

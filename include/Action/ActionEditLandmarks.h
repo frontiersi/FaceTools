@@ -31,12 +31,15 @@ public:
     ActionEditLandmarks( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
     ~ActionEditLandmarks() override;
 
-    QString toolTip() const override { return "Toggle the showing of facial landmarks (if present).";}
+    QString toolTip() const override { return "Showing facial landmarks if present.";}
 
 protected:
     bool checkState( Event) override;
     bool doBeforeAction( Event) override;
     void doAfterAction( Event) override;
+
+    UndoState::Ptr makeUndoState() const override;
+    void restoreState( const UndoState*) override;
 
 private:
     Vis::LandmarksVisualisation *_vis;

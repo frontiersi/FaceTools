@@ -58,7 +58,7 @@ bool ActionTransformToStandardPosition::checkEnable( Event)
         return false;
     using namespace RFeatures;
     fm->lockForRead();
-    cv::Vec3f centre = fm->icentre();
+    cv::Vec3f centre = fm->centre();
     Orientation on = fm->orientation();
     fm->unlock();
     static const double MINF = 1e-6;
@@ -72,7 +72,7 @@ void ActionTransformToStandardPosition::doAction( Event)
     const FV* fv = MS::selectedView();
     FM* fm = fv->data();
     fm->lockForWrite();
-    fm->addTransformMatrix( fm->orientation().asMatrix( fm->icentre()).inv());
+    fm->addTransformMatrix( fm->orientation().asMatrix( fm->centre()).inv());
     fm->unlock();
     ActionOrientCameraToFace::orientToFace( fv, double(DEFAULT_CAMERA_DISTANCE));
 }   // end doAction
@@ -83,7 +83,7 @@ void ActionTransformToStandardPosition::doAfterAction( Event)
     MS::setInteractionMode( IMode::CAMERA_INTERACTION);
     emit onEvent( {Event::AFFINE_CHANGE, Event::CAMERA_CHANGE});
     QString msg = "Model orientation and position restored.";
-    if ( !MS::selectedModel()->landmarks().empty())
+    if ( !MS::selectedModel()->currentAssessment()->landmarks().empty())
         msg = "Transformed to detected face orientation.";
     MS::showStatus( msg, 5000);
 }   // end doAfterAction

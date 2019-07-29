@@ -67,3 +67,9 @@ void ActionShowModelProperties::doAction( Event)
     _dialog->raise();
     _dialog->activateWindow();
 }   // end doAction
+
+
+void ActionShowModelProperties::doAfterAction( Event)
+{
+    MS::showStatus( "Showing Model Properties", 5000);
+}   // end doAfterAction

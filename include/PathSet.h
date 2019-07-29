@@ -36,9 +36,6 @@ public:
     // Create a new path with first handle at given position returning its ID.
     int addPath( const cv::Vec3f&);
 
-    void setActivePath( int);
-    int activePath() const { return _aid;}
-
     // Remove the path with given ID returning true on success.
     bool removePath( int pathId);
 
@@ -63,7 +60,7 @@ public:
 
 private:
     int _sid;              // static IDs
-    int _aid;              // The active ID
+    //int _aid;              // The active ID
     std::unordered_map<int, Path> _paths;   // IDs that map to paths
     IntSet _ids;           // The IDs themselves
 

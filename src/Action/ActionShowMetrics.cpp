@@ -50,6 +50,9 @@ ActionShowMetrics::ActionShowMetrics( const QString& dn, const QIcon& ico, const
     setCheckable( true, _nowShowing);
     addTriggerEvent( Event::METRICS_CHANGE);
     addTriggerEvent( Event::METADATA_CHANGE);
+    addTriggerEvent( Event::ASSESSMENT_CHANGE);
+    addTriggerEvent( Event::CLOSED_MODEL);
+    addTriggerEvent( Event::MODEL_SELECT);
 }   // end ctor
 
 
@@ -190,7 +193,7 @@ void ActionShowMetrics::doAction( Event)
         {
             Vis::MetricVisualiser* mvis = mc->visualiser();
 
-            if ( fm->hasMetric(mc->id()))
+            if ( fm->currentAssessment()->hasMetric(mc->id()))
             {
                 for ( FV* fv : fm->fvs())
                 {
@@ -210,8 +213,7 @@ void ActionShowMetrics::doAction( Event)
     // Refreshing here also refreshes the ChartDialog which refreshes the options
     // available for the currently selected metric's growth curve data and also
     // sets the current growth curve data for the metric to use.
-    if ( _mdialog->isVisible())
-        _mdialog->refresh();
+    _mdialog->refresh();
 }   // end doAction
 
 
@@ -241,20 +243,23 @@ void ActionShowMetrics::_updateMetricText( int mid)
     const MetricValue* mvl = nullptr;
     const MetricValue* mvr = nullptr;
 
+    FaceAssessment::CPtr ass = fm->currentAssessment();
+    //std::cerr << "Switched to assessment " << ass->assessor().toStdString() << std::endl;
+
     MC::Ptr mc = MCM::metric( mid);
     if ( !mc->isBilateral())
     {
-        if ( fm->cmetrics().has( mid))
-            mv = &fm->cmetrics().metric(mid);
+        if ( ass->cmetrics().has( mid))
+            mv = &ass->cmetrics().metric(mid);
         if ( !mv)
             return;
     }   // end if
     else
     {
-        if ( fm->cmetricsL().has(mid))
-            mvl = &fm->cmetricsL().metric( mid);
-        if ( fm->cmetricsR().has(mid))
-            mvr = &fm->cmetricsR().metric( mid);
+        if ( ass->cmetricsL().has(mid))
+            mvl = &ass->cmetricsL().metric( mid);
+        if ( ass->cmetricsR().has(mid))
+            mvr = &ass->cmetricsR().metric( mid);
         if ( !mvl || !mvr)
             return;
     }   // end else
@@ -345,7 +350,7 @@ void ActionShowMetrics::_updateMetricText( int mid)
             oss << " [Age Outside Bounds]";
     }   // end else
 
-    const bool showText = !_mdialog->isHidden() &&  MS::isViewSelected();
+    const bool showText = _mdialog->isVisible() && MS::isViewSelected();
     const std::string ostr = oss.str();
     for ( const auto& p : _texts)
     {

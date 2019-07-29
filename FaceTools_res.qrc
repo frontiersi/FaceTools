@@ -20,6 +20,10 @@
     <file alias="INVISIBLE_SMALL">res/icons/icons8-invisible-22.png</file>
     <file alias="VISIBLE_SMALL">res/icons/icons8-eye-22.png</file>
 
+    <file alias="ADD">res/icons/icons8-add-48.png</file>
+    <file alias="DELETE">res/icons/icons8-delete-48.png</file>
+    <file alias="MARKER">res/icons/icons8-marker-30.png</file>
+
     <file alias="CHART">res/icons/icons8-plot-40.png</file>
     <file alias="METRICS">res/icons/measuring.svg</file>
     <file alias="FACEQ">res/icons/icons8-decision-40.png</file>

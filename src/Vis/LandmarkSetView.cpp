@@ -88,7 +88,8 @@ void LandmarkSetView::setColour( const cv::Vec3d& c)
     std::for_each( std::begin(_rviews), std::end(_rviews), [=](const ViewPair& p){ p.second->setColour( r, g, b);});
 
     assert(_viewer);
-    QColor fg = chooseContrasting( _viewer->backgroundColour());
+    //QColor fg = chooseContrasting( _viewer->backgroundColour());
+    const QColor fg = Qt::GlobalColor::blue;
     std::for_each( std::begin(_lviews), std::end(_lviews), [=](const ViewPair& p){ p.second->setCaptionColour( fg);});
     std::for_each( std::begin(_mviews), std::end(_mviews), [=](const ViewPair& p){ p.second->setCaptionColour( fg);});
     std::for_each( std::begin(_rviews), std::end(_rviews), [=](const ViewPair& p){ p.second->setCaptionColour( fg);});

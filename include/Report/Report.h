@@ -52,7 +52,9 @@ public:
     std::string makeFigure( float widthMM, float heightMM, const std::string& caption);
 
     // mid is the metric ID and d is the dimension of the metric.
-    std::string makeChart( int mid, size_t d=0);
+    // Set footnotemark to something higher than zero to use footnote mark
+    // notation for the chart data source instead of printing out the whole source text.
+    std::string makeChart( int mid, size_t d=0, int footnotemark=0);
 
     std::string makeScanInfo();
 

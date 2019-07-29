@@ -26,6 +26,7 @@
 #include <QImageTools.h>
 #include <QTreeWidget>
 #include <QPushButton>
+#include <QMessageBox>
 #include <cmath>
 #include <cassert>
 using FaceTools::Widget::ScanInfoDialog;
@@ -144,9 +145,10 @@ QTools::TreeModel* createEthnicityComboBoxModel()
 
 ScanInfoDialog::ScanInfoDialog( QWidget *parent) :
     QDialog(parent), _ui(new Ui::ScanInfoDialog), _model(nullptr),
-    _dialogRootTitle( parent->windowTitle() + " | Subject Information")
+    _dialogRootTitle( parent->windowTitle() + " | Assessment Information")
 {
     _ui->setupUi(this);
+
     setWindowTitle( _dialogRootTitle);
     connect( _ui->buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked, this, &ScanInfoDialog::_doOnApply);
 
@@ -159,7 +161,14 @@ ScanInfoDialog::ScanInfoDialog( QWidget *parent) :
 
     connect( _ui->sourceLineEdit, &QLineEdit::textEdited, this, &ScanInfoDialog::_doOnSourceChanged);
     connect( _ui->studyIdLineEdit, &QLineEdit::textEdited, this, &ScanInfoDialog::_doOnStudyIdChanged);
-    connect( _ui->remarksTextEdit, &QPlainTextEdit::textChanged, this, &ScanInfoDialog::_doOnNotesChanged);
+
+    connect( _ui->notesTextEdit, &QPlainTextEdit::textChanged, this, &ScanInfoDialog::_doOnNotesChanged);
+    connect( _ui->assessorComboBox, QOverload<int>::of(&QComboBox::activated), this, &ScanInfoDialog::_doOnAssessorChanged);
+    connect( _ui->assessorComboBox, &QComboBox::editTextChanged, this, &ScanInfoDialog::_doOnEditedAssessorText);
+
+    connect( _ui->addAssessmentButton, &QToolButton::clicked, this, &ScanInfoDialog::_doOnAddAssessment);
+    connect( _ui->removeAssessmentButton, &QToolButton::clicked, this, &ScanInfoDialog::_doOnDeleteAssessment);
+    connect( _ui->copyLandmarksButton, &QToolButton::clicked, this, &ScanInfoDialog::_doOnCopyLandmarks);
 
     QTools::TreeModel* emodel = createEthnicityComboBoxModel();
     _ui->maternalEthnicityComboBox->setModel( emodel);
@@ -198,12 +207,13 @@ void ScanInfoDialog::refresh()
     _ui->captureDateEdit->setDate( QDate::currentDate());
     _ui->sourceLineEdit->clear();
     _ui->studyIdLineEdit->clear();
-    _ui->remarksTextEdit->clear();
     _ui->imageLabel->clear();
+    _ui->assessorComboBox->clear();
+
+    _aids.clear();
 
     if (_model)
     {
-        _model->lockForRead();
         const QString fpath = FileIO::FMM::filepath(_model).c_str();
         setWindowTitle( _dialogRootTitle + " | " + fpath);
 
@@ -216,9 +226,19 @@ void ScanInfoDialog::refresh()
         _ui->captureDateEdit->setDate( _model->captureDate());
         _ui->sourceLineEdit->setText( _model->source());
         _ui->studyIdLineEdit->setText( _model->studyId());
-        _ui->remarksTextEdit->setPlainText( _model->notes());
-        _model->unlock();
+
+        const IntSet aids = _model->assessmentIds();
+        for ( int ai : aids)
+        {
+            _aids.insert(ai);
+            FaceAssessment::CPtr ass = _model->assessment(ai);
+            const QString aname = ass->assessor();
+            assert( !aname.isEmpty());
+            _ui->assessorComboBox->addItem( aname, ai);
+        }   // end for
     }   // end if
+
+    _refreshCurrentAssessment();
 
     _ui->buttonBox->button(QDialogButtonBox::Apply)->setEnabled(false);
     _ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(_model != nullptr);
@@ -263,17 +283,28 @@ void ScanInfoDialog::_doOnApply()
         _model->setCaptureDate(date);
 
     const QString src = _ui->sourceLineEdit->text();
-    const QString sid = _ui->studyIdLineEdit->text();
-    const QString rem = _ui->remarksTextEdit->toPlainText();
-
     if ( _model->source() != src)
         _model->setSource( src);
 
+    const QString sid = _ui->studyIdLineEdit->text();
     if ( _model->studyId() != sid)
         _model->setStudyId( sid);
 
-    if ( _model->notes() != rem)
-        _model->setNotes(rem);
+    const int aid = _ui->assessorComboBox->currentData().toInt();
+
+    const QString ass = _ui->assessorComboBox->currentText();
+    if ( _model->assessment(aid)->assessor() != ass)    // Change name of assessor?
+    {
+        _model->assessment(aid)->setAssessor( ass);
+        _model->setMetaSaved(false);
+    }   // end if
+
+    const QString rem = _ui->notesTextEdit->toPlainText();
+    if ( _model->assessment(aid)->notes() != rem)   // Change assessment notes?
+    {
+        _model->assessment(aid)->setNotes( rem);
+        _model->setMetaSaved(false);
+    }   // end if
 
     const bool isSaved = _model->isSaved();
     _model->unlock();
@@ -283,7 +314,7 @@ void ScanInfoDialog::_doOnApply()
 }   // end _doOnApply
 
 
-bool ScanInfoDialog::_isDifferentToModel()
+bool ScanInfoDialog::_isDifferentToCurrent()
 {
     if ( !_model)
         return false;
@@ -308,20 +339,32 @@ bool ScanInfoDialog::_isDifferentToModel()
         return true;
 
     const QString src = _ui->sourceLineEdit->text();
-    const QString sid = _ui->studyIdLineEdit->text();
-    const QString rem = _ui->remarksTextEdit->toPlainText();
-
     if ( _model->source() != src)
         return true;
 
+    const QString sid = _ui->studyIdLineEdit->text();
     if ( _model->studyId() != sid)
         return true;
 
-    if ( _model->notes() != rem)
+    const int aid = _ui->assessorComboBox->currentData().toInt();
+
+    const QString ass = _ui->assessorComboBox->currentText();
+    if ( _model->assessment(aid)->assessor() != ass)
+        return true;
+
+    const QString rem = _ui->notesTextEdit->toPlainText();
+    if ( _model->assessment(aid)->notes() != rem)
         return true;
 
     return false;
-}   // end _isDifferentToModel
+}   // end _isDifferentToCurrent
+
+
+void ScanInfoDialog::_checkEnableApply()
+{
+    const bool isdiff = _isDifferentToCurrent();
+    _ui->buttonBox->button(QDialogButtonBox::Apply)->setEnabled(isdiff);
+}   // end _checkEnableApply
 
 
 void ScanInfoDialog::_doOnChangedMaternalEthnicity()
@@ -330,7 +373,7 @@ void ScanInfoDialog::_doOnChangedMaternalEthnicity()
     // If user landed on the "Aggregated" option, set back to the current ethnicity.
     if (_ui->maternalEthnicityComboBox->currentText() == "Aggregated")
         _setEthnicityComboBox( _ui->maternalEthnicityComboBox, _model->maternalEthnicity());
-    _ui->buttonBox->button(QDialogButtonBox::Apply)->setEnabled(_isDifferentToModel());
+    _checkEnableApply();
 }   // end _doOnChangedMaternalEthnicity
 
 
@@ -340,7 +383,7 @@ void ScanInfoDialog::_doOnChangedPaternalEthnicity()
     // If user landed on the "Aggregated" option, set back to the current ethnicity.
     if (_ui->paternalEthnicityComboBox->currentText() == "Aggregated")
         _setEthnicityComboBox( _ui->paternalEthnicityComboBox, _model->paternalEthnicity());
-    _ui->buttonBox->button(QDialogButtonBox::Apply)->setEnabled(_isDifferentToModel());
+    _checkEnableApply();
 }   // end _doOnChangedPaternalEthnicity
 
 
@@ -348,7 +391,7 @@ void ScanInfoDialog::_doOnDOBChanged()
 {
     if ( _model && _ui->dobDateEdit->date() > QDate::currentDate())   // Can't have dates beyond current date!
         _ui->dobDateEdit->setDate( _model->dateOfBirth());
-    _ui->buttonBox->button(QDialogButtonBox::Apply)->setEnabled(_isDifferentToModel());
+    _checkEnableApply();
 }   // end _doOnDOBChanged
 
 
@@ -356,33 +399,51 @@ void ScanInfoDialog::_doOnCaptureDateChanged()
 {
     if ( _model && _ui->captureDateEdit->date() > QDate::currentDate())   // Can't have dates beyond current date!
         _ui->captureDateEdit->setDate( _model->captureDate());
-    _ui->buttonBox->button(QDialogButtonBox::Apply)->setEnabled(_isDifferentToModel());
+    _checkEnableApply();
 }   // end _doOnCaptureDateChanged
 
 
 void ScanInfoDialog::_doOnSexChanged()
 {
-    _ui->buttonBox->button(QDialogButtonBox::Apply)->setEnabled(_isDifferentToModel());
+    _checkEnableApply();
 }   // end _doOnSexChanged
 
 
 void ScanInfoDialog::_doOnSourceChanged()
 {
-    _ui->buttonBox->button(QDialogButtonBox::Apply)->setEnabled(_isDifferentToModel());
+    _checkEnableApply();
 }   // end _doOnSourceChanged
 
 
 void ScanInfoDialog::_doOnStudyIdChanged()
 {
-    _ui->buttonBox->button(QDialogButtonBox::Apply)->setEnabled(_isDifferentToModel());
+    _checkEnableApply();
 }   // end _doOnStudyIdChanged
 
 
 void ScanInfoDialog::_doOnNotesChanged()
 {
-    _ui->buttonBox->button(QDialogButtonBox::Apply)->setEnabled(_isDifferentToModel());
+    _checkEnableApply();
 }   // end _doOnNotesChanged
 
+
+void ScanInfoDialog::_doOnAssessorChanged()
+{
+    const int ai = _ui->assessorComboBox->currentData().toInt();
+    if ( _model && ai >= 0)
+    {
+        _model->setCurrentAssessment(ai);
+        _refreshCurrentAssessment();
+        emit onAssessmentChanged();
+    }   // end if
+}   // end _doOnAssessorChanged
+
+
+void ScanInfoDialog::_doOnEditedAssessorText()
+{
+    //const int ai = _ui->assessorComboBox->currentData().toInt();
+    _checkEnableApply();
+}   // end _doOnEditedAssessorText
 
 
 void ScanInfoDialog::accept()
@@ -397,3 +458,130 @@ void ScanInfoDialog::reject()
     refresh();
     QDialog::reject();
 }   // end reject
+
+
+void ScanInfoDialog::_refreshCurrentAssessment()
+{
+    _ui->notesTextEdit->clear();
+    _ui->addAssessmentButton->setEnabled(false);
+    _ui->removeAssessmentButton->setEnabled(false);
+    _ui->copyLandmarksButton->setEnabled(false);
+    if ( _model)
+    {
+        FaceAssessment::CPtr cass = _model->currentAssessment();
+        assert(cass);
+        _ui->assessorComboBox->setCurrentIndex( _ui->assessorComboBox->findData( cass->id()));
+        _ui->notesTextEdit->setPlainText( cass->notes());
+        _ui->addAssessmentButton->setEnabled( true);
+        _ui->removeAssessmentButton->setEnabled( _model->assessmentsCount() > 1);
+        _ui->copyLandmarksButton->setEnabled( !cass->landmarks().empty() && _model->assessmentsCount() > 1);
+    }   // end if
+}   // end refreshCurrentAssessment
+
+
+void ScanInfoDialog::_doOnAddAssessment()
+{
+    assert( _model);
+
+    // Set the new assessment ID to be one higher than all existing
+    int naid = 0;
+    for ( int aid : _aids)
+        naid = std::max(naid,aid);
+    naid++;
+
+    // Create the new assessment, add to record of assessment IDs and insert in combobox at current index
+    FaceAssessment::Ptr nass = FaceAssessment::create( naid, "Unknown");
+    _aids.insert( nass->id());
+    const int idx = _ui->assessorComboBox->currentIndex();
+    _ui->assessorComboBox->insertItem( idx, nass->assessor(), nass->id());
+
+    // If the current assessment has landmarks and/or paths, copy these in to the new assessment.
+    FaceAssessment::CPtr cass = _model->currentAssessment();
+    if ( cass->hasLandmarks())
+        nass->setLandmarks( cass->landmarks().deepCopy());
+    if ( cass->hasPaths())
+        nass->setPaths( cass->paths().deepCopy());
+
+    // Change model and refresh
+    _model->setAssessment(nass);
+    _model->setCurrentAssessment(nass->id());
+    _refreshCurrentAssessment();
+    // Set focus to the assessor's name which the user will want to change
+    _ui->assessorComboBox->setFocus();
+    emit onAssessmentChanged();
+}   // end _doOnAddAssessment
+
+
+void ScanInfoDialog::_doOnDeleteAssessment()
+{
+    const int ai = _ui->assessorComboBox->currentData().toInt();
+    assert( ai >= 0);
+    assert( _model);
+    assert( _model->assessmentsCount() > 1);
+
+    FaceAssessment::CPtr ass = _model->assessment(ai);
+
+    bool dodel = true;
+    // Warn about deletion if the assessment has notes, paths, or landmarks defined.
+    if ( ass->hasLandmarks() || ass->hasPaths() || ass->hasNotes())
+    {
+        static const QString msg = tr("This action will erase this assessment's landmarks, custom paths, and notes! Really delete?");
+        dodel = QMessageBox::Yes == QMessageBox::warning( this, tr("Delete Assessment?"), msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    }   // end if
+
+    if ( dodel)
+    {
+        // Remove from the combo box
+        _ui->assessorComboBox->removeItem(_ui->assessorComboBox->currentIndex());   // Changes current index
+        _aids.erase(ai);
+
+        // Change model and refresh
+        _model->eraseAssessment(ai);
+        _model->setCurrentAssessment( _ui->assessorComboBox->currentData().toInt());
+        _refreshCurrentAssessment();
+        emit onAssessmentChanged();
+    }   // end if
+}   // end _doOnDeleteAssessment
+
+
+void ScanInfoDialog::_doOnCopyLandmarks()
+{
+    const int ai = _ui->assessorComboBox->currentData().toInt();
+    FaceAssessment::CPtr sass = _model->assessment(ai);
+    assert( ai >= 0);
+    assert( _model);
+    assert( _model->assessmentsCount() > 1);
+    assert( sass->hasLandmarks());
+
+    // Warn about copying if to do so will overwrite other assessment landmark sets.
+    bool dowarn = false;
+    for ( int aid : _aids)
+    {
+        if ( ai != aid && _model->assessment(aid)->hasLandmarks())
+        {
+            dowarn = true;
+            break;
+        }   // end if
+    }   // end for
+
+    bool docopy = true;
+    if ( dowarn)
+    {
+        static const QString msg = tr("This action will overwrite existing landmarks for other assessments! Really overwrite?");
+        docopy = QMessageBox::Yes == QMessageBox::warning( this, tr("Overwrite Landmarks?"), msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    }   // end if
+
+    if ( docopy)
+    {
+        for ( int aid : _aids)
+        {
+            if ( ai != aid)
+            {
+                FaceAssessment::Ptr lass = _model->assessment(aid);
+                lass->setLandmarks( sass->landmarks().deepCopy());
+            }   // end if
+        }   // end for
+
+        emit onCopiedLandmarks();
+    }   // end if
+}   // end _doOnCopyLandmarks

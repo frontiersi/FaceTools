@@ -29,7 +29,7 @@ public:
     ActionShowScanInfo( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
     ~ActionShowScanInfo() override;
 
-    QString toolTip() const override { return "Display and edit demographic and other metadata about the selected model.";}
+    QString toolTip() const override { return "Display and edit demographic and assessment data about the current subject.";}
 
     void setThumbnailUpdater( ActionUpdateThumbnail*);
 
@@ -38,6 +38,7 @@ protected:
     bool checkState( Event) override;
     bool checkEnable( Event) override;
     void doAction( Event) override;
+    void doAfterAction( Event) override;
 
 private slots:
     void doOnUpdatedThumbnail( const FM*, const cv::Mat&);

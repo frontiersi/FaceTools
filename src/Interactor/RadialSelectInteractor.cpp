@@ -34,7 +34,7 @@ RadialSelectInteractor::RadialSelectInteractor( LoopSelectVisualisation& vis, co
     : _vis(vis), _onReticule(false), _move(false), _model(fm), _radiusChange(0)
 {
     fm->lockForRead();
-    cv::Vec3f cpos = fm->findClosestSurfacePoint( fm->icentre());
+    cv::Vec3f cpos = fm->findClosestSurfacePoint( fm->centre());
     const int sv = fm->findVertex( cpos);
     _rsel = RFeatures::ObjModelRegionSelector::create( fm->model(), sv);
 
@@ -77,7 +77,7 @@ void RadialSelectInteractor::updateVis()
         _vis.setPoints( fv, pts);
     }   // end for
 
-    _model->updateRenderers();
+    MS::updateRender();
 }   // end updateVis
 
 
@@ -174,6 +174,6 @@ void RadialSelectInteractor::showHover( bool v)
         for ( FV* f : fm->fvs())
             _vis.setHighlighted( f, v);
 
-        fm->updateRenderers();
+        MS::updateRender();
     }   // end if
 }   // end showHover

@@ -58,6 +58,14 @@ Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _model(nullptr)
                                     "zscore", &MetricValue::zscore,
                                     "mean", &MetricValue::mean);
 
+    _lua.new_usertype<MC>( "MC",
+                           "currentGrowthData", &MC::currentGrowthData);
+
+    _lua.new_usertype<GrowthData>( "GrowthData",
+                                   "source", &GrowthData::source,
+                                   "note", &GrowthData::note,
+                                   "longNote", &GrowthData::longNote);
+
     _lua.new_usertype<FM>( "FM",
                            "age", &FM::age,
                            "sex", &FM::sex,
@@ -66,12 +74,17 @@ Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _model(nullptr)
                            "paternalEthnicity", &FM::paternalEthnicity,
                            "captureDate", &FM::captureDate,
                            "dateOfBirth", &FM::dateOfBirth,
-                           "hasLandmarks", &FM::hasLandmarks,
-                           "metrics", &FM::cmetrics,
-                           "metricsL", &FM::cmetricsL,
-                           "metricsR", &FM::cmetricsR);
+                           "currentAssessment", &FM::cassessment);
+
+    _lua.new_usertype<FaceAssessment>( "FaceAssessment",
+                           "hasLandmarks", &FaceAssessment::hasLandmarks,
+                           "metrics", &FaceAssessment::cmetrics,
+                           "metricsL", &FaceAssessment::cmetricsL,
+                           "metricsR", &FaceAssessment::cmetricsR);
 
     _lua.set_function( "phenotype", PhenotypeManager::cphenotype);
+    _lua.set_function( "discover", PhenotypeManager::discover);
+    _lua.set_function( "metric", MCM::metric);
 
     _lua.new_usertype<Phenotype>( "Phenotype",
                                   "name", &Phenotype::name);
@@ -82,7 +95,8 @@ Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _model(nullptr)
                               "year", &QDate::year);
 
     _lua.new_usertype<QString>( "QString",
-                                "toStdString", &QString::toStdString);
+                                "toStdString", &QString::toStdString,
+                                "isEmpty", &QString::isEmpty);
 
     _lua.open_libraries( sol::lib::base);
     _lua.open_libraries( sol::lib::math);
@@ -351,7 +365,8 @@ void writeImg( const QString& imgpath, QTextStream& os, const QString& caption)
        << "\\centering" << endl;
     if ( !caption.isEmpty())
         os << "\\caption*{" << caption << "}" << endl;
-    os << "\\includegraphics[width=\\linewidth]{" << imgpath << "}" << endl;
+    //os << "\\includegraphics[width=\\linewidth]{" << imgpath << "}" << endl;
+    os << "\\includegraphics[width=110.00mm]{" << imgpath << "}" << endl;
     os << "\\end{figure}" << endl;
 }   // end writeImg
 
@@ -362,7 +377,7 @@ void writeSvg( const QString& imname, QTextStream& os, const QString& caption)
        << "\\centering" << endl;
     if ( !caption.isEmpty())
         os << "\\caption*{" << caption << "}" << endl;
-    os << "\\includesvg[width=100.00mm,pretex=\\relscale{0.5}]{" << imname << "}" << endl;
+    os << "\\includesvg[width=100.00mm,pretex=\\relscale{0.8}]{" << imname << "}" << endl;
     os << "\\end{figure}" << endl;
 }   // end writeSvg
 
@@ -373,16 +388,18 @@ std::string Report::makeScanInfo()
 {
     QString ostr;
     QTextStream os(&ostr);
-    os << " \\textbf{Sex:} " << FaceTools::toLongSexString( _model->sex()) << " \\\\" << endl;
     if ( _model->maternalEthnicity() == _model->paternalEthnicity())
-        os << " \\textbf{Ethnicity:} " << _model->maternalEthnicity() << " \\\\" << endl;
+        os << " \\textbf{Ethnicity:} " << Ethnicities::name(_model->maternalEthnicity()) << " \\\\" << endl;
     else
     {
-        os << " \\textbf{Maternal Ethnicity:} " << _model->maternalEthnicity() << " \\\\" << endl;
-        os << " \\textbf{Paternal Ethnicity:} " << _model->paternalEthnicity() << " \\\\" << endl;
+        os << " \\textbf{Maternal Ethnicity:} " << Ethnicities::name(_model->maternalEthnicity()) << " \\\\" << endl;
+        os << " \\textbf{Paternal Ethnicity:} " << Ethnicities::name(_model->paternalEthnicity()) << " \\\\" << endl;
     }   // end else
-    os << " \\textbf{Birth Date:} " << _model->dateOfBirth().toString("dd MMMM yyyy") << " \\\\" << endl;
-    os << " \\textbf{Image Date:} " << _model->captureDate().toString("dd MMMM yyyy") << " \\\\" << endl;
+
+    // Sex and DOB on one line
+    os << " \\textbf{Sex:} " << FaceTools::toLongSexString( _model->sex());
+    os << "  \\textbf{DOB:} " << _model->dateOfBirth().toString("dd MMMM yyyy") << " \\\\" << endl;
+    os << " \\textbf{Image Captured:} " << _model->captureDate().toString("dd MMMM yyyy") << " \\\\" << endl;
     const double age = _model->age();
     const int yrs = int(age);
     const int mths = int((age - double(yrs)) * 12);
@@ -399,12 +416,11 @@ std::string Report::makeScanInfo()
 std::string Report::showNotes()
 {
     QString ostr;
-    if ( !_model->notes().isEmpty())
-    {
-        QTextStream os(&ostr);
-        os << " \\normalsize{\\textbf{Image Notes}} \\\\" << endl
-           << "\\small{" << _model->notes() << "} \\\\" << endl;
-    }   // end if
+    QTextStream os(&ostr);
+    FaceAssessment::CPtr ass = _model->currentAssessment();
+    os << " \\normalsize{\\textbf{Assessor:} " << ass->assessor() << "} \\\\" << endl;
+    os << " \\normalsize{\\textbf{Assessor's notes:}} \\\\" << endl
+       << "\\small{" << (ass->hasNotes() ? ass->notes() : "No further notes.") << "} \\\\" << endl;
     return ostr.toStdString();
 }   // end showNotes
 
@@ -420,10 +436,9 @@ std::string Report::makeFigure( float wmm, float hmm, const std::string& caption
 }   // end makeFigure
 
 
-std::string Report::makeChart( int mid, size_t d)
+std::string Report::makeChart( int mid, size_t d, int footnotemark)
 {
-    MC::Ptr mc = MCM::metric(mid);
-    GrowthData::CPtr gd = mc->currentGrowthData();
+    GrowthData::CPtr gd = MCM::metric(mid)->currentGrowthData();
     Metric::Chart* chart = new Metric::Chart( gd, d, _model);
 
     QtCharts::QChartView cview( chart);
@@ -464,19 +479,7 @@ std::string Report::makeChart( int mid, size_t d)
         return "";
     }   // end if
 
-    QString demog;
-    if ( gd->ethnicity() > 0)
-        demog = Ethnicities::name( gd->ethnicity()) + "; ";
-    demog += toLongSexString( static_cast<Sex>(gd->sex()));
-
-    QString src = "\\tiny{\\textit{" + gd->source();
-    if ( !gd->note().isEmpty())
-        src += "\\\\ " + gd->note();
-    if ( gd->n() > 0)
-        src += QString("; N=%1").arg(gd->n());
-    src += "}}";
-
-    QString qcaption = "\\textbf{" + mc->name() + "} \\\\ " + demog + "\\\\ " + src;
+    QString qcaption = chart->makeLatexTitleString( footnotemark);
     QString ostr;
     QTextStream os( &ostr);
 

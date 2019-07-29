@@ -28,7 +28,7 @@ using RFeatures::ObjModelBounds;
 
 
 // public
-BoundingView::BoundingView( const ObjModelBounds& bounds, float lw, float r, float g, float b)
+BoundingView::BoundingView( const ObjModelBounds& bounds, float lw)
     : _viewer(nullptr), _visible(false), _lw(lw)
 {
     // Get the untransformed corners to create an upright cuboid
@@ -44,7 +44,6 @@ BoundingView::BoundingView( const ObjModelBounds& bounds, float lw, float r, flo
     prop->SetRepresentationToWireframe();
     prop->SetRenderLinesAsTubes(false);
     prop->SetLineWidth( lw);
-    prop->SetColor( double(r), double(g), double(b));
     prop->SetOpacity( 0.17);
 
     // Don't want cuboid actor to be affected by directional lighting
@@ -61,6 +60,13 @@ BoundingView::~BoundingView()
 {
     setVisible( false, _viewer);
 }   // end dtor
+
+
+void BoundingView::setColour(float r, float g, float b)
+{
+    vtkProperty* prop = _cubeActor->GetProperty();
+    prop->SetColor( double(r), double(g), double(b));
+}   // end setColour
 
 
 void BoundingView::setPickable( bool v) { _cubeActor->SetPickable(v);}

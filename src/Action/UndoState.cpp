@@ -26,63 +26,83 @@ using FaceTools::Action::EventGroup;
 using FaceTools::Landmark::LandmarkSet;
 
 
-void FaceTools::Action::storeUndo( const FaceAction* a, EventGroup egrp, bool res)
+void FaceTools::Action::storeUndo( const FaceAction* a, EventGroup egrp)
 {
-    UndoStates::storeUndo( a, egrp, res);
+    UndoStates::storeUndo( a, egrp, true);
 }   // end storeUndo
 
 
-UndoState::Ptr UndoState::create( EventGroup egrp, bool autoRestore)
+void FaceTools::Action::storeUndo( const FaceAction* a)
 {
-    Ptr ustate( new UndoState);
-    ustate->_action = nullptr;
-    ustate->_egrp = egrp;
-    ustate->_autoRestore = autoRestore;
-    const FM* fm = ustate->_fm = ModelSelector::selectedModel();
+    EventGroup egrp;
+    UndoStates::storeUndo( a, egrp, false);
+}   // end storeUndo
 
-    FM& bfm = ustate->_backm;
-    bfm.setMetaSaved( fm->isMetaSaved());
-    bfm.setModelSaved( fm->isModelSaved());
 
-    // If auto-restoring, set the data elements that are required for auto-restoration.
-    if ( autoRestore)
+UndoState::Ptr UndoState::create( const FaceAction* a, EventGroup egrp, bool autoRestore)
+{
+    return Ptr( new UndoState(a, egrp, autoRestore), [](UndoState* x){ delete x;});
+}   // end create
+
+
+UndoState::UndoState( const FaceAction* a, EventGroup egrp, bool ar)
+    : _action( const_cast<FaceAction*>(a)), _egrp(egrp), _autoRestore(ar)
+{
+    _name = a->displayName();
+    _fm = ModelSelector::selectedModel();
+    _metaSaved = _fm->isMetaSaved();
+    _modelSaved = _fm->isModelSaved();
+
+    // If auto-restoring, backup the needed data elements.
+    if ( _autoRestore)
     {
         if ( egrp.has(Event::GEOMETRY_CHANGE) || egrp.has(Event::ORIENTATION_CHANGE))
         {
-            bfm._model = fm->_model->deepCopy(true/*share materials*/);
-            bfm._kdtree = fm->_kdtree;
-            bfm._bnds.clear();    // Just in case
-            for ( const auto& b : fm->_bnds)
-                bfm._bnds.push_back( b->deepCopy());
+            _model = _fm->_model->deepCopy(true/*share materials*/);
+            _kdtree = _fm->_kdtree;
+            _bnds.clear();    // Just in case
+            for ( const auto& b : _fm->_bnds)
+                _bnds.push_back( b->deepCopy());
         }   // end if
 
         if ( egrp.has(Event::AFFINE_CHANGE))
-            ustate->_tmat = fm->model().transformMatrix();
+            _tmat = _fm->model().transformMatrix();
 
         if ( egrp.has(Event::CONNECTIVITY_CHANGE))
-            bfm._manifolds = fm->_manifolds;
+            _manifolds = _fm->_manifolds;
 
-        if ( egrp.has(Event::GEOMETRY_CHANGE) || egrp.has(Event::LANDMARKS_CHANGE) || egrp.has(Event::FACE_DETECTED))
-            bfm._landmarks = fm->_landmarks->deepCopy();
-
-        if ( egrp.has(Event::GEOMETRY_CHANGE) || egrp.has(Event::PATHS_CHANGE))
-            bfm._paths = fm->_paths->deepCopy();
+        if ( egrp.has(Event::GEOMETRY_CHANGE)
+          || egrp.has(Event::LANDMARKS_CHANGE)
+          || egrp.has(Event::ASSESSMENT_CHANGE)
+          || egrp.has(Event::FACE_DETECTED)
+          || egrp.has(Event::PATHS_CHANGE))
+            _ass = _fm->currentAssessment()->deepCopy();
 
         if ( egrp.has(Event::METADATA_CHANGE))
         {
-            bfm._notes = fm->_notes;
-            bfm._source = fm->_source;
-            bfm._studyId = fm->_studyId;
-            bfm._dob = fm->_dob;
-            bfm._sex = fm->_sex;
-            bfm._methnicity = fm->_methnicity;
-            bfm._pethnicity = fm->_pethnicity;
-            bfm._cdate = fm->_cdate;
+            _source = _fm->_source;
+            _studyId = _fm->_studyId;
+            _dob = _fm->_dob;
+            _sex = _fm->_sex;
+            _methnicity = _fm->_methnicity;
+            _pethnicity = _fm->_pethnicity;
+            _cdate = _fm->_cdate;
         }   // end if
     }   // end if
+}   // end ctor
 
-    return ustate;
-}   // end create
+
+void UndoState::setUserData( const QString& s, const QVariant& v)
+{
+    _udata[s] = v;
+}   // end setUserData
+
+
+QVariant UndoState::userData( const QString& s) const
+{
+    assert( _udata.contains(s));
+    return _udata[s];
+}   // end userData
 
 
 void UndoState::restore() const
@@ -97,39 +117,39 @@ void UndoState::restore() const
     {
         if ( _egrp.has(Event::GEOMETRY_CHANGE) || _egrp.has(Event::ORIENTATION_CHANGE))
         {
-            _fm->_model = _backm._model;
-            _fm->_kdtree = _backm._kdtree;
-            _fm->_bnds = _backm._bnds;
+            _fm->_model = _model;
+            _fm->_kdtree = _kdtree;
+            _fm->_bnds = _bnds;
         }   // end if
 
         if ( _egrp.has(Event::AFFINE_CHANGE))
             _fm->addTransformMatrix( _tmat * _fm->model().transformMatrix().inv());
 
         if ( _egrp.has(Event::CONNECTIVITY_CHANGE))
-            _fm->_manifolds = _backm._manifolds;
+            _fm->_manifolds = _manifolds;
 
-        if ( _egrp.has(Event::GEOMETRY_CHANGE) || _egrp.has(Event::LANDMARKS_CHANGE) || _egrp.has(Event::FACE_DETECTED))
-            _fm->_landmarks = _backm._landmarks;
-
-        if ( _egrp.has(Event::GEOMETRY_CHANGE) || _egrp.has(Event::PATHS_CHANGE))
-            _fm->_paths = _backm._paths;
+        if ( _egrp.has(Event::GEOMETRY_CHANGE)
+          || _egrp.has(Event::LANDMARKS_CHANGE)
+          || _egrp.has(Event::ASSESSMENT_CHANGE)
+          || _egrp.has(Event::FACE_DETECTED)
+          || _egrp.has(Event::PATHS_CHANGE))
+            _fm->setAssessment( _ass);
 
         if ( _egrp.has(Event::METADATA_CHANGE))
         {
-            _fm->_notes = _backm._notes;
-            _fm->_source = _backm._source;
-            _fm->_studyId = _backm._studyId;
-            _fm->_dob = _backm._dob;
-            _fm->_sex = _backm._sex;
-            _fm->_methnicity = _backm._methnicity;
-            _fm->_pethnicity = _backm._pethnicity;
-            _fm->_cdate = _backm._cdate;
+            _fm->_source = _source;
+            _fm->_studyId = _studyId;
+            _fm->_dob = _dob;
+            _fm->_sex = _sex;
+            _fm->_methnicity = _methnicity;
+            _fm->_pethnicity = _pethnicity;
+            _fm->_cdate = _cdate;
         }   // end if
     }   // end if
 
-    _fm->setMetaSaved( _backm.isMetaSaved());
-    _fm->setModelSaved( _backm.isModelSaved());
+    _fm->setMetaSaved( _metaSaved);
+    _fm->setModelSaved( _modelSaved);
     _fm->unlock();
 
     _action->onEvent(_egrp);
-}   // end restore
+}   // end _restore

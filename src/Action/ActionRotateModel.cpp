@@ -54,10 +54,10 @@ void ActionRotateModel::doAction( Event)
     cv::Matx44d rmat = _rmat;
     // If the model has landmarks, then rotate with respect to the head's orientation
     // otherwise simply rotate about the defined axis.
-    if ( !fm->landmarks().empty())
+    const Landmark::LandmarkSet& lmks = fm->currentAssessment()->landmarks();
+    if ( !lmks.empty())
     {
         // Translate to origin, rotate, then translate back.
-        const Landmark::LandmarkSet& lmks = fm->landmarks();
         const RFeatures::Orientation on = lmks.orientation();
         const cv::Matx44d m = on.asMatrix( lmks.fullMean());
         rmat = m * _rmat * m.inv();

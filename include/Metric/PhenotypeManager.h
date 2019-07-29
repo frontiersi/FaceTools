@@ -46,11 +46,12 @@ public:
     // Return a constant reference - only use if sure of id presence!
     static const Phenotype& cphenotype( int id) { return *_hpos.at(id);}
 
-    // Discover and return the set of PhenotypicIndication IDs for the given model.
-    // Note that demographic information about the model is ignored here - the only
+    // Discover and return the set of PhenotypicIndication IDs for the given model and
+    // assessment ID. If the assessment ID is < 0, then the current assessment set on the
+    // model is used. Demographic information about the model is ignored here - the only
     // consideration is if the model has the necessary measurements of the metrics
     // corresponding to each phenotypic indication.
-    static IntSet discover( const FM*);
+    static IntSet discover( const FM*, int aid=-1);
 
 private:
     static IntSet _ids;

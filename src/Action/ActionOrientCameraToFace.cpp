@@ -53,7 +53,7 @@ void ActionOrientCameraToFace::orientToFace( const FV *fv, double dist, double r
     const FM* fm = fv->data();
 
     fm->lockForRead();
-    const cv::Vec3f focus = fm->icentre();
+    const cv::Vec3f focus = fm->centre();
     RFeatures::Orientation on = fm->orientation();
     fm->unlock();
 

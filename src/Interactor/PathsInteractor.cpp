@@ -76,7 +76,10 @@ bool PathsInteractor::leftButtonDown()
     if ( _drag)
         leftButtonUp();
     if ( _handle)
+    {
+        emit onStartedDrag(_handle);
         _drag = true;
+    }   // end if
     return _drag;
 }   // end leftButtonDown
 
@@ -86,7 +89,7 @@ bool PathsInteractor::leftButtonUp()
     bool swallowed = false;
     if ( _drag)
     {
-        emit onUpdated(_handle);
+        emit onFinishedDrag(_handle);
         if ( prop() != _handle->prop())
             leavePath();
         _drag = false;
@@ -153,8 +156,8 @@ void PathsInteractor::movePath( const FV* fv, const cv::Vec3f& pos)
     int pid = _handle->pathId();
     FM* fm = fv->data();
     fm->lockForWrite();
-    fm->setPathPosition( pid, pos, _handle->handleId());
-    _vis.updatePath( fm, pid);
+    fm->setPathPosition( pid, _handle->handleId(), pos);
+    _vis.movePath( fm, pid);
     fm->unlock();
     setCaption( fv, pid);
     MS::setCursor(Qt::CursorShape::CrossCursor);
@@ -165,7 +168,7 @@ void PathsInteractor::setCaption( const FV* fv, int pid)
 {
     const FM* fm = fv->data();
     fm->lockForRead();
-    const Path* path = fm->paths().path( pid);
+    const Path* path = fm->currentAssessment()->paths().path( pid);
     if ( _handle && _handle->pathId() == pid)
         _handle->setCaption( QString("%1 ").arg(path->elen, 4, 'f', 1) + FM::LENGTH_UNITS);
     _vis.setText( fm, pid, int( fv->viewer()->getWidth()) - 10, 10);    // Set display caption at bottom right

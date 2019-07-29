@@ -18,6 +18,7 @@
 #include <U3DCache.h>
 #include <FaceModel.h>
 #include <U3DExporter.h>
+#include <QTemporaryFile>
 #include <cassert>
 using FaceTools::U3DCache;
 using FaceTools::FM;
@@ -54,22 +55,34 @@ void U3DCache::refresh( const FM* fm, bool med9)
     // Copy out model and ensure in standard position:
     fm->lockForRead();
     RFeatures::ObjModel::Ptr model = fm->model().deepCopy( true);    // Share materials
-    const cv::Vec3f centre = fm->icentre();
+    const cv::Vec3f centre = fm->centre();
     const RFeatures::Orientation on = fm->orientation();
     fm->unlock();
 
     model->setTransformMatrix( on.asMatrix(centre).inv());
     model->fixTransformMatrix();
-    //std::cerr << "Exporting to U3D format at" << fname.toStdString() << std::endl;
-    const QString fname = makeFilePath(fm);
     RModelIO::U3DExporter xptr( true, med9);
-
-    _cacheLock.lockForWrite();
-    if ( xptr.save( *model, fname.toStdString()))
-        _cache.insert(fm);
+    QTemporaryFile tfile( QDir::tempPath() + "/XXXXXX.u3d");
+    if ( tfile.open())
+    {
+        std::cerr << QString( "Exporting U3D model to '%1'").arg( tfile.fileName()).toStdString() << std::endl;
+        if ( xptr.save( *model, tfile.fileName().toStdString()))
+        {
+            // Copy U3D model exported to the temporary location to the cache location
+            const QString cacheFileName = makeFilePath(fm);
+            std::cerr << QString("Copying U3D model to cache location at '%1'").arg(cacheFileName).toStdString() << std::endl;
+            _cacheLock.lockForWrite();
+            QFile::copy( tfile.fileName(), cacheFileName);
+            _cache.insert(fm);
+            _cacheLock.unlock();
+            std::cerr << "Finished updating U3D cache" << std::endl;
+            QFile::remove( tfile.fileName());
+        }   // end if
+        else
+            std::cerr << "Unable to save to U3D format!" << std::endl;
+    }   // end if
     else
-        std::cerr << "Unable to save to U3D format!" << std::endl;
-    _cacheLock.unlock();
+        std::cerr << "Couldn't open temporary file for exporting U3D model!" << std::endl;
 }   // end refresh
 
 
@@ -78,8 +91,7 @@ void U3DCache::purge( const FM* fm)
     _cacheLock.lockForWrite();
     if ( _cache.count(fm) > 0)
     {
-        const QString fname = makeFilePath(fm);
-        QFile::remove( fname);
+        QFile::remove( makeFilePath(fm));
         _cache.erase(fm);
     }   // end if
     _cacheLock.unlock();

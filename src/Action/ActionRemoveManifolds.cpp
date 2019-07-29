@@ -53,7 +53,7 @@ bool manifoldIdInRange( int mid)
 bool ActionRemoveManifolds::checkEnable( Event)
 {
     bool enabled = false;
-    if ( MS::isViewSelected())
+    if ( MS::isViewSelected() && MS::interactionMode() == IMode::CAMERA_INTERACTION)
     {
         // Ready if more than one manifold and the point is on the face.
         const FV* fv = MS::selectedView();

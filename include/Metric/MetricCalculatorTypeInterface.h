@@ -32,11 +32,11 @@ public:
 
     virtual Vis::MetricVisualiser* visualiser() = 0;    // Return the visualiser
 
-    // Can this metric be calculated for given model and parameters?
-    virtual bool canCalculate( const FM*, const Landmark::LmkList*) const = 0;
+    // Can this metric be calculated for given model assessment (id) and parameters?
+    virtual bool canCalculate( const FM*, int aid, const Landmark::LmkList*) const = 0;
 
-    // Measurement(s) against given model for the given landmark parameters.
-    virtual void measure( std::vector<double>&, const FM*, const Landmark::LmkList*) const = 0;
+    // Measurement(s) against given model and assessment (id) for the given landmark parameters.
+    virtual void measure( std::vector<double>&, const FM*, int aid, const Landmark::LmkList*) const = 0;
 
     // Create and return a clone of this object with the given metric parameters.
     virtual MetricCalculatorTypeInterface* make( int id, const Landmark::LmkList*, const Landmark::LmkList*) const = 0;

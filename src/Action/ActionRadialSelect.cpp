@@ -57,7 +57,7 @@ size_t ActionRadialSelect::selectedFaces( IntSet& fs) const { return _interactor
 
 bool ActionRadialSelect::checkEnable( Event e)
 {
-    return ActionVisualise::checkEnable(e);
+    return MS::interactionMode() == IMode::CAMERA_INTERACTION && ActionVisualise::checkEnable(e);
 }   // end checkEnable
 
 
@@ -72,7 +72,7 @@ void ActionRadialSelect::doAction( Event e)
     {
         fm->lockForRead();
         cv::Vec3f cpos = centre();
-        const LandmarkSet& lmks = fm->landmarks();
+        const LandmarkSet& lmks = fm->currentAssessment()->landmarks();
 
         const QPoint& mpos = primedMousePos();
         // In the first case, select as the centre the point projected onto the surface my the

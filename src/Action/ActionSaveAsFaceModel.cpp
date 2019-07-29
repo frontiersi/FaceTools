@@ -116,11 +116,11 @@ bool ActionSaveAsFaceModel::doBeforeAction( Event)
 
 void ActionSaveAsFaceModel::doAction( Event)
 {
-    _egrp.clear();
+    _egrp = Event::NONE;
     assert( !_filename.empty());
     FM* fm = MS::selectedModel();
     fm->lockForWrite();
-    if ( fm->landmarks().empty())   // Save the model's position and orientation if landmarks aren't set.
+    if ( !fm->hasLandmarks())
     {
         fm->fixOrientation();
         _egrp.add(Event::ORIENTATION_CHANGE);

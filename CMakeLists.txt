@@ -244,6 +244,7 @@ set( INCLUDE_FILES
     #"${INCLUDE_DIR}/CurvatureSpeedFunctor.h"
     #"${INCLUDE_DIR}/CurvatureVariableSpeedFunctor.h"
     "${INCLUDE_DIR}/Ethnicities.h"
+    "${INCLUDE_DIR}/FaceAssessment.h"
     "${INCLUDE_DIR}/FaceModel.h"
     "${INCLUDE_DIR}/FaceModelCurvature.h"
     "${INCLUDE_DIR}/FaceViewSet.h"
@@ -421,6 +422,7 @@ set( SRC_FILES
     #${SRC_DIR}/CurvatureSpeedFunctor
     #${SRC_DIR}/CurvatureVariableSpeedFunctor
     ${SRC_DIR}/Ethnicities
+    ${SRC_DIR}/FaceAssessment
     ${SRC_DIR}/FaceModel
     ${SRC_DIR}/FaceModelCurvature
     ${SRC_DIR}/FaceModelViewer

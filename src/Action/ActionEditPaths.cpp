@@ -22,6 +22,7 @@
 #include <VtkTools.h>
 using FaceTools::Action::ActionEditPaths;
 using FaceTools::Action::Event;
+using FaceTools::Action::UndoState;
 using FaceTools::Action::ActionVisualise;
 using FaceTools::Interactor::PathsInteractor;
 using FaceTools::Vis::PathSetVisualisation;
@@ -30,22 +31,29 @@ using FaceTools::Vis::FV;
 using FaceTools::Vis::PathView;
 using MS = FaceTools::Action::ModelSelector;
 
+Q_DECLARE_METATYPE( FaceTools::PathSet::Ptr)
 
 
 ActionEditPaths::ActionEditPaths( const QString& dn, const QIcon& ic, PathSetVisualisation* vis, PathsInteractor::Ptr pint, const QKeySequence& ks)
     : ActionVisualise( dn, ic, vis, ks), _pint( pint), _vis(vis)
 {
-    connect( &*_pint, &PathsInteractor::onUpdated, [this](){ emit onEvent( Event::PATHS_CHANGE);});
+    connect( &*_pint, &PathsInteractor::onStartedDrag, [this](){ storeUndo(this);});
+    connect( &*_pint, &PathsInteractor::onFinishedDrag, [this](){ emit onEvent( Event::PATHS_CHANGE);});
     addTriggerEvent( Event::PATHS_CHANGE);
 }   // end ctor
 
 
 bool ActionEditPaths::checkState( Event e)
 {
-    const bool chk = ActionVisualise::checkState(e);
+    bool chk = ActionVisualise::checkState(e);    // true if _vis->isVisible true
+    if ( chk && EventGroup(e).has({Event::PATHS_CHANGE, Event::ASSESSMENT_CHANGE}))
+    {
+        const FM* fm = MS::selectedModel();
+        for ( const FV* fv : fm->fvs())
+            _vis->syncActorsToData( fv, cv::Matx44d::eye());
+        chk = ActionVisualise::checkState(e);   // Recheck
+    }   // end if
     _pint->setEnabled(chk);
-    if ( chk)
-        _vis->refresh( MS::selectedModel());
     return chk;
 }   // end checkState
 
@@ -63,3 +71,23 @@ void ActionEditPaths::doAction( Event e)
     else
         MS::clearStatus();
 }   // end doAction
+
+
+UndoState::Ptr ActionEditPaths::makeUndoState() const
+{
+    UndoState::Ptr us = UndoState::create( this, Event::PATHS_CHANGE);
+    us->setName( "Move Path Handle");
+    PathSet::Ptr paths = us->model()->currentAssessment()->paths().deepCopy();
+    us->setUserData( "Paths", QVariant::fromValue(paths));
+    return us;
+}   // end makeUndoState
+
+
+void ActionEditPaths::restoreState( const UndoState* us)
+{
+    PathSet::Ptr paths = us->userData("Paths").value<PathSet::Ptr>();
+    FM* fm = us->model();
+    fm->setPaths(paths);
+    for ( const FV* fv : fm->fvs())
+        _vis->syncActorsToData( fv, cv::Matx44d::eye());
+}   // end restoreState

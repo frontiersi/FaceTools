@@ -96,34 +96,68 @@ Chart::Chart( GrowthData::CPtr gd, size_t d, const FM* fm) : _gdata(gd), _dim(d)
 Chart::~Chart() { }   // end dtor
 
 
-void Chart::addTitle( const QString& t)
+namespace {
+QString makeTitleString( GrowthData::CPtr gd, size_t dim)
 {
-    GrowthData::CPtr gd = _gdata;
-
-    QString title = t;
-
+    QString title = MCM::metric(gd->metricId())->name();
     // For multi-dimensional metrics, specify the dimension being shown.
     if ( gd->dims() > 1)
-        title += QString( " [Dimension %1]").arg(_dim + 1);
+        title += QString( " [Dimension %1]").arg(dim + 1);
+    return title;
+}   // end makeTitleString
 
+
+QString makeDemographicString( GrowthData::CPtr gd)
+{
     // Get the statics info as "sex; ethnicity; N"
-    QString ethName = Ethnicities::name( gd->ethnicity());
-    QString demog = toLongSexString( gd->sex());
+    const QString ethName = FaceTools::Ethnicities::name( gd->ethnicity());
+    QString demog = FaceTools::toLongSexString( gd->sex());
     if ( !ethName.isEmpty())
         demog += "; " + ethName;
     if ( gd->n() > 0)
         demog += QString("; N=%1").arg(gd->n());
+    return demog;
+}   // end makeDemographicString
 
+
+QString makeSourceString( GrowthData::CPtr gd, const QString& lb)
+{
     // Get the source and any note on the same line, with long notes underneath.
-    QString src = "<em>" + gd->source();
+    QString src = gd->source();
     if ( !gd->note().isEmpty())
         src += " " + gd->note();
     if ( !gd->longNote().isEmpty())
-        src += "<br>" + gd->longNote();
-    src += "</em>";
+        src += lb + gd->longNote();
+    return src;
+}   // end makeSourceString
+}   // end namespace
 
-    this->setTitle( QString("<center><big><b>%1</b> (%2)</big><br>%3</center>").arg( title, demog, src));
-}   // end addTitle
+
+QString Chart::makeRichTextTitleString() const
+{
+    const QString title = makeTitleString( _gdata, _dim);
+    const QString demog = makeDemographicString( _gdata);
+    const QString src = makeSourceString( _gdata, "<br>");
+    // Format as centred:
+    // <big><b>Title</b> (Sex; Ethnicity; N=n)</big>
+    //           <em>Source Note
+    //               LongNote</em>
+    return QString("<center><big><b>%1</b> (%2)</big><br><em>%3</em></center>").arg( title, demog, src);
+}   // end makeRichTextTitleString
+
+
+QString Chart::makeLatexTitleString( int fnm) const
+{
+    const QString title = makeTitleString( _gdata, _dim);
+    const QString demog = makeDemographicString( _gdata);
+    if ( fnm > 0)
+        return QString("\\textbf{%1}\\\\ \\small{(%2) \\footnotemark[%3]}").arg( title, demog).arg(fnm);
+    const QString src = makeSourceString( _gdata, "\\\\");
+    return QString("\\textbf{%1}\\\\ \\small{(%2)}\\\\ \\scriptsize{\\textit{%3}}").arg( title, demog, src);
+}   // end makeLatexTitleString
+
+
+void Chart::addTitle() { this->setTitle( makeRichTextTitleString());}
 
 
 void Chart::_addDataPoints( const FM* fm)
@@ -131,13 +165,14 @@ void Chart::_addDataPoints( const FM* fm)
     GrowthData::CPtr gd = _gdata;
     const int mid = gd->metricId();
     const double age = fm->age();
+    FaceAssessment::CPtr ass = fm->currentAssessment();
 
     if ( MCM::metric(mid)->isBilateral())
     {
-        if ( fm->cmetricsL().has(mid) && fm->cmetricsR().has(mid))
+        if ( ass->cmetricsL().has(mid) && ass->cmetricsR().has(mid))
         {
-            const MetricValue& mvl = fm->cmetricsL().metric( mid);
-            const MetricValue& mvr = fm->cmetricsR().metric( mid);
+            const MetricValue& mvl = ass->cmetricsL().metric( mid);
+            const MetricValue& mvr = ass->cmetricsR().metric( mid);
 
             this->addSeries( createMetricPoint( age, mvl.value(_dim), "Left", Qt::blue));
             this->addSeries( createMetricPoint( age, mvr.value(_dim), "Right", Qt::darkGreen));
@@ -148,9 +183,9 @@ void Chart::_addDataPoints( const FM* fm)
     }   // end if
     else
     {
-        if ( fm->cmetrics().has(mid))
+        if ( ass->cmetrics().has(mid))
         {
-            const MetricValue &mv = fm->cmetrics().metric( mid);
+            const MetricValue &mv = ass->cmetrics().metric( mid);
             this->addSeries( createMetricPoint( age, mv.value(_dim), "Subject", Qt::red));
         }   // end if
     }   // end else

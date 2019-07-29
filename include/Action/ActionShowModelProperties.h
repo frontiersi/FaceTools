@@ -36,6 +36,7 @@ protected:
     bool checkState( Event) override;
     bool checkEnable( Event) override;
     void doAction( Event) override;
+    void doAfterAction( Event) override;
 
 private:
     Widget::ModelPropertiesDialog *_dialog;

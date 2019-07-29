@@ -137,7 +137,7 @@ void FaceActionManager::doEvent( EventGroup egrp)
         }   // end for
     }   // end if
 
-    if ( egrp.has(Event::LANDMARKS_CHANGE) || egrp.has(Event::FACE_DETECTED))
+    if ( egrp.has(Event::LANDMARKS_CHANGE) || egrp.has(Event::FACE_DETECTED) || egrp.has(Event::ASSESSMENT_CHANGE))
         MS::syncBoundingVisualisation(fm);
 
     // If the action did anything to the camera, always set the interaction
@@ -149,7 +149,9 @@ void FaceActionManager::doEvent( EventGroup egrp)
     // if the received event triggers them.
     for ( FaceAction* act : _actions)
     {
-        if ( act == sact || act->isRunning())  // Running actions are ignored until they complete
+        // Sending actions should not be able to trigger themselves, and
+        // actions are not reentrant generally speaking so running actions are also ignored.
+        if ( act == sact || (act->isRunning() && !act->isReentrant()))
             continue;
 
         // In refreshing state, actions decide whether to enable themselves and check themselves.

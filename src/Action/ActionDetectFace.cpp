@@ -64,7 +64,7 @@ bool ActionDetectFace::doBeforeAction( Event)
     _ulmks.clear();
     _err = "";
 
-    if ( fm->landmarks().empty())
+    if ( fm->currentAssessment()->landmarks().empty())
         _ulmks = LDMKS_MAN::ids();
     else // Warn if about to overwrite!
     {
@@ -116,10 +116,10 @@ std::string ActionDetectFace::redetectLandmarks( FM* fm, const IntSet *ulmks)
         lmks->addTransformMatrix( T);
 
         fm->lockForWrite();
-        fm->setLandmarks(lmks);        // LANDMARKS_CHANGE | FACE_DETECTED
+        fm->setLandmarks(lmks);  // LANDMARKS_CHANGE | FACE_DETECTED
         fm->addTransformMatrix(Tinv);
         fm->fixOrientation();          // ORIENTATION_CHANGE
-        fm->clearMetrics();            // METRICS_CHANGE
+        fm->currentAssessment()->clearMetrics();            // METRICS_CHANGE
         fm->unlock();
     }   // end if
     else

@@ -26,28 +26,68 @@ class UndoStates;
 
 /**
  * Called by an action at the start of FaceAction::doAction if desiring undo functionality.
+ * The first version of this function should be used for simple undo/redos based on events.
+ * For more complex undo/redos, use the second signature of storeUndo which will require the
+ * calling action to override FaceAction::makeUndoState and FaceAction::restoreState.
  */
-FaceTools_EXPORT void storeUndo( const FaceAction*, EventGroup, bool autoRestore=true);
+FaceTools_EXPORT void storeUndo( const FaceAction*, EventGroup);
+FaceTools_EXPORT void storeUndo( const FaceAction*);
 
 
 class FaceTools_EXPORT UndoState
 {
 public:
     using Ptr = std::shared_ptr<UndoState>;
-    static Ptr create( EventGroup, bool autoRestore=false);
+    static Ptr create( const FaceAction*, EventGroup, bool autoRestore=false);
 
-protected:
-    FM *_fm;
-    FM _backm;
-    cv::Matx44d _tmat;  // Affine transforms
-    cv::Matx44d _omat;  // Orientation transforms
+    // Get the model that was selected at creation time.
+    FM* model() const { return _fm;}
+
+    // Return the action this UndoState was created for/by.
+    const FaceAction* action() const { return _action;}
+
+    const EventGroup& events() const { return _egrp;}
+
+    // Set the name of the undo state (defaults to the action's display name).
+    void setName( const QString& nm) { _name = nm;}
+    const QString& name() const { return _name;}
+
+    bool isAutoRestore() const { return _autoRestore;}
+
+    // Set the data keyed by the given string.
+    void setUserData( const QString&, const QVariant&);
+
+    // Return the data keyed by the given string (no error checking!).
+    QVariant userData( const QString&) const;
+
+    void restore() const;   // Called by UndoStates
 
 private:
     FaceAction* _action;
     EventGroup _egrp;
     bool _autoRestore;
-    void restore() const;
-    friend class UndoStates;
+    FM *_fm;
+    QString _name;
+    bool _metaSaved, _modelSaved;
+    RFeatures::ObjModel::Ptr _model;
+    RFeatures::ObjModelManifolds::Ptr _manifolds;
+    RFeatures::ObjModelKDTree::Ptr _kdtree;
+    std::vector<RFeatures::ObjModelBounds::Ptr> _bnds;
+    FaceAssessment::Ptr _ass;
+    QString _source;    // Image source
+    QString _studyId;   // Study ID info
+    QDate _dob;         // Subject date of birth
+    int8_t _sex;        // Subject sex
+    int _methnicity;    // Subject's maternal ethnicity
+    int _pethnicity;    // Subject's paternal ethnicity
+    QDate _cdate;       // Date of image capture
+    cv::Matx44d _tmat;
+    QMap<QString, QVariant> _udata;
+
+    UndoState( const FaceAction*, EventGroup, bool);
+    UndoState( const UndoState&) = delete;
+    UndoState& operator=( const UndoState&) = delete;
+    ~UndoState(){}
 };  // end struct
 
 }}   // end namespaces

@@ -18,9 +18,7 @@
 #ifndef FACE_TOOLS_FACE_MODEL_H
 #define FACE_TOOLS_FACE_MODEL_H
 
-#include "LandmarkSet.h"
-#include "MetricSet.h"
-#include "PathSet.h"
+#include "FaceAssessment.h"
 #include "FaceViewSet.h"
 #include <ObjModelTools.h>   // RFeatures
 #include <QReadWriteLock>
@@ -76,6 +74,10 @@ public:
     const RFeatures::ObjModelKDTree& kdtree() const { return *_kdtree;}
     const RFeatures::ObjModelManifolds& manifolds() const { return *_manifolds;}
 
+    // Returns the ID of the manifold holding the face or -1 if a medial landmark
+    // ON ANY OF THE STORED ASSESSMENTS doesn't exist.
+    int faceManifoldId() const;
+
     /**
      * Returns full model bounds at entry zero, and the corresponding manifold bounds at higher indices.
      * Without landmarks, the bounds at entry zero encompass the model. With landmarks, the bounds at
@@ -84,45 +86,79 @@ public:
      */
     const std::vector<RFeatures::ObjModelBounds::Ptr>& bounds() const { return _bnds;}
 
-    const Landmark::LandmarkSet& landmarks() const { return *_landmarks;}
+    /**
+     * Set the given assessment in this model, overwriting what exists at the corresponding
+     * index and potentially setting the current assessment too if the given assessment has
+     * the same id.
+     */
+    void setAssessment( FaceAssessment::Ptr);
+
+    /**
+     * Erase the assessment with given ID. Must always have at least one assessment!
+     * If the erased assessment is the current assessment, the current assessment is
+     * set to a random assessment.
+     */
+    void eraseAssessment( int);
+
+    /**
+     * Set the current assessment using its id (must exist).
+     */
+    void setCurrentAssessment( int);
+
+    /**
+     * Return the current assessment (may be null).
+     */
+    FaceAssessment::Ptr currentAssessment() { return _cass;}
+    FaceAssessment::CPtr currentAssessment() const { return _cass;}
+    FaceAssessment::CPtr cassessment() const { return currentAssessment();}  // For Lua binding
+
+    /**
+     * Return the assessment with the given id.
+     */
+    FaceAssessment::CPtr assessment( int id) const;
+    FaceAssessment::Ptr assessment( int id);
+
+    /**
+     * Return all assessment ids.
+     */
+    IntSet assessmentIds() const;
+
+    /**
+     * Return the number of assessments; should always be >= 1.
+     */
+    int assessmentsCount() const { return _ass.size();}
+
+    /**
+     * Returns true iff any of the assessments have landmarks set.
+     */
+    bool hasLandmarks() const;
+
     void setLandmarks( Landmark::LandmarkSet::Ptr);
-    bool hasLandmarks() const { return !_landmarks->empty();}
-    // Set the position of the landmark with given ID returning true on success.
-    bool setLandmarkPosition( int lid, const cv::Vec3f& pos, FaceLateral);
+
+    /**
+     * Set the position of the landmark with given ID.
+     */
+    void setLandmarkPosition( int, FaceLateral, const cv::Vec3f&);
     void swapLandmarkLaterals();
 
-    // Cause each landmark to update its position to be at the closest point on the surface.
-    // This should always be the case normally unless manually placing a set of landmarks.
+    /**
+     * Cause each landmark to update its position to be at the closest point on the surface.
+     * This should always be the case normally unless manually placing a set of landmarks.
+     */
     void moveLandmarksToSurface();
 
-    const PathSet& paths() const { return *_paths;}
+    /**
+     * Create and return a new set of landmarks being the average over all of the individual assessment landmark sets.
+     */
+    Landmark::LandmarkSet::Ptr makeMeanLandmarksSet() const;
+
     void setPaths( PathSet::Ptr);
     int addPath( const cv::Vec3f&);
-    bool removePath( int pid);
-    bool hasPaths() const { return !_paths->empty();}
-    // Rename the path with given ID returning true if the path exists and was renamed.
-    bool renamePath( int pid, const QString&);
-    // Set the position of the handle of path with given ID returning true on success.
-    bool setPathPosition( int pid, const cv::Vec3f& pos, int handle=0);
+    void removePath( int pid);
+    void renamePath( int pid, const QString&);
+    // Set the position of the handle of path with given ID.
+    void setPathPosition( int pid, int handle, const cv::Vec3f& pos);
 
-    // Returns the ID of the manifold holding the face or -1 if a medial landmark doesn't exist.
-    int faceManifoldId() const;
-
-    Metric::MetricSet& metrics() { return _metrics;}
-    const Metric::MetricSet& cmetrics() const { return _metrics;}
-    Metric::MetricSet& metricsL() { return _metricsL;}
-    const Metric::MetricSet& cmetricsL() const { return _metricsL;}
-    Metric::MetricSet& metricsR() { return _metricsR;}
-    const Metric::MetricSet& cmetricsR() const { return _metricsR;}
-
-    // Is the metric with given ID recorded in this FaceModel?
-    bool hasMetric( int mid) const;
-
-    void clearMetrics();
-
-    // Set/get image notes.
-    void setNotes( const QString&);
-    const QString& notes() const { return _notes;}
 
     // Set/get source of data.
     void setSource( const QString&);
@@ -172,9 +208,6 @@ public:
     // Returns true if any of the metadata are present.
     bool hasMetaData() const;
 
-    // Convenience function to update renderers on all associated FaceViews.
-    void updateRenderers() const;
-
     // Find and return the point on the surface closest to the given point (which may not be on the surface).
     cv::Vec3f findClosestSurfacePoint( const cv::Vec3f&) const;
 
@@ -185,10 +218,12 @@ public:
     // closest point on the surface using the internal kd-tree.
     double translateToSurface( cv::Vec3f&) const;
 
-    // Return the centre and orientation of this model defined by the landmarks if set,
-    // or from the underlying model's transform matrix if no landmarks are set.
-    // Use bounds() to get the centre of the model's bounding box.
-    cv::Vec3f icentre() const;
+    // Return the centre of this model defined by the orientation bounds which are
+    // determined either according to landmarks (if present) or the underlying model.
+    cv::Vec3f centre() const;
+
+    // Returns the model's orientation as defined by the current bounds which are
+    // derived from the current landmarks if set, or from the model bounds if not.
     RFeatures::Orientation orientation() const;
 
     void addView( Vis::FaceView*);
@@ -200,7 +235,6 @@ public:
 private:
     bool _savedMeta;
     bool _savedModel;
-    QString _notes;     // Image notes
     QString _source;    // Image source
     QString _studyId;   // Study ID info
     QDate _dob;         // Subject date of birth
@@ -208,15 +242,12 @@ private:
     int _methnicity;    // Subject's maternal ethnicity
     int _pethnicity;    // Subject's paternal ethnicity
     QDate _cdate;       // Date of image capture
-    Landmark::LandmarkSet::Ptr _landmarks;
-    PathSet::Ptr _paths;
-    Metric::MetricSet _metrics;
-    Metric::MetricSet _metricsL;
-    Metric::MetricSet _metricsR;
     RFeatures::ObjModel::Ptr _model;
     RFeatures::ObjModelManifolds::Ptr _manifolds;
     RFeatures::ObjModelKDTree::Ptr _kdtree;
     std::vector<RFeatures::ObjModelBounds::Ptr> _bnds;
+    QMap<int, FaceAssessment::Ptr> _ass;    // Assessments keyed by id
+    FaceAssessment::Ptr _cass;              // Current assessment
 
     mutable QReadWriteLock _mutex;
     FVS _fvs;  // Associated FaceViews

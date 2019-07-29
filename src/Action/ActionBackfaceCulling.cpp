@@ -33,14 +33,15 @@ using MS = FaceTools::Action::ModelSelector;
 namespace {
 bool shouldTurnOn( const FM* fm)
 {
+    const FaceTools::Landmark::LandmarkSet& lmks = fm->currentAssessment()->landmarks();
     // Don't respond if the landmark isn't present.
-    if ( !fm->landmarks().hasCode( FaceTools::Landmark::G))
+    if ( !lmks.hasCode( FaceTools::Landmark::G))
         return false;
 
     // If the face normal is in the same space half as the orientation normal,
     // then we want to automatically turn on backface culling.
     // Find a polygon at the glabella
-    const cv::Vec3f v = fm->landmarks().pos( FaceTools::Landmark::G);
+    const cv::Vec3f v = lmks.pos( FaceTools::Landmark::G);
 
     // Calculate the norm given by the ordering of the vertices on the polygon.
     const RFeatures::ObjModel& model = fm->model();
@@ -48,7 +49,7 @@ bool shouldTurnOn( const FM* fm)
     const cv::Vec3f fnrm = model.calcFaceNorm( *model.faces(vidx).begin());
 
     // If normal in same direction (positive inner product) as orientation, respond (return true).
-    const cv::Vec3f onrm = fm->landmarks().orientation().nvec();
+    const cv::Vec3f onrm = lmks.orientation().nvec();
 
     return onrm.dot(fnrm) > 0;
 }   // end shouldTurnOn
@@ -61,20 +62,33 @@ ActionBackfaceCulling::ActionBackfaceCulling( const QString& dn, const QIcon& ic
     setCheckable( true, false);
     addTriggerEvent( Event::FACE_DETECTED);
     addTriggerEvent( Event::LOADED_MODEL);
+    addTriggerEvent( Event::LANDMARKS_CHANGE);
 }   // end ctor
 
 
 bool ActionBackfaceCulling::checkState( Event e)
 {
-    return ( MS::isViewSelected() && (MS::selectedView()->backfaceCulling() ||
-           (isTriggerEvent(e) && shouldTurnOn( MS::selectedModel()))));
+    bool rval = false;
+    const FV* fv = MS::selectedView();
+    if ( fv)
+    {
+        const FM* fm = fv->data();
+        if ( fv->backfaceCulling())
+        {
+            rval = true;
+            // Turn off if there was a landmarks change resulting in no landmarks being present (detection reset).
+            if ( EventGroup(e).has(Event::LANDMARKS_CHANGE) && fm->currentAssessment()->landmarks().empty())
+                rval = false;
+        }   // end if
+        else
+            rval = isTriggerEvent(e) && shouldTurnOn( fm);
+    }   // end if
+
+    return rval;
 }   // end checkState
 
 
-bool ActionBackfaceCulling::checkEnable( Event)
-{
-    return MS::isViewSelected();
-}   // end checkEnable
+bool ActionBackfaceCulling::checkEnable( Event) { return MS::isViewSelected();}   // end checkEnable
 
 
 void ActionBackfaceCulling::doAction( Event)

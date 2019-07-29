@@ -28,16 +28,19 @@ using FaceTools::ModelViewer;
 PathView::PathView( int id, const std::list<cv::Vec3f>& vtxs)
     : _viewer(nullptr), _id(id), _h0(nullptr), _h1(nullptr), _lprop(nullptr)
 {
-    _h0 = new Handle( 0, _id, vtxs.front(), 1.5);
-    _h1 = new Handle( 1, _id, vtxs.back(), 1.5);
+    _h0 = new Handle( 0, _id, vtxs.front(), 1.3);
+    _h1 = new Handle( 1, _id, vtxs.back(), 1.3);
 
-    _h0->_sv->setResolution(30);
-    _h0->_sv->setColour( 0.0, 1.0, 0.0);    // Green
-    _h0->_sv->setOpacity( 0.4);
+    _h0->_sv->setResolution(23);
+    _h0->_sv->setColour( 0.1, 0.7, 0.1);    // Green
+    _h0->_sv->setOpacity( 0.99);
 
-    _h1->_sv->setResolution(30);
-    _h1->_sv->setColour( 0.0, 0.0, 1.0);    // Blue
-    _h1->_sv->setOpacity( 0.4);
+    _h1->_sv->setResolution(23);
+    _h1->_sv->setColour( 0.1, 0.7, 0.1);    // Green
+    _h1->_sv->setOpacity( 0.99);
+
+    _h0->_sv->setCaptionColour( Qt::GlobalColor::blue);
+    _h1->_sv->setCaptionColour( Qt::GlobalColor::blue);
 
     update( vtxs);
 }   // end ctor
@@ -88,36 +91,28 @@ void PathView::update( const std::list<cv::Vec3f>& vtxs)
     vtkProperty* property = _lprop->GetProperty();
     property->SetRepresentationToWireframe();
     property->SetRenderLinesAsTubes(false);
-    property->SetLineWidth( 2.0);
-    property->SetColor( 0.0, 0.0, 1.0);
-    property->SetOpacity( 0.4);
+    property->SetLineWidth( 3.0);
+    property->SetColor( 0.1, 0.5, 0.7);
+    property->SetOpacity( 0.99);
     property->SetAmbient( 1.0);
     property->SetDiffuse( 0.0);
     property->SetSpecular(0.0);
 
     if ( _viewer)
-        updateColours();
+        _viewer->add(_lprop);
 }   // end update
 
-
+/*
 void PathView::updateColours()
 {
     assert(_viewer);
     QColor fg = chooseContrasting(_viewer->backgroundColour());
-    _h0->_sv->setCaptionColour(fg);
-    _h1->_sv->setCaptionColour(fg);
+    _h0->_sv->setCaptionColour( fg);
+    _h1->_sv->setCaptionColour( fg);
     //vtkProperty* property = _lprop->GetProperty();
     //property->SetColor( fg.redF(), fg.greenF(), fg.blueF());
 }   // end updateColours
-
-
-void PathView::pokeTransform( const vtkMatrix4x4* vm)
-{
-    const cv::Matx44d cm = RVTK::toCV(vm);
-    _h0->_sv->setCentre( RFeatures::transform( cm, _h0->_sv->centre()));
-    _h1->_sv->setCentre( RFeatures::transform( cm, _h1->_sv->centre()));
-    _lprop->PokeMatrix( const_cast<vtkMatrix4x4*>(vm));
-}   // end pokeTransform
+*/
 
 
 // private

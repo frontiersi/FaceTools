@@ -77,17 +77,12 @@ public:
     bool isEthnicityMatch( int) const;
 
     /**
-     * Returns true iff the given model has measurements for all of the
-     * corresponding metrics used in the evaluation of the presence of
-     * this phenotypic indication.
-     */
-    bool hasMeasurements( const FM*) const;
-
-    /**
      * Check if this phenotypic indication is present given the measurements
-     * recorded in the metric sets of the provided model. Ignores demographic info.
+     * recorded in the metric sets of the provided model and the assessment
+     * data (landmarks). Uses the currently set assessment if assessId = -1.
+     * Ignores demographic data about the model.
      */
-    bool isPresent( const FM*) const;
+    bool isPresent( const FM*, int assessId=-1) const;
 
     ~Phenotype(){}  // Public for Lua
 
@@ -101,6 +96,13 @@ private:
     IntSet _metrics;
     sol::state _lua;
     sol::function _determine;
+
+    /**
+     * Returns true iff the given model has measurements for all of the
+     * corresponding metrics used in the evaluation of the presence of
+     * this phenotypic indication.
+     */
+    bool _hasMeasurements( const FM*, int aid) const;
 
     Phenotype();
     Phenotype( const Phenotype&) = delete;

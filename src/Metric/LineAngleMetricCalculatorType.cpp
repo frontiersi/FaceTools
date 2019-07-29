@@ -36,18 +36,18 @@ MCT* LineAngleMetricCalculatorType::make( int id, const LmkList* l0, const LmkLi
 }   // end make
 
 
-bool LineAngleMetricCalculatorType::canCalculate( const FM* fm, const LmkList* ll) const
+bool LineAngleMetricCalculatorType::canCalculate( const FM* fm, int aid, const LmkList* ll) const
 {
     using SLmk = FaceTools::Landmark::SpecificLandmark;
-    const LandmarkSet& lmks = fm->landmarks();
+    const LandmarkSet& lmks = fm->assessment(aid)->landmarks();
     return std::all_of( std::begin(*ll), std::end(*ll), [&lmks]( const SLmk& p){ return lmks.has(p);});
 }   // end canCalculate
 
 
-void LineAngleMetricCalculatorType::measure( std::vector<double>& dvals, const FM* fm, const LmkList* ll) const
+void LineAngleMetricCalculatorType::measure( std::vector<double>& dvals, const FM* fm, int aid, const LmkList* ll) const
 {
-    assert( canCalculate(fm, ll));
-    const LandmarkSet& lmks = fm->landmarks();
+    assert( canCalculate( fm, aid, ll));
+    const LandmarkSet& lmks = fm->assessment(aid)->landmarks();
     cv::Vec3d p0 = lmks.pos( ll->front());
     cv::Vec3d p1 = lmks.pos( ll->back());
     cv::Vec3d cp;

@@ -38,6 +38,7 @@ public:
 
 private:
     std::unordered_map<const FV*, BoundingView*> _views;
+    void _setColour( const FV*);
 };  // end class
 
 }}   // end namespace

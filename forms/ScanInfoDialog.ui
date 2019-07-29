@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>840</width>
-    <height>414</height>
+    <width>672</width>
+    <height>392</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -23,173 +23,6 @@
   <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,1,0">
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_11">
-     <item>
-      <layout class="QVBoxLayout" name="verticalLayout_2">
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,2">
-         <item>
-          <widget class="QLabel" name="label_3">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Date of Birth</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QDateEdit" name="dobDateEdit">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="toolTip">
-            <string>When was the subject born?</string>
-           </property>
-           <property name="whatsThis">
-            <string>The subject's date of birth. Required to calculate the subject's age so that (together with sex and ethnicity) the significance of facial metrics can be accurately determined.</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignCenter</set>
-           </property>
-           <property name="displayFormat">
-            <string>dd MMMM yyyy</string>
-           </property>
-           <property name="calendarPopup">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_7" stretch="1,2">
-         <item>
-          <widget class="QLabel" name="label">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Maternal Ethnicity</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QTools::TreeComboBox" name="maternalEthnicityComboBox">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="toolTip">
-            <string>Ethnicity of the subject's mother.</string>
-           </property>
-           <property name="whatsThis">
-            <string>Ethnic group categories are provided according to the Australian Bureau of Statistics &quot;1249.0 - Australian Standard Classification of Cultural and Ethnic Groups (ASCCEG), 2016&quot;.</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_10" stretch="1,2">
-         <item>
-          <widget class="QLabel" name="label_5">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Paternal Ethnicity</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QTools::TreeComboBox" name="paternalEthnicityComboBox">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="toolTip">
-            <string>Ethnicity of the subject's father.</string>
-           </property>
-           <property name="statusTip">
-            <string>Ethnic group categories are provided according to the Australian Bureau of Statistics &quot;1249.0 - Australian Standard Classification of Cultural and Ethnic Groups (ASCCEG), 2016&quot;.</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_8" stretch="1,2">
-         <item>
-          <widget class="QLabel" name="label_2">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Sex</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QComboBox" name="sexComboBox">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="toolTip">
-            <string>The subject's sex.</string>
-           </property>
-           <property name="statusTip">
-            <string/>
-           </property>
-           <property name="whatsThis">
-            <string>The biological sex (not gender) of the subject. Intersex is denoted with the &quot;Female / Male&quot; option.</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <widget class="Line" name="line">
-       <property name="orientation">
-        <enum>Qt::Vertical</enum>
-       </property>
-      </widget>
-     </item>
      <item>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
@@ -207,6 +40,9 @@
            </property>
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="buddy">
+            <cstring>captureDateEdit</cstring>
            </property>
           </widget>
          </item>
@@ -253,6 +89,9 @@
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
            </property>
+           <property name="buddy">
+            <cstring>sourceLineEdit</cstring>
+           </property>
           </widget>
          </item>
          <item>
@@ -292,6 +131,9 @@
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
            </property>
+           <property name="buddy">
+            <cstring>studyIdLineEdit</cstring>
+           </property>
           </widget>
          </item>
          <item>
@@ -316,7 +158,7 @@
         </layout>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,2">
+        <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="5,12,1,1,1">
          <item>
           <widget class="QLabel" name="label_9">
            <property name="sizePolicy">
@@ -330,6 +172,9 @@
            </property>
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="buddy">
+            <cstring>assessorComboBox</cstring>
            </property>
           </widget>
          </item>
@@ -345,7 +190,240 @@
             <string>Name of the assessing clinician.</string>
            </property>
            <property name="editable">
-            <bool>false</bool>
+            <bool>true</bool>
+           </property>
+           <property name="duplicatesEnabled">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QToolButton" name="addAssessmentButton">
+           <property name="toolTip">
+            <string>Add a new assessment.</string>
+           </property>
+           <property name="whatsThis">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Adds a new assessment for this model also copying across landmarks and any custom measurements defined against the current assessment.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string>...</string>
+           </property>
+           <property name="icon">
+            <iconset resource="../FaceTools_res.qrc">
+             <normaloff>:/icons/ADD</normaloff>:/icons/ADD</iconset>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QToolButton" name="removeAssessmentButton">
+           <property name="toolTip">
+            <string>Erase the current assessment.</string>
+           </property>
+           <property name="whatsThis">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Removes the current assessment which includes the assessor's notes as well as landmarks and any custom measurements.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string>...</string>
+           </property>
+           <property name="icon">
+            <iconset resource="../FaceTools_res.qrc">
+             <normaloff>:/icons/DELETE</normaloff>:/icons/DELETE</iconset>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QToolButton" name="copyLandmarksButton">
+           <property name="toolTip">
+            <string>Copy this assessor's landmark positions to all other assessments.</string>
+           </property>
+           <property name="whatsThis">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Copies across the landmarks from this assessment to all other assessments - overwriting the positions of landmarks stored against those assessments. Afterwards, each assessment retains its own version of the landmarks to allow repositioning independently of the other landmark sets.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string>...</string>
+           </property>
+           <property name="icon">
+            <iconset resource="../FaceTools_res.qrc">
+             <normaloff>:/icons/MARKER</normaloff>:/icons/MARKER</iconset>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="Line" name="line">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,2">
+         <item>
+          <widget class="QLabel" name="label_3">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Date of Birth</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="buddy">
+            <cstring>dobDateEdit</cstring>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QDateEdit" name="dobDateEdit">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>When was the subject born?</string>
+           </property>
+           <property name="whatsThis">
+            <string>The subject's date of birth. Required to calculate the subject's age so that (together with sex and ethnicity) the significance of facial metrics can be accurately determined.</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+           <property name="displayFormat">
+            <string>dd MMMM yyyy</string>
+           </property>
+           <property name="calendarPopup">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_7" stretch="1,2">
+         <item>
+          <widget class="QLabel" name="label">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Maternal Ethnicity</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="buddy">
+            <cstring>maternalEthnicityComboBox</cstring>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTools::TreeComboBox" name="maternalEthnicityComboBox">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>Ethnicity of the subject's mother.</string>
+           </property>
+           <property name="whatsThis">
+            <string>Ethnic group categories are provided according to the Australian Bureau of Statistics &quot;1249.0 - Australian Standard Classification of Cultural and Ethnic Groups (ASCCEG), 2016&quot;.</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_10" stretch="1,2">
+         <item>
+          <widget class="QLabel" name="label_5">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Paternal Ethnicity</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="buddy">
+            <cstring>paternalEthnicityComboBox</cstring>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTools::TreeComboBox" name="paternalEthnicityComboBox">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>Ethnicity of the subject's father.</string>
+           </property>
+           <property name="statusTip">
+            <string>Ethnic group categories are provided according to the Australian Bureau of Statistics &quot;1249.0 - Australian Standard Classification of Cultural and Ethnic Groups (ASCCEG), 2016&quot;.</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_8" stretch="1,2">
+         <item>
+          <widget class="QLabel" name="label_2">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Sex</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="buddy">
+            <cstring>sexComboBox</cstring>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="sexComboBox">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>The subject's sex.</string>
+           </property>
+           <property name="statusTip">
+            <string/>
+           </property>
+           <property name="whatsThis">
+            <string>The biological sex (not gender) of the subject. Intersex is denoted with the &quot;Female / Male&quot; option.</string>
            </property>
           </widget>
          </item>
@@ -356,10 +434,39 @@
     </layout>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="0,1">
+    <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="1,0">
      <property name="sizeConstraint">
       <enum>QLayout::SetDefaultConstraint</enum>
      </property>
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout_5">
+       <item>
+        <widget class="QPlainTextEdit" name="notesTextEdit">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>400</width>
+           <height>200</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>Write and store assessment notes.</string>
+         </property>
+         <property name="whatsThis">
+          <string>Commentry salient to the assessment of this individual at this point in time.</string>
+         </property>
+         <property name="placeholderText">
+          <string>Assessor's notes.</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
      <item>
       <widget class="QLabel" name="imageLabel">
        <property name="sizePolicy">
@@ -388,55 +495,10 @@
        </property>
       </widget>
      </item>
-     <item>
-      <layout class="QVBoxLayout" name="verticalLayout_5">
-       <item>
-        <widget class="QPlainTextEdit" name="remarksTextEdit">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>400</width>
-           <height>200</height>
-          </size>
-         </property>
-         <property name="toolTip">
-          <string>Write and store assessment notes.</string>
-         </property>
-         <property name="whatsThis">
-          <string>Commentry salient to the assessment of this individual at this point in time.</string>
-         </property>
-         <property name="placeholderText">
-          <string>Clinical Notes</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
     </layout>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_4">
-     <item>
-      <spacer name="horizontalSpacer_3">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeType">
-        <enum>QSizePolicy::Preferred</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>0</width>
-         <height>0</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
+    <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="0">
      <item>
       <widget class="QDialogButtonBox" name="buttonBox">
        <property name="sizePolicy">
@@ -467,7 +529,23 @@
    <header>TreeComboBox.h</header>
   </customwidget>
  </customwidgets>
- <resources/>
+ <tabstops>
+  <tabstop>captureDateEdit</tabstop>
+  <tabstop>sourceLineEdit</tabstop>
+  <tabstop>studyIdLineEdit</tabstop>
+  <tabstop>assessorComboBox</tabstop>
+  <tabstop>notesTextEdit</tabstop>
+  <tabstop>dobDateEdit</tabstop>
+  <tabstop>maternalEthnicityComboBox</tabstop>
+  <tabstop>paternalEthnicityComboBox</tabstop>
+  <tabstop>sexComboBox</tabstop>
+  <tabstop>addAssessmentButton</tabstop>
+  <tabstop>removeAssessmentButton</tabstop>
+  <tabstop>copyLandmarksButton</tabstop>
+ </tabstops>
+ <resources>
+  <include location="../FaceTools_res.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>buttonBox</sender>

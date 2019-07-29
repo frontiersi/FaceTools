@@ -73,7 +73,7 @@ bool ActionMakeHalfFace::doBeforeAction( Event)
     // If this action is set to use landmarks but the selected model has none,
     // ask the user if they want to continue.
     const FM* fm = MS::selectedModel();
-    if ( _useLmks && fm->landmarks().empty())
+    if ( _useLmks && fm->currentAssessment()->landmarks().empty())
     {
         static const QString msg = tr("There are no landmarks to place the cutting plane! Use the preset cutting plane instead?");
         QWidget* prnt = static_cast<QWidget*>(parent());
@@ -98,8 +98,9 @@ void ActionMakeHalfFace::doAction( Event)
 
     fm->lockForWrite();
     // Use cutting plane position as through mean of landmarks if requested and available
-    if ( _useLmks && !fm->landmarks().empty())
-        p = fm->landmarks().fullMean();
+    const Landmark::LandmarkSet& lmks = fm->currentAssessment()->landmarks();
+    if ( _useLmks && !lmks.empty())
+        p = lmks.fullMean();
 
     ObjModel::Ptr nmod = ObjModelSlicer( fm->model())( p, _n);  // Copy of one half
     ObjModel::Ptr nmod1 = nmod->deepCopy(true/*share mats*/);   // Flipped copy will become other half
@@ -117,7 +118,6 @@ void ActionMakeHalfFace::doAction( Event)
 
     // Also need to update the positions of the lateral landmarks on the rejected side
     // to reflect their partner positions through the same plane.
-    const Landmark::LandmarkSet& lmks = fm->landmarks();
     const auto& lmksLat = lmks.lateral( FACE_LATERAL_LEFT);
     for ( const auto& pair : lmksLat)
     {
@@ -128,9 +128,9 @@ void ActionMakeHalfFace::doAction( Event)
         const float ldot = _n.dot(lpos - p);
         const float rdot = _n.dot(rpos - p);
         if ( ldot > 0 && rdot < 0)   // Keep the left lateral
-            fm->setLandmarkPosition( lmid, RFeatures::transform( rmat, lpos), FACE_LATERAL_RIGHT);
+            fm->setLandmarkPosition( lmid, FACE_LATERAL_RIGHT, RFeatures::transform( rmat, lpos));
         else if ( rdot > 0 && ldot < 0)   // Keep the right lateral
-            fm->setLandmarkPosition( lmid, RFeatures::transform( rmat, rpos), FACE_LATERAL_LEFT);
+            fm->setLandmarkPosition( lmid, FACE_LATERAL_LEFT, RFeatures::transform( rmat, rpos));
     }   // end for
 
     fm->unlock();

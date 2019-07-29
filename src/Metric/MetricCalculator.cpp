@@ -107,7 +107,7 @@ MetricCalculator::Ptr MetricCalculator::load( const QString &fpath)
         return nullptr;
     }   // end if
 
-    mc->_setType(mct);
+    mc->_mct = mct;
 
     // Read in the growth data statistics
     sol::table stats = table["stats"];
@@ -357,22 +357,6 @@ void MetricCalculator::_findMatchingGrowthData( int8_t sex, int en, bool exactEt
 }   // end _findMatchingGrowthData
 
 
-void MetricCalculator::setCompatibleSources( const FM *fm)
-{
-    if ( fm)
-    {
-        _compatible = _compatibleGrowthData(fm);
-        const int ethn = Ethnicities::codeMix({fm->maternalEthnicity(), fm->paternalEthnicity()});
-        const GrowthDataSources bgds = _mostCompatible( fm->sex(), ethn);
-        if ( !bgds.empty())
-            setCurrentGrowthData( *bgds.begin());
-    }   // end if
-
-    if ( !fm || _compatible.empty())
-        _compatible = matchingGrowthData(); // All available
-}   // end setCompatibleSources
-
-
 GrowthDataSources MetricCalculator::matchingGrowthData( int8_t sex, int en, bool exactEth) const
 {
     GrowthDataSources mgds;
@@ -387,6 +371,78 @@ GrowthDataSources MetricCalculator::matchingGrowthData( int8_t sex, int en, bool
 
     return mgds;
 }   // end matchingGrowthData
+
+
+GrowthDataSources MetricCalculator::_mostCompatible( int ethn) const
+{
+    const GrowthDataSources& mgds = _compatible;
+
+    // Then from this compatible set, find the set of GrowthData that give the closest match to the specified demographic criteria.
+    const bool ISMIX = Ethnicities::isMixed(ethn);
+    GrowthDataSources bgds;
+    GrowthData::CPtr bgd;
+    int bmd = INT_MAX;  // Should try to minimise
+    bool bmx = false;   // Whether the best match is a match on all ethnicities in the mix or not (only ever true if isMix true).
+    for ( GrowthData::CPtr gd : mgds)
+    {
+        // If this is a mixed code, a better match is if the ethnic group of this data source
+        // is a parent for all the specified ethnicities - even if it's at a higher level.
+        int md = Ethnicities::parentDegree( gd->ethnicity(), ethn, ISMIX);
+        bool mixMatch = ISMIX;
+        if ( md < 0 && ISMIX && ethn != 0)
+        {
+            assert( ISMIX); // md can only be < 0 if this is a mixed code, otherwise it wouldn't have been compatible to begin with.
+            // Wasn't able to match all the ethnicities so see if just one of the mix can be parented by this source.
+            md = Ethnicities::parentDegree( gd->ethnicity(), ethn, false);
+            assert( md >= 0);    // Must be >= 0 or wouldn't be compatible to begin with.
+            mixMatch = false;
+        }   // end if
+
+        bool isBetterMatch = true;
+        if ( bgd)
+        {
+            isBetterMatch = false;
+            if (md >= 0 && ( ( mixMatch && !bmx)   // Prefer a complete matching of the ethnic mix to source data
+               || ( mixMatch == bmx && md < bmd)   // Prefer a closer degree of ethnic matching to source data
+               || ( mixMatch == bmx && md == bmd && gd->sex() != BOTH_SEXES)))    // Prefer a closer match to sex for the same degree of ethnic matching
+            {
+                isBetterMatch = true;
+                // The third case in the above disjunction allows the possibility to arise that the existing best
+                // matching GrowthData has the same demographics as the current GrowthData. This can only be the
+                // case however if the source reference is different. In this case, we don't clear the current
+                // best match sources, but instead collect it as one of the best.
+                if (!( mixMatch == bmx && md == bmd && gd->sex() == bgd->sex()))
+                    bgds.clear();
+            }   // end if
+        }   // end if
+
+        if ( isBetterMatch)
+        {
+            bgd = gd;
+            bgds.insert(bgd);
+            bmd = std::max( 0, md);
+            bmx = mixMatch;
+        }   // end if
+    }   // end for
+
+    return bgds;
+}   // end _mostCompatible
+
+
+void MetricCalculator::setCompatibleSources( const FM *fm)
+{
+    if ( fm)
+    {
+        _compatible = _compatibleGrowthData(fm);
+        const int ethn = Ethnicities::codeMix({fm->maternalEthnicity(), fm->paternalEthnicity()});
+        const GrowthDataSources bgds = _mostCompatible( ethn);
+        if ( !bgds.empty())
+            setCurrentGrowthData( *bgds.begin());
+    }   // end if
+
+    if ( !fm || _compatible.empty())
+        _compatible = matchingGrowthData(); // All available
+}   // end setCompatibleSources
 
 
 GrowthDataSources MetricCalculator::_compatibleGrowthData( const FM* fm) const
@@ -434,63 +490,6 @@ GrowthDataSources MetricCalculator::_compatibleGrowthData( const FM* fm) const
 }   // end _compatibleGrowthData
 
 
-GrowthDataSources MetricCalculator::_mostCompatible( int8_t sex, int ethn) const
-{
-    assert( sex != UNKNOWN_SEX);
-    const GrowthDataSources& mgds = _compatible;
-
-    // Then from this compatible set, find the set of GrowthData that give the closest match to the specified demographic criteria.
-    const bool ISMIX = Ethnicities::isMixed(ethn);
-    GrowthDataSources bgds;
-    GrowthData::CPtr bgd;
-    int bmd = INT_MAX;  // Should try to minimise
-    bool bmx = false;   // Whether the best match is a match on all ethnicities in the mix or not (only ever true if isMix true).
-    for ( GrowthData::CPtr gd : mgds)
-    {
-        // If this is a mixed code, a better match is if the ethnic group of this data source
-        // is a parent for all the specified ethnicities - even if it's at a higher level.
-        int matchDegree = Ethnicities::parentDegree( gd->ethnicity(), ethn, ISMIX);
-        bool mixMatch = ISMIX;
-        if ( matchDegree < 0)
-        {
-            assert( ISMIX); // m can only be < 0 if this is a mixed code, otherwise it wouldn't have been compatible to begin with.
-            // Wasn't able to match all the ethnicities so see if just one of the mix can be parented by this source.
-            matchDegree = Ethnicities::parentDegree( gd->ethnicity(), ethn, false);
-            assert( matchDegree >= 0);    // Must be >= 0 or wouldn't be compatible to begin with.
-            mixMatch = false;
-        }   // end if
-
-        bool isBetterMatch = true;
-        if ( bgd)
-        {
-            isBetterMatch = false;
-            if (  ( mixMatch && !bmx)       // Prefer a complete matching of the ethnic mix to source data
-               || ( mixMatch == bmx && matchDegree < bmd)   // Prefer a closer degree of ethnic matching to source data
-               || ( mixMatch == bmx && matchDegree == bmd && gd->sex() != BOTH_SEXES))    // Prefer a closer match to sex for the same degree of ethnic matching
-            {
-                isBetterMatch = true;
-                // The third case in the above disjunction allows the possibility to arise that the existing best
-                // matching GrowthData has the same demographics as the current GrowthData. This can only be the
-                // case however if the source reference is different. In this case, we don't clear the current
-                // best match sources, but instead collect it as one of the best.
-                if (!( mixMatch == bmx && matchDegree == bmd && gd->sex() == bgd->sex()))
-                    bgds.clear();
-            }   // end if
-        }   // end if
-
-        if ( isBetterMatch)
-        {
-            bgd = gd;
-            bgds.insert(bgd);
-            bmd = matchDegree;
-            bmx = mixMatch;
-        }   // end if
-    }   // end for
-
-    return bgds;
-}   // end _mostCompatible
-
-
 GrowthData::CPtr MetricCalculator::growthData( int8_t sex, int en, const QString& src) const
 {
     GrowthData::CPtr gd;
@@ -518,16 +517,25 @@ GrowthData::CPtr MetricCalculator::growthData( int8_t sex, int en, const QString
 
 bool MetricCalculator::canMeasure( const FM* fm) const
 {
-    return _mct && fm && _mct->canCalculate( fm, &_lmks0);
+    assert(_mct);
+    if ( !fm)
+        return false;
+    const IntSet aids = fm->assessmentIds();
+    for ( int aid : aids)
+    {
+        if ( !_mct->canCalculate( fm, aid, &_lmks0))
+            return false;
+    }   // end for
+    return true;
 }   // end canMeasure
 
 
-MetricValue MetricCalculator::_measure( const FM* fm, const LmkList& llst) const
+MetricValue MetricCalculator::_measure( const FM* fm, int aid, const LmkList& llst) const
 {
     MetricValue mv( id());
     std::vector<double> dvals;
     assert(_mct);
-    _mct->measure( dvals, fm, &llst); // Facial measurement at dimension i
+    _mct->measure( dvals, fm, aid, &llst); // Facial measurement at dimension i
     mv.setValues(dvals);
     return mv;
 }   // end _measure
@@ -538,14 +546,22 @@ bool MetricCalculator::measure( FM* fm) const
     bool ok = false;
     if ( canMeasure(fm))
     {
-        ok = true;
-        if ( isBilateral())
+        const IntSet aids = fm->assessmentIds();
+        for ( int aid : aids)
         {
-            fm->metricsL().set( _measure( fm, _lmks0));
-            fm->metricsR().set( _measure( fm, _lmks1));
-        }   // end if
-        else
-            fm->metrics().set( _measure( fm, _lmks0));
+            if ( !_mct->canCalculate( fm, aid, &_lmks0))
+                continue;
+
+            FaceAssessment::Ptr ass = fm->assessment(aid);
+            ok = true;
+            if ( isBilateral())
+            {
+                ass->metricsL().set( _measure( fm, aid, _lmks0));
+                ass->metricsR().set( _measure( fm, aid, _lmks1));
+            }   // end if
+            else
+                ass->metrics().set( _measure( fm, aid, _lmks0));
+        }   // end for
     }   // end if
     return ok;
 }   // end measure

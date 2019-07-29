@@ -54,18 +54,19 @@ void UndoStates::_storeUndo( const FaceAction* a, EventGroup egrp, bool autoRest
 #endif
     UndoState::Ptr us;
     if ( autoRestore)
-        us = UndoState::create( egrp, autoRestore);
+        us = UndoState::create( a, egrp, autoRestore);
     else
     {
         us = a->makeUndoState();
         if ( !us)
+        {
+            assert( false);
             return;
+        }   // end if
     }   // end else
 
-    us->_action = const_cast<FaceAction*>(a);
-
     _mutex.lockForWrite();
-    Stacks& stacks = _stacks[us->_fm];
+    Stacks& stacks = _stacks[us->model()];
     if ( stacks.undos.size() == MAX_RESTORES)
         stacks.undos.pop_back();
     stacks.undos.push_front( us);   // Push to undo stack
@@ -104,7 +105,7 @@ QString UndoStates::_undoActionName()
     QString aname = "";
     _mutex.lockForRead();
     if ( _stacks.count(fm) > 0)
-        aname = _stacks.at(fm).undos.front()->_action->displayName();
+        aname = _stacks.at(fm).undos.front()->name();
     _mutex.unlock();
     return aname;
 }   // end _undoActionName
@@ -117,7 +118,7 @@ QString UndoStates::_redoActionName()
     QString aname = "";
     _mutex.lockForRead();
     if ( _stacks.count(fm) > 0)
-        aname = _stacks.at(fm).redos.front()->_action->displayName();
+        aname = _stacks.at(fm).redos.front()->name();
     _mutex.unlock();
     return aname;
 }   // end _redoActionName
@@ -135,18 +136,11 @@ void UndoStates::_undo()
 
     // Before restoring state, we save the current state for redo purposes
     UndoState::Ptr rstate;
-    if ( ustate->_autoRestore)
-        rstate = UndoState::create( ustate->_egrp, true);
+    if ( ustate->isAutoRestore())
+        rstate = UndoState::create( ustate->action(), ustate->events(), true);
     else
-    {
-        rstate = ustate->_action->makeUndoState();
-        if ( !rstate)
-            return;
-    }   // end else
-
-    rstate->_action = ustate->_action;
-    rstate->_egrp = ustate->_egrp;
-    stacks.redos.push_front(rstate);
+        rstate = ustate->action()->makeUndoState();
+    stacks.redos.push_front( rstate);
     _mutex.unlock();
 
     ustate->restore();
@@ -163,21 +157,13 @@ void UndoStates::_redo()
     Stacks& stacks = _stacks.at(MS::selectedModel());
     UndoState::Ptr rstate = stacks.redos.front();
     stacks.redos.pop_front();
-
     // Before restoring state, we save the current state for undo purposes
     UndoState::Ptr ustate;
-    if ( rstate->_autoRestore)
-        ustate = UndoState::create( rstate->_egrp, true);
+    if ( rstate->isAutoRestore())
+        ustate = UndoState::create( rstate->action(), rstate->events(), true);
     else
-    {
-        ustate = rstate->_action->makeUndoState();
-        if ( !ustate)
-            return;
-    }   // end else
-
-    ustate->_action = rstate->_action;
-    ustate->_egrp = rstate->_egrp;
-    stacks.undos.push_front(ustate);
+        ustate = rstate->action()->makeUndoState();
+    stacks.undos.push_front( ustate);
     _mutex.unlock();
 
     rstate->restore();

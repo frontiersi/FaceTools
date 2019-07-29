@@ -42,7 +42,7 @@ PathSetVisualisation::~PathSetVisualisation()
 bool PathSetVisualisation::isAvailable( const FM* fm) const
 {
     assert(fm);
-    return !fm->paths().empty();
+    return !fm->currentAssessment()->paths().empty();
 }   // end isAvailable
 
 
@@ -54,16 +54,19 @@ bool PathSetVisualisation::belongs( const vtkProp* prop, const FV* fv) const
 
 void PathSetVisualisation::apply( FV* fv, const QPoint*)
 {
-    if ( !hasView(fv))
-        _views[fv] = new PathSetView( fv->data()->paths());
-    FMV* viewer = fv->viewer();
-    _views.at(fv)->setVisible( true, viewer);
+    assert(fv);
+    if ( !_hasView(fv))
+    {
+        const PathSet& paths = fv->data()->currentAssessment()->paths();
+        _views[fv] = new PathSetView( paths);
+    }   // end if
+    _views.at(fv)->setVisible( true, fv->viewer());
 }   // end apply
 
 
 bool PathSetVisualisation::purge( FV* fv, Event)
 {
-    if ( hasView(fv))
+    if ( _hasView(fv))
     {
         _views.at(fv)->setVisible( false, fv->viewer());
         delete _views.at(fv);
@@ -75,7 +78,7 @@ bool PathSetVisualisation::purge( FV* fv, Event)
 
 void PathSetVisualisation::setVisible( FV* fv, bool v)
 {
-    if ( hasView(fv))
+    if ( _hasView(fv))
     {
         FMV* viewer = fv->viewer();
         _views.at(fv)->setVisible( v, viewer);
@@ -86,47 +89,27 @@ void PathSetVisualisation::setVisible( FV* fv, bool v)
 bool PathSetVisualisation::isVisible( const FV *fv) const
 {
     bool vis = false;
-    if ( hasView(fv))
+    if ( _hasView(fv))
         vis = _views.at(fv)->isVisible();
     return vis;
 }   // end isVisible
 
 
-// public
-void PathSetVisualisation::addPath( const FM* fm, int pathId)
+void PathSetVisualisation::movePath( const FM* fm, int pathId)
 {
+    const Path& path = *fm->currentAssessment()->paths().path(pathId);
     for ( FV* fv : fm->fvs())
-    {
-        if ( !hasView(fv))
-            apply(fv,nullptr);
-        else
-            _views.at(fv)->updatePath(pathId);
-        _views.at(fv)->showPath( true, pathId);
-    }   // end for
-}   // end addPath
+        if ( _hasView(fv))
+            _views.at(fv)->movePath( path);
+}   // end movePath
 
 
-void PathSetVisualisation::updatePath( const FM* fm, int pathId)
+void PathSetVisualisation::setText(  const FM* fm, int pid, int xpos, int ypos)
 {
+    const Path& path = *fm->currentAssessment()->paths().path(pid);
     for ( FV* fv : fm->fvs())
-        if ( hasView(fv))
-            _views.at(fv)->updatePath( pathId);
-}   // end updatePath
-
-
-void PathSetVisualisation::refresh( const FM* fm)
-{
-    for ( FV* fv : fm->fvs())
-        if ( hasView(fv))
-            _views.at(fv)->refresh();
-}   // end refresh
-
-
-void PathSetVisualisation::setText( const FM* fm, int pid, int xpos, int ypos)
-{
-    for ( FV* fv : fm->fvs())
-        if ( hasView(fv))
-            _views.at(fv)->setText( pid, xpos, ypos);
+        if ( _hasView(fv))
+            _views.at(fv)->setText( path, xpos, ypos);
 }   // end setText
 
 
@@ -138,7 +121,7 @@ void PathSetVisualisation::showText( const FM* fm)
     if ( fm)
     {
         for ( FV* fv : fm->fvs())
-            if ( hasView(fv))
+            if ( _hasView(fv))
                 _views.at(fv)->setTextVisible(true);
     }   // end if
 }   // end showText
@@ -146,17 +129,14 @@ void PathSetVisualisation::showText( const FM* fm)
 
 PathView::Handle* PathSetVisualisation::pathHandle( const FV* fv, const vtkProp* prop) const
 {
-    PathView::Handle *h = nullptr;
-    if ( hasView(fv))
-        h = _views.at(fv)->handle( prop);
-    return h;
+    return _hasView(fv) ? _views.at(fv)->handle( prop) : nullptr;
 }   // end pathHandle
 
 
 PathView::Handle* PathSetVisualisation::pathHandle0( const FV* fv, int pid) const
 {
     PathView::Handle* h = nullptr;
-    if ( hasView(fv))
+    if ( _hasView(fv))
     {
         PathView* pv = _views.at(fv)->pathView(pid);
         if ( pv)
@@ -166,25 +146,22 @@ PathView::Handle* PathSetVisualisation::pathHandle0( const FV* fv, int pid) cons
 }   // end pathHandle0
 
 
-PathView::Handle* PathSetVisualisation::pathHandle1( const FV* fv, int pid) const
+void PathSetVisualisation::syncActorsToData( const FV *fv, const cv::Matx44d &d)
 {
-    PathView::Handle* h = nullptr;
-    if ( hasView(fv))
+    if ( _hasView(fv))
     {
-        PathView* pv = _views.at(fv)->pathView(pid);
-        if ( pv)
-            h = pv->handle1();
+        _views.at(fv)->sync( fv->data()->currentAssessment()->paths(), d);
+        if ( !_views.at(fv)->isVisible())
+            purge( const_cast<FV*>(fv), Event::NONE);
     }   // end if
-    return h;
-}   // end pathHandle1
-
-
-void PathSetVisualisation::syncActorsToData(const FV *fv, const cv::Matx44d &d)
-{
-    if ( hasView(fv))
-        _views.at(fv)->refresh( d);
 }   // end syncActorsToData
 
 
-// private
-bool PathSetVisualisation::hasView( const FV* fv) const { return _views.count(fv) > 0;}
+void PathSetVisualisation::checkState( const FV* fv)
+{
+    if ( _hasView(fv))
+        _views.at(fv)->updateTextColours();
+}   // end checkState
+
+
+bool PathSetVisualisation::_hasView( const FV* fv) const { return _views.count(fv) > 0;}

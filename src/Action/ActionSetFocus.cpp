@@ -34,7 +34,10 @@ ActionSetFocus::ActionSetFocus( const QString& dn, const QIcon& icon, const QKey
 }   // end ctor
 
 
-bool ActionSetFocus::checkEnable( Event) { return true;}
+bool ActionSetFocus::checkEnable( Event)
+{
+    return MS::interactionMode() == IMode::CAMERA_INTERACTION;
+}   // end checkEnable
 
 
 void ActionSetFocus::setFocus( FMV* vwr, const cv::Vec3f& v)

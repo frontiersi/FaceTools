@@ -36,6 +36,7 @@ class FaceTools_EXPORT MetricCalculator : public QObject
 { Q_OBJECT
 public:
     using Ptr = std::shared_ptr<MetricCalculator>;
+    using CPtr = std::shared_ptr<const MetricCalculator>;
 
     // Load from file. Reads in all statistics and also makes new
     // growth data pairs for single sex / same ethnicity datasets,
@@ -101,6 +102,8 @@ public:
     // Overwrites metric values so statistics will need updating.
     bool measure( FM*) const;
 
+    ~MetricCalculator();    // Public for Lua
+
 private:
     MCT* _mct;
     bool _visible;
@@ -114,19 +117,17 @@ private:
     GrowthData::CPtr _cgd;  // Current (default) for this metric
     GrowthDataSources _compatible;
 
-    void _setType( MCT* mct) { _mct = mct;}
     void _addGrowthData( GrowthData::Ptr);
     void _combineGrowthDataSexes();
     void _combineGrowthDataEthnicities();
-    MetricValue _measure( const FM* fm, const Landmark::LmkList&) const;
+    MetricValue _measure( const FM*, int, const Landmark::LmkList&) const;
     void _findMatchingGrowthData( int8_t, int, bool, GrowthDataSources&) const;
     MetricCalculator();
-    ~MetricCalculator();
     MetricCalculator( const MetricCalculator&) = delete;
     void operator=( const MetricCalculator&) = delete;
 
     GrowthDataSources _compatibleGrowthData( const FM*) const;
-    GrowthDataSources _mostCompatible( int8_t, int) const;
+    GrowthDataSources _mostCompatible( int) const;
 };  // end class
 
 }}   // end namespaces

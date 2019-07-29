@@ -60,6 +60,8 @@ void LandmarksInteractor::leaveProp( FV* fv, const vtkProp* p)
 bool LandmarksInteractor::leftButtonDown()
 {
     _drag = _hover;
+    if ( _drag >= 0)
+        emit onStartedDrag(_drag);
     return _drag >= 0;
 }   // end leftButtonDown
 
@@ -69,7 +71,7 @@ bool LandmarksInteractor::leftButtonUp()
     bool swallowed = false;
     if ( _drag >= 0)
     {
-        emit onUpdated( _drag);
+        emit onFinishedDrag( _drag);
         if ( _hover < 0)
             leaveLandmark( _drag, _lat);
         _drag = -1;
@@ -99,12 +101,12 @@ void LandmarksInteractor::landmarkMove( int id, FaceLateral lat, const cv::Vec3f
 {
     FM* fm = MS::selectedModel();
     fm->lockForWrite();
-    fm->setLandmarkPosition( id, pos, lat);
+    fm->setLandmarkPosition( id, lat, pos);
     _vis.updateLandmark( fm, id);
     MS::syncBoundingVisualisation( fm);
     fm->unlock();
     MS::setCursor(Qt::CursorShape::CrossCursor);
-    fm->updateRenderers();
+    MS::updateRender();
 }   // end landmarkMove
 
 

@@ -213,7 +213,7 @@ void ModelSelector::doOnSelected( FV *fv, bool v)
         fv->apply(&_bvis);   // Apply the bounding box around the model
         if ( _autoFocus)
         {
-            if ( fv->data()->landmarks().empty())
+            if ( fv->data()->currentAssessment()->landmarks().empty())
                 ActionResetCamera::resetCamera( fv);
             else
                 ActionOrientCameraToFace::orientToFace( fv, DEFAULT_CAMERA_DISTANCE);

@@ -350,7 +350,7 @@ QToolButton:hover{
         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, growth curve statistics will be automatically set for each metric to most narrowly match the subject's sex and ethnicity, and the available set of statistics for each metric will be constrained to only those that are compatible with the current subject's sex and ethnicity.&lt;/p&gt;&lt;p&gt;Note that when automatically matching to the available statistics, a match to sex is preferred over a match to ethnicity, however the user can manually select a different set of growth curves from the compatible list. If this option is unchecked, the user can select the growth curves to use for each metric from all available statistics.&lt;/p&gt;&lt;p&gt;The currently set growth curves for a metric are used to calculate the statistics (Z scores) for the metric.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
-        <string>Use Subject Demographics</string>
+        <string>Auto Match Subject Demographics</string>
        </property>
        <property name="checked">
         <bool>true</bool>

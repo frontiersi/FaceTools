@@ -43,7 +43,7 @@ void ActorMoveHandler::actorMove( const vtkProp3D* prop)
     if ( fv)
     {
         fv->syncActorDeltaToVisualisations();
-        fv->data()->updateRenderers();
+        MS::updateRender();
     }   // end if
 }   // end actorMove
 
@@ -63,6 +63,6 @@ void ActorMoveHandler::actorStop( const vtkProp3D* prop)
         fm->unlock();
         MS::showStatus( "Finished moving model.", 5000);
         emit onActorStop(fv);
-        fm->updateRenderers();
+        MS::updateRender();
     }   // end if
 }   // end actorStop

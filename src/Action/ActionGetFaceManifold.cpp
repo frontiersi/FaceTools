@@ -64,7 +64,7 @@ bool ActionGetFaceManifold::checkEnable( Event)
     if ( !fm)
         return false;
     fm->lockForRead();
-    const LandmarkSet& lmks = fm->landmarks();
+    const LandmarkSet& lmks = fm->currentAssessment()->landmarks();
     const bool rval = !lmks.empty() && fm->manifolds().count() > 1;
     fm->unlock();
     return rval;

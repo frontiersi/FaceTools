@@ -32,8 +32,8 @@ public:
 
     QString category() const override { return "Line Angle";}
     Vis::MetricVisualiser* visualiser() override { return &_vis;}
-    bool canCalculate( const FM*, const Landmark::LmkList*) const override;
-    void measure( std::vector<double>&, const FM*, const Landmark::LmkList*) const override;
+    bool canCalculate( const FM*, int, const Landmark::LmkList*) const override;
+    void measure( std::vector<double>&, const FM*, int, const Landmark::LmkList*) const override;
 
 private:
     Vis::AngleVisualiser _vis;

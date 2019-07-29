@@ -160,10 +160,10 @@ bool AngleVisualiser::isAvailable( const FM* fm) const
     using SLMK = Landmark::SpecificLandmark;
     bool b0 = true;
     if ( _lmks0)
-        b0 = std::all_of( std::begin(*_lmks0), std::end(*_lmks0), [fm]( const SLMK& lm){ return fm->landmarks().has(lm);});
+        b0 = std::all_of( std::begin(*_lmks0), std::end(*_lmks0), [fm]( const SLMK& lm){ return fm->currentAssessment()->landmarks().has(lm);});
     bool b1 = true;
     if ( _lmks1)
-        b1 = std::all_of( std::begin(*_lmks1), std::end(*_lmks1), [fm]( const SLMK& lm){ return fm->landmarks().has(lm);});
+        b1 = std::all_of( std::begin(*_lmks1), std::end(*_lmks1), [fm]( const SLMK& lm){ return fm->currentAssessment()->landmarks().has(lm);});
     return b0 && b1;
 }   // end isAvailable
 
@@ -188,13 +188,14 @@ void AngleVisualiser::doPurge( const FV *fv)
 void AngleVisualiser::applyActor( const FV *fv, const LmkList* ll, std::unordered_map<const FV*, vtkAngleRepresentation3D*>& angles)
 {
     const FM* fm = fv->data();
-    cv::Vec3d r0 = fm->landmarks().pos( ll->front());
-    cv::Vec3d r1 = fm->landmarks().pos( ll->back());
+    const Landmark::LandmarkSet& lmks = fm->currentAssessment()->landmarks();
+    cv::Vec3d r0 = lmks.pos( ll->front());
+    cv::Vec3d r1 = lmks.pos( ll->back());
     cv::Vec3d cp;
     // Set the centre point according to the given landmark, but if it's < 0,
     // the centre point is set as the point on the surface midway between the endpoints.
     if ( ll->size() == 3)
-        cp = fm->landmarks().pos( ll->at(1));
+        cp = lmks.pos( ll->at(1));
     else
     {
         const cv::Vec3f mp( 0.5 * (r0 + r1));

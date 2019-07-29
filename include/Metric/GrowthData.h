@@ -64,6 +64,8 @@ public:
     // all of the dimensions of the statistics.
     bool isWithinAgeRange( double age) const;
 
+    ~GrowthData();  // Public for Lua
+
 private:
     int _mid;
     int8_t _sex;
@@ -73,7 +75,6 @@ private:
     std::vector<rlib::RSD::Ptr> _rsds;
 
     GrowthData( int mid, size_t ndims, int8_t sex, int ethn);
-    ~GrowthData();
     GrowthData( const GrowthData&) = delete;
     void operator=( const GrowthData&) = delete;
 };  // end class

@@ -29,7 +29,7 @@ using FaceTools::Path;
 using ViewPair = std::pair<int, PathView*>;
 
 
-PathSetView::PathSetView( const PathSet& paths) : _paths(paths), _viewer(nullptr)
+PathSetView::PathSetView( const PathSet& paths) : _viewer(nullptr)
 {
     // The bottom right text.
     _text->GetTextProperty()->SetJustificationToRight();
@@ -40,7 +40,7 @@ PathSetView::PathSetView( const PathSet& paths) : _paths(paths), _viewer(nullptr
     _text->SetVisibility(false);
 
     for ( int id : paths.ids())
-        addPath(id);
+        addPath( *paths.path(id));
 }   // end ctor
 
 
@@ -59,41 +59,40 @@ void PathSetView::setVisible( bool enable, ModelViewer *viewer)
         _viewer->remove(_text);
 
     while ( isVisible())
-        showPath( false, *_visible.begin());
+        _showPath( false, *_visible.begin());
 
     _viewer = viewer;
 
     if ( enable && _viewer)
     {
         for ( const auto& p : _views)
-            showPath( true, p.first);
+            _showPath( true, p.first);
         _viewer->add(_text);
     }   // end if
 }   // end setVisible
 
 
-void PathSetView::showPath( bool enable, int id)
+void PathSetView::_showPath( bool enable, int id)
 {
     assert( _views.count(id) > 0);
     _views.at(id)->setVisible( enable, _viewer);
     _visible.erase(id);
     if ( enable)
         _visible.insert(id);
-}   // end showPath
+}   // end _showPath
 
 
-void PathSetView::setText( int pid, int xpos, int ypos)
+void PathSetView::setText( const Path& path, int xpos, int ypos)
 {
-    const Path* path = _paths.path(pid);
     const std::string lnunits = FaceTools::FM::LENGTH_UNITS.toStdString();
     // Set the text contents for the label and the caption
     std::ostringstream oss0, oss1, oss2;
-    if ( !path->name.empty())
-        oss0 << path->name << std::endl;
-    oss1 << "Caliper: " << std::setw(5) << std::fixed << std::setprecision(1) << path->elen << " " << lnunits;
+    if ( !path.name.empty())
+        oss0 << path.name << std::endl;
+    oss1 << "Caliper: " << std::setw(5) << std::fixed << std::setprecision(1) << path.elen << " " << lnunits;
     oss2 << "\nSurface: ";
-    if ( path->psum >= path->elen)
-        oss2 << std::setw(5) << std::fixed << std::setprecision(1) << path->psum << " " << lnunits;
+    if ( path.psum >= path.elen)
+        oss2 << std::setw(5) << std::fixed << std::setprecision(1) << path.psum << " " << lnunits;
     else
         oss2 << " N/A";
     _text->SetInput( (oss0.str() + oss1.str() + oss2.str()).c_str());
@@ -104,96 +103,80 @@ void PathSetView::setText( int pid, int xpos, int ypos)
 void PathSetView::setTextVisible( bool v) { _text->SetVisibility(v);}
 
 
-// public
-bool PathSetView::isPathVisible( int id) const { return _visible.count(id) > 0;}
-const std::unordered_set<int>& PathSetView::visible() const { return _visible;}
-
-
-// public
-PathView::Handle* PathSetView::addPath( int id)
-{
-    if ( _views.count(id) > 0)
-    {
-        std::cerr << "[WARNING] FaceTools::Vis::PathSetView::addPath: Trying to add path but PathView already present!" << std::endl;
-        return _views.at(id)->handle0();
-    }   // end if
-
-    const Path* path = _paths.path(id);
-    assert(path);
-    if ( !path)
-    {
-        std::cerr << "[ERROR] FaceTools::Vis::PathSetView::addPath: Path data doesn't exist for path ID " << id << std::endl;
-        return nullptr;
-    }   // end if
-
-    PathView* pv = new PathView( id, path->vtxs);
-    _views[id] = pv;
-    // Map handle props to the handles themselves for fast lookup.
-    _handles[pv->handle0()->prop()] = pv->handle0();
-    _handles[pv->handle1()->prop()] = pv->handle1();
-    return pv->handle0();
-}   // end addPath
-
-
-// public
 PathView::Handle* PathSetView::handle( const vtkProp* prop) const
 {
-    PathView::Handle *h = nullptr;
-    if ( _handles.count(prop) > 0)
-        h = _handles.at(prop);
-    return h;
+    return _handles.count(prop) > 0 ? _handles.at(prop) : nullptr;
 }   // end handle
 
 
-// public
 PathView* PathSetView::pathView( int id) const
 {
-    PathView* pv = nullptr;
-    if ( _views.count(id) > 0)
-        pv = _views.at(id);
-    return pv;
+    return _views.count(id) > 0 ?  _views.at(id) : nullptr;
 }   // end pathView
 
 
-// public
-void PathSetView::updatePath( int id, const cv::Matx44d& d)
+void PathSetView::addPath( const Path& path)
 {
-    assert(id >= 0);
-    if ( _paths.has(id))
+    PathView* pv = new PathView( path.id, path.vtxs);
+    _views[path.id] = pv;
+    // Map handle props to the handles themselves for fast lookup.
+    _handles[pv->handle0()->prop()] = pv->handle0();
+    _handles[pv->handle1()->prop()] = pv->handle1();
+}   // end addPath
+
+
+void PathSetView::movePath( const Path& path)
+{
+    assert( _views.count(path.id) > 0);
+    _views.at(path.id)->update(path.vtxs);
+}   // end movePath
+
+
+void PathSetView::erasePath( int id)
+{
+    assert( _views.count(id) > 0);
+    _showPath( false, id);
+    PathView* pv = _views.at(id);
+    _handles.erase(pv->handle0()->prop());
+    _handles.erase(pv->handle1()->prop());
+    _views.erase(id);
+    delete pv;
+}   // end erasePath
+
+
+void PathSetView::sync( const PathSet& paths, const cv::Matx44d& d)
+{
+    const bool isVis = isVisible();
+
+    // Erase all first
+    while ( !_views.empty())
+        erasePath(_views.begin()->first);
+
+    // Add back all
+    const IntSet& validIds = paths.ids();
+    for ( int id : validIds)
+        addPath( *paths.path(id));
+
+    // Update all positions
+    if ( d != cv::Matx44d::eye())
     {
-        if ( _views.count(id) == 0)
-            addPath(id);
-        else
+        for ( auto& p : _views)
         {
-            std::list<cv::Vec3f> pts;
-            for ( const cv::Vec3f& v : _paths.path(id)->vtxs)
-                pts.push_back( RFeatures::transform( d, v));
-            _views.at(id)->update( pts);
-        }   // end else
-        showPath( true, id);
+            const std::list<cv::Vec3f>& ivtxs = paths.path(p.first)->vtxs;
+            std::list<cv::Vec3f> tvtxs;
+            for ( const cv::Vec3f& v : ivtxs)
+                tvtxs.push_back( RFeatures::transform( d, v));
+            p.second->update(tvtxs);
+        }   // end for
     }   // end if
-    else if (_views.count(id) > 0)
-    {   // Delete the path if no longer in the dataset
-        showPath(false, id);
-        PathView* pv = _views.at(id);
-        _handles.erase(pv->handle0()->prop());
-        _handles.erase(pv->handle1()->prop());
-        _views.erase(id);
-        delete pv;
-    }   // end else if
-}   // end updatePath
+
+    if ( isVis)
+        setVisible(true, _viewer);
+}   // end sync
 
 
-// public
-void PathSetView::refresh( const cv::Matx44d& d)
+void PathSetView::updateTextColours()
 {
-    std::unordered_set<int> pids;   // Will be union of path IDs both currently visualised and not.
-    std::for_each( std::begin(_views), std::end(_views), [&](const ViewPair& p){ pids.insert(p.first);});
-    // Add the current path IDs in from the data
-    std::for_each( std::begin(_paths.ids()), std::end(_paths.ids()), [&](int p){ pids.insert(p);});
-    // Run updatePath for all pids
-    std::for_each( std::begin(pids), std::end(pids), [&](int p){ this->updatePath(p, d);});
-
     if ( _viewer)
     {
         const QColor bg = _viewer->backgroundColour();
@@ -201,4 +184,4 @@ void PathSetView::refresh( const cv::Matx44d& d)
         _text->GetTextProperty()->SetBackgroundColor( bg.redF(), bg.greenF(), bg.blueF());
         _text->GetTextProperty()->SetColor( fg.redF(), fg.greenF(), fg.blueF());
     }   // end if
-}   // end refresh
+}   // end updateTextColours

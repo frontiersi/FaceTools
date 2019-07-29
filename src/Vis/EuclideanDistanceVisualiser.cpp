@@ -116,7 +116,7 @@ bool EuclideanDistanceVisualiser::isVisible(const FV *fv) const
 }   // end isVisible
 
 
-void EuclideanDistanceVisualiser::checkState( const FV* fv)
+void EuclideanDistanceVisualiser::checkState( const FV*)
 {
     /*
     const QColor bg = fv->viewer()->backgroundColour();
@@ -133,10 +133,10 @@ bool EuclideanDistanceVisualiser::isAvailable( const FM* fm) const
     using SLMK = Landmark::SpecificLandmark;
     bool b0 = true;
     if ( _lmks0)
-        b0 = std::all_of( std::begin(*_lmks0), std::end(*_lmks0), [fm]( const SLMK& lm){ return fm->landmarks().has(lm);});
+        b0 = std::all_of( std::begin(*_lmks0), std::end(*_lmks0), [fm]( const SLMK& lm){ return fm->currentAssessment()->landmarks().has(lm);});
     bool b1 = true;
     if ( _lmks1)
-        b1 = std::all_of( std::begin(*_lmks1), std::end(*_lmks1), [fm]( const SLMK& lm){ return fm->landmarks().has(lm);});
+        b1 = std::all_of( std::begin(*_lmks1), std::end(*_lmks1), [fm]( const SLMK& lm){ return fm->currentAssessment()->landmarks().has(lm);});
     return b0 && b1;
 }   // end isAvailable
 
@@ -162,11 +162,12 @@ void EuclideanDistanceVisualiser::applyActor( const FV *fv, const LmkList* ll, s
 {
     const FM* fm = fv->data();
 
+    const Landmark::LandmarkSet& lmks = fm->currentAssessment()->landmarks();
     assert( ll);
     assert( !ll->empty());
-    assert( fm->landmarks().has(ll->front()));
-    assert( fm->landmarks().has(ll->back()));
-    const std::vector<cv::Vec3f> vtxs = { fm->landmarks().pos(ll->front()), fm->landmarks().pos(ll->back())};
+    assert( lmks.has(ll->front()));
+    assert( lmks.has(ll->back()));
+    const std::vector<cv::Vec3f> vtxs = { lmks.pos(ll->front()), lmks.pos(ll->back())};
 
     vtkActor* actor = actors[fv] = RVTK::VtkActorCreator::generateLineActor( vtxs);
     vtkProperty* property = actor->GetProperty();

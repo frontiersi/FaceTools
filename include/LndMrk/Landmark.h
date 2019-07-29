@@ -18,10 +18,6 @@
 #ifndef FACE_TOOLS_LANDMARK_LANDMARK_H
 #define FACE_TOOLS_LANDMARK_LANDMARK_H
 
-//#ifdef _WIN32
-//#pragma warning( disable : 4251)
-//#endif
-
 #include <FaceTypes.h>
 #include <QTextStream>
 

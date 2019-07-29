@@ -31,22 +31,29 @@ BoundingVisualisation::~BoundingVisualisation()
 }   // end dtor
 
 
+void BoundingVisualisation::_setColour( const FV* fv)
+{
+    assert(_views.count(fv) > 0);
+    BoundingView* bv = _views.at(fv);
+    float r = 0.3f;
+    float g = 0.4f;
+    float b = 0.9f;
+    if ( !fv->data()->currentAssessment()->landmarks().empty())
+    {
+        r = 0.4f;
+        g = 0.9f;
+        b = 0.3f;
+    }   // end if
+    bv->setColour(r,g,b);
+}   // end _setColour
+
+
 void BoundingVisualisation::apply( FV* fv, const QPoint*)
 {
     if (_views.count(fv) == 0)
     {
-        float lw = 3.0f;
-        float r = 0.3f;
-        float g = 0.4f;
-        float b = 0.9f;
-        if ( !fv->data()->landmarks().empty())
-        {
-            r = 0.4f;
-            g = 0.9f;
-            b = 0.3f;
-        }   // end if
-
-        _views[fv] = new BoundingView( *fv->data()->bounds()[0], lw, r, g, b);
+        _views[fv] = new BoundingView( *fv->data()->bounds()[0], 3.0f);
+        _setColour(fv);
     }   // end if
     _views.at(fv)->setVisible( true, fv->viewer());
 }   // end apply
@@ -74,6 +81,7 @@ void BoundingVisualisation::syncActorsToData( const FV* fv, const cv::Matx44d& d
     {
         const cv::Matx44d& bmat = fv->data()->bounds()[0]->transformMatrix();
         _views.at(fv)->pokeTransform( RVTK::toVTK( d * bmat));
+        _setColour(fv);
     }   // end if
 }   // end syncActorsToData
 

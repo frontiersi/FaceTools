@@ -39,7 +39,9 @@ public:
     void setThumbnail( const cv::Mat_<cv::Vec3b>);
 
 signals:
-    void onUpdated( FM*);   // On updated data on FaceModel
+    void onUpdated( FM*);
+    void onAssessmentChanged();
+    void onCopiedLandmarks();
 
 public slots:
     void accept() override;
@@ -56,12 +58,21 @@ private slots:
     void _doOnSourceChanged();
     void _doOnStudyIdChanged();
     void _doOnNotesChanged();
+    void _doOnAssessorChanged();
+    void _doOnEditedAssessorText();
+
+    void _doOnAddAssessment();
+    void _doOnDeleteAssessment();
+    void _doOnCopyLandmarks();
 
 private:
     Ui::ScanInfoDialog *_ui;
     FM *_model;
+    IntSet _aids;   // Assessment ids for the current model
     const QString _dialogRootTitle;
-    bool _isDifferentToModel();
+    bool _isDifferentToCurrent();
+    void _checkEnableApply();
+    void _refreshCurrentAssessment();
 };  // end class
 
 }}   // end namespace

@@ -43,7 +43,6 @@ void FaceModelXMLFileHandler::exportMetaData( const FM* fm, const std::string& o
     PTree& rnode = tnode.add("FaceModel","");
 
     rnode.put( "ObjFilename", objfname);
-    rnode.put( "Notes", fm->notes().toStdString());
     rnode.put( "Source", fm->source().toStdString());
     rnode.put( "StudyId", fm->studyId().toStdString());
     rnode.put( "DateOfBirth", fm->dateOfBirth().toString().toStdString());
@@ -52,38 +51,50 @@ void FaceModelXMLFileHandler::exportMetaData( const FM* fm, const std::string& o
     rnode.put( "PaternalEthnicity", fm->paternalEthnicity());
     rnode.put( "CaptureDate", fm->captureDate().toString().toStdString());
 
-    fm->landmarks().write( rnode.put("Landmarks", ""));
-    fm->paths().write( rnode.put("Paths", ""));
-
+    RFeatures::putVertex( rnode.put("Centre", ""), fm->centre());
     rnode.put("Orientation", "") << fm->orientation();
-    RFeatures::putVertex( rnode.put("Centre", ""), fm->icentre());
 
+    PTree& anodes = rnode.put("Assessments", "");
+    anodes.put( "DefaultAssessment", fm->currentAssessment()->id());
     const double age = fm->age();
-    PTree& mgrps = rnode.put("MetricGroups", "");
-    fm->cmetrics().write( mgrps.put("Frontal", ""), age);
-    fm->cmetricsL().write( mgrps.put("LeftLateral", ""), age);
-    fm->cmetricsR().write( mgrps.put("RightLateral", ""), age);
-
-    PTree& hpos = rnode.put("PhenotypicIndications", "");
-    const IntSet ptypes = PhenotypeManager::discover(fm);
-    for ( int hid : ptypes)
+    const IntSet aids = fm->assessmentIds();
+    for ( int id : aids)
     {
-        PTree& node = hpos.add( "Term", "");
-        const Phenotype::Ptr pind = PhenotypeManager::phenotype(hid);
+        FaceAssessment::CPtr ass = fm->assessment( id);
 
-        node.put( "Id", pind->id());
-        node.put( "Name", pind->name().toStdString());
+        PTree& anode = anodes.add("Assessment", "");
+        anode.put("AssessmentId", id);
+        anode.put( "Assessor", ass->assessor().toStdString());
+        anode.put( "Notes", ass->notes().toStdString());
+        ass->landmarks().write( anode.put("Landmarks", ""));
+        ass->paths().write( anode.put("Paths", ""));
 
-        QStringList mids;
-        for ( int mid : pind->metrics())
-            mids << QString("%1").arg(mid);
-        const QString midList = mids.join(",");
-        node.put( "Metrics", midList.toStdString());
+        PTree& mgrps = anode.put("MetricGroups", "");
+        ass->cmetrics().write( mgrps.put("Frontal", ""), age);
+        ass->cmetricsL().write( mgrps.put("LeftLateral", ""), age);
+        ass->cmetricsR().write( mgrps.put("RightLateral", ""), age);
 
-        node.put( "SexMatch", pind->isSexMatch(fm->sex()));
-        node.put( "AgeMatch", pind->isAgeMatch(fm->age()));
-        node.put( "MaternalEthnicityMatch", pind->isEthnicityMatch(fm->maternalEthnicity()));
-        node.put( "PaternalEthnicityMatch", pind->isEthnicityMatch(fm->paternalEthnicity()));
+        PTree& pnodes = anode.put("PhenotypicIndications", "");
+        const IntSet ptypes = PhenotypeManager::discover( fm, id);
+        for ( int hid : ptypes)
+        {
+            PTree& pnode = pnodes.add( "Term", "");
+            const Phenotype::Ptr pind = PhenotypeManager::phenotype(hid);
+
+            pnode.put( "Id", pind->id());
+            pnode.put( "Name", pind->name().toStdString());
+
+            QStringList mids;
+            for ( int mid : pind->metrics())
+                mids << QString("%1").arg(mid);
+            const QString midList = mids.join(",");
+            pnode.put( "Metrics", midList.toStdString());
+
+            pnode.put( "AgeMatch", pind->isAgeMatch( age));
+            pnode.put( "SexMatch", pind->isSexMatch( fm->sex()));
+            pnode.put( "MaternalEthnicityMatch", pind->isEthnicityMatch(fm->maternalEthnicity()));
+            pnode.put( "PaternalEthnicityMatch", pind->isEthnicityMatch(fm->paternalEthnicity()));
+        }   // end for
     }   // end for
 }   // end exportMetaData
 
@@ -111,15 +122,6 @@ void importModelRecord( FM* fm, const PTree& rnode, std::string& objfilename)
         objfilename = rnode.get<std::string>( "objfilename");  // Without path info
     else if ( rnode.count("ObjFilename") > 0)
         objfilename = rnode.get<std::string>( "ObjFilename");  // Without path info
-
-    QString notes;
-    if ( rnode.count("description") > 0)
-        notes = rnode.get<std::string>( "description").c_str();
-    else if ( rnode.count("Description") > 0)
-        notes = rnode.get<std::string>( "Description").c_str();
-    else if ( rnode.count("Notes") > 0)
-        notes = rnode.get<std::string>( "Notes").c_str();
-    fm->setNotes(notes);
 
     QString src;
     if ( rnode.count("source") > 0)
@@ -188,20 +190,92 @@ void importModelRecord( FM* fm, const PTree& rnode, std::string& objfilename)
     fm->setMaternalEthnicity(methn);
     fm->setPaternalEthnicity(pethn);
 
+    /**
+     * Older version of this file format save landmarks, paths, and notes in the root node.
+     * If the file has these elements in the root node, set them on the current assessment.
+     */
+    FaceTools::FaceAssessment::Ptr ass = fm->currentAssessment();   // Has ID zero
+
     // Read in the landmarks
     FaceTools::Landmark::LandmarkSet::Ptr lmks = FaceTools::Landmark::LandmarkSet::create();
     if ( rnode.count("Landmarks") > 0)
     {
+        lmks = FaceTools::Landmark::LandmarkSet::create();
         lmks->read( rnode.get_child("Landmarks"));
-        fm->setLandmarks(lmks);
+        ass->setLandmarks(lmks);
     }   // end if
 
     // Read in the saved paths
     FaceTools::PathSet::Ptr paths = FaceTools::PathSet::create();
     if ( rnode.count("Paths") > 0)
     {
+        paths = FaceTools::PathSet::create();
         paths->read( rnode.get_child("Paths"));
-        fm->setPaths(paths);
+        ass->setPaths(paths);
+    }   // end if
+
+    QString notes;
+    if ( rnode.count("description") > 0)
+        notes = rnode.get<std::string>( "description").c_str();
+    else if ( rnode.count("Description") > 0)
+        notes = rnode.get<std::string>( "Description").c_str();
+    else if ( rnode.count("Notes") > 0)
+        notes = rnode.get<std::string>( "Notes").c_str();
+
+    QString assessor = "Unknown";
+    ass->setAssessor( assessor);
+    if ( !notes.isEmpty())
+        ass->setNotes( notes);
+
+    if ( rnode.count("Assessments") > 0)
+    {
+        fm->eraseAssessment(0);    // Remove the default assessment since defining explicitly
+
+        const PTree& anodes = rnode.get_child("Assessments");
+        const int cassid = anodes.count("DefaultAssessment") > 0 ? anodes.get<int>( "DefaultAssessment") : 0;
+        int nassid = 0;   // Assessment ids if not defined
+        int assid = 0;
+
+        for ( const PTree::value_type& vnode: anodes)
+        {
+            const PTree& anode = vnode.second;
+
+            assessor = anode.count("Assessor") > 0 ? anode.get<std::string>("Assessor").c_str() : "";
+            notes = anode.count("Notes") > 0 ? anode.get<std::string>("Notes").c_str() : "";
+            lmks = FaceTools::Landmark::LandmarkSet::create();
+            if ( anode.count("Landmarks") > 0)
+                lmks->read( anode.get_child("Landmarks"));
+            paths = FaceTools::PathSet::create();
+            if ( anode.count("Paths") > 0)
+                paths->read( anode.get_child("Paths"));
+
+            // Skip no content entries
+            if ( assessor.isEmpty() && notes.isEmpty() && lmks->empty() && paths->empty())
+                continue;
+
+            if ( assessor.isEmpty())
+                assessor = "Unknown";
+
+            assid = anode.count("AssessmentId") > 0 ? anode.get<int>("AssessmentId") : nassid;
+            ass = FaceTools::FaceAssessment::create( assid);
+            if ( ass->id() >= nassid)
+                nassid = ass->id() + 1;
+
+            ass->setAssessor( assessor);
+            ass->setNotes( notes);
+            ass->setLandmarks( lmks);
+            ass->setPaths( paths);
+            fm->setAssessment( ass);
+        }   // end for
+
+        // Get the created assessment ids.
+        const IntSet aids = fm->assessmentIds();
+
+        // If there were no assessments actually created, we need to add back in a default empty one!
+        if ( aids.empty())
+            fm->setAssessment( FaceTools::FaceAssessment::create(0));
+        else if ( aids.count(cassid) > 0)
+            fm->setCurrentAssessment(cassid);
     }   // end if
 }   // end importModelRecord
 }   // end namespace

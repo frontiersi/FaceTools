@@ -58,11 +58,11 @@ bool ActionSaveFaceModel::doBeforeAction( Event)
 
 void ActionSaveFaceModel::doAction( Event)
 {
-    _egrp.clear();
+    _egrp = Event::NONE;
     assert(_fails.empty());
     FM *fm = MS::selectedModel();
     fm->lockForWrite();
-    if ( fm->landmarks().empty())
+    if ( !fm->hasLandmarks())
     {
         fm->fixOrientation();
         _egrp.add(Event::ORIENTATION_CHANGE);

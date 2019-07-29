@@ -22,6 +22,7 @@
 #include <VtkTools.h>
 using FaceTools::Action::ActionEditLandmarks;
 using FaceTools::Action::Event;
+using FaceTools::Action::UndoState;
 using FaceTools::Action::ActionVisualise;
 using FaceTools::Interactor::LandmarksInteractor;
 using FaceTools::Vis::LandmarksVisualisation;
@@ -30,12 +31,15 @@ using FaceTools::FM;
 using FaceTools::Vis::FV;
 using MS = FaceTools::Action::ModelSelector;
 
+Q_DECLARE_METATYPE( FaceTools::Landmark::LandmarkSet::Ptr)
+
 
 ActionEditLandmarks::ActionEditLandmarks( const QString& dn, const QIcon& ico, const QKeySequence& ks)
     : ActionVisualise( dn, ico, _vis = new LandmarksVisualisation, ks)
 {
     LandmarksInteractor *lint = new LandmarksInteractor( *_vis);
-    connect( lint, &LandmarksInteractor::onUpdated, [this](){ emit onEvent( Event::LANDMARKS_CHANGE);});
+    connect( lint, &LandmarksInteractor::onStartedDrag, [this](){ storeUndo(this);});
+    connect( lint, &LandmarksInteractor::onFinishedDrag, [this](){ emit onEvent( Event::LANDMARKS_CHANGE);});
     _interactor = std::shared_ptr<LandmarksInteractor>( lint);
     addTriggerEvent( Event::LOADED_MODEL);
     addTriggerEvent( Event::FACE_DETECTED);
@@ -53,15 +57,16 @@ bool ActionEditLandmarks::checkState( Event e)
 {
     const bool chk = ActionVisualise::checkState( e);
     _interactor->setEnabled(chk);
-    _vis->setHighlighted( MS::selectedModel());
+    const FM* fm = MS::selectedModel();
+    _vis->setHighlighted( fm);  // un-highlights all before highlighting only model's landmarks if not null
+    _vis->updateLandmarks( fm);
     return chk;
 }   // end checkState
 
 
 bool ActionEditLandmarks::doBeforeAction( Event)
 {
-    _vis->updateLandmarks( MS::selectedModel());
-    return true;
+    return true;//!EventGroup(e).is(Event::ASSESSMENT_CHANGE);
 }   // end doBeforeAction
 
 
@@ -70,8 +75,27 @@ void ActionEditLandmarks::doAfterAction( Event)
     if ( isChecked())
     {
         MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-        MS::showStatus( "Move landmarks by left-clicking and dragging.");
+        if ( MS::selectedModel()->currentAssessment()->hasLandmarks())
+            MS::showStatus( "Move landmarks by left-clicking and dragging.");
     }   // end if
     else
         MS::clearStatus();
 }   // end doAfterAction
+
+
+UndoState::Ptr ActionEditLandmarks::makeUndoState() const
+{
+    UndoState::Ptr us = UndoState::create( this, Event::LANDMARKS_CHANGE);
+    us->setName( "Move Landmark");
+    Landmark::LandmarkSet::Ptr lmks = us->model()->currentAssessment()->landmarks().deepCopy();
+    us->setUserData( "Lmks", QVariant::fromValue(lmks));
+    return us;
+}   // end makeUndoState
+
+
+void ActionEditLandmarks::restoreState( const UndoState* us)
+{
+    Landmark::LandmarkSet::Ptr lmks = us->userData("Lmks").value<Landmark::LandmarkSet::Ptr>();
+    us->model()->setLandmarks(lmks);
+    _vis->updateLandmarks( us->model());
+}   // end restoreState

@@ -133,9 +133,13 @@ protected:
     /**
      * Set asynchronous execution or not on the next call to execute().
      * Default is synchronous (blocking calls) in the GUI thread.
+     * Normally, an asynchronous running action is not reentrant.
+     * Set reentrant to true if async is also true to allow this action to
+     * be triggered again even while executing inside its doAction function.
      */
-    void setAsync( bool v) { _doasync = v;}
+    void setAsync( bool async, bool reentrant=false);
     bool isAsync() const { return _doasync;}
+    bool isReentrant() const { return _reentrant;}
 
     /**
      * Returns the client set mouse position. Returns (-1,-1) if not set.
@@ -213,13 +217,12 @@ protected:
     /**
      * Override this function to provide custom restoring of state for undo/redo functionality.
      * It is only necessary to implement this if storeUndo is called with autoRestore=false.
-     * Ask this action to restore state from an UndoState object. The passed in UndoState object
+     * The action should restore state from an UndoState object. The passed in UndoState object
      * will have been previously created by this action's own overridden makeUndoState function
-     * and so this action should use knowledge of the makeup of that object to restore state
-     * according to what is saved in that UndoState object.
+     * and so this action should use knowledge of the makeup of that object to restore state.
      * During this call, the model that was selected when makeUndoState was called will be locked
-     * in write mode, and on returning true the events passed to storeUndo will be emitted.
-     * On return, memory used by the passed in UndoState object is reclaimed.
+     * in write mode. After returning, the events originally passed to storeUndo are emitted and
+     * the memory used by the UndoState object is reclaimed.
     */
     virtual void restoreState( const UndoState*);   // Has default ERROR implementation!
 
@@ -234,7 +237,8 @@ private:
     const QKeySequence _keys;
     bool _init;
     bool _doasync;
-    bool _isRunning;
+    bool _reentrant;
+    int _runCount;
     bool _reqConfirm;
     bool _unlocked; // If true, this action is enabled (true by default)
     Event _pevents; // Purge events
@@ -257,7 +261,7 @@ private:
      * to determine which actions can be set ready. Running actions refresh themselves
      * immediately after doAfterAction() returns and before the final onEvent is emitted.
      */
-    bool isRunning() const { return _isRunning;}
+    bool isRunning() const { return _runCount > 0;}
 
     friend class FaceActionWorker;
     friend class FaceActionManager;

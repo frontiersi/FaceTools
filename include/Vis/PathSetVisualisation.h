@@ -34,28 +34,19 @@ public:
     bool belongs( const vtkProp*, const FV*) const override;
     bool isAvailable( const FM*) const override;
 
-    bool hasView( const FV*) const;
-
     void apply( FV*, const QPoint* mc=nullptr) override;
     bool purge( FV*, Action::Event) override;
 
     void setVisible( FV*, bool) override;
     bool isVisible( const FV*) const override;
 
-    // Creates and shows the given path across all FaceViews for the FaceModel.
-    void addPath( const FM*, int pathId);
-
     // Update the position of the handles for the given path.
-    void updatePath( const FM*, int pathId);
-
-    // Refresh visualisation of paths for the given FaceModel.
-    void refresh( const FM*);
+    void movePath( const FM*, int pathId);
 
     // Returns the handle for a path by looking for it by prop.
     PathView::Handle* pathHandle( const FV*, const vtkProp*) const;
     // Returns handles 0 or 1 for the given path.
     PathView::Handle* pathHandle0( const FV*, int pathID) const;
-    PathView::Handle* pathHandle1( const FV*, int pathID) const;
 
     // Update text info from the specified path from the given model.
     // Text displayed at display coordinates x,y.
@@ -66,9 +57,12 @@ public:
 
     void syncActorsToData( const FV*, const cv::Matx44d&) override;
 
+    void checkState( const FV*) override;
+
 private:
     // The paths associated with a FV.
     std::unordered_map<const FV*, PathSetView*> _views;
+    bool _hasView( const FV*) const;
 };  // end class
 
 }}   // end namespace

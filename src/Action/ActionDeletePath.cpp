@@ -44,6 +44,8 @@ ActionDeletePath::ActionDeletePath( const QString& dn, const QIcon& ico,
 bool ActionDeletePath::checkEnable( Event)
 {
     const FV* fv = _pint->view();
+    if ( MS::interactionMode() == IMode::ACTOR_INTERACTION || !fv)
+        return false;
     return fv == MS::selectedView() && _pint->hoverPath();
 }   // end checkEnabled
 

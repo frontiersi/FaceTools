@@ -244,17 +244,42 @@ int Ethnicities::codeMix( const IntSet& cmix)
     if ( cmix.empty())
         return 0;
 
-    int pc = *cmix.begin(); // Parent ethnic code of hopefully all members of vmix
     if ( cmix.size() == 1)
-        return pc;  // Own parent
+        return *cmix.begin();
 
-    for ( int cc : cmix)
+    int bp = 0; // Set to be the best (most narrow) parent over all elements of cmix
+
+    for ( int pc : cmix)
     {
-        if ( _findSharedParent( pc, cc, true) < 0)  // Break if no parent found
-            break;
+        for ( int cc : cmix)
+        {
+            if ( _findSharedParent( pc, cc, true) < 0)  // pc not a parent of cc? then try a different parent
+            {
+                pc = 0;
+                break;
+            }   // end if
+        }   // end for
+
+        if ( pc > 0)
+        {
+            // If pc is a parent, and so is bp, set bp to be the better (more narrow) parent.
+            if ( bp == 0)   // pc always better than nothing
+                bp = pc;
+            else if ( pc != bp)
+            {
+                // If bp is a parent of pc, then pc must be more narrow and vice versa
+                if ( parentDegree( bp, pc, true) >= 0)
+                    bp = pc;
+#ifndef NDEBUG
+                else
+                    assert( parentDegree( pc, bp, true) >= 0);
+#endif
+            }   // end else
+        }   // end if
+
     }   // end for
 
-    return pc;
+    return bp;
 }   // end codeMix
 
 
@@ -266,6 +291,9 @@ int Ethnicities::parentDegree( int pc, int cc, bool allBelong)
 
 int Ethnicities::_findSharedParent( int& pc, int cc, bool allBelong)
 {
+    if ( pc == 0 || cc == 0)
+        return -1;
+
     int nlvls = -1;
     IntSet pgrp;
     // If cc is not a child of pc, keep setting pc to be higher in the hierarchy

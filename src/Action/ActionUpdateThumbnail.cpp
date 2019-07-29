@@ -48,8 +48,8 @@ const cv::Mat ActionUpdateThumbnail::thumbnail( const FM* fm)
         return _thumbs.at(fm);
     fm->lockForRead();
     _omv.setModel( fm->model());
-    const cv::Vec3f centre = fm->icentre();  // Calculated from landmarks if available
-    const RFeatures::Orientation on = fm->orientation();    // Calculated from landmarks if available
+    const cv::Vec3f centre = fm->centre();
+    const RFeatures::Orientation on = fm->orientation();
     fm->unlock();
     const cv::Vec3f cpos = (500 * on.nvec()) + centre;
     const RFeatures::CameraParams cam( cpos, centre, on.uvec(), 30);

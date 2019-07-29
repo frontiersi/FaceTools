@@ -96,23 +96,36 @@ bool Path::recalculate( const FM* fm)
 
 PTree& FaceTools::operator<<( PTree& pathsNode, const Path& p)
 {
-    PTree& pnode = pathsNode.add("path","");
-    pnode.put( "<xmlattr>.name", p.name);
-    RFeatures::putNamedVertex( pnode, "v0", p.vtxs.front());
-    RFeatures::putNamedVertex( pnode, "v1", p.vtxs.back());
-    PTree& metrics = pnode.add( "metrics", "");
-    metrics.put("elen", p.elen);
-    metrics.put("psum", p.psum);
+    PTree& pnode = pathsNode.add("Path","");
+    pnode.put( "Name", p.name);
+    RFeatures::putNamedVertex( pnode, "V0", p.vtxs.front());
+    RFeatures::putNamedVertex( pnode, "V1", p.vtxs.back());
+    PTree& metrics = pnode.add( "Metrics", "");
+    metrics.put("Elen", p.elen);
+    metrics.put("Psum", p.psum);
     return pathsNode;
 }   // end operator<<
 
 
 const PTree& FaceTools::operator>>( const PTree& pnode, Path& p)
 {
-    p.name = pnode.get<std::string>( "<xmlattr>.name");
+    p.name = "";
+    if ( pnode.count("Name") > 0)
+        p.name = pnode.get<std::string>( "Name");
+    else if ( pnode.count("<xmlattr>.name") > 0)
+        p.name = pnode.get<std::string>( "<xmlattr>.name");
+
     p.vtxs.resize(2);
-    p.vtxs.front() = RFeatures::getVertex( pnode.get_child("v0"));
-    p.vtxs.back()  = RFeatures::getVertex( pnode.get_child("v1"));
+    p.vtxs.front() = p.vtxs.back() = cv::Vec3f(0,0,0);
+    if ( pnode.count("v0") > 0)
+        p.vtxs.front() = RFeatures::getVertex( pnode.get_child("v0"));
+    else if ( pnode.count("V0") > 0)
+        p.vtxs.front() = RFeatures::getVertex( pnode.get_child("V0"));
+    if ( pnode.count("v1") > 0)
+        p.vtxs.back()  = RFeatures::getVertex( pnode.get_child("v1"));
+    else if ( pnode.count("V1") > 0)
+        p.vtxs.back()  = RFeatures::getVertex( pnode.get_child("V1"));
+
     // elen and plen need calculate via a call to recalculate
     return pnode;
 }   // end operator>>

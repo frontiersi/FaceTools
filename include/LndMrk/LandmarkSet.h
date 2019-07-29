@@ -31,7 +31,16 @@ class FaceTools_EXPORT LandmarkSet
 {
 public:
     using Ptr = std::shared_ptr<LandmarkSet>;
+    using CPtr = std::shared_ptr<const LandmarkSet>;
+
     static Ptr create();
+
+    /**
+     * Create and return a mean set of landmarks from the provided set.
+     * The client should call moveToSurface passing a model on the returned
+     * landmarks set if is desirable for the points be coincident with a surface.
+     */
+    static Ptr createMean( const std::unordered_set<const LandmarkSet*>&);
 
     Ptr deepCopy() const;
 
@@ -48,7 +57,7 @@ public:
     // Remove all landmarks from the set.
     void clear();
 
-    // Return the full set of landmarks for one lateral.
+    // Return the full set of landmarks for one lateral. These landmarks are untransformed.
     const std::unordered_map<int, cv::Vec3f>& lateral( FaceLateral) const;
 
     // Return the position of the landmark for the given lateral.

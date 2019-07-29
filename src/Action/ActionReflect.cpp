@@ -50,7 +50,7 @@ bool ActionReflect::doBeforeAction( Event)
     _ev = Event::AFFINE_CHANGE;
     FM* fm = MS::selectedModel();
     fm->lockForRead();
-    if ( !fm->landmarks().empty())  // Will also have to invert normals if landmarks present
+    if ( !fm->currentAssessment()->landmarks().empty())  // Will also have to invert normals if landmarks present
         _ev.add( {Event::LANDMARKS_CHANGE, Event::GEOMETRY_CHANGE});
     fm->unlock();
     return true;
@@ -69,11 +69,11 @@ void ActionReflect::doAction( Event)
                                      0, 0, 1, 0,
                                      0, 0, 0, 1);
 
+    const Landmark::LandmarkSet& lmks = fm->currentAssessment()->landmarks();
     // If the model has landmarks, then reflect through the model's median plane.
-    if ( !fm->landmarks().empty())
+    if ( !lmks.empty())
     {
         // Translate to origin, reflect through YZ plane, then translate back.
-        const Landmark::LandmarkSet& lmks = fm->landmarks();
         const cv::Matx44d m = lmks.orientation().asMatrix( lmks.fullMean());
         rmat = m * rmat * m.inv();
         ActionInvertNormals::invertNormals( fm->wmodel());
@@ -88,7 +88,7 @@ void ActionReflect::doAction( Event)
 void ActionReflect::doAfterAction( Event)
 {
     QString smsg = "Reflected model through YZ plane.";
-    if ( !MS::selectedModel()->landmarks().empty())
+    if ( !MS::selectedModel()->currentAssessment()->landmarks().empty())
         smsg = "Reflected face through midsagittal plane.";
     MS::showStatus( smsg, 5000);
     MS::setInteractionMode( IMode::CAMERA_INTERACTION);

@@ -29,14 +29,77 @@ using LDMRK_PAIR = std::pair<int, cv::Vec3f>;
 #include <algorithm>
 #include <cassert>
 
+
+namespace  {
+void addLandmarks( const std::unordered_map<int, cv::Vec3f>& vs, FaceTools::FaceLateral lat, LandmarkSet::Ptr mlmks)
+{
+    for ( const auto& p : vs)
+    {
+        const int lmid = p.first;
+        cv::Vec3f v(0,0,0);
+        if ( mlmks->has(lmid, lat))
+            v = mlmks->upos(lmid, lat);
+        v += p.second;
+        mlmks->set( lmid, v, lat);
+    }   // end for
+}   // end addLandmarks
+
+
+void setAverage( std::unordered_map<int, cv::Vec3f>& lat, int n)
+{
+    const double sf = 1.0/n;
+    for ( auto& p : lat)
+    {
+        const cv::Vec3f v = p.second * sf;
+        lat[p.first] = v;
+    }   // end for
+}   // end setAverage
+
+}   // end namespace
+
+
+LandmarkSet::Ptr LandmarkSet::createMean( const std::unordered_set<const LandmarkSet*>& lms)
+{
+    LandmarkSet::Ptr mlmks = LandmarkSet::create();
+    cv::Matx44d tmat = cv::Matx44d::zeros();
+
+    int n = 0;
+    for ( const LandmarkSet* lmks : lms)
+    {
+        if ( lmks->empty())
+            continue;
+
+        n++;
+        tmat += lmks->transformMatrix();
+        const std::unordered_map<int, cv::Vec3f>& llat = lmks->lateral(FACE_LATERAL_LEFT);
+        const std::unordered_map<int, cv::Vec3f>& mlat = lmks->lateral(FACE_LATERAL_MEDIAL);
+        const std::unordered_map<int, cv::Vec3f>& rlat = lmks->lateral(FACE_LATERAL_RIGHT);
+
+        addLandmarks( llat, FACE_LATERAL_LEFT, mlmks);
+        addLandmarks( mlat, FACE_LATERAL_MEDIAL, mlmks);
+        addLandmarks( rlat, FACE_LATERAL_RIGHT, mlmks);
+    }   // end for
+
+    if ( n > 0)
+    {
+        setAverage( mlmks->_lmksL, n);
+        setAverage( mlmks->_lmksM, n);
+        setAverage( mlmks->_lmksR, n);
+        // Set the mean transform matrix
+        tmat *= 1.0/n;
+        mlmks->addTransformMatrix(tmat);
+    }   // end if
+
+    return mlmks;
+}   // end createMean
+
+
 LandmarkSet::Ptr LandmarkSet::create() { return Ptr( new LandmarkSet, [](LandmarkSet* d){ delete d;});}
 
 
 LandmarkSet::Ptr LandmarkSet::deepCopy() const
 {
-    LandmarkSet* lmks = new LandmarkSet;
-    *lmks = *this;
-    return Ptr( lmks, [](LandmarkSet* d){ delete d;});
+    return Ptr( new LandmarkSet(*this), [](LandmarkSet* d){ delete d;});
 }   // end deepCopy
 
 

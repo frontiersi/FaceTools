@@ -36,7 +36,7 @@ ActionResetDetection::ActionResetDetection( const QString& dn, const QIcon& icon
 bool ActionResetDetection::checkEnable( Event)
 {
     const FV* fv = ModelSelector::selectedView();
-    return fv && !fv->data()->landmarks().empty();
+    return fv && !fv->data()->currentAssessment()->landmarks().empty();
 }   // end checkEnabled
 
 
@@ -57,7 +57,7 @@ void ActionResetDetection::doAction( Event)
     FM* fm = ModelSelector::selectedModel();
     fm->lockForWrite();
     fm->setLandmarks( Landmark::LandmarkSet::create());
-    fm->clearMetrics();
+    fm->currentAssessment()->clearMetrics();
     fm->fixOrientation();
     fm->unlock();
 

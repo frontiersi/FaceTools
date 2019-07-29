@@ -29,8 +29,13 @@ class FaceTools_EXPORT LandmarksInteractor : public FaceViewInteractor
 public:
     explicit LandmarksInteractor( Vis::LandmarksVisualisation&);
 
+    // Return the ID of the landmark that's currently being moved
+    // and set out parameter lat to the FaceLateral of the landmark.
+    int dragging( FaceLateral& lat) const { lat = _lat; return _drag;}
+
 signals:
-    void onUpdated( int);   // Provides ID of updated landmark.
+    void onStartedDrag( int);
+    void onFinishedDrag( int);
 
 protected:
     void enterProp( Vis::FV*, const vtkProp*) override;

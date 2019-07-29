@@ -39,30 +39,29 @@ public:
     bool isVisible() const;                             // Returns true iff ANY path shown
     void setVisible( bool, ModelViewer*);               // Show/hide all paths (also sets current viewer)
 
-    void setText( int pathID, int xpos, int ypos);
+    void setText( const Path&, int xpos, int ypos);
     void setTextVisible( bool);
-    void showPath( bool, int pathID);                   // Show/hide individual path
-    bool isPathVisible( int pathID) const;              // Returns true iff a particular path is shown
-    const std::unordered_set<int>& visible() const;     // Returns the set of visible paths
 
-    PathView::Handle* addPath( int pathId);             // Add path from dataset returning a handle (both in same position)
+    void addPath( const Path&);
+    void movePath( const Path&);
+    void erasePath( int pathId);
+
     PathView::Handle* handle( const vtkProp*) const;    // Return the handle mapped to the given prop (if any).
     PathView* pathView( int pathId) const;              // Return the requested path view.
 
-    // Update the given path from the PathSet (remove if necessary).
-    void updatePath( int pathId, const cv::Matx44d& d=cv::Matx44d::eye());
-
     // Refresh all path visualisations to match _paths.
-    void refresh( const cv::Matx44d& d=cv::Matx44d::eye());
+    void sync( const PathSet&, const cv::Matx44d&);
+
+    void updateTextColours();
 
 private:
-    const PathSet& _paths;
     ModelViewer *_viewer;
     std::unordered_map<int, PathView*> _views;
     std::unordered_map<const vtkProp*, PathView::Handle*> _handles;
     std::unordered_set<int> _visible;   // Which paths are visible
     vtkNew<vtkTextActor> _text; // Bottom right text
 
+    void _showPath( bool, int pathID);                   // Show/hide individual path
     PathSetView( const PathSetView&) = delete;
     void operator=( const PathSetView&) = delete;
 };  // end class

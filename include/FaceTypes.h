@@ -34,7 +34,6 @@
 #include <unordered_map>
 
 /************** FaceTools type and using declarations **************/
-
 namespace FaceTools {
 
 class FaceModel;
@@ -133,32 +132,33 @@ using FAM = FaceActionManager;
 enum struct Event : int
 {
     NONE = 0x0,
-    USER = 0x1,                 // Events triggered explicitly by the user (only used internally!)
-    LOADED_MODEL = 0x2,         // Can be used to specify that an action should process on load (via FaceAction::addProcessOn).
-    SAVED_MODEL = 0x4,          // Emitted immediately after saving a model or models.
-    CLOSED_MODEL = 0x8,         // Emitted immediately after closing a model or models.
-    FACE_DETECTED = 0x10,       // After face has been successfully detected and orientation and landmarks set.
-    GEOMETRY_CHANGE = 0x20,     // Non-affine change to the underlying geometry of the model without changing graph connectivity.
-    CONNECTIVITY_CHANGE = 0x40, // Emit together with GEOMETRY_CHANGE to notify that graph connectivity has been altered.
-    AFFINE_CHANGE = 0x80,       // Affine transform change to the model data (shear, scale, rotate, reflect, translate).
-    ORIENTATION_CHANGE = 0x100, // When the model's orientation (transform) becomes fixed.
-    SURFACE_DATA_CHANGE = 0x200,// Change to some surface mapped data.
-    LANDMARKS_CHANGE = 0x400,   // Change to landmark(s) (implies orientation change).
-    METRICS_CHANGE = 0x800,     // Change to measurements - either measurements taken, or measurement parameters.
-    STATISTICS_CHANGE = 0x1000, // Change to statistics.
-    PATHS_CHANGE = 0x2000,      // Change to drawn paths.
-    VIEW_CHANGE = 0x4000,       // Changes to views of the data (visualisations etc) - NOT CAMERA.
-    VIEWER_CHANGE = 0x8000,     // Changed viewer (or the viewer's state) in which view is shown.
-    CAMERA_CHANGE = 0x10000,    // Changes to camera parameters within a viewer.
-    ACTOR_MOVE = 0x20000,       // Change to the position of a visualisation actor through interaction.
-    REPORT_CREATED = 0x40000,   // A report was just created.
-    METADATA_CHANGE = 0x80000,  // Any of a model's metadata changed (including age/ethnicity).
-    U3D_MODEL_CHANGE = 0x100000,// The U3D model associated with a FaceModel has been updated.
-    ALL_VIEWS = 0x200000,       // Specify that the event relates to all models in the selected viewer.
-    ALL_VIEWERS = 0x400000,     // Specify that all viewers should be considered as "selected" and partaking in the event.
-    ACT_CANCELLED = 0x800000,   // An action was cancelled from its doBeforeAction function.
-    ACT_COMPLETE = 0x1000000,   // An action completed after running doAfterAction and refreshing its state.
-    MODEL_SELECT = 0x2000000    // When a model has just been selected.
+    USER = 0x1,                     // Events triggered explicitly by the user (only used internally!)
+    LOADED_MODEL = 0x2,             // Can be used to specify that an action should process on load (via FaceAction::addProcessOn).
+    SAVED_MODEL = 0x4,              // Emitted immediately after saving a model or models.
+    CLOSED_MODEL = 0x8,             // Emitted immediately after closing a model or models.
+    FACE_DETECTED = 0x10,           // After face has been successfully detected and orientation and landmarks set.
+    GEOMETRY_CHANGE = 0x20,         // Non-affine change to the underlying geometry of the model without changing graph connectivity.
+    CONNECTIVITY_CHANGE = 0x40,     // Emit together with GEOMETRY_CHANGE to notify that graph connectivity has been altered.
+    AFFINE_CHANGE = 0x80,           // Affine transform change to the model data (shear, scale, rotate, reflect, translate).
+    ORIENTATION_CHANGE = 0x100,     // When the model's orientation (transform) becomes fixed.
+    SURFACE_DATA_CHANGE = 0x200,    // Change to some surface mapped data.
+    LANDMARKS_CHANGE = 0x400,       // Change to landmark(s) (implies orientation change).
+    METRICS_CHANGE = 0x800,         // Change to measurements - either measurements taken, or measurement parameters.
+    STATISTICS_CHANGE = 0x1000,     // Change to statistics.
+    PATHS_CHANGE = 0x2000,          // Change to drawn paths.
+    VIEW_CHANGE = 0x4000,           // Changes to views of the data (visualisations etc) - NOT CAMERA.
+    VIEWER_CHANGE = 0x8000,         // Changed viewer (or the viewer's state) in which view is shown.
+    CAMERA_CHANGE = 0x10000,        // Changes to camera parameters within a viewer.
+    ACTOR_MOVE = 0x20000,           // Change to the position of a visualisation actor through interaction.
+    REPORT_CREATED = 0x40000,       // A report was just created.
+    METADATA_CHANGE = 0x80000,      // Any of a model's metadata changed (including age/ethnicity).
+    ASSESSMENT_CHANGE = 0x100000,   // Assessment change either in name, notes, landmarks, or path data.
+    U3D_MODEL_CHANGE = 0x200000,    // The U3D model associated with a FaceModel has been updated.
+    ALL_VIEWS = 0x400000,           // Specify that the event relates to all models in the selected viewer.
+    ALL_VIEWERS = 0x800000,         // Specify that all viewers should be considered as "selected" and partaking in the event.
+    ACT_CANCELLED = 0x1000000,      // An action was cancelled from its doBeforeAction function.
+    ACT_COMPLETE = 0x2000000,       // An action completed after running doAfterAction and refreshing its state.
+    MODEL_SELECT = 0x4000000        // When a model has just been selected.
 };  // end enum
 
 // Make Event available to Qt's meta type system.
@@ -179,31 +179,24 @@ struct FaceTools_EXPORT EventGroup
     EventGroup& operator=( const EventGroup&) = default;
     virtual ~EventGroup(){}
 
-    void clear();   // Reset back to Event::NONE
+    Event event() const { return _E;}
+
+    // Return human readable name of the event(s).
+    std::string name() const;
 
     // Combine event(s) with this one and return the union.
     Event add( EventGroup);
 
-    // Returns human readable name of the event.
-    std::string name() const;
-
-    // Returns true iff e & _E (_E contains e)
+    // Returns true if there exists an intersection of some subset of
+    // events between this event group and the parameter event group.
     bool has( EventGroup e) const;
 
-    // Returns true iff e == _E (_E is only e)
+    // Returns true iff e == _E (_E is exactly e)
     bool is( EventGroup e) const;
-
-    Event event() const { return _E;}
-
-    void operator()();
-
-protected:
-    virtual void checkEvent( Event){}
 
 private:
     Event _E;
 };  // end struct
-
 
 }   // end namespace (Action)
 
@@ -216,6 +209,9 @@ using MC = MetricCalculator;
 }   // end namespace (Metric)
 
 }   // end namespace (FaceTools)
+
+Q_DECLARE_METATYPE( FaceTools::FaceLateral)
+Q_DECLARE_METATYPE( cv::Vec3f);
 
 /**********************************************************************/
 

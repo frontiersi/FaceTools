@@ -46,8 +46,8 @@ ChartDialog::ChartDialog( QWidget *parent) :
     _ui->setupUi(this);
     setWindowTitle( parent->windowTitle() + " | Metric Growth Curves");
 
-    setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
-    setParent( parent, windowFlags() & ~Qt::WindowStaysOnTopHint);
+    //setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+    //setParent( parent, windowFlags() & ~Qt::WindowStaysOnTopHint);
 
     _ui->frame->layout()->addWidget( _cview);
     _cview->setRenderHint( QPainter::Antialiasing);
@@ -236,7 +236,7 @@ void ChartDialog::_updateChart()
     {
         const size_t d = static_cast<size_t>(_ui->dimensionSpinBox->value() - 1);   // Dimension to display
         Metric::Chart* chart = new Metric::Chart( ngd, d, MS::selectedModel());
-        chart->addTitle( mc->name());
+        chart->addTitle();
         _cview->setChart( chart);
     }   // end if
     else

@@ -84,13 +84,13 @@ int PhenotypeManager::load( const QString& sdir)
 }   // end load
 
 
-IntSet PhenotypeManager::discover( const FM* fm)
+IntSet PhenotypeManager::discover( const FM* fm, int aid)
 {
     IntSet dids;
     for ( const auto& p : _hpos)
     {
         Phenotype::Ptr hpo = p.second;
-        if ( hpo->isPresent(fm))
+        if ( hpo->isPresent(fm, aid))
             dids.insert( hpo->id());
     }   // end for
     return dids;

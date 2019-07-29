@@ -40,7 +40,7 @@ PathSet::Ptr PathSet::deepCopy() const
 
 
 // private
-PathSet::PathSet() : _sid(0), _aid(-1)
+PathSet::PathSet() : _sid(0)//, _aid(-1)
 {
 }   // end ctor
 
@@ -69,13 +69,6 @@ int PathSet::addPath( const cv::Vec3f& v)
 {
     return setPath( Path( _sid++, v));
 }   // end addPath
-
-
-void PathSet::setActivePath( int pid)
-{
-    _aid = pid;
-    assert( _ids.count(pid) > 0);
-}   // end setActivePath
 
 
 bool PathSet::removePath( int id)

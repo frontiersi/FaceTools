@@ -106,11 +106,12 @@ Phenotype::Ptr Phenotype::load( const QString& fpath)
 }   // end load
 
 
-bool Phenotype::hasMeasurements( const FM* fm) const
+bool Phenotype::_hasMeasurements( const FM* fm, int aid) const
 {
-    const MetricSet& mlat = fm->cmetrics();
-    const MetricSet& llat = fm->cmetricsL();
-    const MetricSet& rlat = fm->cmetricsR();
+    FaceAssessment::CPtr ass = aid < 0 ? fm->currentAssessment() : fm->assessment(aid);
+    const MetricSet& mlat = ass->cmetrics();
+    const MetricSet& llat = ass->cmetricsL();
+    const MetricSet& rlat = ass->cmetricsR();
 
     // Only evaluate if all the measurements are available for this indication
     for ( int mid : _metrics)
@@ -129,23 +130,24 @@ bool Phenotype::hasMeasurements( const FM* fm) const
     }   // end for
 
     return true;
-}   // end hasMeasurements
+}   // end _hasMeasurements
 
 
-bool Phenotype::isPresent( const FM* fm) const
+bool Phenotype::isPresent( const FM* fm, int aid) const
 {
     if ( !_determine.valid())
         return false;
 
-    if ( !hasMeasurements(fm))
+    if ( !_hasMeasurements(fm, aid))
         return false;
 
     bool present = false;
     try
     {
-        const MetricSet* mlat = &fm->cmetrics();
-        const MetricSet* llat = &fm->cmetricsL();
-        const MetricSet* rlat = &fm->cmetricsR();
+        FaceAssessment::CPtr ass = aid < 0 ? fm->currentAssessment() : fm->assessment(aid);
+        const MetricSet& mlat = ass->cmetrics();
+        const MetricSet& llat = ass->cmetricsL();
+        const MetricSet& rlat = ass->cmetricsR();
         sol::function_result result = _determine( fm->age(), mlat, llat, rlat);
         if ( result.valid())
             present = result;
@@ -186,7 +188,7 @@ bool Phenotype::isAgeMatch( double age) const
     {
         MC::Ptr mc = MCM::metric(mid);
         GrowthData::CPtr gd = mc->currentGrowthData();  // May be null
-        if ( !gd->isWithinAgeRange(age))
+        if ( !gd || !gd->isWithinAgeRange(age))
             return false;
     }   // end for
     return true;

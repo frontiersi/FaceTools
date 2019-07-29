@@ -32,11 +32,14 @@ public:
                      Interactor::PathsInteractor::Ptr,
                      const QKeySequence& ks=QKeySequence());
 
-    QString toolTip() const override { return "Toggle the showing of any custom path measurements.";}
+    QString toolTip() const override { return "Show custom point-to-point measurements if present.";}
 
 protected:
     bool checkState( Event) override;
     void doAction( Event) override;
+
+    UndoState::Ptr makeUndoState() const override;
+    void restoreState( const UndoState*) override;
 
 private:
     Interactor::PathsInteractor::Ptr _pint;

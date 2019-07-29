@@ -42,6 +42,8 @@ ActionRenamePath::ActionRenamePath( const QString& dn, const QIcon& ico, PathsIn
 bool ActionRenamePath::checkEnable( Event)
 {
     const FV* fv = _pint->view();
+    if ( MS::interactionMode() == IMode::ACTOR_INTERACTION || !fv)
+        return false;
     return fv == MS::selectedView() && _pint->hoverPath();
 }   // end checkEnabled
 
@@ -55,7 +57,7 @@ void ActionRenamePath::doAction( Event)
     assert(pid >= 0);
 
     fm->lockForRead();
-    QString clabel = fm->paths().path(pid)->name.c_str();
+    QString clabel = fm->currentAssessment()->paths().path(pid)->name.c_str();
     fm->unlock();
 
     QWidget* prnt = static_cast<QWidget*>(parent());

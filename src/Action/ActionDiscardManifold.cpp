@@ -53,7 +53,7 @@ bool manifoldIdInRange( int mid)
 bool ActionDiscardManifold::checkEnable( Event)
 {
     bool enabled = false;
-    if ( MS::isViewSelected())
+    if ( MS::isViewSelected() && MS::interactionMode() == IMode::CAMERA_INTERACTION)
     {
         const FV* fv = MS::selectedView();
         const FM* fm = fv->data();

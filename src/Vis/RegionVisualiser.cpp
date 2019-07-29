@@ -142,10 +142,10 @@ bool RegionVisualiser::isAvailable( const FM* fm) const
     using SLMK = Landmark::SpecificLandmark;
     bool b0 = true;
     if ( _lmks0)
-        b0 = std::all_of( std::begin(*_lmks0), std::end(*_lmks0), [fm]( const SLMK& lm){ return fm->landmarks().has(lm);});
+        b0 = std::all_of( std::begin(*_lmks0), std::end(*_lmks0), [fm]( const SLMK& lm){ return fm->currentAssessment()->landmarks().has(lm);});
     bool b1 = true;
     if ( _lmks1)
-        b1 = std::all_of( std::begin(*_lmks1), std::end(*_lmks1), [fm]( const SLMK& lm){ return fm->landmarks().has(lm);});
+        b1 = std::all_of( std::begin(*_lmks1), std::end(*_lmks1), [fm]( const SLMK& lm){ return fm->currentAssessment()->landmarks().has(lm);});
     return b0 && b1;
 }   // end isAvailable
 
@@ -172,7 +172,7 @@ void RegionVisualiser::applyActor( const FV *fv, const LmkList* lmks, std::unord
     const FM* fm = fv->data();
     std::vector<cv::Vec3f> vtxs;
     for ( const auto& lmk : *lmks)
-        vtxs.push_back(fm->landmarks().pos(lmk));
+        vtxs.push_back(fm->currentAssessment()->landmarks().pos(lmk));
     vtkActor* actor = actors[fv] = RVTK::VtkActorCreator::generateLineActor(vtxs, true);
     setActorProperties(actor);
     fv->viewer()->add( actor);

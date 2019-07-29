@@ -25,6 +25,7 @@
 using FaceTools::PathSet;
 using FaceTools::FaceModel;
 using FaceTools::Landmark::LandmarkSet;
+using FaceTools::FaceAssessment;
 using FaceTools::FMVS;
 using FaceTools::Vis::VisualisationLayers;
 using FaceTools::Vis::BaseVisualisation;
@@ -38,24 +39,22 @@ int FaceModel::MAX_MANIFOLDS(1);
 
 
 FaceModel::FaceModel( ObjModel::Ptr model)
-    : _savedMeta(false), _savedModel(false), _notes(""), _source(""), _studyId(""),
+    : _savedMeta(false), _savedModel(false), _source(""), _studyId(""),
       _dob( QDate::currentDate()), _sex(FaceTools::MALE_SEX | FaceTools::FEMALE_SEX),
       _methnicity(0), _pethnicity(0), _cdate( QDate::currentDate())
 {
     assert(model);
-    _landmarks = LandmarkSet::create();
-    _paths = PathSet::create();
+    setAssessment( FaceAssessment::create(0));
     update(model);
 }   // end ctor
 
 
 FaceModel::FaceModel()
-    : _savedMeta(false), _savedModel(false), _notes(""), _source(""), _studyId(""),
+    : _savedMeta(false), _savedModel(false), _source(""), _studyId(""),
       _dob( QDate::currentDate()), _sex(FaceTools::MALE_SEX | FaceTools::FEMALE_SEX),
       _methnicity(0), _pethnicity(0), _cdate( QDate::currentDate())
 {
-    _landmarks = LandmarkSet::create();
-    _paths = PathSet::create();
+    setAssessment( FaceAssessment::create(0));
 }   // end ctor
 
 
@@ -106,8 +105,12 @@ void FaceModel::update( ObjModel::Ptr model, bool updateConnectivity)
     setModelSaved(false);
     _model = model;
     _kdtree = ObjModelKDTree::create( *_model);
-    _paths->recalculate( this);   // Ensure stored paths remap to the new surface.
-    //moveLandmarksToSurface();   // Actions must now do this explicitly
+
+    // Recalculate path positions on the model over all assessments
+    for ( auto& ass : _ass)
+        ass.get()->recalculatePaths(this);
+
+    moveLandmarksToSurface();
     _makeOrientationBounds();
 }   // end update
 
@@ -121,8 +124,9 @@ void FaceModel::_makeOrientationBounds()
     cv::Matx44d T = _model->transformMatrix();  // Identity matrix normally
     //std::cerr << "_makeOrientationBounds: " << std::endl;
     //std::cerr << T << std::endl;
-    if ( !_landmarks->empty())
-        T = _landmarks->orientation().asMatrix( _landmarks->fullMean());
+    LandmarkSet::CPtr lmks = makeMeanLandmarksSet();
+    if ( !lmks->empty())
+        T = lmks->orientation().asMatrix( lmks->fullMean());
     const size_t nm = _manifolds->count();
     _bnds.resize(nm+1);
     for ( size_t i = 0; i < nm; ++i)
@@ -133,7 +137,7 @@ void FaceModel::_makeOrientationBounds()
 
     // If no landmarks, make the bounds entry at zero the union of the manifold bounding cuboids
     // otherwise the bounds at zero represents a box around the head of the model.
-    if ( _landmarks->empty())
+    if ( lmks->empty())
     {
         _bnds[0] = _bnds[1]->deepCopy();
         for ( size_t i = 2; i < nm+1; ++i)
@@ -142,16 +146,16 @@ void FaceModel::_makeOrientationBounds()
     else
     {
         // Get the landmark mean, superior and inferior means in standard position
-        cv::Vec3f lm = _landmarks->fullMean();
-        cv::Vec3f sm = _landmarks->superiorMean();
-        cv::Vec3f im = _landmarks->inferiorMean();
+        cv::Vec3f lm = lmks->fullMean();
+        cv::Vec3f sm = lmks->superiorMean();
+        cv::Vec3f im = lmks->inferiorMean();
         const cv::Matx44d iT = T.inv();
         RFeatures::transform( iT, lm);
         RFeatures::transform( iT, sm);
         RFeatures::transform( iT, im);
-        const double xlen = 2.2*cv::norm(_landmarks->eyeVec());
-        const double ylen = 2.2*cv::norm(sm-im);
-        const double zlen = ylen;
+        const double xlen = 2.5*cv::norm( lmks->eyeVec());
+        const double ylen = 2.6*cv::norm(sm-im);
+        const double zlen = 1.1 * ylen;
         cv::Vec3d minc(-xlen/2, -ylen/2, -0.8*zlen);
         cv::Vec3d maxc(xlen/2, ylen/2, 0.2*zlen);
         RFeatures::transform( T, minc);
@@ -175,7 +179,8 @@ void FaceModel::eraseView( FV* fv)
 
 void FaceModel::_syncOrientationBounds()
 {
-    const cv::Matx44d T = _landmarks->orientation().asMatrix( _landmarks->fullMean());
+    LandmarkSet::CPtr lmks = makeMeanLandmarksSet();
+    const cv::Matx44d T = lmks->orientation().asMatrix( lmks->fullMean());
     // Update the bounds
     for ( auto& b : _bnds)
         b->setTransformMatrix(T);
@@ -190,18 +195,12 @@ void FaceModel::addTransformMatrix( const cv::Matx44d& T)
     for ( auto& b : _bnds)
         b->addTransformMatrix(T);
 
-    if ( !_landmarks->empty())
-    {
-        _landmarks->addTransformMatrix(T);
-        setMetaSaved( false);
-    }   // end if
+    bool addedTransform = false;
+    for ( auto& a : _ass)
+        addedTransform = a.get()->addTransform(T);
 
-    if ( !_paths->empty())
-    {
-        _paths->transform(T);
+    if ( addedTransform)
         setMetaSaved( false);
-    }   // end if
-
     setModelSaved( false);
 }   // end addTransformMatrix
 
@@ -219,51 +218,27 @@ void FaceModel::setMetaSaved( bool s) { _savedMeta = s;}
 void FaceModel::setModelSaved( bool s) { _savedModel = s;}
 
 
-cv::Vec3f FaceModel::icentre() const
+cv::Vec3f FaceModel::centre() const
 {
-    cv::Vec3f c;
-    if (!_landmarks->empty())
-        c = _landmarks->fullMean();
-    else
-    {
-        const cv::Matx44d& T = _bnds[0]->transformMatrix();
-        c = cv::Vec3f( float(T(0,3)), float(T(1,3)), float(T(2,3)));
-    }   // end else
-    return c;
-}   // end icentre
+    assert(!_bnds.empty());
+    const cv::Matx44d& T = _bnds[0]->transformMatrix();
+    return cv::Vec3f( float(T(0,3)), float(T(1,3)), float(T(2,3)));
+}   // end centre
 
 
 Orientation FaceModel::orientation() const
 {
-    Orientation on;
-    if ( !_bnds.empty())
-        on = Orientation( _bnds[0]->transformMatrix());
-    return on;
+    assert(!_bnds.empty());
+    return Orientation( _bnds[0]->transformMatrix());
 }   // end orientation
 
 
-cv::Vec3f FaceModel::findClosestSurfacePoint( const cv::Vec3f& v) const
-{
-    return FaceTools::toSurface( this, v);
-}   // end findClosestSurfacePoint
-
-
+cv::Vec3f FaceModel::findClosestSurfacePoint( const cv::Vec3f& v) const { return FaceTools::toSurface( this, v);}
 int FaceModel::findVertex( const cv::Vec3f& v) const { return _kdtree->find(v);}
-
 
 void FaceModel::lockForWrite() { _mutex.lockForWrite();}
 void FaceModel::lockForRead() const { _mutex.lockForRead();}
 void FaceModel::unlock() const { _mutex.unlock();}
-
-
-void FaceModel::setNotes( const QString& n)
-{
-    if ( n != _notes)
-    {
-        _notes = n;
-        setMetaSaved(false);
-    }   // end if
-}   // end setNotes
 
 
 void FaceModel::setSource( const QString& s)
@@ -338,159 +313,33 @@ void FaceModel::setSex( int8_t s)
 
 bool FaceModel::hasMetaData() const
 {
-    return !_notes.isEmpty()
+    return _cass->hasContent()
         || !_source.isEmpty()
         || !_studyId.isEmpty()
         || _dob != QDate::currentDate()
         || _sex == FaceTools::MALE_SEX
         || _sex == FaceTools::FEMALE_SEX
-        || _methnicity > 0
-        || _pethnicity > 0
-        || _cdate != QDate::currentDate()
-        || !_landmarks->empty()
-        || !_paths->empty()
-        || !_metrics.empty()
-        || !_metricsL.empty()
-        || !_metricsR.empty();
+        || _methnicity != 0
+        || _pethnicity != 0
+        || _cdate != QDate::currentDate();
 }   // end hasMetaData
 
 
 int FaceModel::faceManifoldId() const
 {
-    const LandmarkSet& lmks = landmarks();
-    int mid = -1;
-    if ( !lmks.empty())
+    for ( const auto& a : _ass)
     {
-        const cv::Vec3f v = lmks.posSomeMedial();
-        const int svidx = findVertex( v);
-        const int fx = *model().faces(svidx).begin(); // Some attached polygon
-        mid = manifolds().manifoldId(fx); // Manifold ID
-    }   // end if
-    return mid;
+        const LandmarkSet& lmks = a.get()->landmarks();
+        if ( !lmks.empty())
+        {
+            const cv::Vec3f v = lmks.posSomeMedial();
+            const int svidx = findVertex( v);
+            const int fx = *model().faces(svidx).begin(); // Some attached polygon
+            return manifolds().manifoldId(fx); // Manifold ID
+        }   // end if
+    }   // end for
+    return -1;
 }   // end faceManifoldId
-
-
-bool FaceModel::hasMetric( int mid) const
-{
-    return _metrics.ids().count(mid) > 0 || _metricsL.ids().count(mid) > 0 || _metricsR.ids().count(mid) > 0;
-}   // end hasMetric
-
-
-void FaceModel::clearMetrics()
-{
-    _metrics.reset();
-    _metricsL.reset();
-    _metricsR.reset();
-}   // end clearMetrics
-
-
-void FaceModel::setLandmarks( LandmarkSet::Ptr lmks)
-{
-    if ( !_landmarks->empty() || !lmks->empty())
-    {
-        setMetaSaved(false);
-        _landmarks = lmks;
-        _syncOrientationBounds();
-    }   // end if
-}   // end setLandmarks
-
-
-bool FaceModel::setLandmarkPosition(int lid, const cv::Vec3f &pos, FaceTools::FaceLateral flat)
-{
-    setMetaSaved(false);
-    const bool okay = _landmarks->set( lid, pos, flat);    // Adds if not already present
-    assert(okay);
-    _syncOrientationBounds();
-    return okay;
-}   // end setLandmarkPosition
-
-
-void FaceModel::moveLandmarksToSurface()
-{
-    if ( !_landmarks->empty())
-    {
-        setMetaSaved(false);
-        _landmarks->moveToSurface( this);
-        _syncOrientationBounds();
-    }   // end if
-}   // end moveLandmarksToSurface
-
-
-void FaceModel::swapLandmarkLaterals()
-{
-    if ( !_landmarks->empty())
-    {
-        setMetaSaved(false);
-        _landmarks->swapLaterals();
-        _syncOrientationBounds();
-    }   // end if
-}   // end swapLandmarkLaterals
-
-
-void FaceModel::setPaths(PathSet::Ptr pths)
-{
-    if ( !_paths->empty() || !pths->empty())
-    {
-        setMetaSaved(false);
-        _paths = pths;
-    }   // end if
-}   // end setPaths
-
-
-int FaceModel::addPath( const cv::Vec3f& pos)
-{
-    setMetaSaved(false);
-    const int aid = _paths->addPath(pos);
-    _paths->setActivePath(aid);
-    return aid;
-}   // end addPath
-
-
-bool FaceModel::removePath( int pid)
-{
-    bool rval = false;
-    if ( _paths->has(pid))
-    {
-        setMetaSaved(false);
-        rval = _paths->removePath(pid);
-    }   // end if
-    return rval;
-}   // end removePath
-
-
-bool FaceModel::renamePath( int pid, const QString &nm)
-{
-    bool rval = false;
-    if ( _paths->has(pid))
-    {
-        setMetaSaved(false);
-        rval = _paths->renamePath(pid, nm.toStdString());
-    }   // end if
-    return rval;
-}   // end renamePath
-
-
-bool FaceModel::setPathPosition( int pid, const cv::Vec3f& pos, int h)
-{
-    Path* path = _paths->path(pid);
-    if ( path)
-    {
-        if ( h == 0)
-            *path->vtxs.begin() = pos;
-        else
-            *path->vtxs.rbegin() = pos;
-        path->recalculate( this);
-        setMetaSaved(false);
-    }   // end if
-    return path != nullptr;
-}   // end setPathPosition
-
-
-void FaceModel::updateRenderers() const
-{
-    FMVS fvs = _fvs.viewers();
-    std::for_each( std::begin(fvs), std::end(fvs), [](FMV* v){ v->updateRender();});
-}   // end updateRenderers
 
 
 double FaceModel::translateToSurface( cv::Vec3f& pos) const
@@ -503,3 +352,158 @@ double FaceModel::translateToSurface( cv::Vec3f& pos) const
     pos = fv;
     return sdiff;
 }   // end translateToSurface
+
+
+void FaceModel::setCurrentAssessment( int id)
+{
+    assert(_ass.count(id) > 0);
+    _cass = _ass.value(id);
+}   // end setCurrentAssessment
+
+
+void FaceModel::setAssessment( FaceAssessment::Ptr ass)
+{
+    assert(ass);
+    if ( !_cass || _cass->id() == ass->id())
+        _cass = ass;
+    _ass[ass->id()] = ass;
+}   // end setAssessment
+
+
+void FaceModel::eraseAssessment( int id)
+{
+    _ass.remove(id);
+    if ( _cass && _cass->id() == id)
+    {
+        _cass = nullptr;
+        if ( !_ass.empty())
+            _cass = _ass.first();
+    }   // end if
+}   // end eraseAssessment
+
+
+FaceAssessment::CPtr FaceModel::assessment( int id) const { return _ass[id];}
+FaceAssessment::Ptr FaceModel::assessment( int id) { return _ass[id];}
+
+
+IntSet FaceModel::assessmentIds() const
+{
+    IntSet aids;
+    for ( const auto& a : _ass)
+        aids.insert(a.get()->id());
+    return aids;
+}   // end assessmentIds
+
+
+void FaceModel::setLandmarks( LandmarkSet::Ptr lmks)
+{
+    assert( _cass);
+    if ( _cass->setLandmarks(lmks))
+    {
+        setMetaSaved(false);
+        _syncOrientationBounds();
+    }   // end if
+}   // end setLandmarks
+
+
+bool FaceModel::hasLandmarks() const
+{
+    for ( const auto& a : _ass)
+        if ( a->hasLandmarks())
+            return true;
+    return false;
+}   // end hasLandmarks
+
+
+void FaceModel::setLandmarkPosition( int lid, FaceTools::FaceLateral flat, const cv::Vec3f &pos)
+{
+    assert( _cass);
+    _cass->setLandmarkPosition( lid, flat, pos);
+    setMetaSaved(false);
+    _syncOrientationBounds();
+}   // end setLandmarkPosition
+
+
+void FaceModel::swapLandmarkLaterals()
+{
+    bool didswap = false;
+    for ( auto& a : _ass)
+        if ( a.get()->swapLandmarkLaterals())
+            didswap = true;
+    if ( didswap)
+    {
+        setMetaSaved(false);
+        _syncOrientationBounds();
+    }   // end if
+}   // end swapLandmarkLaterals
+
+
+void FaceModel::moveLandmarksToSurface()
+{
+    bool moved = false;
+    for ( auto& a : _ass)
+        if ( a.get()->moveLandmarksToSurface(this))
+            moved = true;
+    if ( moved)
+    {
+        setMetaSaved(false);
+        _syncOrientationBounds();
+    }   // end if
+}   // end moveLandmarksToSurface
+
+
+LandmarkSet::Ptr FaceModel::makeMeanLandmarksSet() const
+{
+    std::unordered_set<const LandmarkSet*> slmks;
+    for ( const auto& a : _ass)
+    {
+        const LandmarkSet& lmks = a->landmarks();
+        if ( !lmks.empty())
+            slmks.insert( &lmks);
+    }   // end for
+
+    LandmarkSet::Ptr mlmks = LandmarkSet::createMean( slmks);
+    if ( _kdtree)   // Possible if this function is called before a model is set.
+        mlmks->moveToSurface(this);
+    return mlmks;
+}   // end makeMeanLandmarksSet
+
+
+void FaceModel::setPaths( PathSet::Ptr pths)
+{
+    assert( _cass);
+    if ( _cass->setPaths(pths))
+        setMetaSaved(false);
+}   // end setPaths
+
+
+int FaceModel::addPath( const cv::Vec3f& pos)
+{
+    assert( _cass);
+    setMetaSaved(false);
+    return _cass->addPath( pos);
+}   // end addPath
+
+
+void FaceModel::removePath( int pid)
+{
+    assert( _cass);
+    if ( _cass->removePath(pid))
+        setMetaSaved(false);
+}   // end removePath
+
+
+void FaceModel::renamePath( int pid, const QString &nm)
+{
+    assert( _cass);
+    if ( _cass->renamePath( pid, nm))
+        setMetaSaved(false);
+}   // end renamePath
+
+
+void FaceModel::setPathPosition( int pid, int h, const cv::Vec3f& pos)
+{
+    assert( _cass);
+    if ( _cass->setPathPosition( this, pid, h, pos))
+        setMetaSaved(false);
+}   // end setPathPosition

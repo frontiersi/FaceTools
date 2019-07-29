@@ -27,8 +27,10 @@ namespace FaceTools { namespace Vis {
 class FaceTools_EXPORT BoundingView
 {
 public:
-    BoundingView( const RFeatures::ObjModelBounds&, float lineWidth, float red, float green, float blue);
+    BoundingView( const RFeatures::ObjModelBounds&, float lineWidth);
     ~BoundingView();
+
+    void setColour( float r, float g, float b);
 
     // Not pickable by default.
     void setPickable( bool);

@@ -299,7 +299,7 @@ cv::Mat_<cv::Vec3b> FaceTools::makeThumbnail( const FM* fm, const cv::Size& dims
 {
     RVTK::OffscreenModelViewer omv( dims, 1);
     omv.setModel( fm->model());
-    const cv::Vec3f centre = fm->icentre();
+    const cv::Vec3f centre = fm->centre();
     const RFeatures::Orientation on = fm->orientation();
     const cv::Vec3f cpos = (d * on.nvec()) + centre;
     const CameraParams cam( cpos, centre, on.uvec(), 30);

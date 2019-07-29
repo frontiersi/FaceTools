@@ -40,7 +40,7 @@ LandmarksVisualisation::~LandmarksVisualisation()
 bool LandmarksVisualisation::isAvailable( const FM* fm) const
 {
     assert(fm);
-    return !fm->landmarks().empty();
+    return !fm->currentAssessment()->landmarks().empty();
 }   // end isAvailable
 
 
@@ -49,7 +49,7 @@ void LandmarksVisualisation::apply( FV* fv, const QPoint*)
     assert(fv);
     if ( !hasView(fv))
     {
-        const LandmarkSet& lmks = fv->data()->landmarks();
+        const LandmarkSet& lmks = fv->data()->currentAssessment()->landmarks();
         _views[fv] = new LandmarkSetView(lmks);
     }   // end if
     _views.at(fv)->setVisible( true, fv->viewer());
@@ -96,6 +96,8 @@ void LandmarksVisualisation::setLandmarkVisible( const FM* fm, int lm, bool v)
 void LandmarksVisualisation::setLandmarkHighlighted( const FM* fm, int lm, FaceLateral lat, bool v)
 {
     assert(fm);
+    if ( !fm)
+        return;
     for ( FV* fv : fm->fvs())
     {
         if ( this->hasView(fv))
@@ -121,7 +123,10 @@ void LandmarksVisualisation::setHighlighted( const FM* fm)
 void LandmarksVisualisation::updateLandmark( const FM* fm, int id)
 {
     assert(fm);
-    const LandmarkSet& lmks = fm->landmarks();
+    if ( !fm)
+        return;
+
+    const LandmarkSet& lmks = fm->currentAssessment()->landmarks();
     const bool isBilateral = LDMKS_MAN::landmark(id)->isBilateral();
 
     for ( FV* fv : fm->fvs())
@@ -143,8 +148,10 @@ void LandmarksVisualisation::updateLandmark( const FM* fm, int id)
 
 void LandmarksVisualisation::updateLandmarks( const FM* fm)
 {
-    assert(fm);
-    const LandmarkSet& lmks = fm->landmarks();
+    if ( !fm)
+        return;
+
+    const LandmarkSet& lmks = fm->currentAssessment()->landmarks();
     if ( lmks.empty())
     {
         const FVS& fvs = fm->fvs();
@@ -180,7 +187,7 @@ bool LandmarksVisualisation::belongs( const vtkProp* p, const FV* fv) const
 void LandmarksVisualisation::syncActorsToData( const FV* fv, const cv::Matx44d& d)
 {
     if ( hasView(fv))
-        _views.at(fv)->sync( fv->data()->landmarks(), d);
+        _views.at(fv)->sync( fv->data()->currentAssessment()->landmarks(), d);
 }   // end syncActorsToData
 
 

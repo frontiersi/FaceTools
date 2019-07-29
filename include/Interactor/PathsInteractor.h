@@ -39,7 +39,8 @@ public:
     void setCaption( const Vis::FV*, int pathId);
 
 signals:
-    void onUpdated( Vis::PathView::Handle*);
+    void onStartedDrag( Vis::PathView::Handle*);
+    void onFinishedDrag( Vis::PathView::Handle*);
     void onEnterPath( Vis::PathView::Handle*);
     void onLeavePath( Vis::PathView::Handle*);
 

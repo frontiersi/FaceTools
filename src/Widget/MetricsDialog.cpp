@@ -65,8 +65,8 @@ MetricsDialog::MetricsDialog( QWidget *parent) :
     setWindowTitle( parent->windowTitle() + " | Measurements");
 
     //setWindowFlags( windowFlags() & ~Qt::WindowCloseButtonHint);
-    setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
-    setParent( parent, windowFlags() & ~Qt::WindowStaysOnTopHint);
+    //setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+    //setParent( parent, windowFlags() & ~Qt::WindowStaysOnTopHint);
 
     _ui->table->setColumnCount(5);
     _ui->table->setHorizontalHeaderLabels( QStringList( {"", "ID", "Name", "Category", "Description"}));

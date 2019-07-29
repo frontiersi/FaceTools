@@ -37,17 +37,17 @@ MCT* CircularityMetricCalculatorType::make( int id, const LmkList* l0, const Lmk
 }   // end make
 
 
-bool CircularityMetricCalculatorType::canCalculate( const FM* fm, const LmkList* ll) const
+bool CircularityMetricCalculatorType::canCalculate( const FM* fm, int aid, const LmkList* ll) const
 {
     using SLmk = FaceTools::Landmark::SpecificLandmark;
-    const LandmarkSet& lmks = fm->landmarks();
+    const LandmarkSet& lmks = fm->assessment(aid)->landmarks();
     return std::all_of( std::begin(*ll), std::end(*ll), [&lmks]( const SLmk& p){ return lmks.has(p);});
 }   // end canCalculate
 
 
-void CircularityMetricCalculatorType::measure( std::vector<double>& dvals, const FM* fm, const LmkList* ll) const
+void CircularityMetricCalculatorType::measure( std::vector<double>& dvals, const FM* fm, int aid, const LmkList* ll) const
 {
-    const LandmarkSet& lmks = fm->landmarks();
+    const LandmarkSet& lmks = fm->assessment(aid)->landmarks();
 
     const auto* pp = &*ll->rbegin();     // Previous point
     const cv::Vec3f fv = lmks.pos( *pp); // Final point

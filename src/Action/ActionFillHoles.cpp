@@ -82,21 +82,6 @@ size_t getNumHoles( const RFeatures::ObjModel& model, const RFeatures::ObjModelM
     return static_cast<size_t>(nholes);
 }   // end getNumHoles
 
-
-bool wasHoleFilled( const RFeatures::ObjModel& model, const RFeatures::ObjModelManifolds& manf, const std::vector<int>& mholes)
-{
-    using namespace RFeatures;
-    const size_t nm = manf.count();
-    for ( size_t i = 0; i < nm; ++i)
-    {
-        const ObjModelManifoldBoundaries& bnds = manf.manifold(int(i))->boundaries(model);  // Causes boundary edges to be calculated
-        const int nholes = std::max(0, static_cast<int>( bnds.count())-1);
-        if ( mholes[i] > nholes)    // A hole was filled
-            return true;
-    }   // end for
-    return false;
-}   // end wasHoleFilled
-
 }   // end namespace
 
 
@@ -111,14 +96,14 @@ void ActionFillHoles::doAction( Event)
     const ObjModelManifolds* manfs = &fm->manifolds();
     const size_t nm = manfs->count();
     ObjModel::Ptr model = fm->wmodel();
-
     ObjModelManifolds::Ptr nmanfs;
-    bool fillingHoles = true;
-    while ( fillingHoles)
+
+    while ( true)
     {
         ObjModelHoleFiller hfiller( model);
-
         std::vector<int> mholes(nm);    // Record the number of holes per manifold
+
+        int sumPolysAdded = 0;    // Total polygons added
         for ( size_t i = 0; i < nm; ++i)
         {
             const ObjManifold* man = manfs->manifold(int(i));
@@ -129,24 +114,30 @@ void ActionFillHoles::doAction( Event)
             const int nbs = static_cast<int>(bnds.count()); // Can be zero
             mholes[i] = std::max(0, nbs-1);
 
-            int fh = 0;
+            int polysAdded = 0;
             for ( int j = 1; j < nbs; ++j)  // Ignore the first (longest) boundary
             {
                 const std::list<int>& blist = bnds.boundary(j);
-                fh += hfiller.fillHole( blist, mpolys);
+                polysAdded += hfiller.fillHole( blist, mpolys);
             }   // end for
 
             if ( nbs > 1)
             {
                 std::cerr << "Manifold " << i << ": " << std::setw(4) << mholes[i]
-                          << " holes filled with " << std::setw(4) << fh << " polygons" << std::endl;
+                          << " holes filled with " << std::setw(4) << polysAdded << " polygons" << std::endl;
             }   // end if
+
+            sumPolysAdded += polysAdded;
         }   // end for
 
-        // Reanalyse the manifolds. If no change in number of holes in all manifolds, break loop.
+        // If no polygons added, break loop.
+        if ( sumPolysAdded == 0)
+            break;
+
         nmanfs = ObjModelManifolds::create( *model);
+        for ( size_t i = 0; i < nm; ++i)
+            nmanfs->manifold(int(i))->boundaries( *model);  // Causes boundary edges to be calculated
         manfs = nmanfs.get();
-        fillingHoles = wasHoleFilled( *model, *manfs, mholes);
     }   // end while
 
     fm->update( model);
