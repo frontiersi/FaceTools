@@ -74,7 +74,6 @@ void ChartDialog::_populateSexs( int ethn)
     std::unordered_set<int8_t> sexs;
     for ( GrowthData::CPtr gd : gds)
     {
-        //if ( ethn == 0 || Ethnicities::belongs( gd->ethnicity(), ethn))
         if ( ethn == 0 || gd->ethnicity() == ethn)
         {
             sexs.insert(gd->sex());

@@ -183,5 +183,7 @@ void PathSetView::updateTextColours()
         const QColor fg = chooseContrasting(bg);
         _text->GetTextProperty()->SetBackgroundColor( bg.redF(), bg.greenF(), bg.blueF());
         _text->GetTextProperty()->SetColor( fg.redF(), fg.greenF(), fg.blueF());
+        for ( auto& p : _views)
+            p.second->updateColours();
     }   // end if
 }   // end updateTextColours

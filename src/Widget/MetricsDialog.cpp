@@ -91,7 +91,7 @@ MetricsDialog::MetricsDialog( QWidget *parent) :
     connect( _ui->hpoComboBox, QOverload<int>::of(&QComboBox::activated), [this](){ _doOnUserSelectedHPOTerm(); refresh();});
     connect( _ui->flipButton, &QToolButton::clicked, [this](){ _doOnClickedFlipCombosButton(); refresh();});
     connect( _ui->matchedCheckBox, &QCheckBox::clicked, [this](){ _doOnClickedMatchButton(); refresh();});
-    connect( _ui->useSubjectDemographicsCheckBox, &QCheckBox::clicked, this, &MetricsDialog::_doOnClickedUseSubjectDemographicsButton);
+    connect( _ui->matchSubjectDemographicsCheckBox, &QCheckBox::clicked, this, &MetricsDialog::_doOnClickedUseSubjectDemographicsButton);
 
     //_ui->table->setColumnHidden(IDNT_COL, true);
     header->setStretchLastSection(true);   // Resize width of final column
@@ -523,12 +523,14 @@ void MetricsDialog::_doOnClickedUseSubjectDemographicsButton()
     // Refreshes chart data and also (possibly) updates the currently set growth
     // data statistics for the currently selected metric.
     const FM* fm = MS::selectedModel();
-    const bool matchSubject = fm && _ui->useSubjectDemographicsCheckBox->isChecked();
+    const bool matchSubject = fm && _ui->matchSubjectDemographicsCheckBox->isChecked();
+    if ( !matchSubject)
+        fm = nullptr;
 
     // Set the set of available growth curve data for each metric to be either all available stats
     // if !matchSubject, or just the set that is most compatible with the currently selected model.
     for ( MC::Ptr mc : MCM::metrics())
-        mc->setCompatibleSources( matchSubject ? fm : nullptr);
+        mc->setCompatibleSources( fm);
     emit onSetMetricGrowthData();
 
     // When metric growth data changes, update hpo terms and syndromes

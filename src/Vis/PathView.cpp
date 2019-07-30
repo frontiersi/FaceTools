@@ -31,11 +31,11 @@ PathView::PathView( int id, const std::list<cv::Vec3f>& vtxs)
     _h0 = new Handle( 0, _id, vtxs.front(), 1.3);
     _h1 = new Handle( 1, _id, vtxs.back(), 1.3);
 
-    _h0->_sv->setResolution(23);
+    _h0->_sv->setResolution(21);
     _h0->_sv->setColour( 0.1, 0.7, 0.1);    // Green
     _h0->_sv->setOpacity( 0.99);
 
-    _h1->_sv->setResolution(23);
+    _h1->_sv->setResolution(21);
     _h1->_sv->setColour( 0.1, 0.7, 0.1);    // Green
     _h1->_sv->setOpacity( 0.99);
 
@@ -92,7 +92,7 @@ void PathView::update( const std::list<cv::Vec3f>& vtxs)
     property->SetRepresentationToWireframe();
     property->SetRenderLinesAsTubes(false);
     property->SetLineWidth( 3.0);
-    property->SetColor( 0.1, 0.5, 0.7);
+    property->SetColor( 0.2, 0.4, 0.6);
     property->SetOpacity( 0.99);
     property->SetAmbient( 1.0);
     property->SetDiffuse( 0.0);
@@ -102,7 +102,7 @@ void PathView::update( const std::list<cv::Vec3f>& vtxs)
         _viewer->add(_lprop);
 }   // end update
 
-/*
+
 void PathView::updateColours()
 {
     assert(_viewer);
@@ -112,7 +112,6 @@ void PathView::updateColours()
     //vtkProperty* property = _lprop->GetProperty();
     //property->SetColor( fg.redF(), fg.greenF(), fg.blueF());
 }   // end updateColours
-*/
 
 
 // private

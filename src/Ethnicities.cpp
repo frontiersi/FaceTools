@@ -285,7 +285,7 @@ int Ethnicities::codeMix( const IntSet& cmix)
 
 int Ethnicities::parentDegree( int pc, int cc, bool allBelong)
 {
-    return _findSharedParent( pc, cc, allBelong);
+    return _belongs( pc, cc, allBelong);
 }   // end parentDegree
 
 

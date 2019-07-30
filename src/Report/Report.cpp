@@ -253,7 +253,8 @@ bool Report::writeLatex( QTextStream& os) const
     os << "\\documentclass{article}" << endl
        << "\\listfiles" << endl   // Do this to see in the .log file which packages are used
        << "\\usepackage[textwidth=20cm,textheight=25cm]{geometry}" << endl
-       << "\\usepackage{graphicx}" << endl;
+       << "\\usepackage{graphicx}" << endl
+       << "\\usepackage{verbatim}" << endl;
 
     if ( useSVG())
     {
@@ -316,9 +317,9 @@ bool Report::writeLatex( QTextStream& os) const
 
 
 namespace {
-bool writefig( const FM* fm, const QString& u3dfile, QTextStream& os, float wmm, float hmm, const QString& caption)
+bool writefig( const QString& u3dfile, QTextStream& os, float wmm, float hmm, const QString& caption)
 {
-    if ( !fm|| u3dfile.isEmpty())
+    if ( u3dfile.isEmpty())
         return false;
 
     static int labelID = 0;
@@ -377,9 +378,26 @@ void writeSvg( const QString& imname, QTextStream& os, const QString& caption)
        << "\\centering" << endl;
     if ( !caption.isEmpty())
         os << "\\caption*{" << caption << "}" << endl;
-    os << "\\includesvg[width=100.00mm,pretex=\\relscale{0.8}]{" << imname << "}" << endl;
+    os << "\\includesvg[width=98.00mm,pretex=\\relscale{0.8}]{" << imname << "}" << endl;
     os << "\\end{figure}" << endl;
 }   // end writeSvg
+
+
+QString sanit( QString s)
+{
+    // Note here that the order is very important!
+    s.replace("\\", "\\textbackslash");
+    s.replace("#", "\\#");
+    s.replace("$", "\\$");
+    s.replace("%", "\\%");
+    s.replace("&", "\\&");
+    s.replace("^", "\\textasciicircum");
+    s.replace("_", "\\_");
+    s.replace("{", "\\{");
+    s.replace("}", "\\}");
+    s.replace("~", "\\~{}");
+    return s;
+}   // end sanit
 
 }   // end namespace
 
@@ -388,26 +406,25 @@ std::string Report::makeScanInfo()
 {
     QString ostr;
     QTextStream os(&ostr);
-    if ( _model->maternalEthnicity() == _model->paternalEthnicity())
-        os << " \\textbf{Ethnicity:} " << Ethnicities::name(_model->maternalEthnicity()) << " \\\\" << endl;
-    else
-    {
-        os << " \\textbf{Maternal Ethnicity:} " << Ethnicities::name(_model->maternalEthnicity()) << " \\\\" << endl;
-        os << " \\textbf{Paternal Ethnicity:} " << Ethnicities::name(_model->paternalEthnicity()) << " \\\\" << endl;
-    }   // end else
+    os << " \\textbf{Ethnicity:} " << sanit(Ethnicities::name(_model->maternalEthnicity()));
+    if ( _model->maternalEthnicity() != _model->paternalEthnicity())
+        os << sanit(" (M) & " + Ethnicities::name(_model->paternalEthnicity()) + " (P)");
+    os << " \\\\" << endl;
 
     // Sex and DOB on one line
-    os << " \\textbf{Sex:} " << FaceTools::toLongSexString( _model->sex());
-    os << "  \\textbf{DOB:} " << _model->dateOfBirth().toString("dd MMMM yyyy") << " \\\\" << endl;
-    os << " \\textbf{Image Captured:} " << _model->captureDate().toString("dd MMMM yyyy") << " \\\\" << endl;
+    os << " \\textbf{Sex:} " << sanit(FaceTools::toLongSexString( _model->sex()));
+    os << " \\textbf{DOB:} " << _model->dateOfBirth().toString("dd MMMM yyyy") << " \\\\" << endl;
+    os << " \\textbf{Capture Date:} " << _model->captureDate().toString("dd MMMM yyyy") << " \\\\" << endl;
     const double age = _model->age();
     const int yrs = int(age);
     const int mths = int((age - double(yrs)) * 12);
-    os << QString(" \\textbf{Age at Capture:} %1 years %2 months \\\\").arg(yrs).arg(mths) << endl;
+    os << QString(" \\textbf{Age:} %1 years %2 months \\\\").arg(yrs).arg(mths) << endl;
     if ( !_model->source().isEmpty())
-        os << " \\textbf{Image Source:} " << _model->source() << " \\\\" << endl;
+        os << " \\textbf{Source:} " << sanit(_model->source());
     if ( !_model->studyId().isEmpty())
-        os << " \\textbf{Study Id:} " << _model->studyId() << " \\\\" << endl;
+        os << " \\textbf{Study Id:} " << sanit(_model->studyId());
+    if ( !_model->source().isEmpty() || !_model->studyId().isEmpty())
+        os << " \\\\" << endl;
 
     return ostr.toStdString();
 }   // end makeScanInfo
@@ -418,9 +435,8 @@ std::string Report::showNotes()
     QString ostr;
     QTextStream os(&ostr);
     FaceAssessment::CPtr ass = _model->currentAssessment();
-    os << " \\normalsize{\\textbf{Assessor:} " << ass->assessor() << "} \\\\" << endl;
-    os << " \\normalsize{\\textbf{Assessor's notes:}} \\\\" << endl
-       << "\\small{" << (ass->hasNotes() ? ass->notes() : "No further notes.") << "} \\\\" << endl;
+    os << " \\normalsize{\\textbf{Assessor:} " << sanit(ass->assessor()) << "} \\\\" << endl;
+    os << " \\small{" << sanit( ass->hasNotes() ? ass->notes() : "Nothing recorded.") << "} \\\\" << endl;
     return ostr.toStdString();
 }   // end showNotes
 
@@ -430,7 +446,7 @@ std::string Report::makeFigure( float wmm, float hmm, const std::string& caption
     QString qcaption(caption.c_str());
     QString ostr;
     QTextStream os( &ostr);
-    if ( !writefig( _model, _u3dfile, os, wmm, hmm, qcaption))
+    if ( !writefig( _u3dfile, os, wmm, hmm, qcaption))
         ostr = "";
     return ostr.toStdString();
 }   // end makeFigure

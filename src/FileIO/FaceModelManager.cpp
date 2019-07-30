@@ -20,6 +20,7 @@
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <FileIO.h> // rlib
+#include <QFileInfo>
 #include <QDebug>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -110,8 +111,10 @@ bool FaceModelManager::write( const FM* cfm, std::string* fpath)
 }   // end write
 
 
-bool FaceModelManager::canWrite( const std::string& fpath)
+bool FaceModelManager::canWrite( const std::string& fn)
 {
+    const QFileInfo finfo(fn.c_str());
+    const std::string fpath = finfo.filePath().toStdString();
     FaceModelFileHandler* fileio = _fhmap.writeInterface( fpath);
     if ( fileio && fileio->canWrite())
         return true;
@@ -119,8 +122,10 @@ bool FaceModelManager::canWrite( const std::string& fpath)
 }   // end canWrite
 
 
-bool FaceModelManager::canRead( const std::string& fname)
+bool FaceModelManager::canRead( const std::string& fn)
 {
+    const QFileInfo finfo(fn.c_str());
+    const std::string fname = finfo.filePath().toStdString();
     if ( !boost::filesystem::exists( fname))
        return false;
     FaceModelFileHandler* fileio = _fhmap.readInterface( fname);
@@ -143,12 +148,19 @@ bool FaceModelManager::canSaveTextures( const std::string &fpath)
 }   // end canSaveTextures
 
 
-bool FaceModelManager::isOpen( const std::string& fname) { return _mfiles.count(fname) > 0;}
-
-
-FM* FaceModelManager::read( const std::string& fname)
+bool FaceModelManager::isOpen( const std::string& fn)
 {
-    assert( !fname.empty());
+    const QFileInfo finfo(fn.c_str());
+    const std::string fname = finfo.filePath().toStdString();
+    return _mfiles.count(fname) > 0;
+}   // end isOpen
+
+
+FM* FaceModelManager::read( const std::string& fn)
+{
+    assert( !fn.empty());
+    const QFileInfo finfo(fn.c_str());
+    const std::string fname = finfo.filePath().toStdString();
 
     _err = "";
     if ( _mfiles.count(fname) > 0)

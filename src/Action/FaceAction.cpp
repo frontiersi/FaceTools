@@ -124,6 +124,8 @@ void FaceAction::init( QWidget* parent) // Called by FaceActionManager after con
         _action.setToolTip( tooltip);
 
     QString whatsthis = whatsThis();
+    if ( whatsthis.isEmpty())
+        whatsthis = tooltip;
     if ( !whatsthis.isEmpty())
         _action.setWhatsThis( whatsthis);
 

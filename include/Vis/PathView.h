@@ -58,7 +58,7 @@ public:
     Handle* handle0() { return _h0;}
     Handle* handle1() { return _h1;}
 
-    //void pokeTransform( const vtkMatrix4x4*);
+    void updateColours();
 
 private:
     ModelViewer *_viewer;

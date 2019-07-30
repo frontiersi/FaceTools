@@ -88,8 +88,7 @@ void LandmarkSetView::setColour( const cv::Vec3d& c)
     std::for_each( std::begin(_rviews), std::end(_rviews), [=](const ViewPair& p){ p.second->setColour( r, g, b);});
 
     assert(_viewer);
-    //QColor fg = chooseContrasting( _viewer->backgroundColour());
-    const QColor fg = Qt::GlobalColor::blue;
+    QColor fg = chooseContrasting( _viewer->backgroundColour());
     std::for_each( std::begin(_lviews), std::end(_lviews), [=](const ViewPair& p){ p.second->setCaptionColour( fg);});
     std::for_each( std::begin(_mviews), std::end(_mviews), [=](const ViewPair& p){ p.second->setCaptionColour( fg);});
     std::for_each( std::begin(_rviews), std::end(_rviews), [=](const ViewPair& p){ p.second->setCaptionColour( fg);});
@@ -235,7 +234,7 @@ void LandmarkSetView::_set( int lm, SphereMap& views, PropMap& props, const cv::
         props[sv->prop()] = lm;
         sv->setColour( BASE0_COL[0], BASE0_COL[1], BASE0_COL[2]);
         sv->setOpacity(0.99);
-        sv->setResolution(23);
+        sv->setResolution(21);
     }   // end if
     sv->setCaption( (LDMKS_MAN::landmark(lm)->name() + lats).toStdString());
     sv->setCentre( pos);

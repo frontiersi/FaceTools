@@ -18,6 +18,7 @@
 #include <GrowthData.h>
 #include <Ethnicities.h>
 #include <FaceModel.h>
+#include <QSet>
 #include <MetricCalculatorManager.h>
 using FaceTools::Metric::GrowthData;
 using FaceTools::Metric::MetricSet;
@@ -46,12 +47,54 @@ void GrowthData::setSource( const QString& s)
 }   // end setSource
 
 
+void GrowthData::addSource( const QString& s)
+{
+    QString esrc = _source;
+
+    // Remove the period at the end if it exists.
+    while ( esrc.endsWith("."))
+        esrc = esrc.left(esrc.size()-1);
+
+    // Split into ; delimited tokens
+    QStringList srcs = esrc.split(";");
+
+    // Set the new set of references (trimmed)
+    QSet<QString> sset;
+    for ( const QString& es : srcs)
+        sset.insert(es.trimmed());
+
+    // Add the new source
+    QString ns = s;
+    while ( ns.endsWith("."))
+        ns = ns.left(ns.size()-1);
+    sset.insert(ns.trimmed());
+
+    // Sort them
+    srcs = QStringList::fromSet(sset);
+    srcs.sort();
+
+    // Finally, reset.
+    _source = QString( "%1.").arg(srcs.join("; "));
+}   // end addSource
+
+
 void GrowthData::setNote( const QString& s)
 {
     _note = s;
     if ( !_note.isEmpty() && !_note.endsWith("."))
         _note += ".";
 }   // end setNote
+
+
+void GrowthData::appendNote( const QString& s)
+{
+    QStringList notes;
+    notes << _note;
+    notes << s;
+    _note = notes.join(" ").trimmed();
+    if ( !_note.isEmpty() && !_note.endsWith("."))
+        _note += ".";
+}   // end appendNote
 
 
 void GrowthData::setLongNote( const QString& s)

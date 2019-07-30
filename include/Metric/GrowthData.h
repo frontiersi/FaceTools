@@ -46,9 +46,11 @@ public:
     int ethnicity() const { return _ethn;}
 
     void setSource( const QString&);
+    void addSource( const QString&);
     const QString& source() const { return _source;}
 
     void setNote( const QString&);
+    void appendNote( const QString&);
     const QString& note() const { return _note;}
 
     void setLongNote( const QString&);

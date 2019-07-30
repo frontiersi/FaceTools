@@ -342,7 +342,7 @@ QToolButton:hover{
       </widget>
      </item>
      <item>
-      <widget class="QCheckBox" name="useSubjectDemographicsCheckBox">
+      <widget class="QCheckBox" name="matchSubjectDemographicsCheckBox">
        <property name="toolTip">
         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, a set of metric growth curves from those available is automatically chosen to most narrowly match the current subject's sex and ethnicity.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>

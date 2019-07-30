@@ -35,6 +35,11 @@ using FaceTools::FaceLateral;
 using FaceTools::Landmark::LmkList;
 using FaceTools::Metric::GrowthDataSources;
 
+
+// public static
+QString FaceTools::Metric::MetricCalculator::CUSTOM_STATS_REF("");
+
+
 namespace {
 static const int8_t BOTH_SEXES = FaceTools::Sex::FEMALE_SEX | FaceTools::Sex::MALE_SEX;
 }   // end namespace
@@ -278,6 +283,7 @@ void MetricCalculator::_combineGrowthDataSexes()
                      && g0->sex() != g1->sex())
                 {
                     GrowthData::Ptr gnew = GrowthData::create( {g0, g1});
+                    gnew->addSource( CUSTOM_STATS_REF);
                     assert(gnew);
                     _addGrowthData( gnew);
                 }   // end if
@@ -318,6 +324,7 @@ void MetricCalculator::_combineGrowthDataEthnicities()
                 {
                     assert( gdi->source() != gdj->source());    // Must be different sources, or duplicate GrowthData was read in!
                     GrowthData::Ptr gnew = GrowthData::create( {gdi, gdj});
+                    gnew->addSource( CUSTOM_STATS_REF);
                     assert(gnew);
                     _addGrowthData( gnew);
                 }   // end if
@@ -373,59 +380,93 @@ GrowthDataSources MetricCalculator::matchingGrowthData( int8_t sex, int en, bool
 }   // end matchingGrowthData
 
 
-GrowthDataSources MetricCalculator::_mostCompatible( int ethn) const
+namespace  {
+bool _isBetterMatch( bool bes, bool sm, int md, int bmd)
 {
-    const GrowthDataSources& mgds = _compatible;
-
-    // Then from this compatible set, find the set of GrowthData that give the closest match to the specified demographic criteria.
-    const bool ISMIX = Ethnicities::isMixed(ethn);
-    GrowthDataSources bgds;
-    GrowthData::CPtr bgd;
-    int bmd = INT_MAX;  // Should try to minimise
-    bool bmx = false;   // Whether the best match is a match on all ethnicities in the mix or not (only ever true if isMix true).
-    for ( GrowthData::CPtr gd : mgds)
+    bool rval = false;
+    if ( bes)   // Does the best sex match exist on the current source?
     {
-        // If this is a mixed code, a better match is if the ethnic group of this data source
-        // is a parent for all the specified ethnicities - even if it's at a higher level.
-        int md = Ethnicities::parentDegree( gd->ethnicity(), ethn, ISMIX);
-        bool mixMatch = ISMIX;
-        if ( md < 0 && ISMIX && ethn != 0)
+        if ( sm)    // is current source exact match for subject sex?
+            if ( md < bmd)  // is the ethnicity match degree lower?
+                rval = true;    // Objectively better
+    }   // end if
+    else
+    {
+        if ( sm)
+            rval = true;    // May result in degrading of the ethnic match degree
+        else if ( md < bmd)
+            rval = true;    // Objectively better
+    }   // end else
+    return rval;
+}   // end _isBetterMatch
+}   // end namespace
+
+
+GrowthData::CPtr MetricCalculator::_mostCompatible( int8_t sex, int meth, int peth) const
+{
+    // From the compatible set which will can include single sex and both sex sources, as well as sources with
+    // ethnicities that encompass at least one of the given ethnicities, find the GrowthData source that best
+    // matches the given sex and ethnicities.
+    GrowthData::CPtr bgd;
+    int bmd = INT_MAX;  // Should try to minimise this match degree
+    bool bex = false;   // True iff the best match is a match on both ethnicities (which could be the same)
+    bool bes = false;   // True iff the best match is an exact match on sex
+    for ( GrowthData::CPtr gd : _compatible)
+    {
+        // If the ethnicity is mixed, a better match exists if the ethnic group of this data source
+        // is a parent for both ethnicities - even if it's at a higher level.
+        int md = Ethnicities::parentDegree( gd->ethnicity(), meth); // Maternal ethnicity parent degree
+        bool em = md >= 0;  // Set true if both parental ethnicities are matched under the source data
+        if ( md < 0)
+            md = INT_MAX;
+        int pd = md;        // Set to paternal ethnicity parent degree
+        if ( peth != meth)  // Check for a match to the different ethnicities under this source data
         {
-            assert( ISMIX); // md can only be < 0 if this is a mixed code, otherwise it wouldn't have been compatible to begin with.
-            // Wasn't able to match all the ethnicities so see if just one of the mix can be parented by this source.
-            md = Ethnicities::parentDegree( gd->ethnicity(), ethn, false);
-            assert( md >= 0);    // Must be >= 0 or wouldn't be compatible to begin with.
-            mixMatch = false;
+            pd = Ethnicities::parentDegree( gd->ethnicity(), peth);
+            em = em && pd >= 0;
+            if ( pd < 0)
+                pd = INT_MAX;
         }   // end if
 
-        bool isBetterMatch = true;
-        if ( bgd)
+        const bool sm = gd->sex() == sex;   // Is the source data an exact sex match?
+
+        bool isBetter = true;
+        if ( bgd)   // Compare against existing best match?
         {
-            isBetterMatch = false;
-            if (md >= 0 && ( ( mixMatch && !bmx)   // Prefer a complete matching of the ethnic mix to source data
-               || ( mixMatch == bmx && md < bmd)   // Prefer a closer degree of ethnic matching to source data
-               || ( mixMatch == bmx && md == bmd && gd->sex() != BOTH_SEXES)))    // Prefer a closer match to sex for the same degree of ethnic matching
+            // em is true if the ethnicities are different and both are matched under the source data,
+            // or if the ethnicities are the same and it's matched under the source data.
+            if ( em)
             {
-                isBetterMatch = true;
-                // The third case in the above disjunction allows the possibility to arise that the existing best
-                // matching GrowthData has the same demographics as the current GrowthData. This can only be the
-                // case however if the source reference is different. In this case, we don't clear the current
-                // best match sources, but instead collect it as one of the best.
-                if (!( mixMatch == bmx && md == bmd && gd->sex() == bgd->sex()))
-                    bgds.clear();
+                if ( bex)   // If both ethnicities not already matched, this source is better even if it's a worse sex match.
+                {
+                    md = std::min(md,pd);   // Set the match degree for both ethnicities to be the lower of the two ethnicities
+                    isBetter = _isBetterMatch( bes, sm, md, bmd);
+                }   // end if
+                else
+                    isBetter = true;
             }   // end if
+            else
+            {
+                if ( bex)
+                    isBetter = false;
+                else
+                {
+                    md = std::min(md,pd);
+                    isBetter = _isBetterMatch( bes, sm, md, bmd);
+                }   // end else
+            }   // end else
         }   // end if
 
-        if ( isBetterMatch)
+        if ( isBetter)
         {
             bgd = gd;
-            bgds.insert(bgd);
-            bmd = std::max( 0, md);
-            bmx = mixMatch;
+            bmd = md;
+            bex = em;
+            bes = sm;
         }   // end if
     }   // end for
 
-    return bgds;
+    return bgd;
 }   // end _mostCompatible
 
 
@@ -433,11 +474,13 @@ void MetricCalculator::setCompatibleSources( const FM *fm)
 {
     if ( fm)
     {
-        _compatible = _compatibleGrowthData(fm);
-        const int ethn = Ethnicities::codeMix({fm->maternalEthnicity(), fm->paternalEthnicity()});
-        const GrowthDataSources bgds = _mostCompatible( ethn);
-        if ( !bgds.empty())
-            setCurrentGrowthData( *bgds.begin());
+        _compatible = _getCompatibleGrowthData(fm);
+        if ( _compatible.empty())
+            _compatible = matchingGrowthData(); // All available if can't restrict set
+
+        GrowthData::CPtr bgd = _mostCompatible( fm->sex(), fm->maternalEthnicity(), fm->paternalEthnicity());
+        if ( bgd)
+            setCurrentGrowthData( bgd);
     }   // end if
 
     if ( !fm || _compatible.empty())
@@ -445,49 +488,58 @@ void MetricCalculator::setCompatibleSources( const FM *fm)
 }   // end setCompatibleSources
 
 
-GrowthDataSources MetricCalculator::_compatibleGrowthData( const FM* fm) const
+GrowthDataSources MetricCalculator::_getCompatibleGrowthData( const FM* fm) const
 {
     GrowthDataSources gds;
     if ( fm)
     {
         bool addBothSexes = false;
         // Get sex data of mother's ethnicity
-        gds = matchingGrowthData( fm->sex(), fm->maternalEthnicity(), false);
-        // Include combined sex data of mother's ethnicity if only single sex in model.
-        if ( fm->sex() != BOTH_SEXES && fm->sex() != UNKNOWN_SEX)
+        if ( fm->maternalEthnicity() != 0)
         {
-            addBothSexes = true;
-            GrowthDataSources gds1 = matchingGrowthData( BOTH_SEXES, fm->maternalEthnicity(), false);
-            gds.insert( gds1.begin(), gds1.end());
+            gds = matchingGrowthData( fm->sex(), fm->maternalEthnicity(), false);
+            // Include combined sex data of mother's ethnicity if only single sex in model.
+            if ( fm->sex() != BOTH_SEXES && fm->sex() != UNKNOWN_SEX)
+            {
+                addBothSexes = true;
+                GrowthDataSources gds1 = matchingGrowthData( BOTH_SEXES, fm->maternalEthnicity(), false);
+                gds.insert( gds1.begin(), gds1.end());
+            }   // end if
         }   // end if
 
         // Is father's ethnicity different?
         if ( fm->paternalEthnicity() != fm->maternalEthnicity())
         {
-            // Get sex data of father's ethnicity
-            GrowthDataSources gds1 = matchingGrowthData( fm->sex(), fm->paternalEthnicity(), false);
-            gds.insert( gds1.begin(), gds1.end());
-            // Include combined sex data of father's ethnicity if only single sex in model.
-            if ( addBothSexes)
+            if ( fm->paternalEthnicity() != 0)
             {
-                gds1 = matchingGrowthData( BOTH_SEXES, fm->paternalEthnicity(), false);
+                // Get sex data of father's ethnicity
+                GrowthDataSources gds1 = matchingGrowthData( fm->sex(), fm->paternalEthnicity(), false);
                 gds.insert( gds1.begin(), gds1.end());
+                // Include combined sex data of father's ethnicity if only single sex in model.
+                if ( addBothSexes)
+                {
+                    gds1 = matchingGrowthData( BOTH_SEXES, fm->paternalEthnicity(), false);
+                    gds.insert( gds1.begin(), gds1.end());
+                }   // end if
             }   // end if
 
             // Since ethnicities are different, get the mixed ethnic code data too.
             const int mcode = Ethnicities::codeMix( {fm->maternalEthnicity(), fm->paternalEthnicity()});
-            gds1 = matchingGrowthData( fm->sex(), mcode, true);
-            gds.insert( gds1.begin(), gds1.end());
-            // And again, include combined sex data of combined ethnicity if only single sex in model.
-            if ( addBothSexes)
+            if ( mcode != 0)
             {
-                gds1 = matchingGrowthData( BOTH_SEXES, mcode, true);
+                GrowthDataSources gds1 = matchingGrowthData( fm->sex(), mcode, true);
                 gds.insert( gds1.begin(), gds1.end());
+                // And again, include combined sex data of combined ethnicity if only single sex in model.
+                if ( addBothSexes)
+                {
+                    gds1 = matchingGrowthData( BOTH_SEXES, mcode, true);
+                    gds.insert( gds1.begin(), gds1.end());
+                }   // end if
             }   // end if
         }   // end if
     }   // end if
     return gds;
-}   // end _compatibleGrowthData
+}   // end _getCompatibleGrowthData
 
 
 GrowthData::CPtr MetricCalculator::growthData( int8_t sex, int en, const QString& src) const

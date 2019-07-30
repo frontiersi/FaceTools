@@ -36,7 +36,7 @@ void SphereView::init()
     _caption->BorderOff();
     _caption->GetCaptionTextProperty()->BoldOff();
     _caption->GetCaptionTextProperty()->ItalicOff();
-    _caption->GetCaptionTextProperty()->ShadowOff();
+    _caption->GetCaptionTextProperty()->ShadowOn();
     _caption->GetCaptionTextProperty()->SetFontFamilyToCourier();
     _caption->GetCaptionTextProperty()->SetFontSize(21);
     setCaptionColour( Qt::GlobalColor::white);

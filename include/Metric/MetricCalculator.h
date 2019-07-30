@@ -104,6 +104,8 @@ public:
 
     ~MetricCalculator();    // Public for Lua
 
+    static QString CUSTOM_STATS_REF;
+
 private:
     MCT* _mct;
     bool _visible;
@@ -126,8 +128,8 @@ private:
     MetricCalculator( const MetricCalculator&) = delete;
     void operator=( const MetricCalculator&) = delete;
 
-    GrowthDataSources _compatibleGrowthData( const FM*) const;
-    GrowthDataSources _mostCompatible( int) const;
+    GrowthDataSources _getCompatibleGrowthData( const FM*) const;
+    GrowthData::CPtr _mostCompatible( int8_t, int, int) const;
 };  // end class
 
 }}   // end namespaces
