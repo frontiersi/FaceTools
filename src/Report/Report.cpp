@@ -127,19 +127,26 @@ bool Report::isAvailable(const FM *fm) const
 
 
 // public
-Report::Ptr Report::load( const QString& fpath, QTemporaryDir& tdir)
+Report::Ptr Report::load( const QString& fname, QTemporaryDir& tdir)
 {
     bool loadedOk = false;
     Ptr report( new Report( tdir), []( Report* d){ delete d;});
 
     try
     {
-        report->_lua.script_file( fpath.toStdString());
-        loadedOk = true;
+        QFile file(fname);
+        if ( file.open(QIODevice::ReadOnly | QIODevice::Text))  // Open for read only text
+        {
+            QTextStream in(&file);
+            const QString code = in.readAll();
+            report->_lua.script( code.toStdString());
+            //report->_lua.script_file( fpath.toStdString());
+            loadedOk = true;
+        }   // end if
     }   // end try
     catch ( const sol::error& e)
     {
-        qWarning() << "Unable to load and execute file '" << fpath << "'!" << endl << "\t" << e.what();
+        qWarning() << "Unable to load and execute file '" << fname << "'!" << endl << "\t" << e.what();
     }   // end catch
 
     if ( !loadedOk)

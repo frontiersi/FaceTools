@@ -31,6 +31,7 @@ using RModelIO::U3DExporter;
 QTemporaryDir ReportManager::_tmpdir;
 QString ReportManager::_hname;
 QString ReportManager::_logopath;
+QString ReportManager::_logofile;
 QString ReportManager::_inkscape;
 QStringList ReportManager::_names;
 std::unordered_map<QString, Report::Ptr> ReportManager::_reports;
@@ -93,16 +94,16 @@ int ReportManager::load( const QString& sdir)
 {
     // Copy the logo into the temporary directory for latex to include
     QFile logo( _logopath);
-    const QString logofile = _tmpdir.filePath("logo.pdf");
-    logo.copy( logofile);
+    _logofile = _tmpdir.filePath("logo.pdf");
+    logo.copy( _logofile);
 
-    const std::string werr = "[WARNING] FaceTools::Report::ReportManager::load: ";
     _names.clear();
     _reports.clear();
 
     QDir rdir( sdir);
     if ( !rdir.exists() || !rdir.isReadable())
     {
+        static const std::string werr = "[WARNING] FaceTools::Report::ReportManager::load: ";
         std::cerr << werr << "Unable to open directory: " << sdir.toStdString() << std::endl;
         return -1;
     }   // end if
@@ -111,23 +112,30 @@ int ReportManager::load( const QString& sdir)
     int nrecs = 0;
     for ( const QString& fname : fnames)
     {
-        Report::Ptr rep = Report::load( rdir.absoluteFilePath(fname), _tmpdir);
-        if ( !rep)
-        {
-            std::cerr << werr << "Error loading Lua script " << fname.toStdString() << std::endl;
-            continue;
-        }   // end else
-
-        rep->setLogo(logofile);
-        rep->setHeaderName(_hname);
-        rep->setInkscape(_inkscape);
-
-        _reports[rep->name()] = rep;
-        _names.append(rep->name());
-        nrecs++;
+        if ( add( rdir.absoluteFilePath( rdir.absoluteFilePath(fname))))
+            nrecs++;
     }   // end for
 
-    _names.sort();
     return nrecs;
 }   // end load
 
+
+bool ReportManager::add( const QString& file)
+{
+    Report::Ptr rep = Report::load( file, _tmpdir);
+    if ( !rep)
+    {
+        static const std::string werr = "[WARNING] FaceTools::Report::ReportManager::load: ";
+        std::cerr << werr << "Error loading Lua script from " << file.toStdString() << std::endl;
+        return false;
+    }   // end else
+
+    rep->setLogo(_logofile);
+    rep->setHeaderName(_hname);
+    rep->setInkscape(_inkscape);
+
+    _reports[rep->name()] = rep;
+    _names.append(rep->name());
+    _names.sort();
+    return true;
+}   // end add

@@ -38,6 +38,9 @@ public:
     // Load all report Lua scripts from the given directory.
     static int load( const QString&);
 
+    // Add a single report from the given filepath.
+    static bool add( const QString&);
+
     // Return the number of reports.
     static size_t count() { return _reports.size();}
 
@@ -51,6 +54,7 @@ private:
     static QTemporaryDir _tmpdir;
     static QString _hname;
     static QString _logopath;
+    static QString _logofile;
     static QString _inkscape;
     static QStringList _names;                                  // Report names
     static std::unordered_map<QString, Report::Ptr> _reports;   // Reports keyed by their names
