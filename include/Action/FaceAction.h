@@ -64,6 +64,13 @@ public:
      */
     virtual QString attachToToolBar() { return "";}
 
+    /**
+     * Return any rich text formatted help for this action. This is separate from
+     * tooltip and whatsThis text since it provides greater detail with formatting
+     * suitable for inclusion in help documentation.
+     */
+    virtual QString helpRichText() const { return "";}
+
     void setCheckable( bool b, bool initialCheckState);
     void setChecked( bool b) { _action.setChecked(b);}
     bool isChecked() const { return _action.isChecked();}
@@ -121,6 +128,7 @@ public:
 
 signals:
     void onEvent( EventGroup);   // Report to others that state changing event(s) have occurred.
+    void onShowHelp();           // Show help for this action
 
 protected:
     /**

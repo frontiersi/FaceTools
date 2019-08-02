@@ -50,6 +50,7 @@ public slots:
 
 signals:
     void onUpdate( const FM*);
+    void onShowHelp( const FaceAction*);
     void onRegisteredAction( FaceAction*);
 
 private:

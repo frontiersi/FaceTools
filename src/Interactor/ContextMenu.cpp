@@ -62,7 +62,7 @@ bool ContextMenu::rightButtonUp()
 {
     const int tnow = QTime::currentTime().msecsSinceStartOfDay();
     // Use double-click interval for acceptable right button down time
-    if (( tnow - _rDownTime) < QApplication::doubleClickInterval())
+    if (( tnow - _rDownTime) < 0.5*QApplication::doubleClickInterval())
     {
         const QPoint mpos = MS::mousePos(); // Relative to viewer
         for ( FaceAction* a : _actions)
