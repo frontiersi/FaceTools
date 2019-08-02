@@ -584,13 +584,24 @@ bool MetricCalculator::canMeasure( const FM* fm) const
 
 MetricValue MetricCalculator::_measure( const FM* fm, int aid, const LmkList& llst) const
 {
-    MetricValue mv( id());
     std::vector<double> dvals;
     assert(_mct);
-    _mct->measure( dvals, fm, aid, &llst); // Facial measurement at dimension i
+    _mct->measure( dvals, fm, aid, &llst, false); // Facial measurements (don't project to plane)
+    MetricValue mv( id());
     mv.setValues(dvals);
     return mv;
 }   // end _measure
+
+
+double MetricCalculator::calculate( const FM* fm, FaceLateral lat, bool pplane, size_t d) const
+{
+    assert(_mct);
+    const LmkList *llst =  lat == FACE_LATERAL_RIGHT ? &_lmks1 : &_lmks0;
+    std::vector<double> dvals;
+    _mct->measure( dvals, fm, fm->currentAssessment()->id(), llst, pplane);
+    assert( d >= 0 && d < dvals.size());
+    return dvals[d];
+}   // end calculate
 
 
 bool MetricCalculator::measure( FM* fm) const

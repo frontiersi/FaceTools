@@ -45,24 +45,30 @@ bool CircularityMetricCalculatorType::canCalculate( const FM* fm, int aid, const
 }   // end canCalculate
 
 
-void CircularityMetricCalculatorType::measure( std::vector<double>& dvals, const FM* fm, int aid, const LmkList* ll) const
+void CircularityMetricCalculatorType::measure( std::vector<double>& dvals, const FM* fm, int aid, const LmkList* ll, bool ppl) const
 {
     const LandmarkSet& lmks = fm->assessment(aid)->landmarks();
 
-    const auto* pp = &*ll->rbegin();     // Previous point
-    const cv::Vec3f fv = lmks.pos( *pp); // Final point
+    const cv::Vec3d nv = fm->orientation().nvec();
+    using SL = FaceTools::Landmark::SpecificLandmark;
+
+    cv::Vec3d pp = lmks.pos( *ll->rbegin());    // Previous point (end of list)
+    const cv::Vec3d fv = pp; // Final point
 
     double area = 0;
     double perim = 0;
-    for ( const auto& tp : *ll)
+    for ( const SL& tp : *ll)
     {
-        const cv::Vec3f v0 = lmks.pos( *pp);
-        const cv::Vec3f v1 = lmks.pos( tp);
+        const cv::Vec3d v0 = pp;
+        cv::Vec3d v1 = lmks.pos( tp);
 
-        perim += cv::norm(v1 - v0);
+        if ( ppl)
+            perim += RFeatures::projectIntoPlane( v0, v1, nv, &v1);
+        else
+            perim += cv::norm(v1 - v0);
+
         area += RFeatures::calcTriangleArea( v0, v1, fv);
-
-        pp = &tp;
+        pp = v1;
     }   // end for
 
     dvals.resize(1);

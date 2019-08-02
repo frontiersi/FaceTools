@@ -18,27 +18,29 @@
 #ifndef FACE_TOOLS_FILE_IO_FACE_MODEL_FILE_HANDLER_H
 #define FACE_TOOLS_FILE_IO_FACE_MODEL_FILE_HANDLER_H
 
-#include <FaceModelFileHandlerInterface.h>
+#include <FaceModel.h>
 
 namespace FaceTools { namespace FileIO {
 
-class FaceTools_EXPORT FaceModelFileHandler : public FaceModelFileHandlerInterface
-{ Q_OBJECT
+class FaceTools_EXPORT FaceModelFileHandler
+{
 public:
     FaceModelFileHandler(){}
+    virtual ~FaceModelFileHandler(){}
 
-    // Must implement FaceModelFileHandlerInterface::getFileDescription
-    // Must implement FaceModelFileHandlerInterface::getFileExtensions
-    // Must implement FaceModelFileHandlerInterface::error
-    double version() const override { return 0;}
+    virtual QString getFileDescription() const = 0; // Human readable file type description.
+    virtual const QStringSet& getFileExtensions() const = 0; // Get file extensions capable of being handled.
+    virtual QString error() const = 0;      // Returns error string on failed read/write.
 
-    bool canRead() const override { return false;}
-    bool canWrite() const override { return false;}
-    bool canWriteTextures() const override { return false;}
+    virtual double version() const { return 0;}
+
+    virtual bool canRead() const { return false;}
+    virtual bool canWrite() const { return false;}
+    virtual bool canWriteTextures() const { return false;}
 
     // Default implementations cause application exit if not overridden and respective canRead/Write return true.
-    FM* read( const QString&) override;              // Must override if canRead overridden to true
-    bool write( const FM*, const QString&) override; // Must override if canWrite overridden to true
+    virtual FM* read( const QString&);              // Must override if canRead overridden to true
+    virtual bool write( const FM*, const QString&); // Must override if canWrite overridden to true
 
 private:
     FaceModelFileHandler( const FaceModelFileHandler&) = delete;

@@ -31,24 +31,6 @@ class FaceTools_EXPORT FaceActionGroup : public FaceActionInterface
 public:
     FaceActionGroup();
 
-    // Create menus / toolbars for the action group. By default, these functions create and return
-    // new menus and toolbars containing the group's actions. The returned widgets should be parented
-    // to an appropriate host widget. Derived types may override these functions to
-    // return null if it isn't appropriate to create menus or toolbars.
-    virtual QMenu* createMenu() const;
-    virtual QToolBar* createToolBar() const;
-
-    // If getWidget() is overridden to return something other than null, this function will return an
-    // action with icon taken from getIcon() and name getDisplayName() that when triggered shows the
-    // widget. If a keyboard shortcut is defined using getShortcut(), this is added to the action.
-    // If widget() returns null (default), this function will also return null.
-    QAction* qaction();
-
-    // By default, these functions add all member actions in this group to the provided widgets.
-    // Override in the derived type to add only subsets of the group's actions.
-    virtual void addTo( QMenu*) const;
-    virtual void addTo( QToolBar*) const;
-
     // QTools::PluginInterface
     QStringList interfaceIds() const override;
     FaceAction* iface( const QString&) const override;

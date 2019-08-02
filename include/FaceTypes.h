@@ -79,10 +79,7 @@ enum FaceLateral : uint8_t
 
 namespace FileIO {
 
-class FaceModelAssImpFileHandlerInterface;
-class FaceModelAssImpFileHandler;
-class FaceModelAssImpFileHandlerFactory;
-class FaceModelFileHandlerInterface;
+class FaceModelFileHandler;
 class FaceModelFileHandlerMap;
 class FaceModelManager;
 }   // end namespace (FileIO)
@@ -91,7 +88,6 @@ namespace Vis {
 
 class FaceView;
 using FV = FaceView;
-class VisualisationInterface;
 class BaseVisualisation;
 class MetricVisualiser;
 class SurfaceVisualisation;
@@ -123,7 +119,6 @@ FaceTools_EXPORT Q_NAMESPACE
 
 class UndoState;
 class UndoStates;
-class FaceActionInterface;
 class FaceAction;
 class FaceActionWorker;
 class FaceActionManager;
@@ -177,7 +172,7 @@ struct FaceTools_EXPORT EventGroup
 
     EventGroup( const EventGroup&) = default;
     EventGroup& operator=( const EventGroup&) = default;
-    virtual ~EventGroup(){}
+    virtual ~EventGroup();
 
     Event event() const { return _E;}
 
@@ -202,7 +197,7 @@ private:
 
 namespace Metric {
 
-class MetricCalculatorTypeInterface;
+class MetricCalculatorType;
 class MetricCalculator;
 using MC = MetricCalculator;
 
@@ -214,24 +209,6 @@ Q_DECLARE_METATYPE( FaceTools::FaceLateral)
 Q_DECLARE_METATYPE( cv::Vec3f);
 
 /**********************************************************************/
-
-
-
-/************ Declare plugin interfaces *************/
-
-#define FaceToolsPluginFaceActionInterface_iid "com.github.frontiersi.FaceTools.v3.Action.FaceActionInterface"
-Q_DECLARE_INTERFACE( FaceTools::Action::FaceActionInterface, FaceToolsPluginFaceActionInterface_iid)
-
-#define FaceToolsPluginVisVisualisationInterface_iid "com.github.frontiersi.FaceTools.v3.Vis.VisualisationInterface"
-Q_DECLARE_INTERFACE( FaceTools::Vis::VisualisationInterface, FaceToolsPluginVisVisualisationInterface_iid)
-
-#define FaceToolsPluginMetricMetricCalculatorTypeInterface_iid "com.github.frontiersi.FaceTools.v3.Metric.MetricCalculatorTypeInterface"
-Q_DECLARE_INTERFACE( FaceTools::Metric::MetricCalculatorTypeInterface, FaceToolsPluginMetricMetricCalculatorTypeInterface_iid)
-
-#define FaceToolsFileIOPluginFaceModelFileHandlerInterface_iid "com.github.frontiersi.FaceTools.v3.FileIO.FaceModelFileHandlerInterface"
-Q_DECLARE_INTERFACE( FaceTools::FileIO::FaceModelFileHandlerInterface, FaceToolsFileIOPluginFaceModelFileHandlerInterface_iid)
-
-/****************************************************/
 
 
 

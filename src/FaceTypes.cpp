@@ -116,6 +116,7 @@ EventGroup::EventGroup( Event e0, Event e1, Event e2, Event e3, Event e4) : _E(e
     add({e1, e2, e3, e4});
 }   // end ctor
 
+EventGroup::~EventGroup(){}
 
 bool EventGroup::has( EventGroup e) const { return (int(e.event()) & int(_E)) > 0;}
 

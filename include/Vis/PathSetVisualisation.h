@@ -24,7 +24,7 @@
 namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT PathSetVisualisation : public BaseVisualisation
-{ Q_OBJECT
+{
 public:
     ~PathSetVisualisation() override;
 

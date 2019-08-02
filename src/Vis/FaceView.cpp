@@ -38,7 +38,7 @@ using FaceTools::Action::EventGroup;
 
 FaceView::FaceView( FM* fm, FMV* viewer)
     : _data(fm), _actor(nullptr), _texture(nullptr), _viewer(nullptr), _pviewer(nullptr),
-      _smm(nullptr), _baseCol(200,190,210), _xvis(nullptr), _nMetricLayers(0)
+      _smm(nullptr), _baseCol(200,190,210), _xvis(nullptr)
 {
     assert(viewer);
     assert(fm);
@@ -152,7 +152,6 @@ void FaceView::reset()
     // applied later when/if necessary by their parent ActionVisualise objects).
     auto vlayers = _vlayers;
     _xvis = nullptr;
-    _nMetricLayers = 0;
     for ( BV* vis : vlayers)
     {
         const bool wasVisible = vis->isVisible(this);
@@ -180,8 +179,6 @@ bool FaceView::purge( BV* vis, Event e)
     _vlayers.erase(vis);
     if ( _xvis == vis)
         _xvis = nullptr;
-    if ( _nMetricLayers > 0 && qobject_cast<MetricVisualiser*>(vis) != nullptr)
-        _nMetricLayers--;
 
     return true;
 }   // end purge
@@ -193,7 +190,6 @@ void FaceView::apply( BV* vis, const QPoint* mc)
     assert(_actor);
     assert(_viewer);
 
-    const bool wasPresent = _vlayers.count(vis) > 0;
     assert( vis->isAvailable(_data));
 
     // Is the passed in visualisation exclusive?
@@ -208,9 +204,6 @@ void FaceView::apply( BV* vis, const QPoint* mc)
     vis->setVisible( this, true);
 
     _vlayers.insert(vis);
-
-    if ( !wasPresent && qobject_cast<MetricVisualiser*>(vis) != nullptr)
-        _nMetricLayers++;
 }   // end apply
 
 

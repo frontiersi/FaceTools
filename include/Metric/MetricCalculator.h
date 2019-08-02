@@ -22,7 +22,7 @@
  * Understands how to perform and record a generic metric calculation.
  */
 
-#include <MetricCalculatorTypeInterface.h>
+#include <MetricCalculatorType.h>
 #include <GrowthData.h>
 #include <MetricSet.h>
 #include <Landmark.h>
@@ -32,8 +32,8 @@ namespace FaceTools { namespace Metric {
 // Growth data by sex then ethnic group code.
 using GrowthDataSources = std::unordered_set<GrowthData::CPtr>;
 
-class FaceTools_EXPORT MetricCalculator : public QObject
-{ Q_OBJECT
+class FaceTools_EXPORT MetricCalculator
+{
 public:
     using Ptr = std::shared_ptr<MetricCalculator>;
     using CPtr = std::shared_ptr<const MetricCalculator>;
@@ -101,6 +101,12 @@ public:
     // metric values. Returns true iff the measurement could be taken.
     // Overwrites metric values so statistics will need updating.
     bool measure( FM*) const;
+
+    // Return the calculated value for the given face lateral at the given
+    // dimension for the given model without updating its metric values.
+    // Set pplane to true if the measurement should be taken projected into
+    // the 2D plane orthogonal to the model's face normal.
+    double calculate( const FM*, FaceLateral, bool pplane=false, size_t dim=0) const;
 
     ~MetricCalculator();    // Public for Lua
 

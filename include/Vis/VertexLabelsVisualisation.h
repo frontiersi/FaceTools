@@ -26,7 +26,7 @@
 namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT VertexLabelsVisualisation : public BaseVisualisation
-{ Q_OBJECT
+{
 public:
     ~VertexLabelsVisualisation() override;
 

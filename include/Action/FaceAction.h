@@ -25,15 +25,7 @@
 
 namespace FaceTools { namespace Action {
 
-// Must remain pure virtual so Qt can make it a plugin interface.
-class FaceTools_EXPORT FaceActionInterface : public QTools::PluginInterface
-{ Q_OBJECT
-public:
-    virtual ~FaceActionInterface(){}
-};  // end class
-
-
-class FaceTools_EXPORT FaceAction : public FaceActionInterface
+class FaceTools_EXPORT FaceAction : public QTools::PluginInterface
 { Q_OBJECT
 public:
     FaceAction();
@@ -59,12 +51,18 @@ public:
     QAction* qaction() { return &_action;}
 
     /**
-     * Actions can use this flag to know if they should ask the user for confirmation
-     * before carrying out an action. This should be tested within overridden doBeforeAction.
-     * This setting is true by default.
+     * Returns which menu to attach this action to (none by default).
+     * Menus are defined according to their names separated by '|'. For example, if the
+     * application defines a submenu called "Camera" on the "Views" menu, this action
+     * can be attached at the bottom of the Camera menu by returning "Views|Camera".
+     * If the specified menu cannot be found, the action is left unconnected.
      */
-    void setRequireConfirm( bool v) { _reqConfirm = v;}
-    bool requireConfirm() const { return _reqConfirm;}
+    virtual QString attachToMenu() { return "";}
+
+    /**
+     * Same as attachToMenu, but specify the name of a toolbar to attach to.
+     */
+    virtual QString attachToToolBar() { return "";}
 
     void setCheckable( bool b, bool initialCheckState);
     void setChecked( bool b) { _action.setChecked(b);}
@@ -239,7 +237,6 @@ private:
     bool _doasync;
     bool _reentrant;
     int _runCount;
-    bool _reqConfirm;
     bool _unlocked; // If true, this action is enabled (true by default)
     Event _pevents; // Purge events
     Event _tevents; // Trigger events

@@ -24,7 +24,7 @@
 namespace FaceTools { namespace FileIO {
 
 class FaceTools_EXPORT FaceModelU3DFileHandler : public FaceModelFileHandler
-{ Q_OBJECT
+{
 public:
     explicit FaceModelU3DFileHandler( bool delFilesWhenDone=true);
     QString getFileDescription() const override;

@@ -29,7 +29,7 @@
 namespace FaceTools { namespace FileIO {
 
 class FaceTools_EXPORT FaceModelAssImpFileHandler : public FaceModelFileHandler
-{ Q_OBJECT
+{
 public:
     QString getFileDescription() const override { return _fdesc;}
     const QStringSet& getFileExtensions() const override { return _exts;}

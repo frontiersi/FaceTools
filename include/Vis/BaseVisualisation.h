@@ -18,25 +18,25 @@
 #ifndef FACE_TOOLS_VIS_BASE_VISUALISATION_H
 #define FACE_TOOLS_VIS_BASE_VISUALISATION_H
 
-#include "VisualisationInterface.h"
+#include "FaceTypes.h"
 #include <vtkMatrix4x4.h>
 #include <vtkProp.h>
 #include <cassert>
 
 namespace FaceTools { namespace Vis {
 
-// Derived classes should inherit BaseVisualisation instead of VisualisationInterface.
-class FaceTools_EXPORT BaseVisualisation : public VisualisationInterface
-{ Q_OBJECT
+class FaceTools_EXPORT BaseVisualisation
+{
 public:
     BaseVisualisation(){}
+    virtual ~BaseVisualisation(){}
 
-    bool isAvailable( const FM*) const override { return true;}
-    bool isAvailable( const FV*, const QPoint*) const override;
+    virtual bool isAvailable( const FM*) const { return true;}
+    virtual bool isAvailable( const FV*, const QPoint*) const;
 
     // Visualisations that are toggled (default) can be turned on and off as layers over the base view.
     // A non-toggled visualisation is mutually exclusive wrt any other non-toggled visualisation.
-    bool isToggled() const override { return true;}
+    virtual bool isToggled() const { return true;}
 
     // If a visualisation is non-toggled, then it is exclusive by default. Visualisations
     // that toggle on/off can also enforce exclusivity when toggling on. This is the case
@@ -65,7 +65,7 @@ public:
     // obtain its complete state from calling apply on the destination view, so this
     // function should only be reimplemented if the default forwarding of this call
     // to apply(dst) leaves the visualisation in an incomplete state.
-    void copy( FV* dst, const FV*) override { this->apply(dst);}
+    virtual void copy( FV* dst, const FV*) { this->apply(dst);}
 
     // Set the visibility of the visualisation if applied.
     virtual void setVisible( FV*, bool) {}
@@ -79,10 +79,10 @@ public:
     virtual void checkState( const FV*){}
 
     // Apply the visualisation for the given FaceView (add associated actors to viewer).
-    // void apply( FV*, const QPoint* p=nullptr) override;
+    virtual void apply( FV*, const QPoint* p=nullptr) = 0;
 
     // Remove the visualisation for the given FaceView (remove associated actors from viewer).
-    // bool purge( FV*, Action::Event) override;
+    virtual bool purge( FV*, Action::Event) = 0;
 
 private:
     BaseVisualisation( const BaseVisualisation&) = delete;
@@ -91,7 +91,7 @@ private:
 
 
 class FaceTools_EXPORT TextureVisualisation : public BaseVisualisation
-{ Q_OBJECT
+{
 public:
     bool isExclusive() const override { return true;}
 
@@ -105,7 +105,7 @@ public:
 
 
 class FaceTools_EXPORT WireframeVisualisation : public BaseVisualisation
-{ Q_OBJECT
+{
 public:
     bool belongs( const vtkProp*, const FV*) const override; // Returns true iff fc->view()->isFace(prop)
 

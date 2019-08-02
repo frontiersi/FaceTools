@@ -25,7 +25,7 @@
 namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT AngleVisualiser : public MetricVisualiser
-{ Q_OBJECT
+{
 public:
     AngleVisualiser( int id, const Landmark::LmkList* l0=nullptr, const Landmark::LmkList* l1=nullptr);
 

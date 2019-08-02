@@ -48,7 +48,7 @@ void FaceAction::pinit()
 {
     _init = _doasync = _reentrant = false;
     _runCount = 0;
-    _unlocked = _reqConfirm = true;
+    _unlocked = true;
     _pevents = _tevents = Event::NONE;
     if ( _dname.isEmpty())
         _dname = QTools::PluginInterface::displayName();

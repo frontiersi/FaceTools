@@ -18,13 +18,13 @@
 #ifndef FACE_TOOLS_METRIC_CURVATURE_METRIC_CALCULATOR_TYPE_H
 #define FACE_TOOLS_METRIC_CURVATURE_METRIC_CALCULATOR_TYPE_H
 
-#include <MetricCalculatorTypeInterface.h>
+#include <MetricCalculatorType.h>
 #include <RegionVisualiser.h>
 
 namespace FaceTools { namespace Metric {
 
-class FaceTools_EXPORT CurvatureMetricCalculatorType : public MetricCalculatorTypeInterface
-{ Q_OBJECT
+class FaceTools_EXPORT CurvatureMetricCalculatorType : public MetricCalculatorType
+{
 public:
     CurvatureMetricCalculatorType( int id=-1, const Landmark::LmkList* l0=nullptr, const Landmark::LmkList* l1=nullptr);
 
@@ -33,7 +33,7 @@ public:
     QString category() const override { return "Curvature";}
     Vis::MetricVisualiser* visualiser() override { return &_vis;}
     bool canCalculate( const FM*, int, const Landmark::LmkList*) const override;
-    void measure( std::vector<double>&, const FM*, int, const Landmark::LmkList*) const override;
+    void measure( std::vector<double>&, const FM*, int, const Landmark::LmkList*, bool) const override;
 
 private:
     Vis::RegionVisualiser _vis;

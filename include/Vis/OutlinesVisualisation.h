@@ -24,7 +24,7 @@
 namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT OutlinesVisualisation : public BaseVisualisation
-{ Q_OBJECT
+{
 public:
     ~OutlinesVisualisation() override;
 

@@ -128,43 +128,15 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionVisualise.h"
     "${INCLUDE_ACTION_DIR}/CameraWorker.h"
     "${INCLUDE_ACTION_DIR}/FaceAction.h"
-    "${INCLUDE_ACTION_DIR}/FaceActionGroup.h"
     "${INCLUDE_ACTION_DIR}/FaceActionManager.h"
     "${INCLUDE_ACTION_DIR}/FaceActionWorker.h"
     "${INCLUDE_ACTION_DIR}/UndoStates.h"
 
     "${INCLUDE_FILEIO_DIR}/BackgroundModelLoader.h"
-    "${INCLUDE_FILEIO_DIR}/FaceModelAssImpFileHandler.h"
-    "${INCLUDE_FILEIO_DIR}/FaceModelFileHandler.h"
-    "${INCLUDE_FILEIO_DIR}/FaceModelFileHandlerInterface.h"
-    "${INCLUDE_FILEIO_DIR}/FaceModelOBJFileHandler.h"
-    "${INCLUDE_FILEIO_DIR}/FaceModelPLYFileHandler.h"
-    "${INCLUDE_FILEIO_DIR}/FaceModelU3DFileHandler.h"
-    "${INCLUDE_FILEIO_DIR}/FaceModelXMLFileHandler.h"
 
-    "${INCLUDE_METRIC_DIR}/CircularityMetricCalculatorType.h"
     "${INCLUDE_METRIC_DIR}/Chart.h"
-    "${INCLUDE_METRIC_DIR}/CurvatureMetricCalculatorType.h"
-    "${INCLUDE_METRIC_DIR}/DistanceMetricCalculatorType.h"
-    "${INCLUDE_METRIC_DIR}/LineAngleMetricCalculatorType.h"
-    "${INCLUDE_METRIC_DIR}/MetricCalculatorTypeInterface.h"
-    "${INCLUDE_METRIC_DIR}/MetricCalculator.h"
 
     "${INCLUDE_REPORT_DIR}/Report.h"
-
-    "${INCLUDE_VIS_DIR}/AngleVisualiser.h"
-    "${INCLUDE_VIS_DIR}/BaseVisualisation.h"
-    "${INCLUDE_VIS_DIR}/BoundingVisualisation.h"
-    "${INCLUDE_VIS_DIR}/EuclideanDistanceVisualiser.h"
-    "${INCLUDE_VIS_DIR}/LandmarksVisualisation.h"
-    "${INCLUDE_VIS_DIR}/LoopSelectVisualisation.h"
-    "${INCLUDE_VIS_DIR}/MetricVisualiser.h"
-    "${INCLUDE_VIS_DIR}/OutlinesVisualisation.h"
-    "${INCLUDE_VIS_DIR}/PathSetVisualisation.h"
-    "${INCLUDE_VIS_DIR}/RegionVisualiser.h"
-    "${INCLUDE_VIS_DIR}/SurfaceVisualisation.h"
-    "${INCLUDE_VIS_DIR}/VertexLabelsVisualisation.h"
-    "${INCLUDE_VIS_DIR}/VisualisationInterface.h"
 
     "${INCLUDE_INT_DIR}/ActorMoveHandler.h"
     "${INCLUDE_INT_DIR}/ContextMenu.h"
@@ -211,6 +183,12 @@ set( INCLUDE_FILES
     "${INCLUDE_FILEIO_DIR}/FaceModelFileHandlerMap.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelManager.h"
     "${INCLUDE_FILEIO_DIR}/LoadFaceModelsHelper.h"
+    "${INCLUDE_FILEIO_DIR}/FaceModelFileHandler.h"
+    "${INCLUDE_FILEIO_DIR}/FaceModelAssImpFileHandler.h"
+    "${INCLUDE_FILEIO_DIR}/FaceModelOBJFileHandler.h"
+    "${INCLUDE_FILEIO_DIR}/FaceModelPLYFileHandler.h"
+    "${INCLUDE_FILEIO_DIR}/FaceModelU3DFileHandler.h"
+    "${INCLUDE_FILEIO_DIR}/FaceModelXMLFileHandler.h"
 
     "${INCLUDE_LNDMRK_DIR}/Landmark.h"
     "${INCLUDE_LNDMRK_DIR}/LandmarkSet.h"
@@ -227,17 +205,35 @@ set( INCLUDE_FILES
     "${INCLUDE_METRIC_DIR}/PhenotypeManager.h"
     "${INCLUDE_METRIC_DIR}/Syndrome.h"
     "${INCLUDE_METRIC_DIR}/SyndromeManager.h"
+    "${INCLUDE_METRIC_DIR}/CircularityMetricCalculatorType.h"
+    "${INCLUDE_METRIC_DIR}/CurvatureMetricCalculatorType.h"
+    "${INCLUDE_METRIC_DIR}/DistanceMetricCalculatorType.h"
+    "${INCLUDE_METRIC_DIR}/LineAngleMetricCalculatorType.h"
+    "${INCLUDE_METRIC_DIR}/MetricCalculatorType.h"
+    "${INCLUDE_METRIC_DIR}/MetricCalculator.h"
 
     "${INCLUDE_REPORT_DIR}/ReportManager.h"
 
+    "${INCLUDE_VIS_DIR}/AngleVisualiser.h"
+    "${INCLUDE_VIS_DIR}/BaseVisualisation.h"
     "${INCLUDE_VIS_DIR}/BoundingView.h"
+    "${INCLUDE_VIS_DIR}/BoundingVisualisation.h"
+    "${INCLUDE_VIS_DIR}/EuclideanDistanceVisualiser.h"
     "${INCLUDE_VIS_DIR}/FaceView.h"
     "${INCLUDE_VIS_DIR}/LandmarkSetView.h"
+    "${INCLUDE_VIS_DIR}/LandmarksVisualisation.h"
+    "${INCLUDE_VIS_DIR}/LoopSelectVisualisation.h"
     "${INCLUDE_VIS_DIR}/LoopsView.h"
+    "${INCLUDE_VIS_DIR}/MetricVisualiser.h"
+    "${INCLUDE_VIS_DIR}/OutlinesVisualisation.h"
+    "${INCLUDE_VIS_DIR}/PathSetVisualisation.h"
     "${INCLUDE_VIS_DIR}/PathView.h"
     "${INCLUDE_VIS_DIR}/PathSetView.h"
+    "${INCLUDE_VIS_DIR}/RegionVisualiser.h"
     "${INCLUDE_VIS_DIR}/SphereView.h"
     "${INCLUDE_VIS_DIR}/SurfaceMetricsMapper.h"
+    "${INCLUDE_VIS_DIR}/SurfaceVisualisation.h"
+    "${INCLUDE_VIS_DIR}/VertexLabelsVisualisation.h"
 
     "${INCLUDE_WIDGET_DIR}/IntTableWidgetItem.h"
 
@@ -326,7 +322,6 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/ActionVisualise
     ${SRC_ACTION_DIR}/CameraWorker
     ${SRC_ACTION_DIR}/FaceAction
-    ${SRC_ACTION_DIR}/FaceActionGroup
     ${SRC_ACTION_DIR}/FaceActionManager
     ${SRC_ACTION_DIR}/FaceActionWorker
     ${SRC_ACTION_DIR}/ModelSelector
@@ -374,6 +369,7 @@ set( SRC_FILES
     ${SRC_METRIC_DIR}/GeneManager
     ${SRC_METRIC_DIR}/GrowthData
     ${SRC_METRIC_DIR}/LineAngleMetricCalculatorType
+    ${SRC_METRIC_DIR}/MetricCalculatorType
     ${SRC_METRIC_DIR}/MetricCalculatorTypeRegistry
     ${SRC_METRIC_DIR}/MetricCalculatorManager
     ${SRC_METRIC_DIR}/MetricCalculator
@@ -444,7 +440,7 @@ qt5_wrap_ui( FORM_HEADERS ${FORMS})
 qt5_wrap_cpp( QOBJECT_MOCS ${QOBJECTS})
 qt5_add_resources( RESOURCE_FILE "${RESOURCE_FILE}")
 
-add_library( ${PROJECT_NAME} ${SRC_FILES} ${QOBJECT_MOCS} ${INCLUDE_FILES} ${FORMS} ${RESOURCE_FILE})
+add_library( ${PROJECT_NAME} ${SRC_FILES} ${QOBJECT_MOCS} ${INCLUDE_FILES} ${FORM_HEADERS} ${FORMS} ${RESOURCE_FILE})
 include( "cmake/LinkLibs.cmake")
 
 install( DIRECTORY "${PROJECT_SOURCE_DIR}/haarcascades" DESTINATION "${LIB_PRE_REQS}/${PROJECT_NAME}")

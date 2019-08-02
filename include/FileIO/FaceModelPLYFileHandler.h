@@ -25,7 +25,7 @@
 namespace FaceTools { namespace FileIO {
 
 class FaceTools_EXPORT FaceModelPLYFileHandler : public FaceModelFileHandler
-{ Q_OBJECT
+{
 public:
     FaceModelPLYFileHandler();
     QString getFileDescription() const override;

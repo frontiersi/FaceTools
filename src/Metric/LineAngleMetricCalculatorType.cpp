@@ -44,7 +44,7 @@ bool LineAngleMetricCalculatorType::canCalculate( const FM* fm, int aid, const L
 }   // end canCalculate
 
 
-void LineAngleMetricCalculatorType::measure( std::vector<double>& dvals, const FM* fm, int aid, const LmkList* ll) const
+void LineAngleMetricCalculatorType::measure( std::vector<double>& dvals, const FM* fm, int aid, const LmkList* ll, bool) const
 {
     assert( canCalculate( fm, aid, ll));
     const LandmarkSet& lmks = fm->assessment(aid)->landmarks();

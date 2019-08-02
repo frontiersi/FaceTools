@@ -29,7 +29,7 @@
 namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT SurfaceVisualisation : public BaseVisualisation
-{ Q_OBJECT
+{
 public:
     explicit SurfaceVisualisation( SurfaceMetricsMapper::Ptr);
 

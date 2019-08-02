@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,34 +15,36 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_METRIC_METRIC_CALCULATOR_TYPE_INTERFACE_H
-#define FACE_TOOLS_METRIC_METRIC_CALCULATOR_TYPE_INTERFACE_H
+#ifndef FACE_TOOLS_METRIC_METRIC_CALCULATOR_TYPE_H
+#define FACE_TOOLS_METRIC_METRIC_CALCULATOR_TYPE_H
 
 #include <FaceTypes.h>
-#include <PluginInterface.h>            // QTools
-#include <MetricVisualiser.h>           // FaceTools::Vis
+#include <MetricVisualiser.h>   // FaceTools::Vis
 #include <Landmark.h>
 
 namespace FaceTools { namespace Metric {
 
-class FaceTools_EXPORT MetricCalculatorTypeInterface : public QTools::PluginInterface
-{ Q_OBJECT
+class FaceTools_EXPORT MetricCalculatorType
+{
 public:
+    virtual ~MetricCalculatorType();
+
     virtual QString category() const = 0;        // Metric calculator category.
 
     virtual Vis::MetricVisualiser* visualiser() = 0;    // Return the visualiser
 
     // Can this metric be calculated for given model assessment (id) and parameters?
-    virtual bool canCalculate( const FM*, int aid, const Landmark::LmkList*) const = 0;
+    virtual bool canCalculate( const FM*, int, const Landmark::LmkList*) const { return false;}
 
     // Measurement(s) against given model and assessment (id) for the given landmark parameters.
-    virtual void measure( std::vector<double>&, const FM*, int aid, const Landmark::LmkList*) const = 0;
+    // Set pplane true if the measurement should be taken in the projected 2D plane.
+    virtual void measure( std::vector<double>&, const FM*, int aid, const Landmark::LmkList*, bool pplane) const = 0;
 
     // Create and return a clone of this object with the given metric parameters.
-    virtual MetricCalculatorTypeInterface* make( int id, const Landmark::LmkList*, const Landmark::LmkList*) const = 0;
+    virtual MetricCalculatorType* make( int id, const Landmark::LmkList*, const Landmark::LmkList*) const = 0;
 };  // end class
 
-using MCT = MetricCalculatorTypeInterface;
+using MCT = MetricCalculatorType;
 
 }}   // end namespaces
 

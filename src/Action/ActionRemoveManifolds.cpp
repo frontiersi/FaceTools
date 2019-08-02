@@ -85,7 +85,7 @@ bool ActionRemoveManifolds::doBeforeAction( Event)
     const size_t numFaceRemove = manifoldIdInRange(_mid) ? size_t(fm->model().numPolys()) - fm->manifolds().manifold(_mid)->polygons().size() : 0;
     fm->unlock();
 
-    if ( numFaceRemove > 0 && requireConfirm())
+    if ( numFaceRemove > 0)
     {
         const int rv = QMessageBox::question( qobject_cast<QWidget*>(parent()),
                               tr("Removing Other Manifolds"),

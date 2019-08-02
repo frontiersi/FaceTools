@@ -74,7 +74,7 @@ private:
 }   // end namespace
 
 
-void CurvatureMetricCalculatorType::measure( std::vector<double>& dvals, const FM* fm, int aid, const LmkList* ll) const
+void CurvatureMetricCalculatorType::measure( std::vector<double>& dvals, const FM* fm, int aid, const LmkList* ll, bool) const
 {
     const LandmarkSet& lmks = fm->assessment(aid)->landmarks();
     const RFeatures::ObjModel& model = fm->model();

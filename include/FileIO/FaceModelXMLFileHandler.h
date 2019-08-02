@@ -27,7 +27,7 @@ static const std::string XML_FILE_EXTENSION = "3df";
 static const std::string XML_FILE_DESCRIPTION = "3D Face Image and Metadata";
 
 class FaceTools_EXPORT FaceModelXMLFileHandler : public FaceModelFileHandler
-{ Q_OBJECT
+{
 public:
     FaceModelXMLFileHandler() { _exts.insert( XML_FILE_EXTENSION.c_str());}
     QString getFileDescription() const override { return XML_FILE_DESCRIPTION.c_str();}

@@ -24,7 +24,7 @@
 namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT LandmarksVisualisation : public BaseVisualisation
-{ Q_OBJECT
+{
 public:
     ~LandmarksVisualisation() override;
 

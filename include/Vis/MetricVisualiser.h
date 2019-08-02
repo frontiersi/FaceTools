@@ -25,7 +25,7 @@
 namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT MetricVisualiser : public BaseVisualisation
-{ Q_OBJECT
+{
 public:
     explicit MetricVisualiser( int);    // Supply the associated metric ID
     ~MetricVisualiser() override;

@@ -25,7 +25,7 @@
 namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT EuclideanDistanceVisualiser : public MetricVisualiser
-{ Q_OBJECT
+{
 public:
     EuclideanDistanceVisualiser( int id, const Landmark::LmkList* l0=nullptr, const Landmark::LmkList* l1=nullptr);
 

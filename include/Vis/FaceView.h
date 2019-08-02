@@ -80,9 +80,6 @@ public:
     // Returns the set of currently applied visualisations.
     const VisualisationLayers& visualisations() const { return _vlayers;}
 
-    // Returns true if at least one of the visualisations currently applied are MetricVisualiser.
-    bool hasMetricVisualiser() const { return _nMetricLayers > 0;}
-
     // Returns the visualisation layer that vtkProp belongs to or null.
     BaseVisualisation* layer( const vtkProp*) const;
 
@@ -131,7 +128,6 @@ private:
     SurfaceMetricsMapper *_smm;             // The active surface mapping (if not null).
     QColor _baseCol;
     BaseVisualisation *_xvis;
-    size_t _nMetricLayers;                  // Count of metric visualiser layers.
     VisualisationLayers _vlayers;           // Visualisation layers.
 
     void _updateModelLighting();

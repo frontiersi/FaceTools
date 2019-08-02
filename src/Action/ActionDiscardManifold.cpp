@@ -84,7 +84,7 @@ bool ActionDiscardManifold::doBeforeAction( Event)
     fm->unlock();
 
     bool goOk = false;
-    if ( numFaceRemove > 0 && requireConfirm())
+    if ( numFaceRemove > 0)
     {
         const int rv = QMessageBox::question( static_cast<QWidget*>(parent()),
                               tr("Discard Manifold"),

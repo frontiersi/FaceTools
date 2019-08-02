@@ -150,7 +150,7 @@ ScanInfoDialog::ScanInfoDialog( QWidget *parent) :
     _ui->setupUi(this);
 
     setWindowTitle( _dialogRootTitle);
-    connect( _ui->buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked, this, &ScanInfoDialog::_doOnApply);
+    //connect( _ui->buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked, this, &ScanInfoDialog::_doOnApply);
 
     connect( _ui->maternalEthnicityComboBox, QOverload<int>::of(&QComboBox::activated), this, &ScanInfoDialog::_doOnChangedMaternalEthnicity);
     connect( _ui->paternalEthnicityComboBox, QOverload<int>::of(&QComboBox::activated), this, &ScanInfoDialog::_doOnChangedPaternalEthnicity);
@@ -505,9 +505,11 @@ void ScanInfoDialog::_doOnAddAssessment()
     // Change model and refresh
     _model->setAssessment(nass);
     _model->setCurrentAssessment(nass->id());
+    _model->setMetaSaved(false);
     _refreshCurrentAssessment();
     // Set focus to the assessor's name which the user will want to change
     _ui->assessorComboBox->setFocus();
+    emit onUpdated(_model);
     emit onAssessmentChanged();
 }   // end _doOnAddAssessment
 
@@ -538,7 +540,9 @@ void ScanInfoDialog::_doOnDeleteAssessment()
         // Change model and refresh
         _model->eraseAssessment(ai);
         _model->setCurrentAssessment( _ui->assessorComboBox->currentData().toInt());
+        _model->setMetaSaved(false);
         _refreshCurrentAssessment();
+        emit onUpdated(_model);
         emit onAssessmentChanged();
     }   // end if
 }   // end _doOnDeleteAssessment
@@ -582,6 +586,8 @@ void ScanInfoDialog::_doOnCopyLandmarks()
             }   // end if
         }   // end for
 
+        _model->setMetaSaved(false);
         emit onCopiedLandmarks();
+        emit onUpdated(_model);
     }   // end if
 }   // end _doOnCopyLandmarks

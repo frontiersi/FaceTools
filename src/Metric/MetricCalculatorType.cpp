@@ -15,32 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_VIS_BOUNDING_VISUALISATION_H
-#define FACE_TOOLS_VIS_BOUNDING_VISUALISATION_H
+#include <MetricCalculatorType.h>
+using FaceTools::Metric::MetricCalculatorType;
 
-#include "BaseVisualisation.h"
-#include "BoundingView.h"
-
-namespace FaceTools { namespace Vis {
-
-class FaceTools_EXPORT BoundingVisualisation : public BaseVisualisation
-{
-public:
-    ~BoundingVisualisation() override;
-
-    void apply( FV*, const QPoint* mc=nullptr) override;
-    bool purge( FV*, Action::Event) override;
-
-    void setVisible( FV*, bool) override;
-    bool isVisible( const FV*) const override;
-
-    void syncActorsToData( const FV*, const cv::Matx44d& d=cv::Matx44d::eye()) override;
-
-private:
-    std::unordered_map<const FV*, BoundingView*> _views;
-    void _setColour( const FV*);
-};  // end class
-
-}}   // end namespace
-
-#endif
+MetricCalculatorType::~MetricCalculatorType(){}

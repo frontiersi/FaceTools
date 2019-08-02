@@ -29,7 +29,7 @@
 namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT LoopSelectVisualisation : public BaseVisualisation
-{ Q_OBJECT
+{
 public:
     explicit LoopSelectVisualisation( double sphereRad=4.0);
     ~LoopSelectVisualisation() override;

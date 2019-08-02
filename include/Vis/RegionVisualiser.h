@@ -25,7 +25,7 @@
 namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT RegionVisualiser : public MetricVisualiser
-{ Q_OBJECT
+{
 public:
     RegionVisualiser( int id, const Landmark::LmkList* lmks0=nullptr, const Landmark::LmkList* lmks1=nullptr);
 

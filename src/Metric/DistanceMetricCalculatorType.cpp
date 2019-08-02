@@ -46,10 +46,18 @@ bool DistanceMetricCalculatorType::canCalculate( const FM* fm, int aid, const Lm
 }   // end canCalculate
 
 
-void DistanceMetricCalculatorType::measure( std::vector<double>& dvals, const FM* fm, int aid, const LmkList* ll) const
+void DistanceMetricCalculatorType::measure( std::vector<double>& dvals, const FM* fm, int aid, const LmkList* ll, bool ppl) const
 {
     assert( canCalculate( fm, aid, ll));
     const LandmarkSet& lmks = fm->assessment(aid)->landmarks();
     dvals.resize(1);
-    dvals[0] = cv::norm( lmks.pos(ll->front()) - lmks.pos(ll->back()));
+    const cv::Vec3d v0 = lmks.pos(ll->front());
+    const cv::Vec3d v1 = lmks.pos(ll->back());
+    if ( !ppl)
+        dvals[0] = cv::norm( v0 - v1);
+    else
+    {
+        const cv::Vec3d nv = fm->orientation().nvec();
+        dvals[0] = RFeatures::projectIntoPlane( v0, v1, nv);
+    }   // end else
 }   // end measure

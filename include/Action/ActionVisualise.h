@@ -28,8 +28,6 @@ class FaceTools_EXPORT ActionVisualise : public FaceAction
 public:
     ActionVisualise( const QString&, const QIcon&, Vis::BaseVisualisation*, const QKeySequence& ks=QKeySequence());
 
-    QWidget* widget() const override { return _vis->widget();}
-
     Vis::BaseVisualisation* visualisation() { return _vis;}
 
     bool isExclusive() const { return !_vis->isToggled() || _vis->isExclusive();}
