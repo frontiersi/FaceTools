@@ -145,15 +145,14 @@ enum struct Event : int
     VIEWER_CHANGE = 0x8000,         // Changed viewer (or the viewer's state) in which view is shown.
     CAMERA_CHANGE = 0x10000,        // Changes to camera parameters within a viewer.
     ACTOR_MOVE = 0x20000,           // Change to the position of a visualisation actor through interaction.
-    REPORT_CREATED = 0x40000,       // A report was just created.
-    METADATA_CHANGE = 0x80000,      // Any of a model's metadata changed (including age/ethnicity).
-    ASSESSMENT_CHANGE = 0x100000,   // Assessment change either in name, notes, landmarks, or path data.
-    U3D_MODEL_CHANGE = 0x200000,    // The U3D model associated with a FaceModel has been updated.
-    ALL_VIEWS = 0x400000,           // Specify that the event relates to all models in the selected viewer.
-    ALL_VIEWERS = 0x800000,         // Specify that all viewers should be considered as "selected" and partaking in the event.
-    ACT_CANCELLED = 0x1000000,      // An action was cancelled from its doBeforeAction function.
-    ACT_COMPLETE = 0x2000000,       // An action completed after running doAfterAction and refreshing its state.
-    MODEL_SELECT = 0x4000000        // When a model has just been selected.
+    METADATA_CHANGE = 0x40000,      // Any of a model's metadata changed (including age/ethnicity).
+    ASSESSMENT_CHANGE = 0x80000,    // Assessment change either in name, notes, landmarks, or path data.
+    U3D_MODEL_CHANGE = 0x100000,    // The U3D model associated with a FaceModel has been updated.
+    ALL_VIEWS = 0x200000,           // Specify that the event relates to all models in the selected viewer.
+    ALL_VIEWERS = 0x400000,         // Specify that all viewers should be considered as "selected" and partaking in the event.
+    ACT_CANCELLED = 0x800000,       // An action was cancelled from its doBeforeAction function.
+    ACT_COMPLETE = 0x1000000,       // An action completed after running doAfterAction and refreshing its state.
+    MODEL_SELECT = 0x2000000        // When a model has just been selected.
 };  // end enum
 
 // Make Event available to Qt's meta type system.
@@ -165,10 +164,7 @@ struct FaceTools_EXPORT EventGroup
 {
     EventGroup();
     EventGroup( Event);
-    EventGroup( Event, Event);
-    EventGroup( Event, Event, Event);
-    EventGroup( Event, Event, Event, Event);
-    EventGroup( Event, Event, Event, Event, Event);
+    EventGroup( std::initializer_list<Event>);
 
     EventGroup( const EventGroup&) = default;
     EventGroup& operator=( const EventGroup&) = default;

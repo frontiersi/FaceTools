@@ -29,6 +29,7 @@ class FaceTools_EXPORT Report : public QObject
 { Q_OBJECT
 public:
     using Ptr = std::shared_ptr<Report>;
+    using CPtr = std::shared_ptr<const Report>;
     static Ptr load( const QString& luascript, QTemporaryDir&);
 
     explicit Report( QTemporaryDir&);
@@ -69,7 +70,6 @@ private:
     QTemporaryDir& _tmpdir;
     QString _logofile, _headerName;
     QString _inkscape;
-    QString _author;
     QString _name;
     QString _title;
     sol::state _lua;

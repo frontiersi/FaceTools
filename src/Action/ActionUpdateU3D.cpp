@@ -29,9 +29,9 @@ using MS = FaceTools::Action::ModelSelector;
 ActionUpdateU3D::ActionUpdateU3D() : FaceAction( "U3D Updater")
 {
     addPurgeEvent( Event::GEOMETRY_CHANGE);
-    addPurgeEvent( Event::FACE_DETECTED);
+    addPurgeEvent( Event::ORIENTATION_CHANGE);
     addTriggerEvent( Event::GEOMETRY_CHANGE);
-    addTriggerEvent( Event::FACE_DETECTED);
+    addTriggerEvent( Event::ORIENTATION_CHANGE);
     setAsync( true, true);  // Reentrant!
 }   // end ctor
 

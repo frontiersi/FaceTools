@@ -33,7 +33,18 @@ public:
 
     // By default, the user is simply asked to save the report. If given a program name here,
     // the report will be opened in the chosen reader (as a forked process).
-    void setOpenOnSave( const QString& pdfreader) { _pdfreader = pdfreader;}
+    static void setOpenOnSave( const QString& pdfreader) { _pdfreader = pdfreader;}
+
+    // Returns true iff report generation (in general) is available for the given model.
+    // Checks that the U3D cache has a filepath for the given model and that
+    // ReportManager::isAvailable returns true.
+    static bool isAvailable( const FM*);
+
+    // Ask user where to save a report generated at the given temporary file location.
+    // Before returning true, if the PDF viewer is set to open generated reports automatically,
+    // the corresponding viewer program will be forked to try to open the file in the newly saved location.
+    // Returns false if unable to save the report or if the user cancels.
+    static bool saveGeneratedReport( const QString& tmpfile, const QWidget* prnt=nullptr);
 
 protected:
     void postInit() override;
@@ -48,7 +59,7 @@ private:
     QTemporaryDir _tmpdir;
     QString _tmpfile;
     QString _err;
-    QString _pdfreader;
+    static QString _pdfreader;
 };  // end class
 
 }}   // end namespace

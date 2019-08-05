@@ -96,24 +96,10 @@ EventGroup::EventGroup( Event E) : _E(E)
 {
 }   // end ctor
 
-EventGroup::EventGroup( Event e0, Event e1) : _E(e0)
+EventGroup::EventGroup( std::initializer_list<Event> evs) : _E(*evs.begin())
 {
-    add( e1);
-}   // end ctor
-
-EventGroup::EventGroup( Event e0, Event e1, Event e2) : _E(e0)
-{
-    add({e1, e2});
-}   // end ctor
-
-EventGroup::EventGroup( Event e0, Event e1, Event e2, Event e3) : _E(e0)
-{
-    add({e1, e2, e3});
-}   // end ctor
-
-EventGroup::EventGroup( Event e0, Event e1, Event e2, Event e3, Event e4) : _E(e0)
-{
-    add({e1, e2, e3, e4});
+    for ( Event e : evs)
+        add( e);
 }   // end ctor
 
 EventGroup::~EventGroup(){}
@@ -171,8 +157,6 @@ std::string EventGroup::name() const
         nms.push_back("CAMERA_CHANGE");
     if ( has(Event::ACTOR_MOVE))
         nms.push_back("ACTOR_MOVE");
-    if ( has(Event::REPORT_CREATED))
-        nms.push_back("REPORT_CREATED");
     if ( has(Event::METADATA_CHANGE))
         nms.push_back("METADATA_CHANGE");
     if ( has(Event::ASSESSMENT_CHANGE))
@@ -241,8 +225,6 @@ bool EventGroup::operator()( const std::function<bool(Event)>& checkEvent)
         checkEvent(Event::CAMERA_CHANGE);
     if ( has(Event::ACTOR_MOVE))
         checkEvent(Event::ACTOR_MOVE);
-    if ( has(Event::REPORT_CREATED))
-        checkEvent(Event::REPORT_CREATED);
     if ( has(Event::METADATA_CHANGE))
         checkEvent(Event::METADATA_CHANGE);
     if ( has(Event::ASSESSMENT_CHANGE))

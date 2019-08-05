@@ -40,6 +40,7 @@ using FaceTools::Vis::FV;
 using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
 
+QString ActionExportPDF::_pdfreader("");    // Static
 
 // public
 ActionExportPDF::ActionExportPDF( const QString& nm, const QIcon& icon, const QKeySequence& ks)
@@ -57,11 +58,13 @@ void ActionExportPDF::postInit()
 }   // end postInit
 
 
-bool ActionExportPDF::checkEnable( Event)
+bool ActionExportPDF::isAvailable( const FM* fm)
 {
-    const FV* fv = MS::selectedView();
-    return fv && U3DCache::isAvailable() && !U3DCache::u3dfilepath(fv->data())->isEmpty() && ReportManager::isAvailable();
-}   // end checkEnabled
+    return fm && U3DCache::isAvailable() && !U3DCache::u3dfilepath(fm)->isEmpty() && ReportManager::isAvailable();
+}   // end isAvailable
+
+
+bool ActionExportPDF::checkEnable( Event) { return isAvailable(MS::selectedModel());}
 
 
 // Get the save filepath for the report
@@ -109,12 +112,18 @@ void ActionExportPDF::doAfterAction( Event)
     }   // end if
 
     std::cerr << "Created PDF at '" << _tmpfile.toStdString() << "'" << std::endl;
+    saveGeneratedReport(_tmpfile, prnt);
+}   // end doAfterAction
 
+
+// static
+bool ActionExportPDF::saveGeneratedReport( const QString& tmpfile, const QWidget* prnt)
+{
     const FM* fm = MS::selectedModel();
     const std::string fname = FileIO::FMM::filepath( fm);
     QString outfile = boost::filesystem::path(fname).filename().replace_extension( "pdf").string().c_str();
 
-    QFileDialog fileDialog( prnt);
+    QFileDialog fileDialog( const_cast<QWidget*>(prnt));
     fileDialog.setWindowTitle( tr("Save Generated Report"));
     fileDialog.setFileMode( QFileDialog::AnyFile);
     fileDialog.setNameFilter( "Portable Document Format (*.pdf)");
@@ -141,23 +150,25 @@ void ActionExportPDF::doAfterAction( Event)
         {
             if ( !QFile::remove(outfile))
             {
-                _err = "Unable to remove existing file! Choose a different filename.";
-                QMessageBox::warning( prnt, tr("Report Save Error!"), _err);
-                std::cerr << _err.toStdString() << std::endl;
+                static const QString err = "Unable to remove existing file! Choose a different filename.";
+                QMessageBox::warning( const_cast<QWidget*>(prnt), tr("Report Save Error!"), err);
                 docopy = false; // Try again!
             }   // end if
         }   // end if
     }   // end while
 
+    bool success = false;
     // Copy the report temporary file to the output location (only succeeds if outfile not present already).
-    if ( docopy && QFile::copy( _tmpfile, outfile))
+    if ( docopy && QFile::copy( tmpfile, outfile))
     {
         MS::showStatus( "Report saved to '" + outfile + "'", 5000);
-        emit onEvent( Event::REPORT_CREATED);
+        success = true;
         if ( !_pdfreader.isEmpty())
         {
             std::cerr << "Forking " << _pdfreader.toStdString() << " " << outfile.toStdString() << std::endl;
             QProcess::startDetached(_pdfreader, QStringList(outfile), "");
         }   // end if
     }   // end if
+
+    return success;
 }   // end doAfterAction

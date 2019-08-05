@@ -596,6 +596,8 @@ MetricValue MetricCalculator::_measure( const FM* fm, int aid, const LmkList& ll
 double MetricCalculator::calculate( const FM* fm, FaceLateral lat, bool pplane, size_t d) const
 {
     assert(_mct);
+    if ( !fm)
+        return 0.0;
     const LmkList *llst =  lat == FACE_LATERAL_RIGHT ? &_lmks1 : &_lmks0;
     std::vector<double> dvals;
     _mct->measure( dvals, fm, fm->currentAssessment()->id(), llst, pplane);

@@ -40,6 +40,26 @@ using FaceTools::FM;
 using FaceTools::Metric::PhenotypeManager;
 using FaceTools::Metric::Phenotype;
 
+
+namespace {
+QString sanit( QString s)
+{
+    // Note here that the order is very important!
+    s.replace("\\", "\\textbackslash");
+    s.replace("#", "\\#");
+    s.replace("$", "\\$");
+    s.replace("%", "\\%");
+    s.replace("&", "\\&");
+    s.replace("^", "\\textasciicircum");
+    s.replace("_", "\\_");
+    s.replace("{", "\\{");
+    s.replace("}", "\\}");
+    s.replace("~", "\\~{}");
+    return s;
+}   // end sanit
+}   // end namespace
+
+
 // public
 Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _model(nullptr)
 {
@@ -289,10 +309,26 @@ bool Report::writeLatex( QTextStream& os) const
        << "\\rhead{\\includegraphics[width=60mm]{" << _logofile << "}}" << endl
        << "\\lhead{" << endl
        //<< "\\Large " << _headerName << " Report: " << _title << " \\\\" << endl
-       << "\\LARGE \\textbf{" << _title << "} \\\\" << endl
-       << "\\large \\textbf{Report Date:} " << QDate::currentDate().toString("dd MMMM yyyy") << "\\\\" << endl;
-    if ( !_author.isEmpty())
-        os << "\\normalsize " << _author << " \\\\" << endl;
+       << "\\LARGE \\textbf{" << sanit(_title) << "} \\\\" << endl;
+
+    os << "\\vspace{2mm} \\normalsize" << endl; // Small gap below title
+
+    // Source and Study ID if present
+    bool hasSource = !_model->source().isEmpty();
+    bool hasStudyId = !_model->studyId().isEmpty();
+    if ( hasSource)
+        os << "\\textbf{Source:} " << sanit(_model->source());
+    if ( hasStudyId)
+    {
+        if ( hasSource)
+            os << "\\hspace{5mm}";
+        os << "\\textbf{Study Id:} " << sanit(_model->studyId());
+    }   // end if
+    if ( hasSource || hasStudyId)
+        os << " \\\\" << endl;
+
+    os << "\\textbf{Report Date:} " << QDate::currentDate().toString("dd MMMM yyyy") << "\\\\" << endl;
+
     os << "}" << endl;
 
     // Document
@@ -390,22 +426,6 @@ void writeSvg( const QString& imname, QTextStream& os, const QString& caption)
 }   // end writeSvg
 
 
-QString sanit( QString s)
-{
-    // Note here that the order is very important!
-    s.replace("\\", "\\textbackslash");
-    s.replace("#", "\\#");
-    s.replace("$", "\\$");
-    s.replace("%", "\\%");
-    s.replace("&", "\\&");
-    s.replace("^", "\\textasciicircum");
-    s.replace("_", "\\_");
-    s.replace("{", "\\{");
-    s.replace("}", "\\}");
-    s.replace("~", "\\~{}");
-    return s;
-}   // end sanit
-
 }   // end namespace
 
 
@@ -413,25 +433,20 @@ std::string Report::makeScanInfo()
 {
     QString ostr;
     QTextStream os(&ostr);
-    os << " \\textbf{Ethnicity:} " << sanit(Ethnicities::name(_model->maternalEthnicity()));
+    os << "\\textbf{Image Capture Date:} " << _model->captureDate().toString("dd MMMM yyyy") << " \\\\" << endl;
+
+    os << "\\textbf{Ethnicity:} " << sanit(Ethnicities::name(_model->maternalEthnicity()));
     if ( _model->maternalEthnicity() != _model->paternalEthnicity())
         os << sanit(" (M) & " + Ethnicities::name(_model->paternalEthnicity()) + " (P)");
     os << " \\\\" << endl;
 
     // Sex and DOB on one line
-    os << " \\textbf{Sex:} " << sanit(FaceTools::toLongSexString( _model->sex()));
-    os << " \\textbf{DOB:} " << _model->dateOfBirth().toString("dd MMMM yyyy") << " \\\\" << endl;
-    os << " \\textbf{Capture Date:} " << _model->captureDate().toString("dd MMMM yyyy") << " \\\\" << endl;
+    os << "\\textbf{Sex:} " << sanit(FaceTools::toLongSexString( _model->sex()));
+    os << "\\hspace{4mm} \\textbf{DOB:} " << _model->dateOfBirth().toString("dd MMMM yyyy") << " \\\\" << endl;
     const double age = _model->age();
     const int yrs = int(age);
     const int mths = int((age - double(yrs)) * 12);
-    os << QString(" \\textbf{Age:} %1 years %2 months \\\\").arg(yrs).arg(mths) << endl;
-    if ( !_model->source().isEmpty())
-        os << " \\textbf{Source:} " << sanit(_model->source());
-    if ( !_model->studyId().isEmpty())
-        os << " \\textbf{Study Id:} " << sanit(_model->studyId());
-    if ( !_model->source().isEmpty() || !_model->studyId().isEmpty())
-        os << " \\\\" << endl;
+    os << QString("\\textbf{Age:} %1 years %2 months \\\\").arg(yrs).arg(mths) << endl;
 
     return ostr.toStdString();
 }   // end makeScanInfo
