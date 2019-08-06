@@ -63,6 +63,14 @@ Chart::Ptr Chart::create( GrowthData::CPtr gd, size_t d, const FM* fm)
 }   // end create
 
 
+Chart::Ptr Chart::create( int mid, size_t d, const FM* fm)
+{
+    assert(MCM::metric(mid) != nullptr);
+    GrowthData::CPtr gd = MCM::metric(mid)->currentGrowthData();
+    return Ptr( new Chart( gd, d, fm));
+}   // end create
+
+
 Chart::Chart( GrowthData::CPtr gd, size_t d, const FM* fm) : _gdata(gd), _dim(d)
 {
     double xmin, xmax;
@@ -89,11 +97,19 @@ Chart::Chart( GrowthData::CPtr gd, size_t d, const FM* fm) : _gdata(gd), _dim(d)
     this->setBackgroundVisible(false);
     this->setDropShadowEnabled(false);
     this->axisX()->setTitleText( "Age from birth (years)");
+
+    // TODO Change the Y axis title to depend upon the calculation type (angle, distance, area etc).
     this->axisY()->setTitleText( QString("Distance (%1)").arg(FM::LENGTH_UNITS));
 }   // end ctor
 
 
 Chart::~Chart() { }   // end dtor
+
+
+void Chart::setYAxisTitle( const QString& ytitle)
+{
+    this->axisY()->setTitleText( ytitle);
+}   // end setYAxisTitle
 
 
 namespace {

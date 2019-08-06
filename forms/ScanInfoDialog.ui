@@ -6,9 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>672</width>
-    <height>392</height>
+    <width>678</width>
+    <height>390</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>678</width>
+    <height>0</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>Scan Info</string>
@@ -20,7 +26,7 @@
   <property name="sizeGripEnabled">
    <bool>true</bool>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,1,0">
+  <layout class="QVBoxLayout" name="verticalLayout_4" stretch="0,1,0">
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_11">
      <item>
@@ -435,11 +441,8 @@
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="1,0">
-     <property name="sizeConstraint">
-      <enum>QLayout::SetDefaultConstraint</enum>
-     </property>
      <item>
-      <layout class="QVBoxLayout" name="verticalLayout_5">
+      <layout class="QVBoxLayout" name="verticalLayout_3" stretch="1,0">
        <item>
         <widget class="QPlainTextEdit" name="notesTextEdit">
          <property name="sizePolicy">
@@ -448,20 +451,33 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
-         <property name="minimumSize">
-          <size>
-           <width>400</width>
-           <height>200</height>
-          </size>
-         </property>
          <property name="toolTip">
-          <string>Write and store assessment notes.</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Record assessment notes.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="whatsThis">
-          <string>Commentry salient to the assessment of this individual at this point in time.</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Any useful information pertaining to the assessment of this individual can be input here and will be saved out into the 3DF file format.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="placeholderText">
           <string>Assessor's notes.</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="hpoTermsLabel">
+         <property name="toolTip">
+          <string>Any automatically detected facial phenotypic traits (from those in the database) are shown here.</string>
+         </property>
+         <property name="whatsThis">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The facial form is automatically analysed for significant facial traits whenever any changes are made to the data such as changes to age, sex, ethnicity, the positions of landmarks, or the morphology of the facial surface. Analysis is conducted independly for each assessor.&lt;/p&gt;&lt;p&gt;Only the facial traits stored in the application's database can be checked, and the identification of such traits depends upon the underlying growth curve statistics associated with the metrics used to establish the objective presence of a particular trait. See the metrics dialog for more information and to change the underlying growth curve data associated with each metric.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::NoFrame</enum>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
          </property>
         </widget>
        </item>
@@ -480,6 +496,12 @@
          <width>200</width>
          <height>200</height>
         </size>
+       </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The thumbnail shows the facial orientation of the subject as defined by the placement of the landmarks.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="whatsThis">
+        <string/>
        </property>
        <property name="frameShape">
         <enum>QFrame::Box</enum>

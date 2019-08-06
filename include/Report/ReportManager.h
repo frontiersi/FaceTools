@@ -38,8 +38,9 @@ public:
     // Load all report Lua scripts from the given directory.
     static int load( const QString&);
 
-    // Add a single report from the given filepath.
-    static bool add( const QString&);
+    // Add a single report from the given filepath returning its identifying
+    // name or an empty string if the report couldn't be added.
+    static QString add( const QString&);
 
     // Return the number of reports.
     static size_t count() { return _reports.size();}

@@ -28,7 +28,7 @@ class FaceTools_EXPORT ActionShowMetrics : public FaceAction
 public:
     ActionShowMetrics( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
 
-    QString toolTip() const override { return "Show the measurements dialog and indicate on the face where the measurements are taken from.";}
+    QString toolTip() const override { return "Show the metrics dialog and indicate on the face where the measurements are taken from.";}
 
     QWidget* widget() const override { return _mdialog;}
 

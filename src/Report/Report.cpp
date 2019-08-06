@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 #include <Ethnicities.h>
 #include <PhenotypeManager.h>
 #include <Chart.h>
+#include <MathUtil.h>   // rlib
 #include <QtSvg/QSvgGenerator>
 #include <QPixmap>
 #include <QFile>
@@ -60,14 +61,31 @@ QString sanit( QString s)
 }   // end namespace
 
 
-// public
-Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _model(nullptr)
+Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _os(nullptr), _model(nullptr)
 {
-    _lua.new_usertype<Report>( "Report",
-                               "makeFigure", &Report::makeFigure,
-                               "makeChart", &Report::makeChart,
-                               "makeScanInfo", &Report::makeScanInfo,
-                               "showNotes", &Report::showNotes);
+    // Create some standardised Lua scripting functions for inserting report elements.
+    addCustomLuaFn( "addScanInfo", [this](){ this->_addLatexScanInfo();});
+    addCustomLuaFn( "addNotes", [this](){ this->_addLatexNotes();});
+    addCustomLuaFn( "addPhenotypicVariationsList", [this](){ this->_addLatexPhenotypicVariationsList();});
+    addCustomLuaFn( "addStartColumn", [this](){ this->_addLatexStartMinipage();});
+    addCustomLuaFn( "addEndColumn", [this](){ this->_addLatexEndMinipage();});
+    addCustomLuaFn( "addLineBreak", [this](){ this->_addLatexLineBreak();});
+
+    _lua.set_function( "addFigure",
+                       [this]( float widthMM, float heightMM, const std::string& caption)
+                        { this->_addLatexFigure( widthMM, heightMM, caption);});
+
+    _lua.set_function( "addGrowthCurvesChart",
+                       [this]( int mid, size_t d, int footnotemark)
+                        { this->_addLatexGrowthCurvesChart( mid, d, footnotemark);});
+
+    _lua.set_function( "addCustomLatex", [this]( const std::string& s) { this->addCustomLatex( QString::fromStdString(s));});
+    _lua.set_function( "addFootnoteSources", [this]( const sol::table &mids){ this->_addFootnoteSources(mids);});
+
+    _lua.set_function( "metric", MCM::metric);
+    _lua.set_function( "metricSource", [this](int mid){ return this->_metricCurrentSource(mid).toStdString();});
+    _lua.set_function( "footnoteIndices", [this]( const sol::table &mids){ return this->_footnoteIndices(mids);});
+    _lua.set_function( "round", []( double v, size_t nd){ return rlib::round(v,nd);});
 
     _lua.new_usertype<MetricSet>( "MetricSet",
                                   "metric", &MetricSet::metric);
@@ -102,10 +120,6 @@ Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _model(nullptr)
                            "metricsL", &FaceAssessment::cmetricsL,
                            "metricsR", &FaceAssessment::cmetricsR);
 
-    _lua.set_function( "phenotype", PhenotypeManager::cphenotype);
-    _lua.set_function( "discover", PhenotypeManager::discover);
-    _lua.set_function( "metric", MCM::metric);
-
     _lua.new_usertype<Phenotype>( "Phenotype",
                                   "name", &Phenotype::name);
 
@@ -123,11 +137,23 @@ Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _model(nullptr)
 }   // end ctor
 
 
-// public
 Report::~Report() {}
 
 
-// public
+void Report::addCustomLuaFn( const QString& fnName, const std::function<void()>& fn)
+{
+    _lua.set_function( fnName.toStdString(), fn);
+}   // end addCustomLuaFn
+
+
+void Report::addCustomLatex( const QString &s)
+{
+    assert(_os);
+    QTextStream& os = *_os;
+    os << s << endl;
+}   // end addCustomLatex
+
+
 bool Report::isAvailable(const FM *fm) const
 {
     bool available = false;
@@ -146,7 +172,6 @@ bool Report::isAvailable(const FM *fm) const
 }   // end isAvailable
 
 
-// public
 Report::Ptr Report::load( const QString& fname, QTemporaryDir& tdir)
 {
     bool loadedOk = false;
@@ -187,6 +212,15 @@ Report::Ptr Report::load( const QString& fname, QTemporaryDir& tdir)
         return nullptr;
     }   // end else
 
+#ifdef NDEBUG
+    // Reject the TEST report if this is the release build
+    if ( report->name().toUpper() == "TEST")
+    {
+        std::cerr << "[INFO] FaceTools::Report::Report::load: Skipping test report for release version." << std::endl;
+        return nullptr;
+    }   // end if
+#endif
+
     if ( sol::optional<std::string> v = table["title"])
         report->_title = v.value().c_str();
     else
@@ -203,11 +237,11 @@ Report::Ptr Report::load( const QString& fname, QTemporaryDir& tdir)
         return nullptr;
     }   // end else
 
-    if ( sol::optional<sol::function> v = table["content"])
-        report->_content = v.value();
+    if ( sol::optional<sol::function> v = table["addContent"])
+        report->_addContent = v.value();
     else
     {
-        qWarning() << "Missing 'content' function!";
+        qWarning() << "Missing 'addContent' function!";
         return nullptr;
     }   // end else
 
@@ -215,7 +249,6 @@ Report::Ptr Report::load( const QString& fname, QTemporaryDir& tdir)
 }   // end load
 
 
-// public
 bool Report::generate( const FM* fm, const QString& u3dfile, const QString& pdffile)
 {
     QFile pfile(pdffile);
@@ -238,9 +271,11 @@ bool Report::generate( const FM* fm, const QString& u3dfile, const QString& pdff
         return false;
     }   // end if
 
-    QTextStream os( &texfile);
-    const bool writtenLatexOk = writeLatex( os);
+    _os = new QTextStream( &texfile);
+    const bool writtenLatexOk = _writeLatex( *_os);
     texfile.close();
+    delete _os;
+
     if ( !writtenLatexOk)
     {
         qWarning() << "Unable to write latex to '" << texfile.fileName() << "'";
@@ -269,21 +304,22 @@ bool Report::generate( const FM* fm, const QString& u3dfile, const QString& pdff
 }   // end generate
 
 
-bool Report::useSVG() const
+bool Report::_useSVG() const
 {
     return !_inkscape.isEmpty() && QFile::exists(_inkscape);
-}   // end useSVG
+}   // end _useSVG
 
 
-bool Report::writeLatex( QTextStream& os) const
+bool Report::_writeLatex( QTextStream& os) const
 {
     os << "\\documentclass{article}" << endl
        << "\\listfiles" << endl   // Do this to see in the .log file which packages are used
        << "\\usepackage[textwidth=20cm,textheight=25cm]{geometry}" << endl
        << "\\usepackage{graphicx}" << endl
-       << "\\usepackage{verbatim}" << endl;
+       << "\\usepackage{verbatim}" << endl
+       << "\\usepackage{xcolor}" << endl;
 
-    if ( useSVG())
+    if ( _useSVG())
     {
         os << "\\usepackage{svg}" << endl   // graphicx also included by svg
            << "\\setsvg{inkscape={\"" << _inkscape << "\"}}" << endl
@@ -308,8 +344,7 @@ bool Report::writeLatex( QTextStream& os) const
        << "\\addtolength{\\textheight}{-7mm}" << endl
        << "\\rhead{\\includegraphics[width=60mm]{" << _logofile << "}}" << endl
        << "\\lhead{" << endl
-       //<< "\\Large " << _headerName << " Report: " << _title << " \\\\" << endl
-       << "\\LARGE \\textbf{" << sanit(_title) << "} \\\\" << endl;
+       << "\\Large \\textbf{" << sanit(_title) << "} \\\\" << endl;
 
     os << "\\vspace{2mm} \\normalsize" << endl; // Small gap below title
 
@@ -321,13 +356,13 @@ bool Report::writeLatex( QTextStream& os) const
     if ( hasStudyId)
     {
         if ( hasSource)
-            os << "\\hspace{5mm}";
+            os << "\\hspace{3mm}";
         os << "\\textbf{Study Id:} " << sanit(_model->studyId());
     }   // end if
     if ( hasSource || hasStudyId)
         os << " \\\\" << endl;
 
-    os << "\\textbf{Report Date:} " << QDate::currentDate().toString("dd MMMM yyyy") << "\\\\" << endl;
+    os << "\\textbf{Reporting Date:} " << QDate::currentDate().toString("dd MMMM yyyy") << "\\\\" << endl;
 
     os << "}" << endl;
 
@@ -340,23 +375,18 @@ bool Report::writeLatex( QTextStream& os) const
     bool valid = true;
     try
     {
-        sol::function_result result = _content( this, _model);
-        if ( result.valid())
-        {
-            std::string content = result;
-            os << content.c_str() << endl;
-        }   // end if
+        _addContent( _model);   // Call out to Lua function to add the report elements
     }   // end try
     catch (const sol::error& e)
     {
-        qWarning() << "Lua Error!:" << e.what();
+        qWarning() << "Lua Error: " << e.what();
         valid = false;
     }   // end catch
 
     os << "\\end{document}" << endl;
     os.flush();
     return valid;
-}   // end writeLaTeX
+}   // end _writeLaTeX
 
 
 namespace {
@@ -371,22 +401,21 @@ bool writefig( const QString& u3dfile, QTextStream& os, float wmm, float hmm, co
     os.setRealNumberNotation( QTextStream::FixedNotation);
     os.setRealNumberPrecision( 3);
 
-    os << "\\begin{figure}[H]" << endl
-       << "\\centering" << endl;
-
-    os << "\\includemedia[" << endl
-       << "\tlabel=" << label << "," << endl
-       << "\twidth=" << wmm << "mm," << endl
-       << "\theight=" << hmm << "mm," << endl
-       << "\tadd3Djscript=3Dspintool.js,   % let scene rotate about z-axis" << endl
-       << "\tkeepaspectratio," << endl
-       << "\tactivate=pageopen," << endl
-       << "\tplaybutton=plain,    % plain | fancy (default) | none" << endl
-       << "\t3Dbg=1 1 1," << endl
-       //<< "\t3Dtoolbar," << endl
-       << "\t3Dmenu," << endl
-       << "\t3Dviews=views.vws," << endl
-       << "\t]{}{" << u3dfile << "}\\\\" << endl;
+    os << R"(\begin{figure}[H]
+            \centering
+            \includemedia[
+            label=)" << label << "," << endl
+       << "width=" << wmm << "mm," << endl
+       << "height=" << hmm << "mm," << endl
+       << R"(add3Djscript=3Dspintool.js,   % let scene rotate about z-axis
+             keepaspectratio,
+             activate=pageopen,
+             playbutton=plain,    % plain | fancy (default) | none
+             3Dbg=1 1 1,
+             3Dmenu,
+             3Dviews=views.vws,
+             ]{}{)" << u3dfile << R"(}\\)" << endl;
+       //<< "3Dtoolbar," << endl
 
     /* THESE AREN'T WORKING! (and also aren't formatted well)
     os << "\\mediabutton[3Dgotoview=" << label << ":(Right)]{\\fbox{Right}}" << endl
@@ -401,82 +430,29 @@ bool writefig( const QString& u3dfile, QTextStream& os, float wmm, float hmm, co
 
     return true;
 }   // end writefig
-
-
-void writeImg( const QString& imgpath, QTextStream& os, const QString& caption)
-{
-    os << "\\begin{figure}[H]" << endl
-       << "\\centering" << endl;
-    if ( !caption.isEmpty())
-        os << "\\caption*{" << caption << "}" << endl;
-    //os << "\\includegraphics[width=\\linewidth]{" << imgpath << "}" << endl;
-    os << "\\includegraphics[width=110.00mm]{" << imgpath << "}" << endl;
-    os << "\\end{figure}" << endl;
-}   // end writeImg
-
-
-void writeSvg( const QString& imname, QTextStream& os, const QString& caption)
-{
-    os << "\\begin{figure}[H]" << endl
-       << "\\centering" << endl;
-    if ( !caption.isEmpty())
-        os << "\\caption*{" << caption << "}" << endl;
-    os << "\\includesvg[width=98.00mm,pretex=\\relscale{0.8}]{" << imname << "}" << endl;
-    os << "\\end{figure}" << endl;
-}   // end writeSvg
-
-
 }   // end namespace
 
 
-std::string Report::makeScanInfo()
+void Report::_addLatexFigure( float wmm, float hmm, const std::string& caption)
 {
-    QString ostr;
-    QTextStream os(&ostr);
-    os << "\\textbf{Image Capture Date:} " << _model->captureDate().toString("dd MMMM yyyy") << " \\\\" << endl;
-
-    os << "\\textbf{Ethnicity:} " << sanit(Ethnicities::name(_model->maternalEthnicity()));
-    if ( _model->maternalEthnicity() != _model->paternalEthnicity())
-        os << sanit(" (M) & " + Ethnicities::name(_model->paternalEthnicity()) + " (P)");
-    os << " \\\\" << endl;
-
-    // Sex and DOB on one line
-    os << "\\textbf{Sex:} " << sanit(FaceTools::toLongSexString( _model->sex()));
-    os << "\\hspace{4mm} \\textbf{DOB:} " << _model->dateOfBirth().toString("dd MMMM yyyy") << " \\\\" << endl;
-    const double age = _model->age();
-    const int yrs = int(age);
-    const int mths = int((age - double(yrs)) * 12);
-    os << QString("\\textbf{Age:} %1 years %2 months \\\\").arg(yrs).arg(mths) << endl;
-
-    return ostr.toStdString();
-}   // end makeScanInfo
+    assert(_os);
+    writefig( _u3dfile, *_os, wmm, hmm, QString( caption.c_str()));
+}   // end _addLatexFigure
 
 
-std::string Report::showNotes()
+void Report::_addLatexGrowthCurvesChart( int mid, size_t d, int footnotemark)
 {
-    QString ostr;
-    QTextStream os(&ostr);
-    FaceAssessment::CPtr ass = _model->currentAssessment();
-    os << " \\normalsize{\\textbf{Assessor:} " << sanit(ass->assessor()) << "} \\\\" << endl;
-    os << " \\small{" << sanit( ass->hasNotes() ? ass->notes() : "Nothing recorded.") << "} \\\\" << endl;
-    return ostr.toStdString();
-}   // end showNotes
+    MC::CPtr mc = MCM::metric(mid);
+    assert(mc);
+    if ( !mc)
+        return;
 
+    // Ensure the chart name is unique (client may want more than one in a report).
+    static int chartid = 0;
+    const QString imname = QString("chart_%1").arg(abs(chartid));   // abs (LOL)
+    chartid++;
 
-std::string Report::makeFigure( float wmm, float hmm, const std::string& caption)
-{
-    QString qcaption(caption.c_str());
-    QString ostr;
-    QTextStream os( &ostr);
-    if ( !writefig( _u3dfile, os, wmm, hmm, qcaption))
-        ostr = "";
-    return ostr.toStdString();
-}   // end makeFigure
-
-
-std::string Report::makeChart( int mid, size_t d, int footnotemark)
-{
-    GrowthData::CPtr gd = MCM::metric(mid)->currentGrowthData();
+    GrowthData::CPtr gd = mc->currentGrowthData();
     Metric::Chart* chart = new Metric::Chart( gd, d, _model);
 
     QtCharts::QChartView cview( chart);
@@ -488,9 +464,9 @@ std::string Report::makeChart( int mid, size_t d, int footnotemark)
     QPaintDevice *img = nullptr;
     QString imgpath;
 
-    if ( useSVG())
+    if ( _useSVG())
     {
-        imgpath = _tmpdir.filePath("chart.svg");
+        imgpath = _tmpdir.filePath(QString("%1.svg").arg(imname));
         QSvgGenerator* simg = new QSvgGenerator;
         simg->setFileName(imgpath);
         simg->setSize(outRect.toRect().size());
@@ -499,7 +475,7 @@ std::string Report::makeChart( int mid, size_t d, int footnotemark)
     }   // end if
     else
     {
-        imgpath = _tmpdir.filePath("chart.png");
+        imgpath = _tmpdir.filePath(QString("%1.png").arg(imname));
         QPixmap* pimg = new QPixmap( outRect.toRect().size());
         pimg->fill( Qt::transparent);
         img = pimg;
@@ -511,26 +487,166 @@ std::string Report::makeChart( int mid, size_t d, int footnotemark)
     chart->scene()->render( &painter, outRect);
     painter.end();
 
-    if ( !useSVG() && !static_cast<QPixmap*>(img)->save( imgpath))
+    if ( !_useSVG() && !static_cast<QPixmap*>(img)->save( imgpath))
     {
         qWarning( "Unable to save PNG!");
-        return "";
+        return;
     }   // end if
 
     QString qcaption = chart->makeLatexTitleString( footnotemark);
-    QString ostr;
-    QTextStream os( &ostr);
+    assert(_os);
+    QTextStream& os = *_os;
 
-    if ( useSVG())
+    os << R"(\begin{figure}[H]
+             \centering)" << endl;
+    if ( !qcaption.isEmpty())
+        os << "\\caption*{" << qcaption << "}" << endl;
+
+    if ( _useSVG())
     {
-        writeSvg( "chart", os, qcaption);
+        os << R"(\includesvg[width=98.00mm,pretex=\relscale{0.8}]{)" << imname << "}" << endl;
         delete static_cast<QSvgGenerator*>(img);
     }   // end if
     else
     {
-        writeImg( imgpath, os, qcaption);
+        //os << "\\includegraphics[width=\\linewidth]{" << imgpath << "}" << endl;
+        os << "\\includegraphics[width=110.00mm]{" << imgpath << "}" << endl;
         delete static_cast<QPixmap*>(img);
     }   // end else
 
-    return ostr.toStdString();
-}   // end makeChart
+    os << "\\end{figure}" << endl;
+}   // end _addLatexGrowthCurvesChart
+
+
+void Report::_addLatexScanInfo()
+{
+    assert(_os);
+    QTextStream& os = *_os;
+    os << "\\textbf{Image Capture Date:} " << _model->captureDate().toString("dd MMMM yyyy") << " \\\\" << endl;
+
+    os << "\\textbf{Ethnicity:} " << sanit(Ethnicities::name(_model->maternalEthnicity()));
+    if ( _model->maternalEthnicity() != _model->paternalEthnicity())
+        os << sanit(" (M) & " + Ethnicities::name(_model->paternalEthnicity()) + " (P)");
+    os << " \\\\" << endl;
+
+    // Sex and DOB on one line
+    os << "\\textbf{Sex:} " << sanit(FaceTools::toLongSexString( _model->sex()));
+    os << "\\hspace{3mm} \\textbf{DOB:} " << _model->dateOfBirth().toString("dd MMMM yyyy") << " \\\\" << endl;
+    const double age = _model->age();
+    const int yrs = int(age);
+    const int mths = int((age - double(yrs)) * 12);
+    os << QString("\\textbf{Age:} %1 years %2 months \\\\").arg(yrs).arg(mths) << endl;
+}   // end _addLatexScanInfo
+
+
+void Report::_addLatexNotes()
+{
+    assert(_os);
+    QTextStream& os = *_os;
+
+    FaceAssessment::CPtr ass = _model->currentAssessment();
+    os << R"( \normalsize{\textbf{Assessor:} )" << sanit(ass->assessor()) << R"(} \\)" << endl;
+    os << R"( \small{)" << sanit( ass->hasNotes() ? ass->notes() : "Nothing recorded.") << R"(} \\)" << endl;
+}   // end _addLatexNotes
+
+
+void Report::_addLatexPhenotypicVariationsList()
+{
+    assert(_os);
+    QTextStream& os = *_os;
+
+    const IntSet pids = PhenotypeManager::discover(_model, -1); // Use the current assessment id
+    if ( !pids.empty())
+    {
+        os << R"~(\begin{center}
+                 \textbf{Atypical Phenotypic Variations} \\
+                 \raggedleft
+                 \begin{itemize})~" << endl;
+        for ( int pid : pids)
+            os << "\t\\item " << PhenotypeManager::phenotype(pid)->name() << endl;
+        os << R"~(\end{itemize} \end{center})~" << endl;
+    }   // end if
+}   // end _addLatexPhenotypicVariationsList
+
+
+void Report::_addLatexStartMinipage()
+{
+    assert(_os);
+    QTextStream& os = *_os;
+    os << R"(\begin{minipage}[t]{.5\linewidth})" << endl;
+}   // end _addLatexStartMinipage
+
+
+void Report::_addLatexEndMinipage()
+{
+    assert(_os);
+    QTextStream& os = *_os;
+    os << R"(\end{minipage})" << endl;
+}   // end _addLatexEndMinipage
+
+
+void Report::_addLatexLineBreak()
+{
+    assert(_os);
+    QTextStream& os = *_os;
+    os << R"(\hfill \break)" << endl;
+}   // end _addLatexLineBreak
+
+
+QString Report::_metricCurrentSource( int mid) const
+{
+    GrowthData::CPtr gd;
+    if ( MCM::metric(mid))
+        gd = MCM::metric(mid)->currentGrowthData();
+    if ( !gd)
+        return "";
+    QString src = gd->source();
+    if ( !gd->note().isEmpty())
+        src += " " + gd->note();
+    return src;
+}   // end _metricCurrentSource
+
+
+std::unordered_map<int, int> Report::_footnoteIndices( const sol::table& mids) const
+{
+    QMap<QString, int> refs;
+    std::unordered_map<int, int> idxs;
+    int idx = 1;
+    for ( size_t i = 0; i < mids.size(); ++i)
+    {
+        const int mid = mids[i];
+        const QString src = _metricCurrentSource(mid);
+        if ( src.isEmpty())
+            continue;
+
+        if ( refs.count(src) > 0)
+            idxs[mid] = refs.value(src);
+        else
+        {
+            refs[src] = mid;
+            idxs[mid] = idx++;
+        }   // end else
+    }   // end for
+    return idxs;
+}   // end _footnoteIndices
+
+
+void Report::_addFootnoteSources( const sol::table& mids)
+{
+    assert(_os);
+    QTextStream& os = *_os;
+
+    QSet<QString> refs;
+    int idx = 1;
+    for ( size_t i = 0; i < mids.size(); ++i)
+    {
+        const int mid = mids[i];
+        const QString src = _metricCurrentSource(mid);
+        if ( !src.isEmpty() && !refs.contains(src))
+        {
+            refs.insert(src);
+            os << "\\footnotetext[" << idx << "]{" << src << "}" << endl;
+            idx++;
+        }   // end if
+    }   // end for
+}   // end _addFootnoteSources

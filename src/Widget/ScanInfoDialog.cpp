@@ -18,6 +18,7 @@
 #include <ScanInfoDialog.h>
 #include <ui_ScanInfoDialog.h>
 #include <MetricCalculatorManager.h>
+#include <PhenotypeManager.h>
 #include <FaceModelManager.h>
 #include <Ethnicities.h>
 #include <FaceModel.h>
@@ -31,6 +32,7 @@
 #include <cassert>
 using FaceTools::Widget::ScanInfoDialog;
 using FaceTools::Metric::MetricCalculatorManager;
+using FaceTools::Metric::PhenotypeManager;
 using FaceTools::FM;
 
 /*
@@ -466,6 +468,8 @@ void ScanInfoDialog::_refreshCurrentAssessment()
     _ui->addAssessmentButton->setEnabled(false);
     _ui->removeAssessmentButton->setEnabled(false);
     _ui->copyLandmarksButton->setEnabled(false);
+
+    QStringList pterms;
     if ( _model)
     {
         FaceAssessment::CPtr cass = _model->currentAssessment();
@@ -475,7 +479,16 @@ void ScanInfoDialog::_refreshCurrentAssessment()
         _ui->addAssessmentButton->setEnabled( true);
         _ui->removeAssessmentButton->setEnabled( _model->assessmentsCount() > 1);
         _ui->copyLandmarksButton->setEnabled( !cass->landmarks().empty() && _model->assessmentsCount() > 1);
+
+        const IntSet ptypes = PhenotypeManager::discover( _model, cass->id());
+        for ( int hid : ptypes)
+            pterms << PhenotypeManager::phenotype(hid)->name();
     }   // end if
+
+    QString msg = tr("Cliniface sees no significant phenotypic traits.");
+    if ( !pterms.isEmpty())
+        msg = pterms.join("; ");
+    _ui->hpoTermsLabel->setText(msg);
 }   // end refreshCurrentAssessment
 
 

@@ -112,7 +112,7 @@ int ReportManager::load( const QString& sdir)
     int nrecs = 0;
     for ( const QString& fname : fnames)
     {
-        if ( add( rdir.absoluteFilePath( rdir.absoluteFilePath(fname))))
+        if ( !add( rdir.absoluteFilePath( rdir.absoluteFilePath(fname))).isEmpty())
             nrecs++;
     }   // end for
 
@@ -120,22 +120,30 @@ int ReportManager::load( const QString& sdir)
 }   // end load
 
 
-bool ReportManager::add( const QString& file)
+QString ReportManager::add( const QString& file)
 {
+    static const std::string werr = "[WARNING] FaceTools::Report::ReportManager::add: ";
     Report::Ptr rep = Report::load( file, _tmpdir);
     if ( !rep)
     {
-        static const std::string werr = "[WARNING] FaceTools::Report::ReportManager::load: ";
         std::cerr << werr << "Error loading Lua script from " << file.toStdString() << std::endl;
-        return false;
+        return "";
     }   // end else
 
     rep->setLogo(_logofile);
     rep->setHeaderName(_hname);
     rep->setInkscape(_inkscape);
 
-    _reports[rep->name()] = rep;
-    _names.append(rep->name());
-    _names.sort();
-    return true;
+    // Check to see if the name exists already because plugins might be overriding
+    if ( _reports.count(rep->name()) == 0)
+    {
+        _names.append(rep->name());
+        _names.sort();
+    }   // end if
+    else {
+        std::cerr << werr << "Overwriting report " << rep->name().toStdString() << std::endl;
+    }   // end else
+
+    _reports[rep->name()] = rep;    // Possibly overwrites existing!
+    return rep->name();
 }   // end add

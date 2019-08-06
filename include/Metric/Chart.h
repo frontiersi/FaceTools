@@ -30,7 +30,10 @@ public:
      * Create and return a new chart showing the given growth curve data for dimension d.
      */
     using Ptr = std::shared_ptr<Chart>;
+
     static Ptr create( GrowthData::CPtr, size_t d, const FM* fm=nullptr);
+    static Ptr create( int mid, size_t d, const FM* fm=nullptr);
+
     Chart( GrowthData::CPtr, size_t, const FM* fm=nullptr);
     ~Chart() override;
 
@@ -39,6 +42,11 @@ public:
      * with components taken from the static functions below.
      */
     void addTitle();
+
+    /**
+     * Default Y axis title is "Distance (mm)" (assumming FM::LENGTH_UNITS = "mm").
+     */
+    void setYAxisTitle( const QString&);
 
     QString makeRichTextTitleString() const;
     QString makeLatexTitleString( int footnotemark=0) const;

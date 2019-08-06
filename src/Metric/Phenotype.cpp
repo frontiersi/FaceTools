@@ -160,9 +160,10 @@ bool Phenotype::isPresent( const FM* fm, int aid) const
         std::cerr << "\t" << e.what() << std::endl;
     }   // end catch
 
+    /*
     if ( present)
         std::cerr << QString( "%1 (%2) is present").arg( name()).arg( id()).toStdString() << std::endl;
-
+    */
     return present;
 }   // end isPresent
 
