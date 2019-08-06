@@ -62,7 +62,7 @@ MetricsDialog::MetricsDialog( QWidget *parent) :
     _cdialog( new ChartDialog( parent))
 {
     _ui->setupUi(this);
-    setWindowTitle( parent->windowTitle() + " | Measurements");
+    setWindowTitle( parent->windowTitle() + " | Metrics");
 
     //setWindowFlags( windowFlags() & ~Qt::WindowCloseButtonHint);
     //setWindowFlags(Qt::Window | Qt::WindowTitleHint | Qt::CustomizeWindowHint);

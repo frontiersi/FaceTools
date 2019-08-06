@@ -322,7 +322,6 @@ void MetricCalculator::_combineGrowthDataEthnicities()
                 // Only combine if different ethnicities.
                 if ( gdi->ethnicity() != gdj->ethnicity())
                 {
-                    assert( gdi->source() != gdj->source());    // Must be different sources, or duplicate GrowthData was read in!
                     GrowthData::Ptr gnew = GrowthData::create( {gdi, gdj});
                     gnew->addSource( CUSTOM_STATS_REF);
                     assert(gnew);

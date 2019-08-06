@@ -35,6 +35,12 @@ public:
     explicit Report( QTemporaryDir&);
     ~Report() override;
 
+    // Add a custom Lua function for report delegates.
+    void addCustomLuaFn( const QString&, const std::function<void()>&);
+
+    // Add some custom latex from within the generate function.
+    void addCustomLatex( const QString&);
+
     void setLogo( const QString& f) { _logofile = f;}
     void setHeaderName( const QString& n){ _headerName = n;}
     void setInkscape( const QString& exe){ _inkscape = exe;}    // Set the Inkscape exe (required for SVG output)
@@ -50,17 +56,6 @@ public:
     // for onFinishedGenerate signal to be emitted.
     bool generate( const FM*, const QString& u3dfile, const QString& pdffile);
 
-    std::string makeFigure( float widthMM, float heightMM, const std::string& caption);
-
-    // mid is the metric ID and d is the dimension of the metric.
-    // Set footnotemark to something higher than zero to use footnote mark
-    // notation for the chart data source instead of printing out the whole source text.
-    std::string makeChart( int mid, size_t d=0, int footnotemark=0);
-
-    std::string makeScanInfo();
-
-    std::string showNotes();
-
 signals:
     // Signal that report for the given model has finished being generated and is at the given location.
     // If parameter model pointer is null, the report failed to generate.
@@ -74,13 +69,32 @@ private:
     QString _title;
     sol::state _lua;
     sol::function _available;
-    sol::function _content;
+    sol::function _addContent;
 
+    QTextStream *_os;
     const FM* _model;
     QString _u3dfile;
 
-    bool useSVG() const;
-    bool writeLatex( QTextStream&) const;
+    void _addLatexFigure( float widthMM, float heightMM, const std::string& caption);
+
+    // mid is the metric ID and d is the dimension of the metric.
+    // Set footnotemark to something higher than zero to use footnote mark
+    // notation for the chart data source instead of the whole source text.
+    void _addLatexGrowthCurvesChart( int mid, size_t d=0, int footnotemark=0);
+
+    void _addLatexScanInfo();
+    void _addLatexNotes();
+    void _addLatexPhenotypicVariationsList();
+
+    void _addLatexStartMinipage();
+    void _addLatexEndMinipage();
+    void _addLatexLineBreak();
+    QString _metricCurrentSource(int) const;
+    std::unordered_map<int, int> _footnoteIndices( const sol::table&) const;
+    void _addFootnoteSources( const sol::table&);
+
+    bool _useSVG() const;
+    bool _writeLatex( QTextStream&) const;
     Report( const Report&) = delete;
     void operator=( const Report&) = delete;
 };  // end class
