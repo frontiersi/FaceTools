@@ -126,7 +126,7 @@ QString ReportManager::add( const QString& file)
     Report::Ptr rep = Report::load( file, _tmpdir);
     if ( !rep)
     {
-        std::cerr << werr << "Error loading Lua script from " << file.toStdString() << std::endl;
+        std::cerr << werr << "Report '" << file.toStdString() << "' not loaded." << std::endl;
         return "";
     }   // end else
 
