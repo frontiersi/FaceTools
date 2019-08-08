@@ -496,12 +496,21 @@ void Report::_addLatexGrowthCurvesChart( int mid, size_t d, int footnotemark)
     QString qcaption = chart->makeLatexTitleString( footnotemark);
     assert(_os);
     QTextStream& os = *_os;
+<<<<<<< HEAD
 
     os << R"(\begin{figure}[H]
              \centering)" << endl;
     if ( !qcaption.isEmpty())
         os << "\\caption*{" << qcaption << "}" << endl;
 
+=======
+
+    os << R"(\begin{figure}[H]
+             \centering)" << endl;
+    if ( !qcaption.isEmpty())
+        os << "\\caption*{" << qcaption << "}" << endl;
+
+>>>>>>> c106bf332b380f9783cbac5fc21ee1e6b994a639
     if ( _useSVG())
     {
         os << R"(\includesvg[width=98.00mm,pretex=\relscale{0.8}]{)" << imname << "}" << endl;
