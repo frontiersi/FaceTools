@@ -16,7 +16,7 @@
  ************************************************************************/
 
 #include <GeneManager.h>
-#include <QFile>
+#include <MiscFunctions.h>
 #include <FileIO.h> // rlib
 #include <iostream>
 #include <cassert>
@@ -31,12 +31,19 @@ std::unordered_map<int, Gene> GeneManager::_genes;
 
 int GeneManager::load( const QString& fname)
 {
+    QTemporaryFile* tmpfile = writeToTempFile(fname);
+    if ( !tmpfile)
+        return 0;
+
     _ids.clear();
     _genes.clear();
     _codes.clear();
 
+    const QString fpath = tmpfile->fileName();
     std::vector<rlib::StringVec> lines;
-    int nrecs = rlib::readFlatFile( fname.toStdString(), lines, IBAR, true/*skip # symbols as well as blank lines*/);
+    int nrecs = rlib::readFlatFile( fpath.toStdString(), lines, IBAR, true/*skip # symbols as well as blank lines*/);
+    delete tmpfile;
+
     if ( nrecs <= 0)
         return nrecs;
 

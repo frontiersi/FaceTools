@@ -59,7 +59,7 @@ QAction* FaceActionManager::registerAction( FaceAction* act)
     auto& acts = get()->_actions;
     assert( acts.count(act) == 0);
     connect( act, &FaceAction::onEvent, &*get(), &FaceActionManager::doEvent);
-    connect( act, &FaceAction::onShowHelp, [](const QString& doc){ emit get()->onShowHelp(doc);});
+    connect( act, &FaceAction::onShowHelp, [](const QString& tok){ emit get()->onShowHelp(tok);});
     acts.insert(act);
     act->init(_singleton->_parent);
     act->refreshState();

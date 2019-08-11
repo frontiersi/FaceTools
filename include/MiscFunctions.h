@@ -21,6 +21,7 @@
 #include "FaceTools_Export.h"
 #include <ObjModelKDTree.h> // RFeatures
 #include <opencv2/opencv.hpp>
+#include <QTemporaryFile>
 #include <QString>
 #include <vtkSmartPointer.h>
 #include <vtkIdList.h>
@@ -31,7 +32,13 @@ typedef unsigned char byte;
 namespace FaceTools {
 
 // Returns the string context of the given file or an empty string on failure.
-FaceTools_EXPORT std::string loadTextFromFile( const std::string& fname);
+FaceTools_EXPORT QString loadTextFromFile( const QString& fname);
+
+// Write the contents of a resource file to a temporary file which is returned.
+// Only necessary if files are not going to be read using QFile (which integrates
+// with Qt's resource system). The client should destroy the returned object when
+// done with the file's contents.
+FaceTools_EXPORT QTemporaryFile* writeToTempFile( const QString& rfile);
 
 FaceTools_EXPORT std::string getDateTimeDigits( const std::string&); // Get the first 10 digits as a string from given string.
 

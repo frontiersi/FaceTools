@@ -26,7 +26,7 @@ class FaceTools_EXPORT LandmarksManager
 {
 public:
     // Load all landmarks from the given file.
-    static int load( const std::string& fname);
+    static int load( const QString& fname);
 
     // Save all landmarks to the given file.
     static bool save( const std::string& fname);

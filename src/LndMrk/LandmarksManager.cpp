@@ -16,7 +16,7 @@
  ************************************************************************/
 
 #include <LandmarksManager.h>
-#include <QFile>
+#include <MiscFunctions.h>
 #include <FileIO.h> // rlib
 #include <boost/algorithm/string.hpp>
 #include <iostream>
@@ -61,16 +61,23 @@ bool LandmarksManager::hasCode( const QString& cd) { return _clmks.count(cd.toLo
 bool LandmarksManager::hasCode( const std::string& nm) { return hasCode( QString(nm.c_str()));}
 
 
-int LandmarksManager::load( const std::string& fname)
+int LandmarksManager::load( const QString& fname)
 {
+    QTemporaryFile* tmpfile = writeToTempFile(fname);
+    if (!tmpfile)
+        return 0;
+
     _ids.clear();
     _codes.clear();
     _names.clear();
     _lmks.clear();
     _clmks.clear();
 
+    const QString fpath = tmpfile->fileName();
     std::vector<rlib::StringVec> lines;
-    int nrecs = rlib::readFlatFile( fname, lines, IBAR, true/*skip # symbols as well as blank lines*/);
+    int nrecs = rlib::readFlatFile( fpath.toStdString(), lines, IBAR, true/*skip # symbols as well as blank lines*/);
+    delete tmpfile;
+
     if ( nrecs <= 0)
         return nrecs;
 

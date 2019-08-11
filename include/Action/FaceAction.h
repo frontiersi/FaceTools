@@ -65,9 +65,11 @@ public:
     virtual QString attachToToolBar() { return "";}
 
     /**
-     * Return any compressed help file to be added.
+     * Return the location of a single file to be added to help (usually HTML).
+     * The provided token should be used as the parameter when emitting onShowHelp
+     * to show the help file returned by this function.
      */
-    virtual QString helpFile() const { return "";}
+    virtual QString helpFile( const QString& helpToken) { return "";}
 
     void setCheckable( bool b, bool initialCheckState);
     void setChecked( bool b) { _action.setChecked(b);}
@@ -126,7 +128,7 @@ public:
 
 signals:
     void onEvent( EventGroup);   // Report to others that state changing event(s) have occurred.
-    void onShowHelp( const QString& helpFile);   // Show the given help file (must be registered).
+    void onShowHelp( const QString& helpToken);   // Show the given help by passing token (see helpFile).
 
 protected:
     /**

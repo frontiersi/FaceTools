@@ -25,19 +25,42 @@
 using RFeatures::ObjModel;
 
 
-std::string FaceTools::loadTextFromFile( const std::string& fname)
+QString FaceTools::loadTextFromFile( const QString& fname)
 {
-    std::string contents;
-    QFile f(fname.c_str());
+    QString contents;
+    QFile f(fname);
     if ( f.open(QFile::ReadOnly | QFile::Text))
     {
         QTextStream in(&f);
-        contents = in.readAll().toStdString();
+        contents = in.readAll();
     }   // end if
     else
-        std::cerr << "[ERROR] FaceTools::loadTextFromFile: Unable to load from file " << fname << std::endl;
+        std::cerr << "[ERROR] FaceTools::loadTextFromFile: Unable to load from file " << fname.toStdString() << std::endl;
     return contents;
 }   // end loadTextFromFile
+
+
+QTemporaryFile* FaceTools::writeToTempFile( const QString& rfile)
+{
+    QTemporaryFile *tmp = new QTemporaryFile;
+    if ( !tmp->open())
+    {
+        delete tmp;
+        return nullptr;
+    }   // end if
+
+    QFile file(rfile);
+    if ( file.open(QIODevice::ReadOnly))
+        tmp->write( file.readAll());
+    else
+    {
+        delete tmp;
+        return nullptr;
+    }   // end 
+    tmp->close();
+
+    return tmp;
+}   // end writeToTempFile
 
 
 /*

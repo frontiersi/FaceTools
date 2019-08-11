@@ -16,7 +16,7 @@
  ************************************************************************/
 
 #include <Ethnicities.h>
-#include <QFile>
+#include <MiscFunctions.h>
 #include <FileIO.h> // rlib
 #include <boost/algorithm/string.hpp>
 #include <iostream>
@@ -105,8 +105,12 @@ bool Ethnicities::belongs( int pc, int cc, bool allBelong)
 }   // end belongs
 
 
-int Ethnicities::load( const std::string& fname)
+int Ethnicities::load( const QString& fname)
 {
+    QTemporaryFile* tmpfile = writeToTempFile(fname);
+    if ( !tmpfile)
+        return 0;
+
     _codes.clear();
     _names.clear();
     _lnames.clear();
@@ -114,8 +118,11 @@ int Ethnicities::load( const std::string& fname)
     _rgroups.clear();
     _lt = -100;
 
+    const QString fpath = tmpfile->fileName();
     std::vector<rlib::StringVec> lines;
-    int nrecs = rlib::readFlatFile( fname, lines, IBAR, true/*skip # symbols as well as blank lines*/);
+    int nrecs = rlib::readFlatFile( fpath.toStdString(), lines, IBAR, true/*skip # symbols as well as blank lines*/);
+    delete tmpfile;
+
     if ( nrecs <= 0)
         return nrecs;
 

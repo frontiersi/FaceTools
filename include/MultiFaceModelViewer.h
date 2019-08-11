@@ -28,7 +28,7 @@ namespace FaceTools {
 class FaceTools_EXPORT MultiFaceModelViewer : public QWidget
 { Q_OBJECT
 public:
-    MultiFaceModelViewer( QWidget *parent=nullptr);
+    explicit MultiFaceModelViewer( QWidget *parent=nullptr);
     ~MultiFaceModelViewer() override {}
 
     FMV* leftViewer() const { return _fmvs.at(0);}

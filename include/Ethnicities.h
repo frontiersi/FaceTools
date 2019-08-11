@@ -44,7 +44,7 @@ public:
      * Load ethnic group data from the given file returning the
      * number of records read in or -1 if failed to read from file.
      */
-    static int load( const std::string& fname);
+    static int load( const QString& fname);
 
     /**
      * Returns sorted list in numerically ascending order of four digit codes starting at 0001.

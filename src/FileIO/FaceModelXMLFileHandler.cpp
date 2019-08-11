@@ -236,7 +236,7 @@ void importModelRecord( FM* fm, const PTree& rnode, std::string& objfilename)
         int nassid = 0;   // Assessment ids if not defined
         int assid = 0;
 
-        for ( const PTree::value_type& vnode: anodes)
+        for ( const PTree::value_type& vnode : anodes)
         {
             const PTree& anode = vnode.second;
 
