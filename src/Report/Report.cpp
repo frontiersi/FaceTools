@@ -555,19 +555,16 @@ void Report::_addLatexPhenotypicVariationsList()
     QTextStream& os = *_os;
 
     const IntSet pids = PhenotypeManager::discover(_model, -1); // Use the current assessment id
-    os << "\\begin{center}" << endl;
     if ( pids.empty())
         os << "No atypical phenotypic variations identified." << endl;
     else
     {
         os << "\\textbf{Identified atypical phenotypic variations:}" << endl
-           << "\\raggedleft" << endl
            << "\\begin{itemize}" << endl;
         for ( int pid : pids)
             os << "\t\\item " << PhenotypeManager::phenotype(pid)->name() << endl;
         os << "\\end{itemize}" << endl;
     }   // end else
-    os << "\\end{center}" << endl;
 }   // end _addLatexPhenotypicVariationsList
 
 
