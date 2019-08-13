@@ -135,7 +135,7 @@ bool FaceModelManager::canRead( const std::string& fn)
 
 bool FaceModelManager::hasFileHandler( const std::string &fpath)
 {
-    return _fhmap.readInterface( fpath) != nullptr;
+    return _fhmap.readInterface( fpath) != nullptr || _fhmap.writeInterface( fpath) != nullptr;
 }   // end hasFileHandler
 
 

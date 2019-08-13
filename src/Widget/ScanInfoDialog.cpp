@@ -235,7 +235,6 @@ void ScanInfoDialog::refresh()
             _aids.insert(ai);
             FaceAssessment::CPtr ass = _model->assessment(ai);
             const QString aname = ass->assessor();
-            assert( !aname.isEmpty());
             _ui->assessorComboBox->addItem( aname, ai);
         }   // end for
     }   // end if

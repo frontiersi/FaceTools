@@ -86,7 +86,7 @@ bool ActionSaveAsFaceModel::doBeforeAction( Event)
         else
             break;
 
-        if ( !FMM::hasFileHandler( _filename))
+        if ( !FMM::canWrite( _filename))
         {
             static const QString msg = tr("Not a valid file format; please choose one of the listed formats.");
             QMessageBox::information( prnt, tr("Invalid File Format"), msg);
