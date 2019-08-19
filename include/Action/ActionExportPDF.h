@@ -31,9 +31,9 @@ public:
 
     QString toolTip() const override { return "Generate and export a PDF containing information about the selected model.";}
 
-    // By default, the user is simply asked to save the report. If given a program name here,
-    // the report will be opened in the chosen reader (as a forked process).
-    static void setOpenOnSave( const QString& pdfreader) { _pdfreader = pdfreader;}
+    // By default, the user is simply asked to save the report. If set true here,
+    // the report will be opened in the user's default PDF reader after saving.
+    static void setOpenOnSave( bool v) { _openOnSave = v;}
 
     // Returns true iff report generation (in general) is available for the given model.
     // Checks that the U3D cache has a filepath for the given model and that
@@ -59,7 +59,7 @@ private:
     QTemporaryDir _tmpdir;
     QString _tmpfile;
     QString _err;
-    static QString _pdfreader;
+    static bool _openOnSave;
 };  // end class
 
 }}   // end namespace

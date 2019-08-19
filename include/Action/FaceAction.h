@@ -52,15 +52,13 @@ public:
 
     /**
      * Returns which menu to attach this action to (none by default).
-     * Menus are defined according to their names separated by '|'. For example, if the
-     * application defines a submenu called "Camera" on the "Views" menu, this action
-     * can be attached at the bottom of the Camera menu by returning "Views|Camera".
      * If the specified menu cannot be found, the action is left unconnected.
      */
     virtual QString attachToMenu() { return "";}
 
     /**
-     * Same as attachToMenu, but specify the name of a toolbar to attach to.
+     * Returns which tool bar to attach this action to (none by default).
+     * If the specified tool bar cannot be found, the action is left unconnected.
      */
     virtual QString attachToToolBar() { return "";}
 

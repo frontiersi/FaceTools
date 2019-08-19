@@ -22,6 +22,7 @@
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 
+#include <QDesktopServices>
 #include <QTemporaryDir>
 #include <QFileDialog>
 #include <QMessageBox>
@@ -40,7 +41,7 @@ using FaceTools::Vis::FV;
 using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
 
-QString ActionExportPDF::_pdfreader("");    // Static
+bool ActionExportPDF::_openOnSave(false);    // Static
 
 // public
 ActionExportPDF::ActionExportPDF( const QString& nm, const QIcon& icon, const QKeySequence& ks)
@@ -105,9 +106,9 @@ void ActionExportPDF::doAfterAction( Event)
 
     if ( !_err.isEmpty())
     {
-        QMessageBox::warning( prnt, tr("Report Creation Error!"), _err);
-        MS::showStatus("Failed to generate report!", 5000);
         std::cerr << _err.toStdString() << std::endl;
+        MS::showStatus("Failed to generate report!", 5000);
+        QMessageBox::warning( prnt, tr("Report Creation Error!"), _err);
         return;
     }   // end if
 
@@ -163,10 +164,11 @@ bool ActionExportPDF::saveGeneratedReport( const QString& tmpfile, const QWidget
     {
         MS::showStatus( "Report saved to '" + outfile + "'", 5000);
         success = true;
-        if ( !_pdfreader.isEmpty())
+        if ( _openOnSave)
         {
-            std::cerr << "Forking " << _pdfreader.toStdString() << " " << outfile.toStdString() << std::endl;
-            QProcess::startDetached(_pdfreader, QStringList(outfile), "");
+            //std::cerr << "Forking " << _pdfreader.toStdString() << " " << outfile.toStdString() << std::endl;
+            //QProcess::startDetached(_pdfreader, QStringList(outfile), "");
+            QDesktopServices::openUrl( QUrl( "file:///" + outfile, QUrl::TolerantMode));
         }   // end if
     }   // end if
 
