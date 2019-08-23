@@ -39,6 +39,7 @@ signals:
 
 protected:
     void purge( const FM*, Event) override;
+    bool checkState( Event) override;
     void doAction( Event) override;
 
 private:

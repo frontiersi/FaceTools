@@ -434,13 +434,13 @@ set( SRC_FILES
     ${SRC_DIR}/U3DCache
     )
 
-set( RESOURCE_FILE "FaceTools_res.qrc")
+set( RCC_FILE "FaceTools_res.qrc")
 
 qt5_wrap_ui( FORM_HEADERS ${FORMS})
 qt5_wrap_cpp( QOBJECT_MOCS ${QOBJECTS})
-qt5_add_resources( RESOURCE_FILE "${RESOURCE_FILE}")
+qt5_add_resources( RESOURCE_FILE "${RCC_FILE}")
 
-add_library( ${PROJECT_NAME} ${SRC_FILES} ${QOBJECT_MOCS} ${INCLUDE_FILES} ${FORM_HEADERS} ${FORMS} ${RESOURCE_FILE})
+add_library( ${PROJECT_NAME} ${SRC_FILES} ${QOBJECT_MOCS} ${INCLUDE_FILES} ${FORM_HEADERS} ${FORMS} ${RESOURCE_FILE} ${RCC_FILE})
 include( "cmake/LinkLibs.cmake")
 
 install( DIRECTORY "${PROJECT_SOURCE_DIR}/haarcascades" DESTINATION "${LIB_PRE_REQS}/${PROJECT_NAME}")

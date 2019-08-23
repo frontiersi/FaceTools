@@ -49,9 +49,9 @@ public:
     /**
      * For making rigid affine changes to the data that can be expressed using a matrix.
      * Transform the model, search tree, landmarks and paths using the given matrix
-     * as well as all FaceViews associated with this model. Note that only the landmarks
-     * and paths are actually updated directly; the model, kd-tree, and bounds are set
-     * with matrices to transform their vertices.
+     * as well as all FaceViews associated with this model. Note that only paths are
+     * updated directly; the model, kd-tree, bounds and landmarks are set with
+     * matrices to transform their vertices.
      */
     void addTransformMatrix( const cv::Matx44d&);
 

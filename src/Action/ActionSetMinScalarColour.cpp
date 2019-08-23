@@ -26,6 +26,7 @@ using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
 using SMM = FaceTools::Vis::SurfaceMetricsMapper;
+using MS = FaceTools::Action::ModelSelector;
 
 
 ActionSetMinScalarColour::ActionSetMinScalarColour( const QString& dname)
@@ -37,7 +38,7 @@ ActionSetMinScalarColour::ActionSetMinScalarColour( const QString& dname)
 
 bool ActionSetMinScalarColour::checkEnable( Event)
 {
-    const FV* fv = ModelSelector::selectedView();
+    const FV* fv = MS::selectedView();
     const SMM* smm = fv ? fv->activeSurface() : nullptr;
     if ( smm)
         setIconColour( smm->minColour());
@@ -56,7 +57,7 @@ bool ActionSetMinScalarColour::doBeforeAction( Event)
 
 void ActionSetMinScalarColour::doAction( Event)
 {
-    SMM* smm = ModelSelector::selectedView()->activeSurface();
+    SMM* smm = MS::selectedView()->activeSurface();
     assert(smm);
     smm->setMinColour( _curColour);
     smm->rebuild();

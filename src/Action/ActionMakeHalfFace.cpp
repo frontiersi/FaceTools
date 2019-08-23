@@ -33,7 +33,7 @@ using RFeatures::Transformer;
 
 
 ActionMakeHalfFace::ActionMakeHalfFace( const QString &dn, const QIcon& ico)
-    : FaceAction( dn, ico), _n(0,1,0), _p(0,0,0), _useLmks(false)
+    : FaceAction( dn, ico), _n(0,1,0), _p(0,0,0)
 {
     setAsync(true);
 }   // end ctor
@@ -41,13 +41,13 @@ ActionMakeHalfFace::ActionMakeHalfFace( const QString &dn, const QIcon& ico)
 
 QString ActionMakeHalfFace::toolTip() const
 {
-    return "Copy one side of the face to the other to make a symmetric face.";
+    return "Copy one half of the face to the other to make a symmetric face.";
 }   // end toolTip
 
 
 QString ActionMakeHalfFace::whatsThis() const
 {
-    return "Make a copy of one side of the face, then reflect it through the median plane before joining it back onto the original unreflected half.";
+    return "Copy one half of the face reflected through the median plane, then join it back onto the original unreflected half to make a symmetric face through the median plane. If no landmarks are present, the YZ plane through the origin is used as the reflecting plane.";
 }   // end whatsThis
 
 
@@ -58,22 +58,15 @@ void ActionMakeHalfFace::setPlane( const cv::Vec3f& n, const cv::Vec3f& p)
 }   // end setPlane
 
 
-void ActionMakeHalfFace::setUseLandmarksIfPossible(bool v) { _useLmks = v;}
-
-
-bool ActionMakeHalfFace::checkEnable( Event)
-{
-    return MS::isViewSelected();
-}   // end checkEnabled
+bool ActionMakeHalfFace::checkEnable( Event) { return MS::isViewSelected();}
 
 
 bool ActionMakeHalfFace::doBeforeAction( Event)
 {
     bool go = true;
-    // If this action is set to use landmarks but the selected model has none,
-    // ask the user if they want to continue.
+    // If the selected model has no landmarks, ask the user if they want to continue.
     const FM* fm = MS::selectedModel();
-    if ( _useLmks && fm->currentAssessment()->landmarks().empty())
+    if ( fm->currentAssessment()->landmarks().empty())
     {
         static const QString msg = tr("There are no landmarks to place the cutting plane! Use the preset cutting plane instead?");
         QWidget* prnt = static_cast<QWidget*>(parent());
@@ -90,31 +83,39 @@ void ActionMakeHalfFace::doAction( Event)
     FM* fm = MS::selectedModel();
 
     // Set up the reflection transformation
-    static const cv::Matx44d rmat ( -1,  0,  0,  0,
-                                     0,  1,  0,  0,
-                                     0,  0,  1,  0,
-                                     0,  0,  0,  1);
-    cv::Vec3f p = _p;
+    static const cv::Matx44d tmat( -1,   0,   0,   0,
+                                    0,   1,   0,   0,
+                                    0,   0,   1,   0,
+                                    0,   0,   0,   1);
+    const cv::Vec3f p = _p;
+    const cv::Vec3f n = _n;
 
     fm->lockForWrite();
-    // Use cutting plane position as through mean of landmarks if requested and available
+
+    // Set the model into standard position before doing the reflection.
     const Landmark::LandmarkSet& lmks = fm->currentAssessment()->landmarks();
-    if ( _useLmks && !lmks.empty())
-        p = lmks.fullMean();
+    const cv::Matx44d omat = lmks.orientation().asMatrix(lmks.fullMean());  // Orientation of model to restore afterwards
 
-    ObjModel::Ptr nmod = ObjModelSlicer( fm->model())( p, _n);  // Copy of one half
-    ObjModel::Ptr nmod1 = nmod->deepCopy(true/*share mats*/);   // Flipped copy will become other half
+    fm->addTransformMatrix( omat.inv());
+    fm->fixOrientation();
 
-    // Invert face normals indices on the other half before reflecting through YZ plane.
-    const IntSet& fids = nmod1->faces();
+    ObjModel::Ptr model = fm->model().deepCopy();
+    ObjModel::Ptr half0 = ObjModelSlicer( *model)( p, n);       // Copy of one half
+    ObjModel::Ptr half1 = half0->deepCopy(true/*share mats*/);  // Copy of half for reflecting
+
+    // Invert face normals indices on the other half before reflecting.
+    const IntSet& fids = half1->faces();
     for ( int fid : fids)
-        nmod1->reversePolyVertices(fid);
+        half1->reversePolyVertices(fid);
 
-    nmod1->setTransformMatrix(rmat);
-    nmod1->fixTransformMatrix();
+    // Reflect the copied half
+    half1->setTransformMatrix(tmat);
+    half1->fixTransformMatrix();
 
-    RFeatures::join( *nmod, *nmod1, true); // Join nmod1 to nmod as new vertices
-    fm->update(nmod);
+    model = half0;  // Join the halves
+    RFeatures::join( *model, *half1, true);
+
+    fm->update(model);
 
     // Also need to update the positions of the lateral landmarks on the rejected side
     // to reflect their partner positions through the same plane.
@@ -125,13 +126,16 @@ void ActionMakeHalfFace::doAction( Event)
         const cv::Vec3f lpos = lmks.pos(lmid, FACE_LATERAL_LEFT);
         const cv::Vec3f rpos = lmks.pos(lmid, FACE_LATERAL_RIGHT);
         // Find which lateral needs to be reflected by testing the dot product
-        const float ldot = _n.dot(lpos - p);
-        const float rdot = _n.dot(rpos - p);
+        const float ldot = n.dot(lpos - p);
+        const float rdot = n.dot(rpos - p);
         if ( ldot > 0 && rdot < 0)   // Keep the left lateral
-            fm->setLandmarkPosition( lmid, FACE_LATERAL_RIGHT, RFeatures::transform( rmat, lpos));
+            fm->setLandmarkPosition( lmid, FACE_LATERAL_RIGHT, RFeatures::transform( tmat, lpos));
         else if ( rdot > 0 && ldot < 0)   // Keep the right lateral
-            fm->setLandmarkPosition( lmid, FACE_LATERAL_LEFT, RFeatures::transform( rmat, rpos));
+            fm->setLandmarkPosition( lmid, FACE_LATERAL_LEFT, RFeatures::transform( tmat, rpos));
     }   // end for
+
+    // Re-orient.
+    fm->addTransformMatrix( omat);
 
     fm->unlock();
 }   // end doAction

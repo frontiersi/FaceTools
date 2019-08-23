@@ -41,13 +41,20 @@ bool ActionUndo::checkEnable( Event)
 }   // end checkEnable
 
 
-void ActionUndo::doAction( Event)
+bool ActionUndo::doBeforeAction( Event)
 {
     // Need to save the name of the action being undone here since upon actually doing
     // the undo, signal onUpdated is emitted which causes checkEnable to execute which
     // will update the name of the undo action that would otherwise be shown in the
     // status bar by the default implementation of doAfterAction.
     _rname = UndoStates::undoActionName();
+    MS::showStatus( QString("Undoing '%1'").arg(_rname));
+    return true;
+}   // end doBeforeAction
+
+
+void ActionUndo::doAction( Event)
+{
     UndoStates::undo();
 }   // end doAction
 

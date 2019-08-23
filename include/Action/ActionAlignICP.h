@@ -27,7 +27,7 @@ class FaceTools_EXPORT ActionAlignICP : public FaceAction
 public:
     ActionAlignICP( const QString&, const QIcon&);
 
-    QString toolTip() const override { return "Use the Iterative Closest Point (ICP) algorithm to attempt to align the other models in the same viewer as the selected model with it.";}
+    QString toolTip() const override { return "Align the vertices of other models in the same viewer as the selected model using the Iterative Closest Point (ICP) algorithm.";}
 
 protected:
     bool checkEnable( Event) override;

@@ -29,9 +29,9 @@ namespace {
 QToolButton* makeButton()
 {
     QToolButton* b = new QToolButton;
-    b->setMinimumSize( QSize(27,27));
-    b->setMaximumSize( QSize(27,27));
-    b->setIconSize( QSize(27,27));
+    b->setMinimumSize( QSize(26,26));
+    b->setMaximumSize( QSize(26,26));
+    b->setIconSize( QSize(26,26));
     //b->setStyleSheet( "QToolButton::menu-indicator { image: none; }");
     b->setStyleSheet( "\
         QToolButton{ \

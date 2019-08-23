@@ -30,7 +30,7 @@ ReportChooserDialog::ReportChooserDialog(QWidget *parent) :
     QDialog(parent), _ui(new Ui::ReportChooserDialog)
 {
     _ui->setupUi(this);
-    setWindowTitle( parent->windowTitle() + " | Select Report");
+    setWindowTitle( parent->windowTitle() + " | Report Template Selection");
 }   // end ctor
 
 

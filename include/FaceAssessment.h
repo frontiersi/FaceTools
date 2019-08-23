@@ -60,6 +60,9 @@ public:
     // Add the given transform to landmarks and paths returning true landmarks/paths not empty.
     bool addTransform( const cv::Matx44d&);
 
+    // Fix the current transform on this assessment's landmarks (paths are always transformed directly).
+    void fixTransform();
+
     // Cause each landmark to update its position to be at the closest point on the surface.
     // This should always be the case normally unless manually placing a set of landmarks.
     bool moveLandmarksToSurface( const FM*);

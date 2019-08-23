@@ -208,6 +208,8 @@ void FaceModel::addTransformMatrix( const cv::Matx44d& T)
 void FaceModel::fixOrientation()
 {
     _model->fixTransformMatrix();
+    for ( auto& a : _ass)
+        a.get()->fixTransform();
     _kdtree = ObjModelKDTree::create( *_model);
     _makeOrientationBounds();
     setModelSaved( false);

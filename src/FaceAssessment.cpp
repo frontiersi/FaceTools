@@ -115,8 +115,16 @@ bool FaceAssessment::addTransform( const cv::Matx44d &T)
         _paths->transform(T);
         setok = true;
     }   // end if
+
     return setok;
 }   // end addTransform
+
+
+void FaceAssessment::fixTransform()
+{
+    _landmarks->fixTransformMatrix();
+    // Note here that path vertices are never passed through a transform.
+}   // end fixTransform
 
 
 bool FaceAssessment::moveLandmarksToSurface( const FM* fm)

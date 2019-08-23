@@ -29,6 +29,32 @@ using FaceTools::Action::Event;
 using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
 
+
+namespace {
+
+// Synchronise the view actors for the given model to the model transform.
+void syncViewActors( const FM* fm)
+{
+    assert(fm);
+    vtkSmartPointer<vtkMatrix4x4> vmat = RVTK::toVTK( fm->model().transformMatrix());
+    for ( FaceTools::Vis::FV* fv : fm->fvs())
+    {
+        fv->actor()->PokeMatrix(vmat);
+        fv->syncActorDeltaToVisualisations();
+    }   // end for
+}   // end syncViewActors
+
+
+// Rebuild the actors associated with the model.
+void rebuildViewActors( const FM* fm)
+{
+    for ( FaceTools::Vis::FV* fv : fm->fvs())
+        fv->reset();
+}   // end rebuildViewActors
+
+}   // end namespace
+
+
 FaceActionManager::Ptr FaceActionManager::_singleton;
 
 
@@ -72,24 +98,12 @@ QAction* FaceActionManager::registerAction( FaceAction* act)
 void FaceActionManager::close( const FM* fm)
 {
     assert(fm);
-#ifndef NDEBUG
-    std::cerr << "Closing '" << FileIO::FMM::filepath(fm) << "'" << std::endl;
-#endif
-#ifndef NDEBUG
-    std::cerr << " -- Purging actions" << std::endl;
-#endif
     fm->lockForRead();
     const auto& acts = get()->_actions;
     for ( FaceAction* act : acts)
         act->purge(fm, Event::CLOSED_MODEL);
     fm->unlock();
-#ifndef NDEBUG
-    std::cerr << " -- Deleting views" << std::endl;
-#endif
     MS::remove(fm);
-#ifndef NDEBUG
-    std::cerr << " -- Removing file reference" << std::endl;
-#endif
     FileIO::FMM::close(fm);
 }   // end close
 
@@ -121,25 +135,42 @@ void FaceActionManager::doEvent( EventGroup egrp)
     // This also reapplies visualisations and it is necessary that any visualisations that rely upon
     // associations of data be fully purged first which is why the above loop to purge the actions
     // comes before this check.
-    if ( egrp.has(Event::GEOMETRY_CHANGE) || egrp.has(Event::ORIENTATION_CHANGE))
+    if ( fm && (egrp.has(Event::GEOMETRY_CHANGE) || egrp.has(Event::ORIENTATION_CHANGE)))
     {
-        for ( Vis::FV* fv : fm->fvs())   // Rebuild the actors associated with the model.
-            fv->reset();
+        if ( !egrp.has( Event::ALL_VIEWS))
+            rebuildViewActors( fm);
+        else
+        {
+            const FVS& aset = MS::selectedView()->viewer()->attached();
+            for ( const FM* vm : aset.models())
+                rebuildViewActors(vm);
+        }   // end else
     }   // end if
 
     // Synchronise affine transformations across view actors
-    if ( egrp.has( Event::AFFINE_CHANGE))
+    if ( fm && egrp.has( Event::AFFINE_CHANGE))
     {
-        vtkSmartPointer<vtkMatrix4x4> vmat = RVTK::toVTK( fm->model().transformMatrix());
-        for ( Vis::FV* fv : fm->fvs())
+        if ( !egrp.has( Event::ALL_VIEWS))
+            syncViewActors( fm);
+        else
         {
-            fv->actor()->PokeMatrix(vmat);
-            fv->syncActorDeltaToVisualisations();
-        }   // end for
+            const FVS& aset = MS::selectedView()->viewer()->attached();
+            for ( const FM* vm : aset.models())
+                syncViewActors(vm);
+        }   // end else
     }   // end if
 
     if ( egrp.has(Event::LANDMARKS_CHANGE) || egrp.has(Event::FACE_DETECTED) || egrp.has(Event::ASSESSMENT_CHANGE))
-        MS::syncBoundingVisualisation(fm);
+    {
+        if ( !egrp.has( Event::ALL_VIEWS))
+            MS::syncBoundingVisualisation(fm);
+        else
+        {
+            const FVS& aset = MS::selectedView()->viewer()->attached();
+            for ( const FM* vm : aset.models())
+                MS::syncBoundingVisualisation(vm);
+        }   // end else
+    }   // end if
 
     // If the action did anything to the camera, always set the interaction
     // mode back to camera interaction mode.
@@ -166,6 +197,6 @@ void FaceActionManager::doEvent( EventGroup egrp)
     }   // end for
 
     // Finally notify the client application of updates and re-render.
-    emit onUpdate( MS::selectedModel());
+    emit onUpdate( fm);
     MS::updateRender();
 }   // end doEvent

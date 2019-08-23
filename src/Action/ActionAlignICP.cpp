@@ -55,8 +55,8 @@ void ActionAlignICP::doAction( Event)
 {
     storeUndo(this, {Event::AFFINE_CHANGE, Event::ALL_VIEWS});
 
-    FV* fv = MS::selectedView();
-    FM* sfm = fv->data();
+    const FV* fv = MS::selectedView();
+    const FM* sfm = fv->data();
 
     // Get the source model to align against
     sfm->lockForRead();
@@ -68,7 +68,8 @@ void ActionAlignICP::doAction( Event)
     for ( FM* fm : aset.models())
     {
         fm->lockForWrite();
-        fm->addTransformMatrix( aligner.calcTransform( fm->model()));
+        const cv::Matx44d tmat = aligner.calcTransform( fm->model());
+        fm->addTransformMatrix( tmat);
         fm->unlock();
     }   // end for
 }   // end doAction
@@ -77,7 +78,7 @@ void ActionAlignICP::doAction( Event)
 void ActionAlignICP::doAfterAction( Event)
 {
     MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-    MS::showStatus( "Finished aligning.", 5000);
     emit onEvent( {Event::AFFINE_CHANGE, Event::ALL_VIEWS});
+    MS::showStatus( "Finished aligning.", 5000);
 }   // end doAfterAction
 

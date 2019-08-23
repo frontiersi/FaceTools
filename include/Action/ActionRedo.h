@@ -31,6 +31,7 @@ public:
 
 protected:
     bool checkEnable( Event) override;
+    bool doBeforeAction( Event) override;
     void doAction( Event) override;
     void doAfterAction( Event) override;
 

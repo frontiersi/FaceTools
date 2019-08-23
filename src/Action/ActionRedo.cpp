@@ -39,13 +39,20 @@ bool ActionRedo::checkEnable( Event)
 }   // end checkEnable
 
 
-void ActionRedo::doAction( Event)
+bool ActionRedo::doBeforeAction( Event)
 {
     // Need to save the name of the action being redone here since upon actually doing
     // the redo, signal onUpdated is emitted which causes checkEnable to execute which
     // will update the name of the redo action that would otherwise be shown in the
     // status bar by the default implementation of doAfterAction.
     _rname = UndoStates::redoActionName();
+    MS::showStatus( QString("Redoing '%1'").arg(_rname));
+    return true;
+}   // end doBeforeAction
+
+
+void ActionRedo::doAction( Event)
+{
     UndoStates::redo();
 }   // end doAction
 

@@ -42,6 +42,14 @@ ActionUpdateThumbnail::~ActionUpdateThumbnail()
 }   // end dtor
 
 
+bool ActionUpdateThumbnail::checkState( Event)
+{
+    QColor bgcol = MS::defaultViewer()->backgroundColour();
+    _omv.setBackgroundColour( bgcol.redF(), bgcol.greenF(), bgcol.blueF());
+    return true;
+}   // end checkState
+
+
 const cv::Mat ActionUpdateThumbnail::thumbnail( const FM* fm)
 {
     if ( _thumbs.count(fm) > 0)

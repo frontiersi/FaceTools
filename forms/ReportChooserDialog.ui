@@ -26,7 +26,7 @@
    <item>
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>Select report to generate</string>
+      <string>Choose a report to generate for the selected model</string>
      </property>
     </widget>
    </item>

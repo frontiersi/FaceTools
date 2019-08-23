@@ -120,7 +120,7 @@ void ActionSaveAsFaceModel::doAction( Event)
     assert( !_filename.empty());
     FM* fm = MS::selectedModel();
     fm->lockForWrite();
-    if ( !fm->hasLandmarks())
+    //if ( !fm->hasLandmarks())
     {
         fm->fixOrientation();
         _egrp.add(Event::ORIENTATION_CHANGE);

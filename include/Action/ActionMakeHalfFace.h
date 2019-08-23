@@ -34,10 +34,6 @@ public:
     // be copied from. The point p specifies a point on the cutting plane.
     void setPlane( const cv::Vec3f& n, const cv::Vec3f& p=cv::Vec3f(0,0,0));
 
-    // If set true, the landmarks are used to identify the point in the cutting
-    // plane as being the mean landmark position - the direction set as n (in setPlane).
-    void setUseLandmarksIfPossible( bool);
-
 protected:
     bool checkEnable( Event) override;
     bool doBeforeAction( Event) override;
@@ -46,7 +42,6 @@ protected:
 
 private:
     cv::Vec3f _n, _p;
-    bool _useLmks;
 };  // end class
 
 }}   // end namespace
