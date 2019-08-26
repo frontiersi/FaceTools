@@ -61,6 +61,7 @@ bool ActionTransformToStandardPosition::checkEnable( Event)
     cv::Vec3f centre = fm->centre();
     Orientation on = fm->orientation();
     fm->unlock();
+    // Enable only if the orientation is
     static const double MINF = 1e-6;
     return (l2sq( centre) > MINF) || (l2sq( on.nvec() - cv::Vec3f(0,0,1)) > MINF) || (l2sq( on.uvec() - cv::Vec3f(0,1,0)) > MINF);
 }   // end checkEnabled
@@ -72,7 +73,8 @@ void ActionTransformToStandardPosition::doAction( Event)
     const FV* fv = MS::selectedView();
     FM* fm = fv->data();
     fm->lockForWrite();
-    fm->addTransformMatrix( fm->orientation().asMatrix( fm->centre()).inv());
+    const cv::Matx44d bmat = fm->orientation().asMatrix( fm->centre());
+    fm->addTransformMatrix( bmat.inv());
     fm->unlock();
     ActionOrientCameraToFace::orientToFace( fv, double(DEFAULT_CAMERA_DISTANCE));
 }   // end doAction

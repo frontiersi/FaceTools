@@ -141,6 +141,7 @@ void ActionFillHoles::doAction( Event)
     }   // end while
 
     fm->update( model);
+    fm->moveLandmarksToSurface();
     fm->unlock();
 }   // end doAction
 

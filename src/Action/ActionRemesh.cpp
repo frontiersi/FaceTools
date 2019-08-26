@@ -57,6 +57,7 @@ void ActionRemesh::doAction( Event)
     vadder.subdivideAndMerge( maxTriangleArea());
     //vadder.addVerticesToMaxTriangleArea( maxTriangleArea());
     fm->update(model);
+    fm->moveLandmarksToSurface();
     fm->unlock();
 }   // end doAction
 

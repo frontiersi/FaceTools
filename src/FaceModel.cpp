@@ -110,7 +110,6 @@ void FaceModel::update( ObjModel::Ptr model, bool updateConnectivity)
     for ( auto& ass : _ass)
         ass.get()->recalculatePaths(this);
 
-    moveLandmarksToSurface();
     _makeOrientationBounds();
 }   // end update
 
@@ -124,9 +123,9 @@ void FaceModel::_makeOrientationBounds()
     cv::Matx44d T = _model->transformMatrix();  // Identity matrix normally
     //std::cerr << "_makeOrientationBounds: " << std::endl;
     //std::cerr << T << std::endl;
-    LandmarkSet::CPtr lmks = makeMeanLandmarksSet();
-    if ( !lmks->empty())
-        T = lmks->orientation().asMatrix( lmks->fullMean());
+    const LandmarkSet& lmks = currentAssessment()->landmarks();
+    if ( !lmks.empty())
+        T = lmks.orientation().asMatrix( lmks.fullMean());
     const size_t nm = _manifolds->count();
     _bnds.resize(nm+1);
     for ( size_t i = 0; i < nm; ++i)
@@ -137,7 +136,7 @@ void FaceModel::_makeOrientationBounds()
 
     // If no landmarks, make the bounds entry at zero the union of the manifold bounding cuboids
     // otherwise the bounds at zero represents a box around the head of the model.
-    if ( lmks->empty())
+    if ( lmks.empty())
     {
         _bnds[0] = _bnds[1]->deepCopy();
         for ( size_t i = 2; i < nm+1; ++i)
@@ -146,14 +145,14 @@ void FaceModel::_makeOrientationBounds()
     else
     {
         // Get the landmark mean, superior and inferior means in standard position
-        cv::Vec3f lm = lmks->fullMean();
-        cv::Vec3f sm = lmks->superiorMean();
-        cv::Vec3f im = lmks->inferiorMean();
+        cv::Vec3f lm = lmks.fullMean();
+        cv::Vec3f sm = lmks.superiorMean();
+        cv::Vec3f im = lmks.inferiorMean();
         const cv::Matx44d iT = T.inv();
         RFeatures::transform( iT, lm);
         RFeatures::transform( iT, sm);
         RFeatures::transform( iT, im);
-        const double xlen = 2.5*cv::norm( lmks->eyeVec());
+        const double xlen = 2.5*cv::norm( lmks.eyeVec());
         const double ylen = 2.6*cv::norm(sm-im);
         const double zlen = 1.1 * ylen;
         cv::Vec3d minc(-xlen/2, -ylen/2, -0.8*zlen);
@@ -179,8 +178,8 @@ void FaceModel::eraseView( FV* fv)
 
 void FaceModel::_syncOrientationBounds()
 {
-    LandmarkSet::CPtr lmks = makeMeanLandmarksSet();
-    const cv::Matx44d T = lmks->orientation().asMatrix( lmks->fullMean());
+    const LandmarkSet& lmks = currentAssessment()->landmarks();
+    const cv::Matx44d T = lmks.orientation().asMatrix( lmks.fullMean());
     // Update the bounds
     for ( auto& b : _bnds)
         b->setTransformMatrix(T);
@@ -195,9 +194,9 @@ void FaceModel::addTransformMatrix( const cv::Matx44d& T)
     for ( auto& b : _bnds)
         b->addTransformMatrix(T);
 
-    bool addedTransform = false;
+    bool addedTransform = true;
     for ( auto& a : _ass)
-        addedTransform = a.get()->addTransform(T);
+        addedTransform = a.get()->addTransform(T) && addedTransform;
 
     if ( addedTransform)
         setMetaSaved( false);
