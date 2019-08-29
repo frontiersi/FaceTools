@@ -32,9 +32,14 @@ bool ActionRedo::checkEnable( Event)
 {
     const bool cando = UndoStates::canRedo();
     QString dname = _dname;
+    QString ttip = toolTip();
     if ( cando)
+    {
         dname = QString("%1 '%2'").arg(_dname).arg( UndoStates::redoActionName());
+        ttip = dname;
+    }   // end if
     setDisplayName( dname);
+    setToolTip( ttip);
     return cando;
 }   // end checkEnable
 

@@ -91,7 +91,7 @@ void PathSetView::setText( const Path& path, int xpos, int ypos)
         oss0 << path.name << std::endl;
     oss1 << "Caliper: " << std::setw(5) << std::fixed << std::setprecision(1) << path.elen << " " << lnunits;
     oss2 << "\nSurface: ";
-    if ( path.psum >= path.elen)
+    if ( path.psum > 0.0)
         oss2 << std::setw(5) << std::fixed << std::setprecision(1) << path.psum << " " << lnunits;
     else
         oss2 << " N/A";

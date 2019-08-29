@@ -32,11 +32,15 @@ ActionUndo::ActionUndo( const QString &dn, const QIcon& ico, const QKeySequence&
 bool ActionUndo::checkEnable( Event)
 {
     const bool cando = UndoStates::canUndo();
-    // Set the name of the action to undo next
     QString dname = _dname; // "Undo"
+    QString ttip = toolTip();
     if ( cando)
+    {
         dname = QString("%1 '%2'").arg(_dname).arg( UndoStates::undoActionName());
+        ttip = dname;
+    }   // end if
     setDisplayName( dname);
+    setToolTip( ttip);
     return cando;
 }   // end checkEnable
 

@@ -51,16 +51,28 @@ void RadialSelectInteractor::set( const cv::Vec3f &p, double r)
     _model->lockForRead();
     cv::Vec3f cpos = _model->findClosestSurfacePoint( p);
     const int sv = _model->findVertex( cpos);
-    cv::Vec3f offset = cpos - _model->model().vtx(sv); // Offset from the vertex
-    _rsel->setCentre( sv, offset);
+
+#ifndef NDEBUG
+    const double diff = cv::norm(p-cpos);
+    std::cerr << "|VTK surface projection - model closest surface point| = " << p << " - " << cpos << " = " << diff << std::endl;
+    if ( diff > 0.1)
+    {
+        const RFeatures::ObjModel& mod = _model->model();
+        std::cerr << "  - Vertex " << sv << " at " << mod.vtx(sv) << std::endl;
+        for ( int v : mod.cvtxs(sv))
+            std::cerr << "    vertex " << v << " at " << mod.vtx(v) << std::endl;
+        cpos = _model->findClosestSurfacePoint( p);
+    }   // end if
+#endif
+
+    _rsel->setCentre( sv, cpos);
     _rsel->setRadius(r);
-    updateVis();
+    _updateVis();
     _model->unlock();
 }   // end set
 
 
-// private
-void RadialSelectInteractor::updateVis()
+void RadialSelectInteractor::_updateVis()
 {
     // Get the boundary as a vector of vertices
     const IntSet* vidxs = _rsel->boundary();
@@ -78,7 +90,7 @@ void RadialSelectInteractor::updateVis()
     }   // end for
 
     MS::updateRender();
-}   // end updateVis
+}   // end _updateVis
 
 
 double RadialSelectInteractor::radius() const { return _rsel->radius();}
@@ -91,7 +103,7 @@ void RadialSelectInteractor::enterProp( FV* fv, const vtkProp* p)
     if ( _vis.belongs( p, fv))
     {
         _onReticule = true;
-        showHover( true);
+        _showHover( true);
     }   // end if
 }   // end enterProp
 
@@ -101,7 +113,7 @@ void RadialSelectInteractor::leaveProp( FV* fv, const vtkProp* p)
     if ( _vis.belongs( p, fv))
     {
         _onReticule = false;
-        showHover( false);
+        _showHover( false);
     }   // end if
 }   // end leaveProp
 
@@ -161,7 +173,7 @@ bool RadialSelectInteractor::mouseWheelBackward()
 }   // end mouseWheeBackward
 
 
-void RadialSelectInteractor::showHover( bool v)
+void RadialSelectInteractor::_showHover( bool v)
 {
     if ( view())
     {
@@ -176,4 +188,4 @@ void RadialSelectInteractor::showHover( bool v)
 
         MS::updateRender();
     }   // end if
-}   // end showHover
+}   // end _showHover

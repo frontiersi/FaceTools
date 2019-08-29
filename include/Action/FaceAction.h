@@ -40,6 +40,11 @@ public:
      */
     void setDisplayName( const QString&);
 
+    /**
+     * Dynamically change this action's tooltip.
+     */
+    void setToolTip( const QString&);
+
     QString displayName() const override;
     const QIcon* icon() const override;
     const QKeySequence* shortcut() const override;

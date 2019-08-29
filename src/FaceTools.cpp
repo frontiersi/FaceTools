@@ -197,28 +197,34 @@ cv::Vec3f FaceTools::toTarget( const FM* fm, const cv::Vec3f& s, const cv::Vec3f
 
 bool FaceTools::findPath( const FM* fm, const cv::Vec3f& p0, const cv::Vec3f& p1, std::list<cv::Vec3f>& pts)
 {
-    using namespace RFeatures;
-
-    const ObjModelSurfacePointFinder spfinder( fm->model());
-    int v0i = fm->findVertex(p0);
-    int v1i = fm->findVertex(p1);
-    int sT, fT;
-    cv::Vec3f v0 = p0;
-    cv::Vec3f v1 = p1;
-    spfinder.find( p0, v0i, sT, v0);
-    spfinder.find( p1, v1i, fT, v1);
-
-    pts.clear();
-    SurfaceCurveFinder scfinder( fm->model());
-    bool foundPath = scfinder.findPath( v0, sT, v1, fT, pts);
-    if ( !foundPath)
+    RFeatures::ObjModelSurfaceCurveFinder scfinder0( fm->model(), fm->kdtree());
+    RFeatures::ObjModelSurfaceCurveFinder scfinderR( fm->model(), fm->kdtree());
+    //ObjModelSurfacePlanePathFinder scfinder( fm->model(), fm->kdtree(), cv::Vec3f(0,0,1));
+ 
+    //std::cerr << "Finding path with endpoints: " << p0 << ", " << p1;
+    double psum0 = scfinder0.findPath( p0, p1);
+    double psumr = scfinderR.findPath( p1, p0);
+    if ( psum0 + psumr < 0.0)
     {
-        pts.clear();
-        foundPath = scfinder.findPath( v1, fT, v0, sT, pts);
-        pts.reverse();
+        //std::cerr << " not found!" << std::endl;
+        return false;
     }   // end if
 
-    return foundPath;
+    if ( psum0 < 0)
+        psum0 = DBL_MAX;
+    if ( psumr < 0)
+        psumr = DBL_MAX;
+
+    const std::vector<cv::Vec3f>* lpath = &scfinder0.lastPath();
+    if ( psumr < psum0)
+        lpath = &scfinderR.lastPath();
+    assert( lpath);
+    pts = std::list<cv::Vec3f>( lpath->begin(), lpath->end());
+    if ( psumr < psum0)
+        pts.reverse();
+
+    //std::cerr << " surface path length = " << std::min(psumr, psum0) << std::endl;
+    return true;
 }   // end findPath
 
 

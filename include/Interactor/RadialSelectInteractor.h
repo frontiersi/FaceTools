@@ -57,8 +57,8 @@ private:
     double _radiusChange;
     RFeatures::ObjModelRegionSelector::Ptr _rsel;
 
-    void showHover(bool);
-    void updateVis();
+    void _showHover(bool);
+    void _updateVis();
 };  // end class
 
 }}   // end namespaces

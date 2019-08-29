@@ -40,20 +40,18 @@ vtkSmartPointer<vtkPolyData> createLabels( const RFeatures::ObjModel& model, con
     vtkSmartPointer<vtkCellArray> vertices = vtkSmartPointer<vtkCellArray>::New();
     vtkSmartPointer<vtkIntArray> vlabels = vtkSmartPointer<vtkIntArray>::New();
 
-    const IntSet& vids = model.vtxIds();
-    const int nv = int(vids.size());
+    assert( model.hasSequentialVertexIds());
+    const int nv = model.numVtxs();
     points->SetNumberOfPoints( nv);
     vlabels->SetNumberOfValues( nv);
     vlabels->SetName( nm.c_str());
 
-    int i = 0;
-    for ( int vid : vids)
+    for ( int i = 0; i < nv; ++i)
     {
-        vlabels->SetValue( i, vid);
-        points->SetPoint( i, &model.vtx(vid)[0]);
+        vlabels->SetValue( i, i);
+        points->SetPoint( i, &model.vtx(i)[0]);
         vertices->InsertNextCell(1);
         vertices->InsertCellPoint(i);
-        i++;
     }   // end for
 
     pdata->SetVerts( vertices);

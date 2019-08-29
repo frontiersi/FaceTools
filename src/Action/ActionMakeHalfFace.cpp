@@ -32,6 +32,38 @@ using RFeatures::ObjModelSlicer;
 using RFeatures::Transformer;
 
 
+namespace {
+
+void reflectLandmarks( FM* fm, const cv::Matx44d& tmat, const cv::Vec3f& p, const cv::Vec3f& n)
+{
+    const FaceTools::Landmark::LandmarkSet& lmks = fm->currentAssessment()->landmarks();
+    for ( const auto& pair : lmks.lateral( FaceTools::FACE_LATERAL_LEFT))
+    {
+        const int lmid = pair.first;
+        const cv::Vec3f lpos = lmks.pos(lmid, FaceTools::FACE_LATERAL_LEFT);
+        const cv::Vec3f rpos = lmks.pos(lmid, FaceTools::FACE_LATERAL_RIGHT);
+        // Find which lateral needs to be reflected by testing the dot product
+        const float ldot = n.dot(lpos - p);
+        const float rdot = n.dot(rpos - p);
+        if ( ldot > 0 && rdot < 0)   // Keep the left lateral
+            fm->setLandmarkPosition( lmid, FaceTools::FACE_LATERAL_RIGHT, RFeatures::transform( tmat, lpos));
+        else if ( rdot > 0 && ldot < 0)   // Keep the right lateral
+            fm->setLandmarkPosition( lmid, FaceTools::FACE_LATERAL_LEFT, RFeatures::transform( tmat, rpos));
+    }   // end for
+
+    for ( const auto& pair : lmks.lateral( FaceTools::FACE_LATERAL_MEDIAL))
+    {
+        const int lmid = pair.first;
+        const cv::Vec3f lpos0 = lmks.pos(lmid, FaceTools::FACE_LATERAL_MEDIAL);
+        const cv::Vec3f lpos1 = RFeatures::transform( tmat, lpos0);
+        const cv::Vec3f lpos = fm->findClosestSurfacePoint( (lpos0 + lpos1) * 0.5f);
+        fm->setLandmarkPosition( lmid, FaceTools::FACE_LATERAL_MEDIAL, lpos);
+    }   // end for
+}   // end reflectLandmarks
+
+}   // end namespace
+
+
 ActionMakeHalfFace::ActionMakeHalfFace( const QString &dn, const QIcon& ico)
     : FaceAction( dn, ico), _n(0,1,0), _p(0,0,0)
 {
@@ -101,7 +133,8 @@ void ActionMakeHalfFace::doAction( Event)
 
     ObjModel::Ptr model = fm->model().deepCopy();
     ObjModel::Ptr half0 = ObjModelSlicer( *model)( p, n);       // Copy of one half
-    ObjModel::Ptr half1 = half0->deepCopy(true/*share mats*/);  // Copy of half for reflecting
+
+    ObjModel::Ptr half1 = half0->deepCopy(true);  // Copy of half for reflecting (share texture mats)
 
     // Invert face normals indices on the other half before reflecting.
     const IntSet& fids = half1->faces();
@@ -112,27 +145,16 @@ void ActionMakeHalfFace::doAction( Event)
     half1->setTransformMatrix(tmat);
     half1->fixTransformMatrix();
 
-    model = half0;  // Join the halves
-    RFeatures::join( *model, *half1, true);
+    // Join newly reflected half1 onto half0
+    RFeatures::join( *half0, *half1, true);
 
-    fm->update(model);
+    fm->update(half0);
 
     // Also need to update the positions of the lateral landmarks on the rejected side
-    // to reflect their partner positions through the same plane.
-    const auto& lmksLat = lmks.lateral( FACE_LATERAL_LEFT);
-    for ( const auto& pair : lmksLat)
-    {
-        const int lmid = pair.first;
-        const cv::Vec3f lpos = lmks.pos(lmid, FACE_LATERAL_LEFT);
-        const cv::Vec3f rpos = lmks.pos(lmid, FACE_LATERAL_RIGHT);
-        // Find which lateral needs to be reflected by testing the dot product
-        const float ldot = n.dot(lpos - p);
-        const float rdot = n.dot(rpos - p);
-        if ( ldot > 0 && rdot < 0)   // Keep the left lateral
-            fm->setLandmarkPosition( lmid, FACE_LATERAL_RIGHT, RFeatures::transform( tmat, lpos));
-        else if ( rdot > 0 && ldot < 0)   // Keep the right lateral
-            fm->setLandmarkPosition( lmid, FACE_LATERAL_LEFT, RFeatures::transform( tmat, rpos));
-    }   // end for
+    // to reflect their partner positions through the same plane. Also reflect the median
+    // landmarks and take the average of their original and reflected positions as their
+    // new positions.
+    reflectLandmarks( fm, tmat, p, n);
 
     // Re-orient.
     fm->addTransformMatrix( omat);

@@ -67,6 +67,12 @@ void FaceAction::setDisplayName( const QString& dname)
 }   // end setDisplayName
 
 
+void FaceAction::setToolTip( const QString& ttip)
+{
+    _action.setToolTip( ttip);
+}   // end setToolTip
+
+
 QString FaceAction::displayName() const { return _dname;}
 const QIcon* FaceAction::icon() const { return _icon.isNull() ? nullptr : &_icon;}
 const QKeySequence* FaceAction::shortcut() const { return _keys.isEmpty() ? nullptr : &_keys;}

@@ -82,6 +82,7 @@ bool Path::recalculate( const FM* fm)
     psum = 0;
     if ( findPath( fm, v0, v1, vtxs))
     {
+        assert( !vtxs.empty());
         const cv::Vec3f* vp = &vtxs.front();
         for ( const cv::Vec3f& v : vtxs)
         {
@@ -89,6 +90,11 @@ bool Path::recalculate( const FM* fm)
             vp = &v;
         }   // end for
     }   // end if
+    else
+    {
+        vtxs.push_back(v0);
+        vtxs.push_back(v1);
+    }   // end else
 
     return true;
 }   // end calculate
