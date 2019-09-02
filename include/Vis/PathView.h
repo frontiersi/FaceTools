@@ -65,6 +65,9 @@ private:
     int _id;
     Handle *_h0, *_h1;
     vtkActor* _lprop;
+#ifndef NDEBUG
+    vtkActor* _pprop;
+#endif
 
     PathView( const PathView&) = delete;
     void operator=( const PathView&) = delete;

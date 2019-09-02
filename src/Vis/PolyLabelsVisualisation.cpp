@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <VertexLabelsVisualisation.h>
+#include <PolyLabelsVisualisation.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
@@ -26,7 +26,7 @@
 #include <vtkProperty.h>
 #include <algorithm>
 #include <cassert>
-using FaceTools::Vis::VertexLabelsVisualisation;
+using FaceTools::Vis::PolyLabelsVisualisation;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
 using FaceTools::Action::Event;
@@ -40,17 +40,21 @@ vtkSmartPointer<vtkPolyData> createLabels( const RFeatures::ObjModel& model, con
     vtkSmartPointer<vtkCellArray> vertices = vtkSmartPointer<vtkCellArray>::New();
     vtkSmartPointer<vtkIntArray> vlabels = vtkSmartPointer<vtkIntArray>::New();
 
-    const IntSet& vids = model.vtxIds();
-    const int nv = static_cast<int>(vids.size());
-    points->SetNumberOfPoints( nv);
-    vlabels->SetNumberOfValues( nv);
+    const IntSet& fids = model.faces();
+    const int np = static_cast<int>(fids.size());
+    points->SetNumberOfPoints( np);
+    vlabels->SetNumberOfValues( np);
     vlabels->SetName( nm.c_str());
 
     int i = 0;
-    for ( int vid : vids)
+    for ( int fid : fids)
     {
-        vlabels->SetValue( i, vid);
-        points->SetPoint( i, &model.vtx(vid)[0]);
+        vlabels->SetValue( i, fid);
+        cv::Vec3d mpos = (model.vtx(model.fvidxs(fid)[0]) + 
+                         model.vtx(model.fvidxs(fid)[1]) + 
+                         model.vtx(model.fvidxs(fid)[2])) * 1.0/3;
+
+        points->SetPoint( i, &mpos[0]);
         vertices->InsertNextCell(1);
         vertices->InsertCellPoint(i++);
     }   // end for
@@ -76,14 +80,14 @@ bool nearIdentity( const cv::Matx44d& d, size_t ndp=8)
 }   // end namespace
 
 
-VertexLabelsVisualisation::~VertexLabelsVisualisation()
+PolyLabelsVisualisation::~PolyLabelsVisualisation()
 {
     while (!_views.empty())
         purge( const_cast<FV*>(_views.begin()->first), Event::NONE);
 }   // end dtor
 
 
-void VertexLabelsVisualisation::apply( FV* fv, const QPoint*)
+void PolyLabelsVisualisation::apply( FV* fv, const QPoint*)
 {
     if ( _views.count(fv) == 0)
     {
@@ -103,7 +107,8 @@ void VertexLabelsVisualisation::apply( FV* fv, const QPoint*)
         lv.filter = vtkSmartPointer<vtkPointSetToLabelHierarchy>::New();
         vtkTextProperty* tp = lv.filter->GetTextProperty();
         tp->SetFontFamilyToCourier();
-        tp->SetFontSize(16);
+        tp->SetBold(true);
+        tp->SetFontSize(19);
 
         _views[fv] = lv;
         syncActorsToData(fv);
@@ -111,7 +116,7 @@ void VertexLabelsVisualisation::apply( FV* fv, const QPoint*)
 }   // end apply
 
 
-bool VertexLabelsVisualisation::purge( FV* fv, Event)
+bool PolyLabelsVisualisation::purge( FV* fv, Event)
 {
     setVisible(fv, false);
     if (_views.count(fv) > 0)
@@ -120,7 +125,7 @@ bool VertexLabelsVisualisation::purge( FV* fv, Event)
 }   // end purge
 
 
-void VertexLabelsVisualisation::setVisible( FV* fv, bool v)
+void PolyLabelsVisualisation::setVisible( FV* fv, bool v)
 {
     if (_views.count(fv) > 0)
     {
@@ -140,7 +145,7 @@ void VertexLabelsVisualisation::setVisible( FV* fv, bool v)
 }   // end setVisible
 
 
-bool VertexLabelsVisualisation::isVisible( const FV* fv) const
+bool PolyLabelsVisualisation::isVisible( const FV* fv) const
 {
     bool vis = false;
     if (_views.count(fv) > 0)
@@ -149,7 +154,7 @@ bool VertexLabelsVisualisation::isVisible( const FV* fv) const
 }   // end isVisible
 
 
-void VertexLabelsVisualisation::syncActorsToData( const FV *fv, const cv::Matx44d &d)
+void PolyLabelsVisualisation::syncActorsToData( const FV *fv, const cv::Matx44d &d)
 {
     if ( _views.count(fv) == 0)
         return;
@@ -163,7 +168,7 @@ void VertexLabelsVisualisation::syncActorsToData( const FV *fv, const cv::Matx44
     }   // end if
     else
     {
-        static const std::string labelsName = "vertexIds";
+        static const std::string labelsName = "polyIds";
         vtkSmartPointer<vtkPolyData> pdata = createLabels( fv->data()->model(), labelsName);
 
         lv.filter->SetInputData( pdata);
@@ -181,7 +186,7 @@ void VertexLabelsVisualisation::syncActorsToData( const FV *fv, const cv::Matx44
 }   // end syncActorsToData
 
 
-void VertexLabelsVisualisation::checkState( const FV* fv)
+void PolyLabelsVisualisation::checkState( const FV* fv)
 {
     QColor bg = fv->viewer()->backgroundColour();
     QColor fg = chooseContrasting( bg);

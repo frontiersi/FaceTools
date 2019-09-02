@@ -27,6 +27,9 @@ using FaceTools::ModelViewer;
 
 PathView::PathView( int id, const std::list<cv::Vec3f>& vtxs)
     : _viewer(nullptr), _id(id), _h0(nullptr), _h1(nullptr), _lprop(nullptr)
+#ifndef NDEBUG
+      , _pprop(nullptr)
+#endif
 {
     _h0 = new Handle( 0, _id, vtxs.front(), 1.3);
     _h1 = new Handle( 1, _id, vtxs.back(), 1.3);
@@ -61,6 +64,9 @@ void PathView::setVisible( bool enable, ModelViewer *viewer)
         _h0->_sv->setVisible( false, _viewer);
         _h1->_sv->setVisible( false, _viewer);
         _viewer->remove(_lprop);
+#ifndef NDEBUG
+        _viewer->remove(_pprop);
+#endif
     }   // end if
 
     _viewer = viewer;
@@ -70,6 +76,9 @@ void PathView::setVisible( bool enable, ModelViewer *viewer)
         _h0->_sv->setVisible( true, _viewer);
         _h1->_sv->setVisible( true, _viewer);
         _viewer->add(_lprop);
+#ifndef NDEBUG
+        _viewer->add(_pprop);
+#endif
     }   // end if
 }   // end setVisible
 
@@ -78,6 +87,7 @@ void PathView::update( const std::list<cv::Vec3f>& vtxs)
 {
     _h0->_sv->setCentre( vtxs.front());
     _h1->_sv->setCentre( vtxs.back());
+
     if ( _lprop)
     {
         if ( _viewer)
@@ -85,6 +95,16 @@ void PathView::update( const std::list<cv::Vec3f>& vtxs)
         _lprop->Delete();
         _lprop = nullptr;
     }   // end if
+
+#ifndef NDEBUG
+    if ( _pprop)
+    {
+        if ( _viewer)
+            _viewer->remove(_pprop);
+        _pprop->Delete();
+        _pprop = nullptr;
+    }   // end if
+#endif
 
     _lprop = RVTK::VtkActorCreator::generateLineActor( vtxs);
     _lprop->SetPickable(false);
@@ -97,9 +117,23 @@ void PathView::update( const std::list<cv::Vec3f>& vtxs)
     property->SetAmbient( 1.0);
     property->SetDiffuse( 0.0);
     property->SetSpecular(0.0);
-
     if ( _viewer)
         _viewer->add(_lprop);
+
+#ifndef NDEBUG
+    _pprop = RVTK::VtkActorCreator::generateLineActor( vtxs);
+    _pprop->SetPickable(false);
+    property = _pprop->GetProperty();
+    property->SetRepresentationToPoints();
+    property->SetPointSize(7);
+    property->SetColor( 1.0, 0.0, 0.0);
+    property->SetOpacity( 0.99);
+    property->SetAmbient( 1.0);
+    property->SetDiffuse( 0.0);
+    property->SetSpecular(0.0);
+    if ( _viewer)
+        _viewer->add(_pprop);
+#endif
 }   // end update
 
 

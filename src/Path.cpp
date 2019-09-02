@@ -19,6 +19,7 @@
 #include <ObjModelTools.h>
 #include <Orientation.h>    // RFeatures (putVertex and getVertex)
 #include <FaceTools.h>
+#include <FaceModel.h>
 #include <algorithm>
 using FaceTools::Path;
 using FaceTools::FM;
@@ -35,39 +36,6 @@ Path::Path( int i, const cv::Vec3f& v0) : id(i), elen(0), psum(0)
     name = "";
 }   // end ctor
 
-/*
-namespace {
-
-    // Set the vertex indices as those on the start and finish polygons (sT and fT)
-    // that give a line segment that is most parallel to line segment v0-->v1.
-    cv::Vec3d u;
-    cv::normalize( v1-v0, u);
-    v0i = findMostParallelVertex( u, model, v1, sT);
-    v1i = findMostParallelVertex( u, model, v0, fT);
-
-int findMostParallelVertex( const cv::Vec3d& u, const RFeatures::ObjModel* model, const cv::Vec3f& sv, int f)
-{
-    cv::Vec3d v;
-    double m;
-    int bi = 0;
-    double d = 0;
-    const int* vidxs = model->fvidxs(f);
-    for ( int i = 0; i < 3; ++i)
-    {
-        cv::normalize( model->vtx(vidxs[i]) - sv, v);
-        m = fabs(v.dot(u));
-        if ( m > d)
-        {
-            d = m;
-            bi = i;
-        }   // end if
-    }   // end for
-    return vidxs[bi];
-}   // end findMostParallelVertex
-
-}   // end namespace
-*/
-
 
 bool Path::recalculate( const FM* fm)
 {
@@ -78,8 +46,11 @@ bool Path::recalculate( const FM* fm)
     cv::Vec3f v1 = vtxs.back();
 
     elen = cv::norm(v1-v0);    // The l2-norm (straight line distance)
-    vtxs.clear();
     psum = 0;
+
+    vtxs.clear();
+    //if ( findStraightPath( fm, v0, v1, cv::Vec3f(0,0,1), vtxs))
+    //if ( findCurveFollowingPath( fm, v0, v1, vtxs))
     if ( findPath( fm, v0, v1, vtxs))
     {
         assert( !vtxs.empty());
@@ -97,7 +68,7 @@ bool Path::recalculate( const FM* fm)
     }   // end else
 
     return true;
-}   // end calculate
+}   // end recalculate
 
 
 PTree& FaceTools::operator<<( PTree& pathsNode, const Path& p)

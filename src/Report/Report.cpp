@@ -212,14 +212,15 @@ Report::Ptr Report::load( const QString& fname, QTemporaryDir& tdir)
         return nullptr;
     }   // end else
 
-#ifdef NDEBUG
     // Reject the TEST report if this is the release build
     if ( report->name().toUpper() == "TEST")
     {
-        std::cerr << "[INFO] FaceTools::Report::Report::load: Skipping test report for release version." << std::endl;
+#ifndef NDEBUG
+        std::cerr << "[INFO] FaceTools::Report::Report::load: Loading test report for debug version." << std::endl;
+#else
         return nullptr;
-    }   // end if
 #endif
+    }   // end if
 
     if ( sol::optional<std::string> v = table["title"])
         report->_title = v.value().c_str();

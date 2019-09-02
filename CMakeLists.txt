@@ -229,6 +229,7 @@ set( INCLUDE_FILES
     "${INCLUDE_VIS_DIR}/PathSetVisualisation.h"
     "${INCLUDE_VIS_DIR}/PathView.h"
     "${INCLUDE_VIS_DIR}/PathSetView.h"
+    "${INCLUDE_VIS_DIR}/PolyLabelsVisualisation.h"
     "${INCLUDE_VIS_DIR}/RegionVisualiser.h"
     "${INCLUDE_VIS_DIR}/SphereView.h"
     "${INCLUDE_VIS_DIR}/SurfaceMetricsMapper.h"
@@ -398,6 +399,7 @@ set( SRC_FILES
     ${SRC_VIS_DIR}/PathView
     ${SRC_VIS_DIR}/PathSetView
     ${SRC_VIS_DIR}/PathSetVisualisation
+    ${SRC_VIS_DIR}/PolyLabelsVisualisation
     ${SRC_VIS_DIR}/RegionVisualiser
     ${SRC_VIS_DIR}/SphereView
     ${SRC_VIS_DIR}/SurfaceMetricsMapper

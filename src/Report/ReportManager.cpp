@@ -125,10 +125,7 @@ QString ReportManager::add( const QString& file)
     static const std::string werr = "[WARNING] FaceTools::Report::ReportManager::add: ";
     Report::Ptr rep = Report::load( file, _tmpdir);
     if ( !rep)
-    {
-        std::cerr << werr << "Report '" << file.toStdString() << "' not loaded." << std::endl;
         return "";
-    }   // end else
 
     rep->setLogo(_logofile);
     rep->setHeaderName(_hname);
@@ -140,9 +137,10 @@ QString ReportManager::add( const QString& file)
         _names.append(rep->name());
         _names.sort();
     }   // end if
-    else {
+#ifndef NDEBUG
+    else
         std::cerr << werr << "Overwriting report " << rep->name().toStdString() << std::endl;
-    }   // end else
+#endif
 
     _reports[rep->name()] = rep;    // Possibly overwrites existing!
     return rep->name();

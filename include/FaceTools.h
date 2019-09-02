@@ -45,6 +45,8 @@ FaceTools_EXPORT cv::Vec3f toSurface( const FM*, const cv::Vec3f& v);
 FaceTools_EXPORT cv::Vec3f toTarget( const FM*, const cv::Vec3f& s, const cv::Vec3f& t);
 
 FaceTools_EXPORT bool findPath( const FM*, const cv::Vec3f& p0, const cv::Vec3f& p1, std::list<cv::Vec3f>& pts);
+FaceTools_EXPORT bool findStraightPath( const FM*, const cv::Vec3f& p0, const cv::Vec3f& p1, const cv::Vec3f& focVec, std::list<cv::Vec3f>& pts);
+FaceTools_EXPORT bool findCurveFollowingPath( const FM*, const cv::Vec3f& p0, const cv::Vec3f& p1, std::list<cv::Vec3f>& pts);
 
 // Find the point farthest off the straight line distance between p0 and p1 along the shortest contour over the mesh between these points.
 // If parameter d is not null, on return it is set with the distance the returned point is orthogonally from the baseline vector p0->p1.

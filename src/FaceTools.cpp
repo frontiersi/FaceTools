@@ -199,7 +199,6 @@ bool FaceTools::findPath( const FM* fm, const cv::Vec3f& p0, const cv::Vec3f& p1
 {
     RFeatures::ObjModelSurfaceCurveFinder scfinder0( fm->model(), fm->kdtree());
     RFeatures::ObjModelSurfaceCurveFinder scfinderR( fm->model(), fm->kdtree());
-    //ObjModelSurfacePlanePathFinder scfinder( fm->model(), fm->kdtree(), cv::Vec3f(0,0,1));
  
     //std::cerr << "Finding path with endpoints: " << p0 << ", " << p1;
     double psum0 = scfinder0.findPath( p0, p1);
@@ -226,6 +225,30 @@ bool FaceTools::findPath( const FM* fm, const cv::Vec3f& p0, const cv::Vec3f& p1
     //std::cerr << " surface path length = " << std::min(psumr, psum0) << std::endl;
     return true;
 }   // end findPath
+
+
+bool FaceTools::findStraightPath( const FM* fm, const cv::Vec3f& p0, const cv::Vec3f& p1, const cv::Vec3f& focVec, std::list<cv::Vec3f>& pts)
+{
+    ObjModelSurfaceGlobalPlanePathFinder pfinder( fm->model(), fm->kdtree(), focVec);
+    if ( pfinder.findPath( p0, p1) >= 0)
+    {
+        const std::vector<cv::Vec3f>& lpath = pfinder.lastPath();
+        pts = std::list<cv::Vec3f>( lpath.begin(), lpath.end());
+    }   // end if
+    return !pts.empty();
+}   // end findStraightPath
+
+
+bool FaceTools::findCurveFollowingPath( const FM* fm, const cv::Vec3f& p0, const cv::Vec3f& p1, std::list<cv::Vec3f>& pts)
+{
+    ObjModelSurfaceLocalPlanePathFinder pfinder( fm->model(), fm->kdtree());
+    if ( pfinder.findPath( p0, p1) >= 0)
+    {
+        const std::vector<cv::Vec3f>& lpath = pfinder.lastPath();
+        pts = std::list<cv::Vec3f>( lpath.begin(), lpath.end());
+    }   // end if
+    return !pts.empty();
+}   // end findCurveFollowingPath
 
 
 cv::Vec3f FaceTools::findDeepestPoint2( const FM* fm, const cv::Vec3f& p0, const cv::Vec3f& p1, double *dout)
