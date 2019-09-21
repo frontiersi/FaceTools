@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <FaceModelOBJFileHandler.h>
+#include <FileIO/FaceModelOBJFileHandler.h>
 #include <AssetImporter.h>  // RModelIO
 #include <QDebug>
 #include <iomanip>

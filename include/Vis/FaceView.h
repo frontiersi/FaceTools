@@ -83,16 +83,21 @@ public:
     // Returns the visualisation layer that vtkProp belongs to or null.
     BaseVisualisation* layer( const vtkProp*) const;
 
-    // Add the difference in transform between the model and the face actor
-    // to all of the other visualisations attached to views of the model.
-    void syncActorDeltaToVisualisations();
+    // When updating the actor's transform directly, call to propogate the transform to all visualisations.
+    void syncVisualisationsToViewTransform();
+
+    // Synchronise the tranform matrix of all visualisations and the FaceView actor to the model transform.
+    void syncToModelTransform();
 
     // Returns true iff the given point projects to intersect with the face actor.
     bool isPointOnFace( const QPoint& p) const;
 
-    // Project the given 2D point to a location on the 3D surface of the main actor.
-    // Returns true iff the point projects to the surface. Ignores all other actors.
-    bool projectToSurface( const QPoint&, cv::Vec3f&) const;
+    // Project the given 2D point to the visible corresponding location on the 3D surface of
+    // the main actor. Returns true iff the point projects to the surface. Ignores all other actors.
+    // If useUntransformed is true, the out point will be set to correspond with the position on the
+    // surface that is untransformed by the view's transform matrix. Note that the view's transform
+    // matrix should always be in sync with the model transform matrix so using either is fine.
+    bool projectToSurface( const QPoint&, cv::Vec3f&, bool useUntransformed=false) const;
 
     // Set/get the opacity of the face actor.
     void setOpacity( double);

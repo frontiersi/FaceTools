@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <CheckAllTableHeader.h>
+#include <Widget/CheckAllTableHeader.h>
 using FaceTools::Widget::CheckAllTableHeader;
 
 CheckAllTableHeader::CheckAllTableHeader( QWidget *parent, bool useEye)

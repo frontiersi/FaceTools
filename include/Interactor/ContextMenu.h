@@ -18,29 +18,28 @@
 #ifndef FACE_TOOLS_CONTEXT_MENU_H
 #define FACE_TOOLS_CONTEXT_MENU_H
 
-#include "ModelViewerInteractor.h"
-#include <FaceAction.h>
+#include "MouseHandler.h"
+#include "../Action/FaceAction.h"
 #include <QMenu>
 
 namespace FaceTools { namespace Interactor {
 
 class FaceTools_EXPORT ContextMenu : public MouseHandler
-{ Q_OBJECT
+{
 public:
     ContextMenu();
 
     void addAction( Action::FaceAction*);
     void addSeparator();
 
-protected:
+private:
     bool rightButtonDown() override;
     bool rightButtonUp() override;
 
-private:
     int _rDownTime;
     QMenu _cmenu;
     std::vector<Action::FaceAction*> _actions;
-    size_t testEnabledActions() const;
+    size_t _testEnabledActions() const;
 };  // end class
 
 }}   // end namespace

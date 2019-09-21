@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionMakeHalfFace.h>
+#include <Action/ActionMakeHalfFace.h>
 #include <FaceModel.h>
 #include <QMessageBox>
 #include <ObjModelTools.h>
@@ -129,7 +129,7 @@ void ActionMakeHalfFace::doAction( Event)
     const cv::Matx44d omat = lmks.orientation().asMatrix(lmks.fullMean());  // Orientation of model to restore afterwards
 
     fm->addTransformMatrix( omat.inv());
-    fm->fixOrientation();
+    fm->fixTransformMatrix();
 
     ObjModel::Ptr model = fm->model().deepCopy();
     ObjModel::Ptr half0 = ObjModelSlicer( *model)( p, n);       // Copy of one half

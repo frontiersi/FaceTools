@@ -15,12 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <PhenotypesDialog.h>
+#include <Widget/PhenotypesDialog.h>
 #include <ui_PhenotypesDialog.h>
-#include <MetricCalculatorManager.h>
-#include <IntTableWidgetItem.h>
-#include <SyndromeManager.h>
-#include <PhenotypeManager.h>
+#include <Widget/IntTableWidgetItem.h>
+#include <Metric/MetricCalculatorManager.h>
+#include <Metric/SyndromeManager.h>
+#include <Metric/PhenotypeManager.h>
 #include <FileIO.h>
 #include <algorithm>
 #include <QHeaderView>

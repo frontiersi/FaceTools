@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <SphereView.h>
+#include <Vis/SphereView.h>
 #include <Transformer.h>    // RFeatures
 #include <VtkTools.h>       // RVTK
 #include <vtkProperty.h>
@@ -29,10 +29,18 @@ using RVTK::VtkScalingActor;
 using FaceTools::Vis::SphereView;
 using FaceTools::ModelViewer;
 
-// private
-void SphereView::init()
+void SphereView::_init( const cv::Vec3f& c, double r, bool p, bool fixed)
 {
-    _visible = false;
+    if ( _actor)
+        delete _actor;
+    _actor = new VtkScalingActor( _source.Get());
+
+    setCentre(c);
+    setRadius(r);
+    setPickable(p);
+    setFixedScale(fixed);
+    setVisible( _visible, _vwr);
+
     _caption->BorderOff();
     _caption->GetCaptionTextProperty()->BoldOff();
     _caption->GetCaptionTextProperty()->ItalicOff();
@@ -44,46 +52,21 @@ void SphereView::init()
     _caption->SetVisibility(false);
     _caption->SetPickable(false);
     _caption->GetTextActor()->SetTextScaleModeToNone();
-
-    _actor = new VtkScalingActor( _source);
-}   // end init
+}   // end _init
 
 
 SphereView::SphereView( const cv::Vec3f& c, double r, bool p, bool fixed)
+    : _vwr(nullptr), _visible(false), _actor(nullptr)
 {
-    init();
-    setCentre(c);
-    setRadius(r);
-    setPickable(p);
-    setFixedScale(fixed);
+    _init( c, r, p, fixed);
 }   // end ctor
 
 
-SphereView::SphereView( const SphereView& sv)
+SphereView::~SphereView()
 {
-    *this = sv;
-}   // end ctor
+    delete _actor;
+}   // end dtor
 
-
-SphereView& SphereView::operator=( const SphereView& sv)
-{
-    init();
-    _visible = sv._visible;
-    setResolution( sv.resolution());
-    setPickable( sv.pickable());
-    setFixedScale( sv.fixedScale());
-    setScaleFactor( sv.scaleFactor());
-    setCentre( sv.centre());
-    setRadius( sv.radius());
-    setOpacity( sv.opacity());
-    setColour( sv.colour());
-    setCaption( sv.caption());
-    setHighlighted( sv.highlighted());
-    return *this;
-}   // end operator=
-
-
-SphereView::~SphereView() { delete _actor;}   // end dtor
 
 void SphereView::setResolution( int t)
 {
@@ -106,7 +89,7 @@ double SphereView::scaleFactor() const { return _actor->scaleFactor();}
 void SphereView::setCentre( const cv::Vec3f& pos)
 {
     _actor->setPosition(pos);
-    setHighlighted(highlighted());  // Just for resetting the caption attachment point
+    _updateCaptionPosition();
 }   // end setCentre
 
 const cv::Vec3f& SphereView::centre() const { return _actor->position();}
@@ -114,11 +97,14 @@ const cv::Vec3f& SphereView::centre() const { return _actor->position();}
 void SphereView::setRadius( double r) { _source->SetRadius(r);}
 double SphereView::radius() const { return _source->GetRadius();}
 
-void SphereView::setOpacity( double v) { _actor->setOpacity(v);}
 double SphereView::opacity() const { return _actor->opacity();}
 
-void SphereView::setColour( double r, double g, double b) { _actor->setColour(r,g,b);}
-void SphereView::setColour( const double c[]) { _actor->setColour(c);}
+void SphereView::setColour( double r, double g, double b, double a)
+{
+    _actor->setColour(r,g,b);
+    _actor->setOpacity(a);
+}   // end setColour
+
 const double* SphereView::colour() const { return _actor->colour();}
 
 void SphereView::setCaption( const std::string& lname) { _caption->SetCaption( lname.c_str());}
@@ -132,15 +118,14 @@ std::string SphereView::caption() const
 
 void SphereView::setCaptionColour( const QColor& tcol)
 {
+    assert(_caption != nullptr);
     _caption->GetCaptionTextProperty()->SetColor( tcol.redF(), tcol.greenF(), tcol.blueF());
 }   // end setCaptionColour
 
 void SphereView::setHighlighted( bool v)
 {
-    const cv::Vec3f& pos = _actor->position();
-    double attachPoint[3] = {double(pos[0]), double(pos[1]), double(pos[2])};
-    _caption->SetAttachmentPoint( attachPoint);
     _caption->SetVisibility( v);
+    _updateCaptionPosition();
 }   // end setHighlighted
 
 bool SphereView::highlighted() const { return static_cast<bool>(_caption->GetVisibility());}
@@ -149,23 +134,48 @@ const vtkProp* SphereView::prop() const { return _actor->prop();}
 
 void SphereView::setVisible( bool v, ModelViewer* vwr)
 {
-    assert(vwr);
-    vwr->remove( _actor->prop());
-    vwr->remove( _caption);
-    _actor->setRenderer( nullptr);
-    if ( v)
+    if ( !v)
     {
-        _actor->setRenderer( vwr->getRenderer());
-        vwr->add( _actor->prop());
-        vwr->add( _caption);
+        if ( _vwr)
+        {
+            _vwr->remove( _actor->prop());
+            _vwr->remove( _caption);
+        }   // end if
+        if ( vwr)
+        {
+            vwr->remove( _actor->prop());
+            vwr->remove( _caption);
+        }   // end if
+
+        _actor->setRenderer( nullptr);
     }   // end if
-    _visible = v;
+
+    _vwr = vwr;
+
+    if ( v && _vwr)
+    {
+        _actor->setRenderer( _vwr->getRenderer());
+        _vwr->add( _actor->prop());
+        _vwr->add( _caption);
+        _visible = true;
+    }   // end if
 }   // end setVisible
 
-/*
-void SphereView::pokeTransform( const vtkMatrix4x4* vm)
+
+void SphereView::pokeTransform( const vtkMatrix4x4* d)
 {
-    _actor->pokeTransform(vm);
-    _caption->PokeMatrix( const_cast<vtkMatrix4x4*>(vm));
+    vtkMatrix4x4* vm = const_cast<vtkMatrix4x4*>(d);
+    _actor->pokeTransform( vm);
+    _updateCaptionPosition();
 }   // end pokeTransform
-*/
+
+
+const vtkMatrix4x4* SphereView::transform() const { return _actor->transform();}
+
+
+void SphereView::_updateCaptionPosition()
+{
+    const cv::Vec3f pos = RFeatures::transform( RVTK::toCV(_actor->transform()), centre());
+    double attachPoint[3] = {double(pos[0]), double(pos[1]), double(pos[2])};
+    _caption->SetAttachmentPoint( attachPoint);
+}   // end _updateCaptionPosition

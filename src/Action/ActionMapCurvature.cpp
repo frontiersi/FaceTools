@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionMapCurvature.h>
+#include <Action/ActionMapCurvature.h>
 #include <FaceModelCurvature.h>
 #include <FaceModel.h>
 #include <algorithm>

@@ -18,8 +18,8 @@
 #ifndef FACE_TOOLS_FACE_ASSESSMENT_H
 #define FACE_TOOLS_FACE_ASSESSMENT_H
 
-#include "LandmarkSet.h"
-#include "MetricSet.h"
+#include "LndMrk/LandmarkSet.h"
+#include "Metric/MetricSet.h"
 #include "PathSet.h"
 
 namespace FaceTools {
@@ -58,10 +58,10 @@ public:
     bool swapLandmarkLaterals();
 
     // Add the given transform to landmarks and paths returning true landmarks/paths not empty.
-    bool addTransform( const cv::Matx44d&);
+    bool addTransformMatrix( const cv::Matx44d&);
 
     // Fix the current transform on this assessment's landmarks (paths are always transformed directly).
-    void fixTransform();
+    void fixTransformMatrix();
 
     // Cause each landmark to update its position to be at the closest point on the surface.
     // This should always be the case normally unless manually placing a set of landmarks.

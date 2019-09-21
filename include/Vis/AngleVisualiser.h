@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,8 +18,8 @@
 #ifndef FACE_TOOLS_VIS_ANGLE_VISUALISER_H
 #define FACE_TOOLS_VIS_ANGLE_VISUALISER_H
 
-#include <MetricVisualiser.h>
-#include <Landmark.h>
+#include "MetricVisualiser.h"
+#include <LndMrk/Landmark.h>
 #include <vtkAngleRepresentation3D.h>
 
 namespace FaceTools { namespace Vis {
@@ -30,7 +30,7 @@ public:
     AngleVisualiser( int id, const Landmark::LmkList* l0=nullptr, const Landmark::LmkList* l1=nullptr);
 
     bool belongs( const vtkProp*, const FV*) const override;
-    void syncActorsToData( const FV*, const cv::Matx44d&) override;
+    void syncToViewTransform( const FV*, const vtkMatrix4x4*) override;
     bool isAvailable( const FM*) const override;
     bool isVisible( const FV*) const override;
 

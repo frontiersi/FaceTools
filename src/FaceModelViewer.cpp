@@ -17,7 +17,7 @@
 
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <FaceView.h>
+#include <Vis/FaceView.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::FaceModelViewer;

@@ -15,10 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <Phenotype.h>
-#include <FaceModel.h>
+#include <Metric/Phenotype.h>
+#include <Metric/MetricCalculatorManager.h>
 #include <Ethnicities.h>
-#include <MetricCalculatorManager.h>
+#include <FaceModel.h>
 using FaceTools::Metric::Phenotype;
 using FaceTools::Metric::MetricSet;
 using FaceTools::Metric::MetricValue;

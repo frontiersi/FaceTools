@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <RegionVisualiser.h>
-#include <LandmarksManager.h>
+#include <Vis/RegionVisualiser.h>
+#include <LndMrk/LandmarksManager.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
@@ -85,15 +85,14 @@ bool RegionVisualiser::belongs( const vtkProp* p, const FV *fv) const
 }   // end belongs
 
 
-void RegionVisualiser::syncActorsToData(const FV *fv, const cv::Matx44d &d)
+void RegionVisualiser::syncToViewTransform( const FV *fv, const vtkMatrix4x4* cvm)
 {
-    const cv::Matx44d& bmat = fv->data()->model().transformMatrix();
-    vtkSmartPointer<vtkMatrix4x4> vm = RVTK::toVTK( d * bmat);
+    vtkMatrix4x4* vm = const_cast<vtkMatrix4x4*>(cvm);
     if ( _rep0.count(fv) > 0)
         _rep0.at(fv)->PokeMatrix(vm);
     if ( _rep1.count(fv) > 0)
         _rep1.at(fv)->PokeMatrix(vm);
-}   // end syncActorsToData
+}   // end syncToViewTransform
 
 
 void RegionVisualiser::setHighlighted( const FV* fv, bool v)

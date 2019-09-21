@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <FaceModelManager.h>
+#include <FileIO/FaceModelManager.h>
 #include <MiscFunctions.h>
 #include <FaceModel.h>
 #include <FaceTools.h>

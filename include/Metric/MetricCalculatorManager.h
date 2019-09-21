@@ -18,7 +18,7 @@
 #ifndef FACE_TOOLS_METRIC_METRIC_CALCULATOR_MANAGER_H
 #define FACE_TOOLS_METRIC_METRIC_CALCULATOR_MANAGER_H
 
-#include <MetricCalculator.h>
+#include "MetricCalculator.h"
 
 namespace FaceTools { namespace Metric {
 

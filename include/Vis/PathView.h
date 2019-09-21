@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,7 +39,8 @@ public:
     {
         int handleId() const { return _hid;}
         int pathId() const { return _pid;}
-        cv::Vec3f pos() const { return _sv->centre();}
+        cv::Vec3f viewPos() const;  // Position handle is being viewed at (after applying view transform).
+        const cv::Vec3f& realPos() const { return _sv->centre();}  // "Real" position of handle (no view transform applied).
         const vtkProp* prop() { return _sv->prop();}
         void setCaption( const QString& c) { _sv->setCaption(c);}
         void showCaption( bool v) { _sv->setHighlighted(v);}
@@ -59,6 +60,8 @@ public:
     Handle* handle1() { return _h1;}
 
     void updateColours();
+
+    void pokeTransform( const vtkMatrix4x4*);
 
 private:
     ModelViewer *_viewer;

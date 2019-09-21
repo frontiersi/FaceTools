@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionResetDetection.h>
+#include <Action/ActionResetDetection.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <QMessageBox>
@@ -58,7 +58,7 @@ void ActionResetDetection::doAction( Event)
     fm->lockForWrite();
     fm->setLandmarks( Landmark::LandmarkSet::create());
     fm->currentAssessment()->clearMetrics();
-    fm->fixOrientation();
+    fm->fixTransformMatrix();
     fm->unlock();
 
     emit onEvent( {Event::LANDMARKS_CHANGE, Event::ORIENTATION_CHANGE, Event::METRICS_CHANGE});

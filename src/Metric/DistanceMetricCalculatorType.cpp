@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <DistanceMetricCalculatorType.h>
+#include <Metric/DistanceMetricCalculatorType.h>
 #include <FaceModel.h>
 #include <algorithm>
 #include <sstream>

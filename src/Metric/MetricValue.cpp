@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <MetricValue.h>
-#include <MetricCalculatorManager.h>
+#include <Metric/MetricValue.h>
+#include <Metric/MetricCalculatorManager.h>
 #include <Ethnicities.h>
 #include <Round.h>  // rlib
 #include <cassert>

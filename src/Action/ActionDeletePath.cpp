@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionDeletePath.h>
+#include <Action/ActionDeletePath.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <algorithm>
@@ -23,44 +23,38 @@
 using FaceTools::Action::ActionDeletePath;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
-using FaceTools::Interactor::PathsInteractor;
-using FaceTools::Vis::PathSetVisualisation;
+using FaceTools::Interactor::PathsHandler;
 using FaceTools::FVS;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
 
 
-ActionDeletePath::ActionDeletePath( const QString& dn, const QIcon& ico,
-                              PathSetVisualisation *vis,
-                              PathsInteractor::Ptr pint)
-    : FaceAction( dn, ico), _vis(vis), _pint(pint)
+ActionDeletePath::ActionDeletePath( const QString& dn, const QIcon& ico, PathsHandler::Ptr handler)
+    : FaceAction( dn, ico), _handler(handler)
 {
-    connect( &*_pint, &PathsInteractor::onLeavePath, this, &ActionDeletePath::doOnLeavePath);
-    connect( &*_pint, &PathsInteractor::onEnterPath, this, &ActionDeletePath::doOnEnterPath);
+    connect( &*_handler, &PathsHandler::onLeavePath, this, &ActionDeletePath::doOnLeavePath);
+    connect( &*_handler, &PathsHandler::onEnterPath, this, &ActionDeletePath::doOnEnterPath);
 }   // end ctor
 
 
 bool ActionDeletePath::checkEnable( Event)
 {
-    const FV* fv = _pint->view();
+    const FV* fv = MS::cursorView();
     if ( MS::interactionMode() == IMode::ACTOR_INTERACTION || !fv)
         return false;
-    return fv == MS::selectedView() && _pint->hoverPath();
+    return fv == MS::selectedView() && _handler->hoverPath();
 }   // end checkEnabled
 
 
 void ActionDeletePath::doAction( Event)
 {
     storeUndo(this, Event::PATHS_CHANGE);
+
     FV* fv = MS::selectedView();
-    FM* fm = fv->data();
-    const int pid = _pint->hoverPath()->pathId();
+    const int pid = _handler->hoverPath()->pathId();
     assert(pid >= 0);
-    fm->lockForWrite();
-    fm->removePath(pid);
-    fm->unlock();
-    _pint->leavePath();
+    _handler->erasePath( fv, pid);
     emit onEvent( Event::PATHS_CHANGE);
 }   // end doAction
 

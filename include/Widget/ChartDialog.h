@@ -19,7 +19,7 @@
 #define FACETOOLS_WIDGET_CHART_DIALOG_H
 
 #include <FaceTools.h>
-#include <Chart.h>
+#include <Metric/Chart.h>
 #include <QDialog>
 
 namespace Ui { class ChartDialog;}

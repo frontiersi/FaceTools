@@ -15,29 +15,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionAddPath.h>
+#include <Action/ActionAddPath.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <FaceView.h>
+#include <Vis/FaceView.h>
 #include <FaceTools.h>
 #include <cassert>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Action::ActionAddPath;
-using FaceTools::Interactor::PathsInteractor;
-using FaceTools::Vis::PathSetVisualisation;
+using FaceTools::Interactor::PathsHandler;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
 
 
-ActionAddPath::ActionAddPath( const QString& dn, const QIcon& ico,
-                              PathSetVisualisation *vis,
-                              PathsInteractor::Ptr pint)
-    : FaceAction( dn, ico), _vis(vis), _pint(pint)
+ActionAddPath::ActionAddPath( const QString& dn, const QIcon& ico, PathsHandler::Ptr handler)
+    : FaceAction( dn, ico), _handler(handler)
 {
-    connect( &*_pint, &PathsInteractor::onLeavePath, this, &ActionAddPath::doOnLeavePath);
-    connect( &*_pint, &PathsInteractor::onEnterPath, this, &ActionAddPath::doOnEnterPath);
+    connect( &*_handler, &PathsHandler::onLeavePath, this, &ActionAddPath::doOnLeavePath);
+    connect( &*_handler, &PathsHandler::onEnterPath, this, &ActionAddPath::doOnEnterPath);
 }   // end ctor
 
 
@@ -46,7 +43,7 @@ bool ActionAddPath::checkEnable( Event)
     const FV* fv = MS::selectedView();
     if ( MS::interactionMode() == IMode::ACTOR_INTERACTION || !fv)
         return false;
-    return fv->isPointOnFace( primedMousePos()) && _pint->hoverPath() == nullptr;
+    return fv->isPointOnFace( primedMousePos()) && _handler->hoverPath() == nullptr;
 }   // end checkEnabled
 
 
@@ -55,18 +52,12 @@ void ActionAddPath::doAction( Event)
     storeUndo( this, Event::PATHS_CHANGE);
 
     FV* fv = MS::selectedView();
-    FM* fm = fv->data();
     cv::Vec3f hpos;
-    int pid = -1;
     if ( fv->projectToSurface( primedMousePos(), hpos))
     {
-        fm->lockForWrite();
-        pid = fm->addPath(hpos);
-        assert(pid >= 0);
-        fm->unlock();
+        _handler->setEnabled(true);
+        _handler->addPath( fv, hpos);
         emit onEvent( Event::PATHS_CHANGE);
-        assert( _pint->isEnabled());
-        _pint->setPathDrag( fv, pid);
     }   // end if
 }   // end doAction
 

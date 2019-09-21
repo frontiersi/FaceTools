@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,9 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionCloseFaceModel.h>
-#include <FaceActionManager.h>
-#include <FaceModelManager.h>
+#include <Action/ActionCloseFaceModel.h>
+#include <Action/FaceActionManager.h>
+#include <FileIO/FaceModelManager.h>
 #include <QMessageBox>
 #include <boost/filesystem.hpp>
 #include <algorithm>
@@ -72,4 +72,6 @@ void ActionCloseFaceModel::doAfterAction( Event)
 {
     MS::setInteractionMode( IMode::CAMERA_INTERACTION);
     emit onEvent( {Event::CLOSED_MODEL, Event::VIEWER_CHANGE});
+
+    // Now need to select 
 }   // end doAfterAction

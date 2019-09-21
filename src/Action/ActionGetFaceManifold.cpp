@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionGetFaceManifold.h>
+#include <Action/ActionGetFaceManifold.h>
 #include <QMessageBox>
 #include <FaceModel.h>
 #include <cassert>

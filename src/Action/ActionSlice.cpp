@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionSlice.h>
+#include <Action/ActionSlice.h>
 #include <FaceModel.h>
 #include <ObjModelTools.h>
 using FaceTools::Action::ActionSlice;

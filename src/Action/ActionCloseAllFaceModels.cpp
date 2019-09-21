@@ -15,9 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionCloseAllFaceModels.h>
-#include <FaceActionManager.h>
-#include <FaceModelManager.h>
+#include <Action/ActionCloseAllFaceModels.h>
+#include <Action/FaceActionManager.h>
+#include <FileIO/FaceModelManager.h>
 #include <QMessageBox>
 #include <algorithm>
 using FaceTools::Action::FaceAction;

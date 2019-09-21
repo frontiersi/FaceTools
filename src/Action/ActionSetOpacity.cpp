@@ -15,10 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionSetOpacity.h>
+#include <Action/ActionSetOpacity.h>
+#include <Vis/FaceView.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <FaceView.h>
 #include <algorithm>
 using FaceTools::Action::ActionSetOpacity;
 using FaceTools::Action::FaceAction;

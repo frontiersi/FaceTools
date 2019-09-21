@@ -19,7 +19,7 @@
 #define FACE_TOOLS_ACTION_SHOW_MODEL_PROPERTIES_H
 
 #include "ActionDiscardManifold.h"
-#include <ModelPropertiesDialog.h>
+#include <Widget/ModelPropertiesDialog.h>
 
 namespace FaceTools { namespace Action {
 

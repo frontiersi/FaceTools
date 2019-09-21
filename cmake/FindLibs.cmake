@@ -175,6 +175,7 @@ if(WITH_RFEATURES)
     link_directories( ${rFeatures_LIBRARY_DIR})
     set(WITH_RLIB TRUE)
     set(WITH_OPENCV TRUE)
+    set(WITH_NANOFLANN TRUE)
     message( STATUS "rFeatures:  ${rFeatures_LIBRARIES}")
     set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${rFeatures_LIBRARY_DIR})
 endif()
@@ -191,21 +192,22 @@ if(WITH_RLIB)
 endif()
 
 
-if(WITH_LIBICP) # The ICP source library (Andreas Geiger) (https://github.com/symao/libicp)
-    set( LIBICP_DIR "${LIB_PRE_REQS}/libICP" CACHE PATH "Location of libICP source files.")
-    set( LIBICP_SRC "${LIBICP_DIR}/src")
-    set( LIBICP_SRC_FILES
-        "${LIBICP_SRC}/icp.cpp"
-        "${LIBICP_SRC}/icpPointToPlane.cpp"
-        "${LIBICP_SRC}/icpPointToPoint.cpp"
-        "${LIBICP_SRC}/kdtree.cpp"
-        "${LIBICP_SRC}/matrix.cpp"
-        )
-    if (NOT IS_DIRECTORY ${LIBICP_SRC})
-        message( FATAL_ERROR "Can't find libICP source files!")
+if(WITH_EIGEN) # Eigen3
+    if(WIN32)
+        set( EIGEN3_INCLUDE_DIR "${LIB_PRE_REQS}/eigen3/include/eigen3" CACHE PATH "Location of Eigen3 headers (Eigen/*.h) directory")
+    elseif(UNIX)
+        find_package( Eigen3 REQUIRED)
     endif()
-    message( STATUS "LibICP:     ${LIBICP_SRC}/*")
-    include_directories( "${LIBICP_SRC}")
+    if( NOT IS_DIRECTORY ${EIGEN3_INCLUDE_DIR})
+        message( FATAL_ERROR "Can't find Eigen3 headers!")
+    endif()
+    include_directories( ${EIGEN3_INCLUDE_DIR})
+endif()
+
+
+if(WITH_NANOFLANN)
+    set( nanoflann_DIR "${LIB_PRE_REQS}/nanoflann/lib/cmake/nanoflann" CACHE PATH "Location of nanoflannConfig.cmake")
+    find_package( nanoflann REQUIRED)
 endif()
 
 
@@ -314,19 +316,6 @@ if(WITH_TINYXML)    # tinyxml
 endif()
 
 
-if(WITH_EIGEN) # Eigen3
-    if(WIN32)
-        set( EIGEN3_INCLUDE_DIR "${LIB_PRE_REQS}/eigen3/include/eigen3" CACHE PATH "Location of Eigen3 headers (Eigen/*.h) directory")
-    elseif(UNIX)
-        find_package( Eigen3 REQUIRED)
-    endif()
-    if( NOT IS_DIRECTORY ${EIGEN3_INCLUDE_DIR})
-        message( FATAL_ERROR "Can't find Eigen3 headers!")
-    endif()
-    include_directories( ${EIGEN3_INCLUDE_DIR})
-endif()
-
-
 if(WITH_VTK)    # VTK
     set( VTK_VER 8.1)
 
@@ -384,10 +373,14 @@ endif()
 
 
 if(WITH_OPENCV) # OpenCV
+    set( OpenCV_BASE "${LIB_PRE_REQS}/opencv")
     if(WIN32)
-        set( OpenCV_DIR "${LIB_PRE_REQS}/opencv" CACHE PATH "Location of OpenCVConfig.cmake")
         get_msvc_version( _msvcv)
-        set( OpenCV_BIN "${OpenCV_DIR}/x64/vc${_msvcv}/bin" CACHE PATH "Location of OpenCV binary (dll) files")
+        set( OpenCV_MSVC "${OpenCV_BASE}/x64/vc${_msvcv}")
+        set( OpenCV_DIR "${OpenCV_MSVC}/lib" CACHE PATH "Location of OpenCVConfig.cmake")
+        set( OpenCV_BIN "${OpenCV_MSVC}/bin" CACHE PATH "Location of OpenCV binary (dll) files")
+    else()
+        set( OpenCV_DIR "${OpenCV_BASE}/share/OpenCV" CACHE PATH "Location of OpenCVConfig.cmake")
     endif()
     find_package( OpenCV 3.2 REQUIRED)
     include_directories( ${OpenCV_INCLUDE_DIRS})

@@ -15,11 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionDetectFace.h>
-#include <FaceOrientationDetector.h>
-#include <FaceShapeLandmarks2DDetector.h>
+#include <Action/ActionDetectFace.h>
+#include <Detect/FaceOrientationDetector.h>
+#include <Detect/FaceShapeLandmarks2DDetector.h>
 #include <FaceModelViewer.h>
-#include <ModelSelector.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <QMessageBox>
@@ -82,8 +81,7 @@ bool ActionDetectFace::doBeforeAction( Event)
 
 void ActionDetectFace::doAction( Event)
 {
-    //storeUndo( this, {Event::LANDMARKS_CHANGE, Event::ORIENTATION_CHANGE, Event::METRICS_CHANGE}, false);
-    storeUndo( this, {Event::LANDMARKS_CHANGE, Event::ORIENTATION_CHANGE, Event::METRICS_CHANGE});
+    storeUndo( this, {Event::LANDMARKS_CHANGE, Event::FACE_DETECTED, Event::ORIENTATION_CHANGE, Event::METRICS_CHANGE, Event::AFFINE_CHANGE});
     FM* fm = MS::selectedModel();
     _err = redetectLandmarks( fm, &_ulmks);
 }   // end doAction
@@ -104,21 +102,18 @@ std::string ActionDetectFace::redetectLandmarks( FM* fm, const IntSet *ulmks)
 
     if ( detectedOkay)
     {
-        // The landmarks are transformed by T from standard position.
+        // The landmarks are detected in the position of the model which means that the
+        // landmarks and the model need to be transformed into standard position.
         const cv::Matx44d T = lmks->orientation().asMatrix( lmks->fullMean());
         const cv::Matx44d Tinv = T.inv();
-        // So transform them back into standard position...
-        lmks->addTransformMatrix( Tinv);
-        lmks->fixTransformMatrix(); // Sets the internal matrix back to I
-        // Before setting the transform matrix back. Note that calling FM::addTransformMatrix(Tinv)
-        // also adds the inverse of T to lmks meaning that the final transform matrix will be set
-        // back to the identity matrix.
-        lmks->addTransformMatrix( T);
 
         fm->lockForWrite();
         fm->setLandmarks(lmks);  // LANDMARKS_CHANGE | FACE_DETECTED
+
+        // Adding the transform matrix to the model also adds it to the newly set landmarks
         fm->addTransformMatrix(Tinv);
-        fm->fixOrientation();          // ORIENTATION_CHANGE
+        fm->fixTransformMatrix();   // ORIENTATION_CHANGE
+
         fm->currentAssessment()->clearMetrics();            // METRICS_CHANGE
         fm->unlock();
     }   // end if
@@ -135,7 +130,7 @@ void ActionDetectFace::doAfterAction( Event)
     {
         MS::clearStatus();
         MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-        emit onEvent( {Event::LANDMARKS_CHANGE, Event::FACE_DETECTED, Event::ORIENTATION_CHANGE, Event::METRICS_CHANGE});
+        emit onEvent( {Event::LANDMARKS_CHANGE, Event::FACE_DETECTED, Event::ORIENTATION_CHANGE, Event::METRICS_CHANGE, Event::AFFINE_CHANGE});
     }   // end if
     else
     {

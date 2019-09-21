@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <SurfaceVisualisation.h>
+#include <Vis/SurfaceVisualisation.h>
 #include <FaceModel.h>
 using FaceTools::Vis::SurfaceMetricsMapper;
 using FaceTools::Vis::BaseVisualisation;

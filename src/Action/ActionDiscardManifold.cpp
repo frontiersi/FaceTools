@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionDiscardManifold.h>
+#include <Action/ActionDiscardManifold.h>
 #include <FaceModel.h>
 #include <QMessageBox>
 #include <cassert>

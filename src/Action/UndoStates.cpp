@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <UndoStates.h>
-#include <FaceAction.h>
+#include <Action/UndoStates.h>
+#include <Action/FaceAction.h>
 #include <QThread>
 #include <cassert>
 using FaceTools::Action::UndoStates;

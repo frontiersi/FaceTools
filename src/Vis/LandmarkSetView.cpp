@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <LandmarkSetView.h>
-#include <LandmarksManager.h>
+#include <Vis/LandmarkSetView.h>
+#include <LndMrk/LandmarksManager.h>
 #include <FaceTools.h>
 #include <algorithm>
 #include <iostream>
@@ -32,20 +32,7 @@ cv::Vec3d LandmarkSetView::BASE0_COL(0.4, 0.0, 1.0);
 cv::Vec3d LandmarkSetView::SPEC0_COL(0.7, 1.0, 0.3);
 
 
-LandmarkSetView::LandmarkSetView( const LandmarkSet& lmks, double r) : _lmrad(r), _viewer(nullptr)
-{
-    // set all in lmks
-    for ( int id : lmks.ids())
-    {
-        if ( LDMKS_MAN::landmark(id)->isBilateral())
-        {
-            set( id, FACE_LATERAL_LEFT, lmks.pos(id, FACE_LATERAL_LEFT));
-            set( id, FACE_LATERAL_RIGHT, lmks.pos(id, FACE_LATERAL_RIGHT));
-        }   // end if
-        else
-            set( id, FACE_LATERAL_MEDIAL, lmks.pos(id, FACE_LATERAL_MEDIAL));
-    }   // end for
-}   // end ctor
+LandmarkSetView::LandmarkSetView( double r) : _lmrad(r), _viewer(nullptr) {}
 
 
 LandmarkSetView::~LandmarkSetView()
@@ -83,9 +70,9 @@ void LandmarkSetView::setColour( const cv::Vec3d& c)
     const double r = c[0];
     const double g = c[1];
     const double b = c[2];
-    std::for_each( std::begin(_lviews), std::end(_lviews), [=](const ViewPair& p){ p.second->setColour( r, g, b);});
-    std::for_each( std::begin(_mviews), std::end(_mviews), [=](const ViewPair& p){ p.second->setColour( r, g, b);});
-    std::for_each( std::begin(_rviews), std::end(_rviews), [=](const ViewPair& p){ p.second->setColour( r, g, b);});
+    std::for_each( std::begin(_lviews), std::end(_lviews), [=](const ViewPair& p){ p.second->setColour( r, g, b, 0.99);});
+    std::for_each( std::begin(_mviews), std::end(_mviews), [=](const ViewPair& p){ p.second->setColour( r, g, b, 0.99);});
+    std::for_each( std::begin(_rviews), std::end(_rviews), [=](const ViewPair& p){ p.second->setColour( r, g, b, 0.99);});
 
     assert(_viewer);
     QColor fg = chooseContrasting( _viewer->backgroundColour());
@@ -158,15 +145,17 @@ void LandmarkSetView::setLandmarkRadius( double r)
 }   // end setLandmarkRadius
 
 
-void LandmarkSetView::sync( const LandmarkSet& lmks, const cv::Matx44d& d)
+void LandmarkSetView::pokeTransform( const vtkMatrix4x4* vd)
 {
+    //const cv::Matx44d d = RVTK::toCV( vd);  // d will be identity if vd null
     for ( auto& p : _lviews)
-        p.second->setCentre( RFeatures::transform( d, lmks.pos( p.first, FACE_LATERAL_LEFT)));
+        p.second->pokeTransform( vd);
     for ( auto& p : _mviews)
-        p.second->setCentre( RFeatures::transform( d, lmks.pos( p.first, FACE_LATERAL_MEDIAL)));
+        p.second->pokeTransform( vd);
     for ( auto& p : _rviews)
-        p.second->setCentre( RFeatures::transform( d, lmks.pos( p.first, FACE_LATERAL_RIGHT)));
-}   // end sync
+        p.second->pokeTransform( vd);
+        //p.second->setCentre( RFeatures::transform( d, lmks.pos( p.first, FACE_LATERAL_RIGHT)));
+}   // end pokeTransform
 
 
 int LandmarkSetView::landmarkId( const vtkProp* prop, FaceLateral& lat) const
@@ -199,14 +188,14 @@ void LandmarkSetView::remove( int lm)
 }   // end remove
 
 
-void LandmarkSetView::set( int lm, FaceLateral lat, const cv::Vec3f& pos)
+void LandmarkSetView::set( int lm, FaceLateral lat, const cv::Vec3f& pos, const vtkMatrix4x4* T)
 {
     if ( lat == FACE_LATERAL_LEFT)
-        _set( lm, _lviews, _lprops, pos, " (L)");
+        _set( lm, lat, _lviews, _lprops, pos, T);
     else if ( lat == FACE_LATERAL_MEDIAL)
-        _set( lm, _mviews, _mprops, pos);
+        _set( lm, lat, _mviews, _mprops, pos, T);
     else if ( lat == FACE_LATERAL_RIGHT)
-        _set( lm, _rviews, _rprops, pos, " (R)");
+        _set( lm, lat, _rviews, _rprops, pos, T);
 }   // end set
 
 
@@ -223,19 +212,23 @@ void LandmarkSetView::_remove( int lm, SphereMap& views, PropMap& props)
 }   // end _remove
 
 
-void LandmarkSetView::_set( int lm, SphereMap& views, PropMap& props, const cv::Vec3f& pos, const QString& lats)
+void LandmarkSetView::_set( int lm, FaceLateral lat, SphereMap& views, PropMap& props, const cv::Vec3f& pos, const vtkMatrix4x4* T)
 {
+    // The provided position has the model's transform applied so need to use the untransformed position and update
+    // the actor matrix on the sphere to match so that further poking of the actor's matrix when also poked to the
+    // sphere will keeep the actors aligned.
+    const cv::Vec3f rpos = RFeatures::transform( RVTK::toCV(T).inv(), pos);
     SphereView *sv = nullptr;
     if ( views.count(lm) > 0) // Get the landmark sphere view to update
         sv = views.at(lm);
     else    // Landmark was added
     {
-        sv = views[lm] = new SphereView( pos, _lmrad, true/*pickable*/, true/*fixed scale*/);
+        sv = views[lm] = new SphereView( rpos, _lmrad, true/*pickable*/, true/*fixed scale*/);
         props[sv->prop()] = lm;
-        sv->setColour( BASE0_COL[0], BASE0_COL[1], BASE0_COL[2]);
-        sv->setOpacity(0.99);
+        sv->setColour( BASE0_COL[0], BASE0_COL[1], BASE0_COL[2], 0.99);
         sv->setResolution(21);
     }   // end if
-    sv->setCaption( (LDMKS_MAN::landmark(lm)->name() + lats).toStdString());
-    sv->setCentre( pos);
+    sv->setCaption( LDMKS_MAN::makeLandmarkString( lm, lat).toStdString());
+    sv->setCentre( rpos);
+    sv->pokeTransform( T);
 }   // end _set

@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <MetricCalculatorTypeRegistry.h>
-#include <LandmarksManager.h>
+#include <Metric/MetricCalculatorTypeRegistry.h>
+#include <LndMrk/LandmarksManager.h>
 #include <iostream>
 #include <cassert>
 using FaceTools::Metric::MetricCalculatorTypeRegistry;

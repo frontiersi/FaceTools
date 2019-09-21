@@ -59,9 +59,9 @@ private:
     // The reference names (filenames) shown in the dropdown lists for attached models.
     std::unordered_map<const FM*, QString> _attachedNames;
 
-    void setViewerVisible( size_t, bool);
-    void doOnViewerChanged( size_t, const Vis::FV*);
-    void doOnComboBoxChanged( size_t, const QString&);
+    void _setViewerVisible( size_t, bool);
+    void _doOnViewerChanged( size_t, const Vis::FV*);
+    void _doOnComboBoxChanged( size_t, const QString&);
 
     MultiFaceModelViewer( const MultiFaceModelViewer&) = delete;
     void operator=( const MultiFaceModelViewer&) = delete;

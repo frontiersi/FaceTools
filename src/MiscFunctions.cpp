@@ -112,6 +112,14 @@ std::string FaceTools::getDateTimeDigits( const std::string& fname)
 }   // end getDateTimeDigits
 
 
+QString FaceTools::posString( const QString prefix, const cv::Vec3f& pos, int fw)
+{
+    const char rep = 'f';
+    const int dp = 2;
+    return QString( "%1 %2 X | %3 Y | %4 Z").arg(prefix).arg( pos[0], fw, rep, dp).arg( pos[1], fw, rep, dp).arg( pos[2], fw, rep, dp);
+}   // end posString
+
+
 long FaceTools::getDateTimeSecs( const std::string& fname)
 {
     std::string digits = getDateTimeDigits( fname);

@@ -15,12 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionTransformToCentre.h>
-#include <ActionResetCamera.h>
-#include <Transformer.h>  // RFeatures
+#include <Action/ActionTransformToCentre.h>
+#include <Action/ActionResetCamera.h>
+#include <Vis/FaceView.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
-#include <FaceView.h>
+#include <Transformer.h>  // RFeatures
 #include <VtkTools.h>
 using FaceTools::Action::ActionTransformToCentre;
 using FaceTools::Action::FaceAction;

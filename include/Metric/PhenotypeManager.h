@@ -18,7 +18,7 @@
 #ifndef FACE_TOOLS_METRIC_PHENOTYPE_MANAGER_H
 #define FACE_TOOLS_METRIC_PHENOTYPE_MANAGER_H
 
-#include <Phenotype.h>
+#include <Metric/Phenotype.h>
 
 namespace FaceTools { namespace Metric {
 

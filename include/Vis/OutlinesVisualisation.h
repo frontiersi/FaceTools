@@ -19,7 +19,7 @@
 #define FACE_TOOLS_VIS_OUTLINES_VISUALISATION_H
 
 #include "BaseVisualisation.h"
-#include "LoopsView.h"
+#include "LoopView.h"
 
 namespace FaceTools { namespace Vis {
 
@@ -34,10 +34,10 @@ public:
     void setVisible( FV*, bool) override;
     bool isVisible( const FV*) const override;
 
-    void syncActorsToData( const FV*, const cv::Matx44d& d=cv::Matx44d::eye()) override;
+    void syncToViewTransform( const FV*, const vtkMatrix4x4*) override;
 
 private:
-    std::unordered_map<const FV*, LoopsView*> _views;
+    std::unordered_map<const FV*, LoopView*> _views;
 };  // end class
 
 }}   // end namespace

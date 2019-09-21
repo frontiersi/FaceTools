@@ -15,10 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <FaceFinder2D.h>
-#include <FeatureUtils.h>       // RFeatures
-#include <FeaturesDetector.h>
+#include <Detect/FaceFinder2D.h>
+#include <Detect/FeaturesDetector.h>
 #include <MiscFunctions.h>
+#include <FeatureUtils.h>       // RFeatures
 #include <cassert>
 using FaceTools::Detect::FaceFinder2D;
 using FaceTools::Detect::FeaturesDetector;

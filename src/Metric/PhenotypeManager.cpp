@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <PhenotypeManager.h>
+#include <Metric/PhenotypeManager.h>
 #include <QFile>
 #include <QDir>
 #include <FileIO.h> // rlib

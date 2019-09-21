@@ -16,16 +16,16 @@
  ************************************************************************/
 
 #include <FaceTools.h>
-#include <OffscreenModelViewer.h>   // RVTK
-#include <FaceShapeLandmarks2DDetector.h>
+#include <Detect/FaceShapeLandmarks2DDetector.h>
+#include <Metric/MetricCalculatorManager.h>
+#include <LndMrk/LandmarksManager.h>
+#include <Vis/FaceView.h>
 #include <FaceModelViewer.h>
-#include <LandmarksManager.h>
 #include <FaceModel.h>
 #include <Ethnicities.h>
+#include <OffscreenModelViewer.h>   // RVTK
 #include <Transformer.h>        // RFeatures
 #include <algorithm>
-#include <FaceView.h>
-#include <MetricCalculatorManager.h>
 using namespace RFeatures;
 using namespace FaceTools::Landmark;
 using MCM = FaceTools::Metric::MetricCalculatorManager;

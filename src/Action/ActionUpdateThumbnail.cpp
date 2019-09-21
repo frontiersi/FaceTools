@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionUpdateThumbnail.h>
+#include <Action/ActionUpdateThumbnail.h>
 #include <FaceModel.h>
 #include <cmath>
 #include <cassert>

@@ -15,10 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionVisualise.h>
+#include <Action/ActionVisualise.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <FaceView.h>
+#include <Vis/FaceView.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionVisualise;

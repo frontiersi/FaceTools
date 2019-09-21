@@ -15,13 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ContextMenu.h>
-#include <FaceAction.h>
-#include <ModelViewer.h>
-#include <QTime>
+#include <Interactor/ContextMenu.h>
+#include <FaceModelViewer.h>
 #include <QApplication>
+#include <QTime>
 using FaceTools::Interactor::ContextMenu;
-using FaceTools::Interactor::MVI;
 using FaceTools::Action::FaceAction;
 using MS = FaceTools::Action::ModelSelector;
 
@@ -51,7 +49,6 @@ bool ContextMenu::rightButtonDown()
 {
     _rDownTime = 0;
     const vtkProp* prop = MS::mouseViewer()->getPointedAt( MS::mousePos());
-    MS::mouseViewer()->updateRender();
     if ( prop && const_cast<vtkProp*>(prop)->GetPickable())
         _rDownTime = QTime::currentTime().msecsSinceStartOfDay();
     return false;
@@ -68,7 +65,7 @@ bool ContextMenu::rightButtonUp()
         for ( FaceAction* a : _actions)
             a->primeMousePos( mpos);
 
-        if ( testEnabledActions() > 0)
+        if ( _testEnabledActions() > 0)
             _cmenu.exec( QCursor::pos());
 
         // Need to deprime mouse position on all actions afterwards
@@ -81,16 +78,16 @@ bool ContextMenu::rightButtonUp()
 }   // end rightButtonUp
 
 
-size_t ContextMenu::testEnabledActions() const
+size_t ContextMenu::_testEnabledActions() const
 {
     size_t nenabled = 0;
     for ( FaceAction* a : _actions)
     {
         // Need to call on ALL actions since we need to recheck their enabled states
-        a->refreshState();
+        a->refreshState();  // Fix flicker on right click
+        MS::updateRender();
         if ( a->isEnabled())
             nenabled++;
     }   // end for
-    MS::mouseViewer()->updateRender();
     return nenabled;
-}   // end testEnabledActions
+}   // end _testEnabledActions

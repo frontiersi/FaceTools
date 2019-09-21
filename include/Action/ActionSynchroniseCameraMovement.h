@@ -34,7 +34,7 @@ protected:
     void doAction( Event) override;
 
 private:
-    Interactor::MVI *_camMover;
+    Interactor::ViewerNotifier *_camMover;
 };  // end class
 
 }}   // end namespaces

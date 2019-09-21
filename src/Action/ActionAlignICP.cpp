@@ -15,11 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionAlignICP.h>
+#include <Action/ActionAlignICP.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <algorithm>
-#include <ObjModelAligner.h>
+#include <ObjModelICPAligner.h>
+#include <FaceModelCurvature.h>
 using FaceTools::Action::ActionAlignICP;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
@@ -40,7 +41,16 @@ bool ActionAlignICP::checkEnable( Event)
 {
     // Enabled only if a model is selected and its viewer has other models.
     const FV* fv = MS::selectedView();
-    return fv && fv->viewer()->attached().size() >= 2;
+    if ( !fv || fv->viewer()->attached().size() < 2)
+        return false;
+
+    // Curvature maps need to be ready for all of the models in the viewer
+    const FMS& fms = fv->viewer()->attached().models();
+    for ( const FM* fm : fms)
+        if ( FaceModelCurvature::rmetrics( fm) == nullptr)
+            return false;
+
+    return true;
 }   // end checkEnabled
 
 
@@ -60,15 +70,16 @@ void ActionAlignICP::doAction( Event)
 
     // Get the source model to align against
     sfm->lockForRead();
-    RFeatures::ObjModelICPAligner aligner( sfm->model());
+    RFeatures::ObjModelICPAligner aligner( sfm->model(), *FaceModelCurvature::rmetrics( sfm));
     sfm->unlock();
 
     // In the same viewer, look at every other model and align to the source.
-    const FVS& aset = fv->viewer()->attached();
-    for ( FM* fm : aset.models())
+    FMS fms = fv->viewer()->attached().models();
+    fms.erase( const_cast<FM*>(sfm));
+    for ( FM* fm : fms)
     {
         fm->lockForWrite();
-        const cv::Matx44d tmat = aligner.calcTransform( fm->model());
+        const cv::Matx44d tmat = aligner.calcTransform( fm->model(), *FaceModelCurvature::rmetrics( fm));
         fm->addTransformMatrix( tmat);
         fm->unlock();
     }   // end for

@@ -15,11 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <GrowthData.h>
+#include <Metric/GrowthData.h>
+#include <Metric/MetricCalculatorManager.h>
 #include <Ethnicities.h>
 #include <FaceModel.h>
 #include <QSet>
-#include <MetricCalculatorManager.h>
 using FaceTools::Metric::GrowthData;
 using FaceTools::Metric::MetricSet;
 using FaceTools::Metric::MetricValue;

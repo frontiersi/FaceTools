@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <Landmark.h>
-#include <LandmarksManager.h>
+#include <LndMrk/LandmarksManager.h>
+#include <LndMrk/Landmark.h>
 using FaceTools::Landmark::Landmark;
 using FaceTools::Landmark::LmkList;
 

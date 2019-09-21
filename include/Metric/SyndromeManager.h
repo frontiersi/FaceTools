@@ -18,7 +18,7 @@
 #ifndef FACE_TOOLS_METRIC_SYNDROME_MANAGER_H
 #define FACE_TOOLS_METRIC_SYNDROME_MANAGER_H
 
-#include <Syndrome.h>
+#include <Metric/Syndrome.h>
 
 namespace FaceTools { namespace Metric {
 

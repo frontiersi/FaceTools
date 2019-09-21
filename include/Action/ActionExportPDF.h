@@ -19,8 +19,8 @@
 #define FACE_TOOLS_ACTION_EXPORT_PDF_H
 
 #include "FaceAction.h"
-#include <ReportChooserDialog.h>
-#include <Report.h>
+#include <Widget/ReportChooserDialog.h>
+#include <Report/Report.h>
 
 namespace FaceTools { namespace Action {
 

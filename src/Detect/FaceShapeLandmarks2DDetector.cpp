@@ -15,8 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <FaceShapeLandmarks2DDetector.h>
-#include <LandmarksManager.h>
+#include <Detect/FaceShapeLandmarks2DDetector.h>
+#include <LndMrk/LandmarksManager.h>
+#include <MiscFunctions.h>
+#include <FaceTools.h>
 
 #include <algorithm>
 #include <iostream>
@@ -26,8 +28,6 @@
 #include <VtkTools.h>           // RVTK
 #include <ImageGrabber.h>       // RVTK
 #include <RendererPicker.h>     // RVTK
-#include <FaceTools.h>
-#include <MiscFunctions.h>
 #include <DijkstraShortestPathFinder.h>
 
 using FaceTools::Detect::FaceShapeLandmarks2DDetector;

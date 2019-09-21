@@ -15,11 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionBackfaceCulling.h>
+#include <Action/ActionBackfaceCulling.h>
+#include <LndMrk/Landmark.h>
+#include <Vis/FaceView.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <Landmark.h>
-#include <FaceView.h>
 #include <cassert>
 using FaceTools::Action::ActionBackfaceCulling;
 using FaceTools::Action::FaceAction;

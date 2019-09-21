@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionInvertNormals.h>
+#include <Action/ActionInvertNormals.h>
 #include <FaceModel.h>
 #include <algorithm>
 #include <cassert>

@@ -19,7 +19,7 @@
 #define FACE_TOOLS_ACTION_DETECT_FACE_H
 
 #include "FaceAction.h"
-#include <DetectionCheckDialog.h>
+#include <Widget/DetectionCheckDialog.h>
 
 namespace FaceTools { namespace Action {
 

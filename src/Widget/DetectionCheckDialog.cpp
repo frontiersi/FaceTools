@@ -15,12 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <DetectionCheckDialog.h>
+#include <Widget/DetectionCheckDialog.h>
 #include <ui_DetectionCheckDialog.h>
-#include <CheckAllTableHeader.h>
-#include <IntTableWidgetItem.h>
-#include <LandmarksManager.h>
-#include <LandmarkSet.h>
+#include <Widget/CheckAllTableHeader.h>
+#include <Widget/IntTableWidgetItem.h>
+#include <LndMrk/LandmarksManager.h>
+#include <LndMrk/LandmarkSet.h>
 #include <FaceModel.h>
 using FaceTools::Widget::DetectionCheckDialog;
 using FaceTools::Widget::CheckAllTableHeader;

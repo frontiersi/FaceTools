@@ -18,7 +18,7 @@
 #ifndef FACE_TOOLS_VIS_BASE_VISUALISATION_H
 #define FACE_TOOLS_VIS_BASE_VISUALISATION_H
 
-#include "FaceTypes.h"
+#include <FaceTypes.h>
 #include <vtkMatrix4x4.h>
 #include <vtkProp.h>
 #include <cassert>
@@ -56,22 +56,15 @@ public:
     // so the default implementation defaults to returning false.
     virtual bool belongs( const vtkProp*, const FV*) const { return false;}
 
-    // Synchronise this visualisation's actors with the given view's data
-    // plus transform delta to be post-multiplied to the actors' positions.
-    virtual void syncActorsToData( const FV*, const cv::Matx44d&){}
-
-    // Copy the visualisation from src to dst. The underlying FaceModel for the two
-    // views must be the same! Copying is only necessary if the visualisation can't
-    // obtain its complete state from calling apply on the destination view, so this
-    // function should only be reimplemented if the default forwarding of this call
-    // to apply(dst) leaves the visualisation in an incomplete state.
-    virtual void copy( FV* dst, const FV*) { this->apply(dst);}
+    // Cause this visualisation to update its actor transforms to match the FaceView
+    // given FaceView transform (this is not the same as the FaceModel or data transform).
+    virtual void syncToViewTransform( const FV*, const vtkMatrix4x4*){}
 
     // Set the visibility of the visualisation if applied.
     virtual void setVisible( FV*, bool) {}
 
     // Get the visibility of the visualisation (should always return false if not applied).
-    virtual bool isVisible( const FV*) const = 0;
+    virtual bool isVisible( const FV*) const { return false;}
 
     // Called from ActionVisualise::checkState and only if this visualisation is currently
     // visible against the given view in order to allow this visualisation to update itself

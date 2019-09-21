@@ -18,7 +18,7 @@
 #ifndef FACE_TOOLS_METRIC_REPORT_MANAGER_H
 #define FACE_TOOLS_METRIC_REPORT_MANAGER_H
 
-#include <Report.h>
+#include "Report.h"
 
 namespace FaceTools { namespace Report {
 

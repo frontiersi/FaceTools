@@ -40,8 +40,10 @@ public:
     void setVisible( FV*, bool) override;
     bool isVisible( const FV*) const override;
 
-    // Update the position of the handles for the given path.
+    void addPath( const FM*, int pathId);
     void movePath( const FM*, int pathId);
+    void erasePath( const FM*, int pathId);
+    void syncPaths( const FM*);
 
     // Returns the handle for a path by looking for it by prop.
     PathView::Handle* pathHandle( const FV*, const vtkProp*) const;
@@ -55,9 +57,9 @@ public:
     // Show the text caption for all views of the associated model - turning off all others.
     void showText( const FM* fm=nullptr);
 
-    void syncActorsToData( const FV*, const cv::Matx44d&) override;
-
     void checkState( const FV*) override;
+
+    void syncToViewTransform( const FV*, const vtkMatrix4x4*) override;
 
 private:
     // The paths associated with a FV.

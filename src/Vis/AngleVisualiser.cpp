@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <AngleVisualiser.h>
-#include <LandmarksManager.h>
+#include <Vis/AngleVisualiser.h>
+#include <LndMrk/LandmarksManager.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
@@ -45,8 +45,9 @@ bool isProp( vtkAngleRepresentation3D* rp, const vtkProp* p)
     return rp->GetRay1() == p || rp->GetRay2() == p || rp->GetArc() == p;
 }   // end isProp
 
-void pokeMatrix( vtkAngleRepresentation3D* rp, vtkMatrix4x4* vm)
+void pokeMatrix( vtkAngleRepresentation3D* rp, const vtkMatrix4x4* cvm)
 {
+    vtkMatrix4x4* vm = const_cast<vtkMatrix4x4*>(cvm);
     rp->GetRay1()->PokeMatrix(vm);
     rp->GetRay2()->PokeMatrix(vm);
     rp->GetArc()->PokeMatrix(vm);
@@ -115,15 +116,13 @@ bool AngleVisualiser::belongs( const vtkProp* p, const FV *fv) const
 }   // end belongs
 
 
-void AngleVisualiser::syncActorsToData(const FV *fv, const cv::Matx44d &d)
+void AngleVisualiser::syncToViewTransform( const FV* fv, const vtkMatrix4x4* vm)
 {
-    const cv::Matx44d& bmat = fv->data()->model().transformMatrix();
-    vtkSmartPointer<vtkMatrix4x4> vm = RVTK::toVTK( d * bmat);
     if ( _angle0.count(fv) > 0)
         pokeMatrix( _angle0.at(fv), vm);
     if ( _angle1.count(fv) > 0)
         pokeMatrix( _angle1.at(fv), vm);
-}   // end syncActorsToData
+}   // end syncToViewTransform
 
 
 void AngleVisualiser::setHighlighted( const FV* fv, bool v)

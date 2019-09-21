@@ -15,16 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ModelSelector.h>
-#include <ActionResetCamera.h>
-#include <ActionOrientCameraToFace.h>
-#include <BoundingVisualisation.h>
+#include <Action/ModelSelector.h>
+#include <Action/ActionResetCamera.h>
+#include <Action/ActionOrientCameraToFace.h>
+#include <Vis/BoundingVisualisation.h>
+#include <Vis/FaceView.h>
 #include <FaceModelViewer.h>
-#include <FaceView.h>
 #include <FaceModel.h>
 #include <cassert>
 using FaceTools::Action::ModelSelector;
-using FaceTools::Interactor::SelectMouseHandler;
+using FaceTools::Interactor::SelectNotifier;
 using FaceTools::Interactor::MouseHandler;
 using FaceTools::ModelViewer;
 using FaceTools::Vis::FV;
@@ -74,7 +74,7 @@ void ModelSelector::restoreCursor()
 }   // end restoreCursor
 
 
-const SelectMouseHandler* ModelSelector::selector() { return &msi();}
+const SelectNotifier* ModelSelector::selector() { return &sn();}
 
 void ModelSelector::setInteractionMode(IMode m, bool v)
 {
@@ -94,7 +94,7 @@ IMode ModelSelector::interactionMode()
 }   // end interactionMode
 
 
-FMV* ModelSelector::mouseViewer() { return static_cast<FMV*>(msi().mouseViewer());}
+FMV* ModelSelector::mouseViewer() { return static_cast<FMV*>(sn().mouseViewer());}
 
 FMV* ModelSelector::defaultViewer()
 {
@@ -108,7 +108,7 @@ FMV* ModelSelector::defaultViewer()
 
 const std::vector<FMV*>& ModelSelector::viewers() { return me()->_viewers;}
 
-FV* ModelSelector::selectedView() { return msi().selected();}
+FV* ModelSelector::selectedView() { return sn().selected();}
 
 
 FV* ModelSelector::addFaceView( FM* fm, FMV* tv)
@@ -130,7 +130,7 @@ FV* ModelSelector::addFaceView( FM* fm, FMV* tv)
     // Attaches the viewer and creates the base models (calls FaceView::reset)
     FV* fv = new FV( fm, tv);
     // Called *after* viewer is attached and causes doOnSelect(fv, true) to be called via signal.
-    msi().add(fv);
+    sn().add(fv);
     return fv;
 }   // end addFaceView
 
@@ -138,7 +138,7 @@ FV* ModelSelector::addFaceView( FM* fm, FMV* tv)
 void ModelSelector::removeFaceView( FV* fv)
 {
     // Called *before* viewer is detached and causes doOnSelect( fv, false) to be called via signal.
-    msi().remove(fv);
+    sn().remove(fv);
     delete fv;  // Ensures all visualisations removed
 }   // end removeFaceView
 
@@ -154,9 +154,9 @@ void ModelSelector::setSelected( FV* fv)
 {
     FV* sv = selectedView();
     if ( sv) // First deselect any currently selected view.
-        msi().setSelected( sv, false);
+        sn().setSelected( sv, false);
     if ( fv) // The select the given view.
-        msi().setSelected( fv, true);
+        sn().setSelected( fv, true);
 }   // end setSelected
 
 
@@ -174,7 +174,7 @@ void ModelSelector::updateRender()
 void ModelSelector::syncBoundingVisualisation( const FM* fm)
 {
     for ( FV* fv : fm->fvs())
-        me()->_bvis.syncActorsToData( fv);
+        me()->_bvis.syncToViewTransform( fv, fv->actor()->GetMatrix());
 }   // end syncBoundingVisualisation
 
 
@@ -188,20 +188,20 @@ ModelSelector::Ptr ModelSelector::me()
 
 
 // private static
-SelectMouseHandler& ModelSelector::msi()
+SelectNotifier& ModelSelector::sn()
 {
-    if ( !me()->_msi)
+    if ( !me()->_sn)
     {
-        SelectMouseHandler* fvsi = me()->_msi = new SelectMouseHandler;
-        QObject::connect( fvsi, &SelectMouseHandler::onSelected,
+        SelectNotifier* fvsi = me()->_sn = new SelectNotifier;
+        QObject::connect( fvsi, &SelectNotifier::onSelected,
                           [](FV* fv, bool s){ me()->doOnSelected( fv, s);});
     }   // end if
-    return *me()->_msi;
-}   // end msi
+    return *me()->_sn;
+}   // end sn
 
 
 // private
-ModelSelector::ModelSelector() : _sbar(nullptr), _autoFocus(true), _defv(-1), _msi(nullptr) {}
+ModelSelector::ModelSelector() : _sbar(nullptr), _autoFocus(true), _defv(-1), _sn(nullptr) {}
 
 
 // private

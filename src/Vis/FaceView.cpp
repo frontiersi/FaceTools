@@ -15,12 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <FaceView.h>
-#include <FaceModel.h>
+#include <Vis/FaceView.h>
+#include <Vis/SurfaceMetricsMapper.h>
+#include <Vis/BaseVisualisation.h>
+#include <Vis/MetricVisualiser.h>
 #include <FaceModelViewer.h>
-#include <SurfaceMetricsMapper.h>
-#include <BaseVisualisation.h>
-#include <MetricVisualiser.h>
+#include <FaceModel.h>
 #include <vtkProperty.h>
 #include <vtkCellData.h>
 #include <VtkTools.h>   // RVTK::transform
@@ -38,7 +38,7 @@ using FaceTools::Action::EventGroup;
 
 FaceView::FaceView( FM* fm, FMV* viewer)
     : _data(fm), _actor(nullptr), _texture(nullptr), _viewer(nullptr), _pviewer(nullptr),
-      _smm(nullptr), _baseCol(200,190,210), _xvis(nullptr)
+      _smm(nullptr), _baseCol(208,200,222), _xvis(nullptr)
 {
     assert(viewer);
     assert(fm);
@@ -225,25 +225,19 @@ BV* FaceView::layer( const vtkProp* prop) const
 }   // end layer
 
 
-void FaceView::syncActorDeltaToVisualisations()
+void FaceView::syncVisualisationsToViewTransform()
 {
-    const cv::Matx44d& bmat = _data->model().transformMatrix(); // Data baseline transform
-    const cv::Matx44d vmat = RVTK::toCV( _actor->GetMatrix());  // Actor's transform matrix
-    const cv::Matx44d dmat = vmat * bmat.inv(); // Calc transform difference to be added
+    for ( BV* vis : _vlayers)
+        vis->syncToViewTransform( this, _actor->GetMatrix());
+}   // end syncVisualisationsToViewTransform
 
-    // Collect all visualisation layers from all FaceViews (there is a more efficient
-    // way to do this given that all visualisations are effectively singletons).
-    VisualisationLayers vlayers;
-    for ( FV* fv : _data->fvs())
-    {
-        const VisualisationLayers& vl = fv->visualisations();
-        vlayers.insert( std::begin(vl), std::end(vl));
-    }   // end for
 
-    for ( BV* vis : vlayers)
-        for ( FV* f : _data->fvs())
-            vis->syncActorsToData( f, dmat);
-}   // end syncActorDeltaToVisualisations
+void FaceView::syncToModelTransform()
+{
+    const cv::Matx44d& T = _data->model().transformMatrix(); // Recently updated transform
+    _actor->PokeMatrix( RVTK::toVTK(T));
+    syncVisualisationsToViewTransform();
+}   // end syncToModelTransform
 
 
 bool FaceView::isPointOnFace( const QPoint& p) const
@@ -253,10 +247,13 @@ bool FaceView::isPointOnFace( const QPoint& p) const
 }   // end isPointOnFace
 
 
-bool FaceView::projectToSurface( const QPoint& p, cv::Vec3f& v) const
+bool FaceView::projectToSurface( const QPoint& p, cv::Vec3f& v, bool useUntransformed) const
 {
     assert(_viewer);
-    return _viewer->calcSurfacePosition( _actor, p, v);
+    const bool didOkay = _viewer->calcSurfacePosition( _actor, p, v);
+    if ( useUntransformed)  // Apply the inverse of the view transform to the surface point?
+        RFeatures::transform( RVTK::toCV(_actor->GetMatrix()).inv(), v);
+    return didOkay;
 }   // end projectToSurface
 
 

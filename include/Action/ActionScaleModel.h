@@ -19,7 +19,7 @@
 #define FACE_TOOLS_ACTION_SCALE_MODEL_H
 
 #include "FaceAction.h"
-#include <ResizeDialog.h>
+#include <Widget/ResizeDialog.h>
 
 namespace FaceTools { namespace Action {
 

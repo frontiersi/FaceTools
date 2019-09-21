@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ModelPropertiesDialog.h>
+#include <Widget/ModelPropertiesDialog.h>
 #include <ui_ModelPropertiesDialog.h>
 #include <FaceModel.h>
 #include <FaceTools.h>

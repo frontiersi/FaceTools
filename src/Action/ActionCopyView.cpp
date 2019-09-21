@@ -15,11 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionCopyView.h>
-#include <BaseVisualisation.h>
+#include <Action/ActionCopyView.h>
+#include <Vis/BaseVisualisation.h>
+#include <Vis/FaceView.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <FaceView.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionCopyView;

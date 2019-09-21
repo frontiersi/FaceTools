@@ -25,7 +25,7 @@
 #include <dlib/opencv.h>
 
 #include <OffscreenModelViewer.h>
-#include <LandmarkSet.h>
+#include <LndMrk/LandmarkSet.h>
 
 namespace FaceTools {  namespace Detect {
 

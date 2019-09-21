@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <SyndromeManager.h>
+#include <Metric/SyndromeManager.h>
 #include <MiscFunctions.h>
 #include <FileIO.h> // rlib
 #include <iostream>

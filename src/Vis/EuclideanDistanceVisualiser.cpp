@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <EuclideanDistanceVisualiser.h>
-#include <LandmarksManager.h>
+#include <Vis/EuclideanDistanceVisualiser.h>
+#include <LndMrk/LandmarksManager.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
@@ -78,15 +78,14 @@ bool EuclideanDistanceVisualiser::belongs( const vtkProp* p, const FV *fv) const
 }   // end belongs
 
 
-void EuclideanDistanceVisualiser::syncActorsToData(const FV *fv, const cv::Matx44d &d)
+void EuclideanDistanceVisualiser::syncToViewTransform( const FV *fv, const vtkMatrix4x4* cvm)
 {
-    const cv::Matx44d& bmat = fv->data()->model().transformMatrix();
-    vtkSmartPointer<vtkMatrix4x4> vm = RVTK::toVTK( d * bmat);
+    vtkMatrix4x4* vm = const_cast<vtkMatrix4x4*>(cvm);
     if ( _actor0.count(fv) > 0)
         _actor0.at(fv)->PokeMatrix( vm);
     if ( _actor1.count(fv) > 0)
         _actor1.at(fv)->PokeMatrix( vm);
-}   // end syncActorsToData
+}   // end syncToViewTransform
 
 
 void EuclideanDistanceVisualiser::setHighlighted( const FV* fv, bool v)

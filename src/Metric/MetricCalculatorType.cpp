@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <MetricCalculatorType.h>
+#include <Metric/MetricCalculatorType.h>
 using FaceTools::Metric::MetricCalculatorType;
 
 MetricCalculatorType::~MetricCalculatorType(){}

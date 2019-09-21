@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <PathView.h>
+#include <Vis/PathView.h>
 #include <FaceTools.h>
 #include <VtkActorCreator.h>    // RVTK
 #include <VtkTools.h>           // RVTK
@@ -31,16 +31,14 @@ PathView::PathView( int id, const std::list<cv::Vec3f>& vtxs)
       , _pprop(nullptr)
 #endif
 {
-    _h0 = new Handle( 0, _id, vtxs.front(), 1.3);
-    _h1 = new Handle( 1, _id, vtxs.back(), 1.3);
+    _h0 = new Handle( 0, _id, vtxs.front(), 1.4);
+    _h1 = new Handle( 1, _id, vtxs.back(), 1.4);
 
     _h0->_sv->setResolution(21);
-    _h0->_sv->setColour( 0.1, 0.7, 0.1);    // Green
-    _h0->_sv->setOpacity( 0.99);
+    _h0->_sv->setColour( 0.1, 0.7, 0.1, 0.99);    // Green
 
     _h1->_sv->setResolution(21);
-    _h1->_sv->setColour( 0.1, 0.7, 0.1);    // Green
-    _h1->_sv->setOpacity( 0.99);
+    _h1->_sv->setColour( 0.1, 0.7, 0.1, 0.99);    // Green
 
     _h0->_sv->setCaptionColour( Qt::GlobalColor::blue);
     _h1->_sv->setCaptionColour( Qt::GlobalColor::blue);
@@ -85,8 +83,15 @@ void PathView::setVisible( bool enable, ModelViewer *viewer)
 
 void PathView::update( const std::list<cv::Vec3f>& vtxs)
 {
-    _h0->_sv->setCentre( vtxs.front());
-    _h1->_sv->setCentre( vtxs.back());
+    // The provided vtxs don't take into account the fact the actors might have a transform matrix applied.
+    // The inverse of the current view transform is applied to the vertex positions so they render in the right place.
+    const vtkMatrix4x4* vmat = _h0->_sv->transform();
+    vtkNew<vtkMatrix4x4> ivmat;
+    vtkMatrix4x4::Invert( vmat, ivmat);
+
+    const cv::Matx44d imat = RVTK::toCV( ivmat);
+    _h0->_sv->setCentre( RFeatures::transform( imat, vtxs.front()));
+    _h1->_sv->setCentre( RFeatures::transform( imat, vtxs.back()));
 
     if ( _lprop)
     {
@@ -107,6 +112,8 @@ void PathView::update( const std::list<cv::Vec3f>& vtxs)
 #endif
 
     _lprop = RVTK::VtkActorCreator::generateLineActor( vtxs);
+    RVTK::fixTransform( _lprop, ivmat); // Apply the inverse of the view transform to the generated actor
+    _lprop->PokeMatrix( const_cast<vtkMatrix4x4*>(vmat));  // Ensure the view matrix is applied
     _lprop->SetPickable(false);
     vtkProperty* property = _lprop->GetProperty();
     property->SetRepresentationToWireframe();
@@ -122,12 +129,14 @@ void PathView::update( const std::list<cv::Vec3f>& vtxs)
 
 #ifndef NDEBUG
     _pprop = RVTK::VtkActorCreator::generateLineActor( vtxs);
+    RVTK::fixTransform( _pprop, ivmat); // Apply the inverse of the view transform to the generated actor
+    _pprop->PokeMatrix( const_cast<vtkMatrix4x4*>(vmat));  // Ensure the view matrix is applied
     _pprop->SetPickable(false);
     property = _pprop->GetProperty();
     property->SetRepresentationToPoints();
     property->SetPointSize(7);
     property->SetColor( 1.0, 0.0, 0.0);
-    property->SetOpacity( 0.99);
+    property->SetOpacity( 0.70);
     property->SetAmbient( 1.0);
     property->SetDiffuse( 0.0);
     property->SetSpecular(0.0);
@@ -139,13 +148,27 @@ void PathView::update( const std::list<cv::Vec3f>& vtxs)
 
 void PathView::updateColours()
 {
-    assert(_viewer);
-    QColor fg = chooseContrasting(_viewer->backgroundColour());
-    _h0->_sv->setCaptionColour( fg);
-    _h1->_sv->setCaptionColour( fg);
-    //vtkProperty* property = _lprop->GetProperty();
-    //property->SetColor( fg.redF(), fg.greenF(), fg.blueF());
+    if ( _viewer)
+    {
+        QColor fg = chooseContrasting(_viewer->backgroundColour());
+        _h0->_sv->setCaptionColour( fg);
+        _h1->_sv->setCaptionColour( fg);
+        //vtkProperty* property = _lprop->GetProperty();
+        //property->SetColor( fg.redF(), fg.greenF(), fg.blueF());
+    }   // end if
 }   // end updateColours
+
+
+void PathView::pokeTransform( const vtkMatrix4x4* vm)
+{
+    vtkMatrix4x4* cvm = const_cast<vtkMatrix4x4*>(vm);
+    _lprop->PokeMatrix(cvm);
+#ifndef NDEBUG
+    _pprop->PokeMatrix(cvm);
+#endif
+    _h0->_sv->pokeTransform(vm);
+    _h1->_sv->pokeTransform(vm);
+}   // end pokeTransform
 
 
 // private
@@ -153,5 +176,14 @@ PathView::Handle::Handle( int hid, int pid, const cv::Vec3f& c, double r)
     : _hid(hid), _pid(pid), _sv( new SphereView( c, r, true/*pickable*/, true/*fixed scale*/))
 {}   // end ctor
 
+
 // private
 PathView::Handle::~Handle() { delete _sv;}
+
+
+cv::Vec3f PathView::Handle::viewPos() const
+{
+    // View position is the handle centre after applying the view transform
+    return RFeatures::transform( RVTK::toCV( _sv->transform()), _sv->centre());
+}   // end viewPos
+

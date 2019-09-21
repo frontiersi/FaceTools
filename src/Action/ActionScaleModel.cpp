@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionScaleModel.h>
+#include <Action/ActionScaleModel.h>
 #include <FaceModel.h>
 using FaceTools::Action::ActionScaleModel;
 using FaceTools::Action::FaceAction;

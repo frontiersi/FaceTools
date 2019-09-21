@@ -25,7 +25,7 @@
 namespace FaceTools { namespace Interactor {
 
 class FaceTools_EXPORT MouseHandler : public QTools::VMH
-{ Q_OBJECT
+{
 public:
     MouseHandler();
     ~MouseHandler() override;

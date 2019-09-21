@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionSaveAsFaceModel.h>
-#include <FaceModelManager.h>
+#include <Action/ActionSaveAsFaceModel.h>
+#include <FileIO/FaceModelManager.h>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <boost/filesystem.hpp>
@@ -120,11 +120,8 @@ void ActionSaveAsFaceModel::doAction( Event)
     assert( !_filename.empty());
     FM* fm = MS::selectedModel();
     fm->lockForWrite();
-    //if ( !fm->hasLandmarks())
-    {
-        fm->fixOrientation();
-        _egrp.add(Event::ORIENTATION_CHANGE);
-    }   // end if
+    fm->fixTransformMatrix();
+    _egrp.add(Event::ORIENTATION_CHANGE);
     fm->unlock();
     fm->lockForRead();
     const bool wokay = FMM::write( fm, &_filename); // Save by specifying new filename

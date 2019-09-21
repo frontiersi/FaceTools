@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <Syndrome.h>
+#include <Metric/Syndrome.h>
 using FaceTools::Metric::Syndrome;
 
 Syndrome::Syndrome() : _id(-1) {}

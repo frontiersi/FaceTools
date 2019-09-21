@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 #ifndef FACE_TOOLS_METRIC_LANDMARKS_MANAGER_H
 #define FACE_TOOLS_METRIC_LANDMARKS_MANAGER_H
 
-#include <Landmark.h>
+#include "Landmark.h"
 
 namespace FaceTools { namespace Landmark {
 
@@ -39,6 +39,9 @@ public:
 
     // Returns alphanumerically sorted list of names.
     static QStringList names();
+
+    // Construct and return the landmark name appended with (L) or (R) if left or right lateral given.
+    static QString makeLandmarkString( int id, FaceLateral=FACE_LATERAL_MEDIAL);
 
     // Check if the given landmark name is present.
     // Lower case versions of landmark names are unique.

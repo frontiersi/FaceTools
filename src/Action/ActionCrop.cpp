@@ -15,11 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionCrop.h>
+#include <Action/ActionCrop.h>
+#include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <VtkTools.h>
-#include <FaceModelViewer.h>
 #include <ObjModelCopier.h>
 #include <cassert>
 using FaceTools::Action::FaceAction;

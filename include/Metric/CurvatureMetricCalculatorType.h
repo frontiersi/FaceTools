@@ -18,8 +18,8 @@
 #ifndef FACE_TOOLS_METRIC_CURVATURE_METRIC_CALCULATOR_TYPE_H
 #define FACE_TOOLS_METRIC_CURVATURE_METRIC_CALCULATOR_TYPE_H
 
-#include <MetricCalculatorType.h>
-#include <RegionVisualiser.h>
+#include "MetricCalculatorType.h"
+#include <Vis/RegionVisualiser.h>
 
 namespace FaceTools { namespace Metric {
 

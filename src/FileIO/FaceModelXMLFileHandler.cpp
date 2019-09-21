@@ -15,11 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <FaceModelXMLFileHandler.h>
-#include <FaceShapeLandmarks2DDetector.h>
+#include <FileIO/FaceModelXMLFileHandler.h>
+#include <Detect/FaceShapeLandmarks2DDetector.h>
+#include <Metric/PhenotypeManager.h>
 #include <FaceTools.h>
 #include <FaceModel.h>
-#include <PhenotypeManager.h>
 #include <Ethnicities.h>
 #include <MiscFunctions.h>
 #include <AssetImporter.h>

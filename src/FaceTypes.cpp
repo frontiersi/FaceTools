@@ -16,7 +16,7 @@
  ************************************************************************/
 
 #include <FaceTypes.h>
-#include <FaceAction.h>
+#include <Action/FaceAction.h>
 using FaceTools::Action::EventGroup;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;

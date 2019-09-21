@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionShowScanInfo.h>
+#include <Action/ActionShowScanInfo.h>
 #include <FaceModel.h>
 using FaceTools::Action::ActionShowScanInfo;
 using FaceTools::Action::ActionUpdateThumbnail;

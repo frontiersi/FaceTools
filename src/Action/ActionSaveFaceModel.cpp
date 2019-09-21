@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionSaveFaceModel.h>
-#include <FaceModelManager.h>
+#include <Action/ActionSaveFaceModel.h>
+#include <FileIO/FaceModelManager.h>
 #include <QMessageBox>
 #include <algorithm>
 #include <cassert>
@@ -62,11 +62,8 @@ void ActionSaveFaceModel::doAction( Event)
     assert(_fails.empty());
     FM *fm = MS::selectedModel();
     fm->lockForWrite();
-    //if ( !fm->hasLandmarks())
-    {
-        fm->fixOrientation();
-        _egrp.add(Event::ORIENTATION_CHANGE);
-    }   // end if
+    fm->fixTransformMatrix();
+    _egrp.add(Event::ORIENTATION_CHANGE);
     fm->unlock();
     fm->lockForRead();
     std::string filepath;   // Will be the last saved filepath

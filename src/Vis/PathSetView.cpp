@@ -15,10 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <PathSetView.h>
+#include <Vis/PathSetView.h>
 #include <FaceTools.h>
-#include <vtkTextProperty.h>
 #include <FaceModel.h>
+#include <vtkTextProperty.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Vis::PathSetView;
@@ -29,7 +29,7 @@ using FaceTools::Path;
 using ViewPair = std::pair<int, PathView*>;
 
 
-PathSetView::PathSetView( const PathSet& paths) : _viewer(nullptr)
+PathSetView::PathSetView() : _viewer(nullptr)
 {
     // The bottom right text.
     _text->GetTextProperty()->SetJustificationToRight();
@@ -38,9 +38,6 @@ PathSetView::PathSetView( const PathSet& paths) : _viewer(nullptr)
     _text->GetTextProperty()->SetBackgroundOpacity(0.7);
     _text->SetPickable( false);
     _text->SetVisibility(false);
-
-    for ( int id : paths.ids())
-        addPath( *paths.path(id));
 }   // end ctor
 
 
@@ -115,13 +112,23 @@ PathView* PathSetView::pathView( int id) const
 }   // end pathView
 
 
-void PathSetView::addPath( const Path& path)
+void PathSetView::addPath( const Path& path, const vtkMatrix4x4* d)
 {
-    PathView* pv = new PathView( path.id, path.vtxs);
-    _views[path.id] = pv;
+    // The vertices of the given path are always in their transformed positions.
+    // For visualisation, the vertices must be untransformed so that pokeTransform
+    // can be used to keep the view position of the vertices synchronised when
+    // dynamically adjusting the position of the model.
+    const cv::Matx44d imat = RVTK::toCV(d).inv();
+    std::list<cv::Vec3f> vtxs;
+    for ( const cv::Vec3f& v : path.vtxs)
+        vtxs.push_back( RFeatures::transform( imat, v));
+
+    PathView* pview = _views[path.id] = new PathView( path.id, vtxs);
+    pview->pokeTransform(d);
+
     // Map handle props to the handles themselves for fast lookup.
-    _handles[pv->handle0()->prop()] = pv->handle0();
-    _handles[pv->handle1()->prop()] = pv->handle1();
+    _handles[pview->handle0()->prop()] = pview->handle0();
+    _handles[pview->handle1()->prop()] = pview->handle1();
 }   // end addPath
 
 
@@ -144,35 +151,43 @@ void PathSetView::erasePath( int id)
 }   // end erasePath
 
 
-void PathSetView::sync( const PathSet& paths, const cv::Matx44d& d)
+void PathSetView::sync( const PathSet& paths, const vtkMatrix4x4* d)
 {
-    const bool isVis = isVisible();
+    bool isVis = isVisible();
 
-    // Erase all first
-    while ( !_views.empty())
-        erasePath(_views.begin()->first);
-
-    // Add back all
-    const IntSet& validIds = paths.ids();
-    for ( int id : validIds)
-        addPath( *paths.path(id));
-
-    // Update all positions
-    if ( d != cv::Matx44d::eye())
+    // First remove any entries from _views that aren't in paths
+    IntSet rpids;
+    for ( auto& p : _views)
     {
-        for ( auto& p : _views)
-        {
-            const std::list<cv::Vec3f>& ivtxs = paths.path(p.first)->vtxs;
-            std::list<cv::Vec3f> tvtxs;
-            for ( const cv::Vec3f& v : ivtxs)
-                tvtxs.push_back( RFeatures::transform( d, v));
-            p.second->update(tvtxs);
-        }   // end for
-    }   // end if
+        if ( !paths.has( p.first))
+            rpids.insert(p.first);
+    }   // end for
 
+    for ( int pid : rpids)
+        erasePath( pid);
+
+    // Then add any in paths not yet present or update what is there
+    for ( int pid : paths.ids())
+    {
+        const Path& path = *paths.path(pid);
+        if ( _views.count(pid) == 0)
+            addPath( path, d);
+        else
+            movePath( path);
+    }   // end for
+
+    isVis = isVis && !_views.empty();
     if ( isVis)
         setVisible(true, _viewer);
 }   // end sync
+
+
+void PathSetView::pokeTransform( const vtkMatrix4x4* vm)
+{
+    // Update all positions
+    for ( auto& p : _views)
+        p.second->pokeTransform(vm);
+}   // end pokeTransform
 
 
 void PathSetView::updateTextColours()

@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <LineAngleMetricCalculatorType.h>
+#include <Metric/LineAngleMetricCalculatorType.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <sstream>

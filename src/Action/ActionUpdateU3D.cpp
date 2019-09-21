@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionUpdateU3D.h>
+#include <Action/ActionUpdateU3D.h>
 #include <U3DCache.h>
 #include <algorithm>
 using FaceTools::Action::ActionUpdateU3D;

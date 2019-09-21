@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <IntTableWidgetItem.h>
+#include <Widget/IntTableWidgetItem.h>
 using FaceTools::Widget::IntTableWidgetItem;
 
 IntTableWidgetItem::IntTableWidgetItem( int v, int rjfw)

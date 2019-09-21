@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <FaceModelU3DFileHandler.h>
-#include <FaceModelFileHandlerException.h>
+#include <FileIO/FaceModelU3DFileHandler.h>
+#include <FileIO/FaceModelFileHandlerException.h>
 #include <algorithm>
 #include <iostream>
 using FaceTools::FileIO::FaceModelU3DFileHandler;

@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <Gene.h>
+#include <Metric/Gene.h>
 using FaceTools::Metric::Gene;
 
 Gene::Gene() : _id(-1) {}

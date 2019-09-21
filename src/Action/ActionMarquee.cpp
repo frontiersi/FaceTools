@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionMarquee.h>
+#include <Action/ActionMarquee.h>
 #include <FaceModelViewer.h>
 #include <algorithm>
 #include <functional>

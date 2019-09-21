@@ -15,8 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionEditPaths.h>
-#include <ModelSelector.h>
+#include <Action/ActionEditPaths.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <VtkTools.h>
@@ -24,8 +23,7 @@ using FaceTools::Action::ActionEditPaths;
 using FaceTools::Action::Event;
 using FaceTools::Action::UndoState;
 using FaceTools::Action::ActionVisualise;
-using FaceTools::Interactor::PathsInteractor;
-using FaceTools::Vis::PathSetVisualisation;
+using FaceTools::Interactor::PathsHandler;
 using FaceTools::FM;
 using FaceTools::Vis::FV;
 using FaceTools::Vis::PathView;
@@ -34,11 +32,11 @@ using MS = FaceTools::Action::ModelSelector;
 Q_DECLARE_METATYPE( FaceTools::PathSet::Ptr)
 
 
-ActionEditPaths::ActionEditPaths( const QString& dn, const QIcon& ic, PathSetVisualisation* vis, PathsInteractor::Ptr pint, const QKeySequence& ks)
-    : ActionVisualise( dn, ic, vis, ks), _pint( pint), _vis(vis)
+ActionEditPaths::ActionEditPaths( const QString& dn, const QIcon& ic, PathsHandler::Ptr handler, const QKeySequence& ks)
+    : ActionVisualise( dn, ic, handler->visualisation(), ks), _handler( handler)
 {
-    connect( &*_pint, &PathsInteractor::onStartedDrag, [this](){ storeUndo(this);});
-    connect( &*_pint, &PathsInteractor::onFinishedDrag, [this](){ emit onEvent( Event::PATHS_CHANGE);});
+    connect( &*_handler, &PathsHandler::onStartedDrag, [this](){ storeUndo(this);});
+    connect( &*_handler, &PathsHandler::onFinishedDrag, [this](){ emit onEvent( Event::PATHS_CHANGE);});
     addTriggerEvent( Event::PATHS_CHANGE);
 }   // end ctor
 
@@ -46,14 +44,7 @@ ActionEditPaths::ActionEditPaths( const QString& dn, const QIcon& ic, PathSetVis
 bool ActionEditPaths::checkState( Event e)
 {
     bool chk = ActionVisualise::checkState(e);    // true if _vis->isVisible true
-    if ( chk && EventGroup(e).has({Event::PATHS_CHANGE, Event::ASSESSMENT_CHANGE}))
-    {
-        const FM* fm = MS::selectedModel();
-        for ( const FV* fv : fm->fvs())
-            _vis->syncActorsToData( fv, cv::Matx44d::eye());
-        chk = ActionVisualise::checkState(e);   // Recheck
-    }   // end if
-    _pint->setEnabled(chk);
+    _handler->setEnabled(chk);
     return chk;
 }   // end checkState
 
@@ -65,8 +56,8 @@ void ActionEditPaths::doAction( Event e)
     {
         MS::setInteractionMode( IMode::CAMERA_INTERACTION);
         MS::showStatus( "Move path handles by left-clicking and dragging; right click to rename/delete.");
-        if ( _pint->hoverPath())  // Ensure captions of hovered over path is up-to-date.
-            _pint->setCaption( MS::selectedView(), _pint->hoverPath()->pathId());
+        if ( _handler->hoverPath())  // Ensure captions of hovered over path is up-to-date.
+            _handler->setCaption( MS::selectedView(), _handler->hoverPath()->pathId());
     }   // end if
     else
         MS::clearStatus();
@@ -88,6 +79,5 @@ void ActionEditPaths::restoreState( const UndoState* us)
     PathSet::Ptr paths = us->userData("Paths").value<PathSet::Ptr>();
     FM* fm = us->model();
     fm->setPaths(paths);
-    for ( const FV* fv : fm->fvs())
-        _vis->syncActorsToData( fv, cv::Matx44d::eye());
+    _handler->visualisation()->syncPaths(fm);
 }   // end restoreState

@@ -15,20 +15,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionRadialSelect.h>
+#include <Action/ActionRadialSelect.h>
+#include <Vis/FaceView.h>
+#include <LndMrk/LandmarkSet.h>
 #include <FaceModel.h>
-#include <FaceView.h>
 #include <FaceTools.h>
 #include <VtkTools.h>
 #include <FaceModelViewer.h>
-#include <LandmarkSet.h>
 #include <cassert>
 using FaceTools::Action::ActionRadialSelect;
 using FaceTools::Action::ActionVisualise;
 using FaceTools::Action::Event;
-using FaceTools::Vis::LoopSelectVisualisation;
-using FaceTools::Interactor::RadialSelectInteractor;
-using FaceTools::Interactor::FVI;
+using FaceTools::Vis::RadialSelectVisualisation;
+using FaceTools::Interactor::RadialSelectHandler;
 using FaceTools::Landmark::LandmarkSet;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
@@ -38,7 +37,7 @@ using MS = FaceTools::Action::ModelSelector;
 
 
 ActionRadialSelect::ActionRadialSelect( const QString& dn, const QIcon& ico)
-    : ActionVisualise( dn, ico, _vis = new LoopSelectVisualisation)
+    : ActionVisualise( dn, ico, _vis = new RadialSelectVisualisation)
 {
     addPurgeEvent( Event::GEOMETRY_CHANGE);
 }   // end ctor
@@ -50,9 +49,12 @@ ActionRadialSelect::~ActionRadialSelect()
 }   // end dtor
 
 
-double ActionRadialSelect::radius() const { return _interactor ? _interactor->radius() : 0.0;}
-cv::Vec3f ActionRadialSelect::centre() const { return _interactor ? _interactor->centre() : cv::Vec3f(0,0,0);}
-size_t ActionRadialSelect::selectedFaces( IntSet& fs) const { return _interactor ? _interactor->selectedFaces(fs) : 0;}
+double ActionRadialSelect::radius() const { return _handler ? _handler->radius() : 0.0;}
+
+cv::Vec3f ActionRadialSelect::centre() const { return _handler ? _handler->centre() : cv::Vec3f(0,0,0);}
+
+
+size_t ActionRadialSelect::selectedFaces( IntSet& fs) const { return _handler ? _handler->selectedFaces(fs) : 0;}
 
 
 bool ActionRadialSelect::checkEnable( Event e)
@@ -71,7 +73,7 @@ void ActionRadialSelect::doAction( Event e)
     if ( isChecked())
     {
         fm->lockForRead();
-        cv::Vec3f cpos = centre();
+        cv::Vec3f cpos = fm->centreFront();
         const LandmarkSet& lmks = fm->currentAssessment()->landmarks();
 
         const QPoint& mpos = primedMousePos();
@@ -91,14 +93,15 @@ void ActionRadialSelect::doAction( Event e)
             rad = 2.3 * cv::norm( mp - lmks.pos(Landmark::PRN));
         }   // end if
 
-        if ( !_interactor || _interactor->model() != fm)
+        if ( !_handler || _handler->model() != fm)
         {
-            _interactor = std::shared_ptr<RadialSelectInteractor>( new RadialSelectInteractor( *_vis, fm));
+            _handler = std::shared_ptr<RadialSelectHandler>( new RadialSelectHandler( *_vis, fm));
             rad = radius();
         }   // end if
         fm->unlock();
 
-        _interactor->set( cpos, rad);   // Causes visualisation to be updated
+        _handler->set( cpos, rad);   // Causes visualisation to be updated
+        _vis->setHighlighted( fm, false);
     }   // end isChecked
 }   // end doAction
 
@@ -114,6 +117,6 @@ void ActionRadialSelect::doAfterAction( Event e)
 
 void ActionRadialSelect::purge( const FM* fm, Event e)
 {
-    _interactor = nullptr;
+    _handler = nullptr;
     ActionVisualise::purge(fm, e);
 }   // end purge

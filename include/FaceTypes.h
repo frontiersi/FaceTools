@@ -96,22 +96,6 @@ using VisualisationLayers = std::unordered_set<BaseVisualisation*>;
 using MetricVisSet = std::unordered_set<MetricVisualiser*>;
 }   // end namespace (Vis)
 
-namespace Interactor {
-
-class ContextMenu;
-class MouseHandler;
-class ModelViewerInteractor;
-using MVI = ModelViewerInteractor;
-class FaceViewInteractor;
-using FVI = FaceViewInteractor;
-}   // end namespace (Interactor)
-
-namespace Detect {
-
-class FaceDetector;
-
-}   // end namespace (Detect)
-
 namespace Action {
 FaceTools_EXPORT Q_NAMESPACE
 // Macro Q_NAMESPACE allows use of Q_ENUM_NS for Event
@@ -120,6 +104,7 @@ FaceTools_EXPORT Q_NAMESPACE
 class UndoState;
 class UndoStates;
 class FaceAction;
+class FaceModelState;
 class FaceActionWorker;
 class FaceActionManager;
 using FAM = FaceActionManager;
@@ -198,6 +183,10 @@ class MetricCalculator;
 using MC = MetricCalculator;
 
 }   // end namespace (Metric)
+
+namespace Interactor {
+class ContextMenu;
+}   // end namespace (Interactor)
 
 }   // end namespace (FaceTools)
 

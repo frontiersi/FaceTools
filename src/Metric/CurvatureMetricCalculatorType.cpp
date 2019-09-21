@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <CurvatureMetricCalculatorType.h>
+#include <Metric/CurvatureMetricCalculatorType.h>
 #include <ObjModelCurvatureMetrics.h>
 #include <FaceModel.h>
 #include <FaceTools.h>

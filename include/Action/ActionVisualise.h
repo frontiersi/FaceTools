@@ -19,7 +19,7 @@
 #define FACE_TOOLS_ACTION_VISUALISE_H
 
 #include "FaceAction.h"
-#include <BaseVisualisation.h>
+#include <Vis/BaseVisualisation.h>
 
 namespace FaceTools { namespace Action {
 

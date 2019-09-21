@@ -15,9 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionShowMetrics.h>
-#include <MetricCalculatorManager.h>
-#include <MetricVisualiser.h>
+#include <Action/ActionShowMetrics.h>
+#include <Metric/MetricCalculatorManager.h>
+#include <Vis/MetricVisualiser.h>
 #include <Ethnicities.h>
 #include <FaceModel.h>
 #include <FaceTools.h>

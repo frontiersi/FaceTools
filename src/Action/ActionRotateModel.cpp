@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionRotateModel.h>
+#include <Action/ActionRotateModel.h>
 #include <Transformer.h>
 #include <FaceModel.h>
 using FaceTools::Action::ActionRotateModel;

@@ -15,19 +15,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <Report.h>
+#include <Report/Report.h>
+#include <Metric/MetricCalculatorManager.h>
+#include <Metric/PhenotypeManager.h>
+#include <Metric/Chart.h>
 #include <PDFGenerator.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <Ethnicities.h>
-#include <PhenotypeManager.h>
-#include <Chart.h>
 #include <MathUtil.h>   // rlib
 #include <QtSvg/QSvgGenerator>
 #include <QPixmap>
 #include <QFile>
 #include <QtDebug>
-#include <MetricCalculatorManager.h>
 using MCM = FaceTools::Metric::MetricCalculatorManager;
 using MC = FaceTools::Metric::MetricCalculator;
 using FaceTools::Metric::GrowthData;

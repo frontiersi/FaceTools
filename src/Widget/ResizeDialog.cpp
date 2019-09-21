@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ResizeDialog.h>
+#include <Widget/ResizeDialog.h>
 #include <ui_ResizeDialog.h>
 #include <FaceModel.h>
 #include <FaceTools.h>

@@ -15,9 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionSetNumScalarColours.h>
-#include <SurfaceMetricsMapper.h>
-#include <FaceView.h>
+#include <Action/ActionSetNumScalarColours.h>
+#include <Vis/SurfaceMetricsMapper.h>
+#include <Vis/FaceView.h>
 #include <cassert>
 using FaceTools::Action::ActionSetNumScalarColours;
 using FaceTools::Action::FaceAction;

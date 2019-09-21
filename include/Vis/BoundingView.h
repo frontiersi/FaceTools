@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,40 +18,26 @@
 #ifndef FACE_TOOLS_BOUNDING_VIEW_H
 #define FACE_TOOLS_BOUNDING_VIEW_H
 
-#include <FaceTypes.h>
-#include <ModelViewer.h>
+#include "SimpleView.h"
 #include <vtkCubeSource.h>
 
 namespace FaceTools { namespace Vis {
 
-class FaceTools_EXPORT BoundingView
+class FaceTools_EXPORT BoundingView : public SimpleView
 {
 public:
-    BoundingView( const RFeatures::ObjModelBounds&, float lineWidth);
-    ~BoundingView();
+    BoundingView( const FM*, float lineWidth);
 
-    void setColour( float r, float g, float b);
+    void pokeTransform( const vtkMatrix4x4*) override;
 
-    // Not pickable by default.
-    void setPickable( bool);
-    bool pickable() const;
-
-    void setVisible( bool, ModelViewer*);
-    bool visible() const { return _visible;}
-
-    void pokeTransform( vtkMatrix4x4*);
+protected:
+    void pokeTransform( vtkActor*, const vtkMatrix4x4*) override;
 
 private:
-    ModelViewer *_viewer;
-    bool _visible;
-    float _lw;
+    const FM* _fm;
     vtkNew<vtkCubeSource> _cubeSource;
-    vtkNew<vtkActor> _cubeActor;
-
-    BoundingView( const BoundingView&) = delete;
-    void operator=( const BoundingView&) = delete;
 };  // end class
 
-} }   // end namespace
+}}   // end namespaces
 
 #endif

@@ -18,8 +18,8 @@
 #ifndef FACE_TOOLS_METRIC_LINE_ANGLE_METRIC_CALCULATOR_TYPE_H
 #define FACE_TOOLS_METRIC_LINE_ANGLE_METRIC_CALCULATOR_TYPE_H
 
-#include <MetricCalculatorType.h>
-#include <AngleVisualiser.h>
+#include "MetricCalculatorType.h"
+#include <Vis/AngleVisualiser.h>
 
 namespace FaceTools { namespace Metric {
 

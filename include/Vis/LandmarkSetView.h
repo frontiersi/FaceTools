@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,14 +19,14 @@
 #define FACE_TOOLS_LANDMARK_SET_VIEW_H
 
 #include "SphereView.h"
-#include <LandmarkSet.h>
+#include <LndMrk/LandmarkSet.h>
 
 namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT LandmarkSetView
 {
 public:
-    LandmarkSetView( const Landmark::LandmarkSet&, double radius=1.2);
+    explicit LandmarkSetView( double radius=1.2);
     virtual ~LandmarkSetView();
 
     void setLandmarkRadius( double);
@@ -42,9 +42,9 @@ public:
     const IntSet& highlighted() const { return _highlighted;} // IDs of highlighted landmarks
     void highlightLandmark( bool, int, FaceLateral);          // Highlights a (visible) landmark
 
-    // Set the landmark position with the model in standard position.
-    // Use pokeTransform to make affine transforms on the actors.
-    void set( int, FaceLateral, const cv::Vec3f&);
+    // Set the landmark position with the model in its current position.
+    // The matrix is the transform applied to the current model.
+    void set( int, FaceLateral, const cv::Vec3f&, const vtkMatrix4x4*);
     void remove( int);
 
     // Returns ID of landmark for prop or -1 if not found.
@@ -52,8 +52,7 @@ public:
     // lateral on which the landmark appears.
     int landmarkId( const vtkProp*, FaceLateral&) const;
 
-    // Sync view locations of landmarks + d.
-    void sync( const Landmark::LandmarkSet&, const cv::Matx44d& d);
+    void pokeTransform( const vtkMatrix4x4*);
 
     static cv::Vec3d BASE0_COL;
     static cv::Vec3d SPEC0_COL;
@@ -69,7 +68,7 @@ private:
     IntSet _visible;
 
     void _remove( int, SphereMap&, PropMap&);
-    void _set( int, SphereMap&, PropMap&, const cv::Vec3f&, const QString& lats="");
+    void _set( int, FaceLateral, SphereMap&, PropMap&, const cv::Vec3f&, const vtkMatrix4x4*);
     LandmarkSetView( const LandmarkSetView&) = delete;
     void operator=( const LandmarkSetView&) = delete;
 };  // end class

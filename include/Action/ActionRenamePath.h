@@ -19,14 +19,14 @@
 #define FACE_TOOLS_ACTION_RENAME_PATH_H
 
 #include "FaceAction.h"
-#include <PathsInteractor.h>
+#include <Interactor/PathsHandler.h>
 
 namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionRenamePath : public FaceAction
 { Q_OBJECT
 public:
-    ActionRenamePath( const QString&, const QIcon&, Interactor::PathsInteractor::Ptr);
+    ActionRenamePath( const QString&, const QIcon&, Interactor::PathsHandler::Ptr);
 
     QString toolTip() const override { return "Give the selected path a label to identify it in metadata.";}
 
@@ -39,7 +39,7 @@ private slots:
     void doOnLeavePath();
 
 private:
-    Interactor::PathsInteractor::Ptr _pint;
+    Interactor::PathsHandler::Ptr _handler;
 };  // end class
 
 }}   // end namespace

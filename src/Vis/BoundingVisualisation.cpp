@@ -15,10 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <BoundingVisualisation.h>
+#include <Vis/BoundingVisualisation.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <algorithm>
 #include <cassert>
 using FaceTools::Vis::BoundingVisualisation;
 using FaceTools::Vis::FV;
@@ -31,28 +30,11 @@ BoundingVisualisation::~BoundingVisualisation()
 }   // end dtor
 
 
-void BoundingVisualisation::_setColour( const FV* fv)
-{
-    assert(_views.count(fv) > 0);
-    BoundingView* bv = _views.at(fv);
-    float r = 0.3f;
-    float g = 0.4f;
-    float b = 0.9f;
-    if ( !fv->data()->currentAssessment()->landmarks().empty())
-    {
-        r = 0.4f;
-        g = 0.9f;
-        b = 0.3f;
-    }   // end if
-    bv->setColour(r,g,b);
-}   // end _setColour
-
-
 void BoundingVisualisation::apply( FV* fv, const QPoint*)
 {
     if (_views.count(fv) == 0)
     {
-        _views[fv] = new BoundingView( *fv->data()->bounds()[0], 3.0f);
+        _views[fv] = new BoundingView( fv->data(), 3.0f);
         _setColour(fv);
     }   // end if
     _views.at(fv)->setVisible( true, fv->viewer());
@@ -75,15 +57,14 @@ bool BoundingVisualisation::isVisible( const FV *fv) const
 }   // end isVisible
 
 
-void BoundingVisualisation::syncActorsToData( const FV* fv, const cv::Matx44d& d)
+void BoundingVisualisation::syncToViewTransform( const FV* fv, const vtkMatrix4x4* d)
 {
     if ( _views.count(fv) > 0)
     {
-        const cv::Matx44d& bmat = fv->data()->bounds()[0]->transformMatrix();
-        _views.at(fv)->pokeTransform( RVTK::toVTK( d * bmat));
+        _views.at(fv)->pokeTransform( d);
         _setColour(fv);
     }   // end if
-}   // end syncActorsToData
+}   // end syncToViewTransform
 
 
 bool BoundingVisualisation::purge( FV* fv, Event)
@@ -96,3 +77,14 @@ bool BoundingVisualisation::purge( FV* fv, Event)
     }   // end if
     return true;
 }   // end purge
+
+
+void BoundingVisualisation::_setColour( const FV* fv)
+{
+    assert(_views.count(fv) > 0);
+    BoundingView* bv = _views.at(fv);
+    cv::Vec3d col( 0.3, 0.4, 0.9);
+    if ( !fv->data()->currentAssessment()->landmarks().empty())
+        col = cv::Vec3d( 0.4, 0.9, 0.3);
+    bv->setColour( col[0], col[1], col[2], 0.20);
+}   // end _setColour

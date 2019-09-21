@@ -19,8 +19,8 @@
 #define FACE_TOOLS_METRIC_METRIC_CALCULATOR_TYPE_H
 
 #include <FaceTypes.h>
-#include <MetricVisualiser.h>   // FaceTools::Vis
-#include <Landmark.h>
+#include <Vis/MetricVisualiser.h>   // FaceTools::Vis
+#include <LndMrk/Landmark.h>
 
 namespace FaceTools { namespace Metric {
 

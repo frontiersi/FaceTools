@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionSetSurfaceColour.h>
-#include <FaceView.h>
+#include <Action/ActionSetSurfaceColour.h>
+#include <Vis/FaceView.h>
 #include <QColorDialog>
 using FaceTools::Action::ActionSetSurfaceColour;
 using FaceTools::Action::FaceAction;

@@ -24,7 +24,7 @@
   a deep copy snapshot of it instead of loading it again.
 **/
 
-#include <FaceModelManager.h>
+#include <FileIO/FaceModelManager.h>
 #include <ObjModel.h>   // RFeatures
 #include <QThread>
 

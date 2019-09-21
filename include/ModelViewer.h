@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,8 +18,8 @@
 #ifndef FACE_TOOLS_MODEL_VIEWER_H
 #define FACE_TOOLS_MODEL_VIEWER_H
 
-#include <ModelViewerInteractor.h>
-#include <MouseHandler.h>
+#include "Interactor/ViewerNotifier.h"
+#include "Interactor/MouseHandler.h"
 #include <VtkActorViewer.h> // QTools
 #include <CameraParams.h>   // RFeatures
 #include <QColor>
@@ -117,11 +117,11 @@ public:
 
 protected:
     // Attach/detach interactors and mouse handlers returning false iff already attached.
-    bool attach( Interactor::MVI*);
-    bool detach( Interactor::MVI*);
+    bool attach( Interactor::ViewerNotifier*);
+    bool detach( Interactor::ViewerNotifier*);
     bool attach( Interactor::MouseHandler*);
     bool detach( Interactor::MouseHandler*);
-    friend class Interactor::ModelViewerInteractor;    // Calls attach and detach passing in self as parameter.
+    friend class Interactor::ViewerNotifier;    // Calls attach and detach passing in self as parameter.
     friend class Interactor::MouseHandler;
 
 private:

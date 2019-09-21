@@ -19,7 +19,7 @@
 #define FACE_TOOLS_ACTION_LOAD_FACE_MODELS_H
 
 #include "FaceAction.h"
-#include <LoadFaceModelsHelper.h>
+#include <FileIO/LoadFaceModelsHelper.h>
 #include <QFileDialog>
 
 namespace FaceTools { namespace Action {

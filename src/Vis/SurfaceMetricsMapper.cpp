@@ -15,9 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <SurfaceMetricsMapper.h>
+#include <Vis/SurfaceMetricsMapper.h>
+#include <Vis/FaceView.h>
 #include <FaceModel.h>
-#include <FaceView.h>
 #include <VtkTools.h>   // RVTK
 #include <vtkCellData.h>
 #include <algorithm>

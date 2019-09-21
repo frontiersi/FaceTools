@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionToggleAxes.h>
+#include <Action/ActionToggleAxes.h>
 #include <FaceTools.h>
 #include <FaceModel.h>
 #include <vtkProperty.h>
@@ -27,6 +27,7 @@ using FaceTools::Action::Event;
 using FaceTools::FMV;
 using FaceTools::FVS;
 using FaceTools::FM;
+using MS = FaceTools::Action::ModelSelector;
 
 
 ActionToggleAxes::ActionToggleAxes( const QString& dn, const QIcon& ico, const QKeySequence& ks)
@@ -38,19 +39,18 @@ ActionToggleAxes::ActionToggleAxes( const QString& dn, const QIcon& ico, const Q
 
 void ActionToggleAxes::postInit()
 {
-    for ( FMV* fmv : ModelSelector::viewers())
-        addViewer(fmv);
+    for ( FMV* fmv : MS::viewers())
+        _addViewer(fmv);
 }   // end postInit
 
 
-// private
-void ActionToggleAxes::updateAxesUnits( vtkCubeAxesActor* actor) const
+void ActionToggleAxes::_updateAxesUnits( vtkCubeAxesActor* actor) const
 {
     const std::string units = FM::LENGTH_UNITS.toStdString();
     actor->SetXUnits( units.c_str());
     actor->SetYUnits( units.c_str());
     actor->SetZUnits( units.c_str());
-}   // end updateAxesUnits
+}   // end _updateAxesUnits
 
 
 namespace {
@@ -65,16 +65,13 @@ void setTextProperties( vtkTextProperty* tp, const QColor& bg, const QColor& fg)
 }   // end namespace
 
 
-// private
-void ActionToggleAxes::addViewer( FMV* fmv)
+void ActionToggleAxes::_addViewer( FMV* fmv)
 {
     vtkCubeAxesActor* actor = _viewers[fmv];
-    updateAxesUnits( actor);
+    fmv->add( actor);
 
-    actor->SetUseTextActor3D(true);
     //actor->SetUse2DMode(true);
-
-    actor->SetBounds( -200, 200, -200, 200, -200, 200);
+    actor->SetBounds( -300, 300, -300, 300, -300, 300);
     actor->DrawXGridlinesOn();
     actor->DrawYGridlinesOn();
     actor->DrawZGridlinesOn();
@@ -99,9 +96,16 @@ void ActionToggleAxes::addViewer( FMV* fmv)
     actor->GetZAxesGridlinesProperty()->SetLineWidth(1);
 
     actor->SetPickable(false);
+    actor->SetUseTextActor3D(true);
 
-    fmv->add( actor);
-}   // end addViewer
+    actor->SetXAxisTickVisibility( false);
+    actor->SetYAxisTickVisibility( false);
+    actor->SetZAxisTickVisibility( false);
+
+    actor->SetXAxisMinorTickVisibility( false);
+    actor->SetYAxisMinorTickVisibility( false);
+    actor->SetZAxisMinorTickVisibility( false);
+}   // end _addViewer
 
 
 bool ActionToggleAxes::checkState( Event)
@@ -113,8 +117,7 @@ bool ActionToggleAxes::checkState( Event)
         QColor fg = chooseContrasting( bg);
 
         vtkCubeAxesActor* actor = p.second;
-
-        updateAxesUnits( actor);
+        _updateAxesUnits( actor);
 
         setTextProperties( actor->GetLabelTextProperty(0), bg, fg);
         setTextProperties( actor->GetLabelTextProperty(1), bg, fg);
@@ -123,14 +126,6 @@ bool ActionToggleAxes::checkState( Event)
         setTextProperties( actor->GetTitleTextProperty(0), bg, fg);
         setTextProperties( actor->GetTitleTextProperty(1), bg, fg);
         setTextProperties( actor->GetTitleTextProperty(2), bg, fg);
-
-        actor->SetXAxisTickVisibility( false);
-        actor->SetYAxisTickVisibility( false);
-        actor->SetZAxisTickVisibility( false);
-
-        actor->SetXAxisMinorTickVisibility( false);
-        actor->SetYAxisMinorTickVisibility( false);
-        actor->SetZAxisMinorTickVisibility( false);
 
         actor->SetVisibility(chk);
     }   // end for

@@ -22,10 +22,10 @@
  * Understands how to perform and record a generic metric calculation.
  */
 
-#include <MetricCalculatorType.h>
-#include <GrowthData.h>
-#include <MetricSet.h>
-#include <Landmark.h>
+#include "MetricCalculatorType.h"
+#include "GrowthData.h"
+#include "MetricSet.h"
+#include <LndMrk/Landmark.h>
 
 namespace FaceTools { namespace Metric {
 

@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionLoadDirFaceModels.h>
-#include <FaceModelManager.h>
+#include <Action/ActionLoadDirFaceModels.h>
+#include <FileIO/FaceModelManager.h>
 using FaceTools::Action::ActionLoadDirFaceModels;
 using FaceTools::Action::Event;
 using FaceTools::Action::FaceAction;

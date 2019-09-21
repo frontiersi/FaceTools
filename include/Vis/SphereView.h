@@ -18,19 +18,17 @@
 #ifndef FACE_TOOLS_SPHERE_VIEW_H
 #define FACE_TOOLS_SPHERE_VIEW_H
 
-#include <ModelViewer.h>
+#include "ViewInterface.h"
 #include <VtkScalingActor.h>    // RVTK
 #include <vtkSphereSource.h>
 #include <vtkCaptionActor2D.h>
 
 namespace FaceTools { namespace Vis {
 
-class FaceTools_EXPORT SphereView
+class FaceTools_EXPORT SphereView : public ViewInterface
 {
 public:
     SphereView( const cv::Vec3f& centre=cv::Vec3f(0,0,0), double radius=1.0, bool pickable=true, bool fixedScale=false);
-    SphereView( const SphereView&);
-    SphereView& operator=( const SphereView&);
     virtual ~SphereView();
 
     void setResolution( int);   // Default 8
@@ -51,12 +49,7 @@ public:
     void setRadius( double);                            // Set radius
     double radius() const;                              // Get radius
 
-    void setOpacity( double);
     double opacity() const;
-
-    void setColour( double r, double g, double b);      // Set colour as rgb components in [0,1].
-    void setColour( const double[3]);
-    const double* colour() const;                       // Return a 3-tuple array for the rgb components.
 
     void setCaption( const std::string&);               // Set caption used when highlighting.
     void setCaption( const QString&);
@@ -67,17 +60,24 @@ public:
     void setHighlighted( bool);                         // Show the caption (only if already visible).
     bool highlighted() const;
 
-    void setVisible( bool, ModelViewer*);               // Set visibility of actors.
-    bool visible() const { return _visible;}
-
     const vtkProp* prop() const;     
+    const double* colour() const;                       // Return a 3-tuple array for the rgb components.
+
+    void setColour( double r, double g, double b, double a) override;
+    void setVisible( bool, ModelViewer*) override;
+    bool visible() const override { return _visible;}
+    void pokeTransform( const vtkMatrix4x4*) override;
+
+    const vtkMatrix4x4* transform() const;
 
 private:
+    ModelViewer *_vwr;
     bool _visible;
     RVTK::VtkScalingActor* _actor;
     vtkNew<vtkSphereSource> _source;
     vtkNew<vtkCaptionActor2D> _caption;
-    void init();
+    void _init( const cv::Vec3f&, double, bool, bool);
+    void _updateCaptionPosition();
 };  // end class
 
 }}   // end namespaces

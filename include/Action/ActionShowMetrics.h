@@ -19,7 +19,7 @@
 #define FACE_TOOLS_ACTION_ACTION_SHOW_METRICS_H
 
 #include "FaceAction.h"
-#include <MetricsDialog.h>
+#include <Widget/MetricsDialog.h>
 
 namespace FaceTools { namespace Action {
 

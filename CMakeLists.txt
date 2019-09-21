@@ -3,8 +3,6 @@ cmake_minimum_required(VERSION 3.12.2 FATAL_ERROR)
 project( FaceTools)
 
 set(WITH_QUAZIP TRUE)
-#set(WITH_CPD TRUE)
-#set(WITH_CGAL TRUE)
 set(WITH_DLIB TRUE)
 set(WITH_RMODELIO TRUE)
 set(WITH_QTOOLS TRUE)
@@ -36,16 +34,6 @@ set( SRC_INT_DIR "${SRC_DIR}/Interactor")
 set( SRC_VIS_DIR "${SRC_DIR}/Vis")
 
 include_directories( ${INCLUDE_DIR})
-include_directories( ${INCLUDE_ACTION_DIR})
-include_directories( ${INCLUDE_DETECT_DIR})
-include_directories( ${INCLUDE_FILEIO_DIR})
-include_directories( ${INCLUDE_LNDMRK_DIR})
-include_directories( ${INCLUDE_METRIC_DIR})
-include_directories( ${INCLUDE_REPORT_DIR})
-include_directories( ${INCLUDE_WIDGET_DIR})
-include_directories( ${INCLUDE_VIS_DIR})
-include_directories( ${INCLUDE_INT_DIR})
-
 include_directories( ${PROJECT_BINARY_DIR}) # Req. for generated Qt form headers
 
 set( FORMS
@@ -138,16 +126,14 @@ set( QOBJECTS
 
     "${INCLUDE_REPORT_DIR}/Report.h"
 
-    "${INCLUDE_INT_DIR}/ActorMoveHandler.h"
-    "${INCLUDE_INT_DIR}/ContextMenu.h"
-    "${INCLUDE_INT_DIR}/FaceViewInteractor.h"
-    "${INCLUDE_INT_DIR}/LandmarksInteractor.h"
-    "${INCLUDE_INT_DIR}/ModelViewerInteractor.h"
-    "${INCLUDE_INT_DIR}/MovementTrigger.h"
-    "${INCLUDE_INT_DIR}/MouseHandler.h"
-    "${INCLUDE_INT_DIR}/PathsInteractor.h"
-    "${INCLUDE_INT_DIR}/RadialSelectInteractor.h"
-    "${INCLUDE_INT_DIR}/SelectMouseHandler.h"
+    "${INCLUDE_INT_DIR}/ActorMoveNotifier.h"
+    "${INCLUDE_INT_DIR}/LandmarksHandler.h"
+    "${INCLUDE_INT_DIR}/MovementNotifier.h"
+    "${INCLUDE_INT_DIR}/PathsHandler.h"
+    "${INCLUDE_INT_DIR}/PropHandler.h"
+    "${INCLUDE_INT_DIR}/PropNotifier.h"
+    "${INCLUDE_INT_DIR}/RadialSelectHandler.h"
+    "${INCLUDE_INT_DIR}/SelectNotifier.h"
 
     "${INCLUDE_WIDGET_DIR}/ChartDialog.h"
     "${INCLUDE_WIDGET_DIR}/CheckAllTableHeader.h"
@@ -170,6 +156,7 @@ set( INCLUDE_FILES
     ${QOBJECTS}
     "${INCLUDE_DIR}/${PROJECT_NAME}.h"
 
+    "${INCLUDE_ACTION_DIR}/FaceModelState.h"
     "${INCLUDE_ACTION_DIR}/ModelSelector.h"
     "${INCLUDE_ACTION_DIR}/UndoState.h"
 
@@ -189,6 +176,10 @@ set( INCLUDE_FILES
     "${INCLUDE_FILEIO_DIR}/FaceModelPLYFileHandler.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelU3DFileHandler.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelXMLFileHandler.h"
+
+    "${INCLUDE_INT_DIR}/ContextMenu.h"
+    "${INCLUDE_INT_DIR}/MouseHandler.h"
+    "${INCLUDE_INT_DIR}/ViewerNotifier.h"
 
     "${INCLUDE_LNDMRK_DIR}/Landmark.h"
     "${INCLUDE_LNDMRK_DIR}/LandmarkSet.h"
@@ -220,21 +211,26 @@ set( INCLUDE_FILES
     "${INCLUDE_VIS_DIR}/BoundingVisualisation.h"
     "${INCLUDE_VIS_DIR}/EuclideanDistanceVisualiser.h"
     "${INCLUDE_VIS_DIR}/FaceView.h"
+    "${INCLUDE_VIS_DIR}/LabelsView.h"
+    "${INCLUDE_VIS_DIR}/LabelsVisualisation.h"
     "${INCLUDE_VIS_DIR}/LandmarkSetView.h"
     "${INCLUDE_VIS_DIR}/LandmarksVisualisation.h"
-    "${INCLUDE_VIS_DIR}/LoopSelectVisualisation.h"
-    "${INCLUDE_VIS_DIR}/LoopsView.h"
+    "${INCLUDE_VIS_DIR}/LoopView.h"
     "${INCLUDE_VIS_DIR}/MetricVisualiser.h"
     "${INCLUDE_VIS_DIR}/OutlinesVisualisation.h"
     "${INCLUDE_VIS_DIR}/PathSetVisualisation.h"
     "${INCLUDE_VIS_DIR}/PathView.h"
     "${INCLUDE_VIS_DIR}/PathSetView.h"
-    "${INCLUDE_VIS_DIR}/PolyLabelsVisualisation.h"
+    "${INCLUDE_VIS_DIR}/PointsView.h"
+    "${INCLUDE_VIS_DIR}/PolyLabelsView.h"
+    "${INCLUDE_VIS_DIR}/RadialSelectVisualisation.h"
     "${INCLUDE_VIS_DIR}/RegionVisualiser.h"
+    "${INCLUDE_VIS_DIR}/SimpleView.h"
     "${INCLUDE_VIS_DIR}/SphereView.h"
     "${INCLUDE_VIS_DIR}/SurfaceMetricsMapper.h"
     "${INCLUDE_VIS_DIR}/SurfaceVisualisation.h"
-    "${INCLUDE_VIS_DIR}/VertexLabelsVisualisation.h"
+    "${INCLUDE_VIS_DIR}/ViewInterface.h"
+    "${INCLUDE_VIS_DIR}/VertexLabelsView.h"
 
     "${INCLUDE_WIDGET_DIR}/IntTableWidgetItem.h"
 
@@ -325,6 +321,7 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/FaceAction
     ${SRC_ACTION_DIR}/FaceActionManager
     ${SRC_ACTION_DIR}/FaceActionWorker
+    ${SRC_ACTION_DIR}/FaceModelState
     ${SRC_ACTION_DIR}/ModelSelector
     ${SRC_ACTION_DIR}/UndoState
     ${SRC_ACTION_DIR}/UndoStates
@@ -347,16 +344,17 @@ set( SRC_FILES
     ${SRC_FILEIO_DIR}/FaceModelU3DFileHandler
     ${SRC_FILEIO_DIR}/LoadFaceModelsHelper
 
-    ${SRC_INT_DIR}/ActorMoveHandler
+    ${SRC_INT_DIR}/ActorMoveNotifier
     ${SRC_INT_DIR}/ContextMenu
-    ${SRC_INT_DIR}/FaceViewInteractor
-    ${SRC_INT_DIR}/LandmarksInteractor
+    ${SRC_INT_DIR}/LandmarksHandler
     ${SRC_INT_DIR}/MouseHandler
-    ${SRC_INT_DIR}/ModelViewerInteractor
-    ${SRC_INT_DIR}/MovementTrigger
-    ${SRC_INT_DIR}/RadialSelectInteractor
-    ${SRC_INT_DIR}/PathsInteractor
-    ${SRC_INT_DIR}/SelectMouseHandler
+    ${SRC_INT_DIR}/MovementNotifier
+    ${SRC_INT_DIR}/PropHandler
+    ${SRC_INT_DIR}/PropNotifier
+    ${SRC_INT_DIR}/PathsHandler
+    ${SRC_INT_DIR}/RadialSelectHandler
+    ${SRC_INT_DIR}/SelectNotifier
+    ${SRC_INT_DIR}/ViewerNotifier
 
     ${SRC_LNDMRK_DIR}/Landmark
     ${SRC_LNDMRK_DIR}/LandmarkSet
@@ -390,21 +388,24 @@ set( SRC_FILES
     ${SRC_VIS_DIR}/BoundingVisualisation
     ${SRC_VIS_DIR}/EuclideanDistanceVisualiser
     ${SRC_VIS_DIR}/FaceView
+    ${SRC_VIS_DIR}/LabelsView
     ${SRC_VIS_DIR}/LandmarkSetView
     ${SRC_VIS_DIR}/LandmarksVisualisation
-    ${SRC_VIS_DIR}/LoopSelectVisualisation
-    ${SRC_VIS_DIR}/LoopsView
+    ${SRC_VIS_DIR}/LoopView
     ${SRC_VIS_DIR}/MetricVisualiser
     ${SRC_VIS_DIR}/OutlinesVisualisation
     ${SRC_VIS_DIR}/PathView
     ${SRC_VIS_DIR}/PathSetView
     ${SRC_VIS_DIR}/PathSetVisualisation
-    ${SRC_VIS_DIR}/PolyLabelsVisualisation
+    ${SRC_VIS_DIR}/PointsView
+    ${SRC_VIS_DIR}/PolyLabelsView
+    ${SRC_VIS_DIR}/RadialSelectVisualisation
     ${SRC_VIS_DIR}/RegionVisualiser
+    ${SRC_VIS_DIR}/SimpleView
     ${SRC_VIS_DIR}/SphereView
     ${SRC_VIS_DIR}/SurfaceMetricsMapper
     ${SRC_VIS_DIR}/SurfaceVisualisation
-    ${SRC_VIS_DIR}/VertexLabelsVisualisation
+    ${SRC_VIS_DIR}/VertexLabelsView
 
     ${SRC_WIDGET_DIR}/ChartDialog
     ${SRC_WIDGET_DIR}/CheckAllTableHeader

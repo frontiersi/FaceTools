@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
 
 #include "FeaturesDetector.h"
 #include "FaceShapeLandmarks2DDetector.h"
-#include <LandmarkSet.h>
+#include <LndMrk/LandmarkSet.h>
 #include <OffscreenModelViewer.h>   // RVTK
 #include <ObjModelKDTree.h>         // RFeatures
 #include <Orientation.h>            // RFeatures
@@ -53,11 +53,11 @@ public:
     const std::string& error() const { return _err;}
 
 private:
-    void setCameraToFace(float);
+    void _setCameraToFace(float);
     // Orient the camera in the offscreen viewer to position the face in an
     // upright pose at a standardised distance to cause the face to fill the
     // viewer in preparation for landmark detection. Returns detection range.
-    float orient();
+    float _orient();
 
     RVTK::OffscreenModelViewer _vwr;
     const FM* _model;

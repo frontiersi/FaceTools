@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionToggleScalarLegend.h>
-#include <SurfaceMetricsMapper.h>
+#include <Action/ActionToggleScalarLegend.h>
+#include <Vis/SurfaceMetricsMapper.h>
 #include <FaceModelViewer.h>
 #include <FaceTools.h>
 #include <vtkTextProperty.h>

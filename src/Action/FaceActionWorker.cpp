@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <FaceActionWorker.h>
-#include <FaceAction.h>
+#include <Action/FaceActionWorker.h>
+#include <Action/FaceAction.h>
 using FaceTools::Action::FaceActionWorker;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;

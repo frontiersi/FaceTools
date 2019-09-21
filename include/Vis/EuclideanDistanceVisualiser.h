@@ -18,8 +18,8 @@
 #ifndef FACE_TOOLS_VIS_EUCLIDEAN_DISTANCE_VISUALISER_H
 #define FACE_TOOLS_VIS_EUCLIDEAN_DISTANCE_VISUALISER_H
 
-#include <MetricVisualiser.h>
-#include <Landmark.h>
+#include "MetricVisualiser.h"
+#include <LndMrk/Landmark.h>
 #include <vtkActor.h>
 
 namespace FaceTools { namespace Vis {
@@ -30,7 +30,7 @@ public:
     EuclideanDistanceVisualiser( int id, const Landmark::LmkList* l0=nullptr, const Landmark::LmkList* l1=nullptr);
 
     bool belongs( const vtkProp*, const FV*) const override;
-    void syncActorsToData( const FV*, const cv::Matx44d&) override;
+    void syncToViewTransform( const FV*, const vtkMatrix4x4*) override;
     bool isAvailable( const FM*) const override;
     bool isVisible( const FV*) const override;
     void checkState( const FV*) override;

@@ -19,8 +19,8 @@
 #define FACE_TOOLS_ACTION_EDIT_LANDMARKS_H
 
 #include "ActionVisualise.h"
-#include <LandmarksVisualisation.h>
-#include <LandmarksInteractor.h>
+#include <Vis/LandmarksVisualisation.h>
+#include <Interactor/LandmarksHandler.h>
 #include <QStatusBar>
 
 namespace FaceTools { namespace Action {
@@ -43,7 +43,7 @@ protected:
 
 private:
     Vis::LandmarksVisualisation *_vis;
-    std::shared_ptr<Interactor::LandmarksInteractor> _interactor;
+    std::shared_ptr<Interactor::LandmarksHandler> _handler;
 };  // end class
 
 }}   // end namespace

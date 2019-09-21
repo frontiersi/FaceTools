@@ -15,9 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionExportMetaData.h>
-#include <FaceModelManager.h>
-#include <FaceModelXMLFileHandler.h>
+#include <Action/ActionExportMetaData.h>
+#include <FileIO/FaceModelManager.h>
+#include <FileIO/FaceModelXMLFileHandler.h>
 #include <FaceModel.h>
 #include <QMessageBox>
 #include <QSet>

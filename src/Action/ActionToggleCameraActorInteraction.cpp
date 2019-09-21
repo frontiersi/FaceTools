@@ -15,11 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionToggleCameraActorInteraction.h>
+#include <Action/ActionToggleCameraActorInteraction.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 using FaceTools::Action::ActionToggleCameraActorInteraction;
-using FaceTools::Interactor::ActorMoveHandler;
+using FaceTools::Interactor::ActorMoveNotifier;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::FaceModelViewer;
@@ -27,16 +27,15 @@ using FaceTools::ModelViewer;
 using FaceTools::FM;
 using FaceTools::FVS;
 using FaceTools::Vis::FV;
-using FaceTools::Interactor::MVI;
 using MS = FaceTools::Action::ModelSelector;
 
 
 ActionToggleCameraActorInteraction::ActionToggleCameraActorInteraction( const QString& dn, const QIcon& ico, const QKeySequence& ks)
     : FaceAction( dn, ico, ks)
 {
-    _moveHandler = std::shared_ptr<ActorMoveHandler>( new ActorMoveHandler);
-    connect( &*_moveHandler, &ActorMoveHandler::onActorStart, this, &ActionToggleCameraActorInteraction::doOnActorStart);
-    connect( &*_moveHandler, &ActorMoveHandler::onActorStop, this, &ActionToggleCameraActorInteraction::doOnActorStop);
+    _moveNotifier = std::shared_ptr<ActorMoveNotifier>( new ActorMoveNotifier);
+    connect( &*_moveNotifier, &ActorMoveNotifier::onActorStart, this, &ActionToggleCameraActorInteraction::doOnActorStart);
+    connect( &*_moveNotifier, &ActorMoveNotifier::onActorStop, this, &ActionToggleCameraActorInteraction::doOnActorStop);
     setCheckable( true, false);
 }   // end ctor
 
@@ -65,19 +64,24 @@ QString ActionToggleCameraActorInteraction::whatsThis() const
 bool ActionToggleCameraActorInteraction::checkState( Event)
 {
     const FM* fm = MS::selectedModel();
+
+    /*
     // Always disable actor moving if the selected model has more than 1 view
     if ( fm && fm->fvs().size() > 1)
         MS::setInteractionMode(IMode::CAMERA_INTERACTION);
+    */
+
     // Sync the move handler
-    _moveHandler->setEnabled( MS::interactionMode() == IMode::ACTOR_INTERACTION);
-    return _moveHandler->isEnabled();
+    _moveNotifier->setEnabled( MS::interactionMode() == IMode::ACTOR_INTERACTION);
+    return _moveNotifier->isEnabled();
 }   // end checkState
 
 
 bool ActionToggleCameraActorInteraction::checkEnable( Event)
 {
     const FM* fm = MS::selectedModel();
-    return (fm && fm->fvs().size() == 1) || isChecked();
+    //return (fm && fm->fvs().size() == 1) || isChecked();
+    return fm || isChecked();
 }   // end checkEnabled
 
 

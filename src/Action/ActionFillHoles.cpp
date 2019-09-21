@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionFillHoles.h>
+#include <Action/ActionFillHoles.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <ObjModelHoleFiller.h>

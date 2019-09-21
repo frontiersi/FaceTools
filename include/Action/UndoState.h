@@ -18,7 +18,7 @@
 #ifndef FACE_TOOLS_ACTION_UNDO_STATE_H
 #define FACE_TOOLS_ACTION_UNDO_STATE_H
 
-#include <FaceModel.h>
+#include "FaceModelState.h"
 
 namespace FaceTools { namespace Action {
 
@@ -41,18 +41,18 @@ public:
     static Ptr create( const FaceAction*, EventGroup, bool autoRestore=false);
 
     // Get the model that was selected at creation time.
-    FM* model() const { return _fm;}
+    inline FM* model() const { return _sfm;}
 
     // Return the action this UndoState was created for/by.
-    const FaceAction* action() const { return _action;}
+    inline const FaceAction* action() const { return _action;}
 
-    const EventGroup& events() const { return _egrp;}
+    inline const EventGroup& events() const { return _egrp;}
 
     // Set the name of the undo state (defaults to the action's display name).
     void setName( const QString& nm) { _name = nm;}
-    const QString& name() const { return _name;}
+    inline const QString& name() const { return _name;}
 
-    bool isAutoRestore() const { return _autoRestore;}
+    inline bool isAutoRestore() const { return _autoRestore;}
 
     // Set the data keyed by the given string.
     void setUserData( const QString&, const QVariant&);
@@ -65,30 +65,17 @@ public:
 private:
     FaceAction* _action;
     EventGroup _egrp;
-    bool _autoRestore;
-    FM *_fm;
+    bool _autoRestore;  // Whether auto restoring state (true = _fstates) or manual (false = _udata).
     QString _name;
-    bool _metaSaved, _modelSaved;
-    RFeatures::ObjModel::Ptr _model;
-    RFeatures::ObjModelManifolds::Ptr _manifolds;
-    RFeatures::ObjModelKDTree::Ptr _kdtree;
-    std::vector<RFeatures::ObjModelBounds::Ptr> _bnds;
-    FaceAssessment::Ptr _ass;
-    QString _source;    // Image source
-    QString _studyId;   // Study ID info
-    QDate _dob;         // Subject date of birth
-    int8_t _sex;        // Subject sex
-    int _methnicity;    // Subject's maternal ethnicity
-    int _pethnicity;    // Subject's paternal ethnicity
-    QDate _cdate;       // Date of image capture
-    cv::Matx44d _tmat;
-    QMap<QString, QVariant> _udata;
+    FM *_sfm;
+    std::vector<FaceModelState::Ptr> _fstates;  // The auto restore states (if being used)
+    QMap<QString, QVariant> _udata; // The manually set state (if being used)
 
     UndoState( const FaceAction*, EventGroup, bool);
     UndoState( const UndoState&) = delete;
     UndoState& operator=( const UndoState&) = delete;
     ~UndoState(){}
-};  // end struct
+};  // end class
 
 }}   // end namespaces
 

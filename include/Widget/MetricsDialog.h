@@ -19,8 +19,8 @@
 #define FACETOOLS_WIDGET_METRICS_DIALOG_H
 
 #include <FaceTypes.h>
-#include <ChartDialog.h>
-#include <PhenotypesDialog.h>
+#include "ChartDialog.h"
+#include "PhenotypesDialog.h"
 #include <QTableWidgetItem>
 #include <QDialog>
 

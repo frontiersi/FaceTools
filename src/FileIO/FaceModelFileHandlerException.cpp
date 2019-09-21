@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <FaceModelFileHandlerException.h>
+#include <FileIO/FaceModelFileHandlerException.h>
 using FaceTools::FileIO::FaceModelFileHandlerException;
 
 FaceModelFileHandlerException::FaceModelFileHandlerException( const std::string& ext, const std::string& what_arg)

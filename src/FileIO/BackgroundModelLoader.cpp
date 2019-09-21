@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <BackgroundModelLoader.h>
+#include <FileIO/BackgroundModelLoader.h>
 using FaceTools::FileIO::BackgroundModelLoader;
 using RFeatures::ObjModel;
 

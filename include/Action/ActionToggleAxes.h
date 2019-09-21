@@ -37,8 +37,8 @@ protected:
 
 private:
     std::unordered_map<FMV*, vtkNew<vtkCubeAxesActor> > _viewers;
-    void updateAxesUnits( vtkCubeAxesActor*) const;
-    void addViewer( FMV*);
+    void _updateAxesUnits( vtkCubeAxesActor*) const;
+    void _addViewer( FMV*);
 };  // end class
 
 }}   // end namespaces

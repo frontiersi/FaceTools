@@ -18,8 +18,8 @@
 #ifndef FACE_TOOLS_LANDMARK_LANDMARK_SET_H
 #define FACE_TOOLS_LANDMARK_LANDMARK_SET_H
 
-#include <Landmark.h>
-#include <LandmarksManager.h>
+#include "Landmark.h"
+#include "LandmarksManager.h"
 #include <ObjModelKDTree.h>
 #include <Orientation.h>
 #include <boost/property_tree/ptree.hpp>

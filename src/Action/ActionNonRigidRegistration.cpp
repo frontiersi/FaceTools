@@ -15,14 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionNonRigidRegistration.h>
-#include <BackgroundModelLoader.h>
+#include <Action/ActionNonRigidRegistration.h>
+#include <FileIO/BackgroundModelLoader.h>
 #include <FaceModelViewer.h>
+#include <FaceModel.h>
 #include <ObjModelKNNCorresponder.h>
 #include <QMessageBox>
 #include <QFileInfo>
 #include <QThread>
-#include <FaceModel.h>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionNonRigidRegistration;
 using FaceTools::Action::Event;

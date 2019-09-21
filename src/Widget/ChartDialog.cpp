@@ -15,13 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ChartDialog.h>
+#include <Widget/ChartDialog.h>
 #include <ui_ChartDialog.h>
-#include <MetricCalculatorManager.h>
-#include <ModelSelector.h>
-#include <FaceModel.h>
+#include <Metric/MetricCalculatorManager.h>
+#include <Action/ModelSelector.h>
+#include <Metric/Chart.h>
 #include <Ethnicities.h>
-#include <Chart.h>
+#include <FaceModel.h>
 #include <QPushButton>
 #include <QtCharts/QScatterSeries>
 #include <QtCharts/QValueAxis>

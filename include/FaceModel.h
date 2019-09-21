@@ -56,12 +56,12 @@ public:
     void addTransformMatrix( const cv::Matx44d&);
 
     /**
-     * Fix this model's orientation either to the current model transform (if no landmarks)
+     * Fix the nominal orientation either to the current model transform (if no landmarks)
      * or to the orientation of the landmarks (if available). As well as fixing the model
-     * transform, this also rebuilds the KD-tree and recalculates bounding boxes.
+     * transform, this also rebuilds the KD-tree and rebuilds bounding boxes.
      * View actors should be rebuilt after calling this function.
      */
-    void fixOrientation();
+    void fixTransformMatrix();
 
     /**
      * Updating the shared model reference inplace requires calling update afterwards
@@ -222,6 +222,9 @@ public:
     // determined either according to landmarks (if present) or the underlying model.
     cv::Vec3f centre() const;
 
+    // Return the centre of the front panel of the model's bounding box.
+    cv::Vec3f centreFront() const;
+
     // Returns the model's orientation as defined by the current bounds which are
     // derived from the current landmarks if set, or from the model bounds if not.
     RFeatures::Orientation orientation() const;
@@ -252,8 +255,9 @@ private:
     mutable QReadWriteLock _mutex;
     FVS _fvs;  // Associated FaceViews
     friend class Vis::FaceView;
-    friend class Action::UndoState;
+    friend class Action::FaceModelState;
 
+    void _recalculatePaths();
     void _syncOrientationBounds();
     void _makeOrientationBounds();
     FaceModel( const FaceModel&) = delete;

@@ -31,6 +31,10 @@ public:
 
     QString toolTip() const override { return "Move the view of the selected model to an adjacent viewer - removing any existing duplicate view in that viewer.";}
 
+    // Move the given FaceView to the given target viewer - merging if necessary with any copy present in the target viewer.
+    // Does nothing if the target viewer is the same as the FaceView's current viewer.
+    static void move( Vis::FV*, FMV *target);
+
 protected:
     bool checkEnable( Event) override;
     void doAction( Event) override;

@@ -15,12 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <FaceActionManager.h>
-#include <FaceModelManager.h>
+#include <Action/FaceActionManager.h>
+#include <FileIO/FaceModelManager.h>
 #include <FaceModelViewer.h>
-#include <ModelSelector.h>
+#include <Action/ActionMoveView.h>
+#include <Action/ModelSelector.h>
 #include <FaceModel.h>
-#include <FaceView.h>
+#include <Vis/FaceView.h>
 #include <cassert>
 using FaceTools::Action::FaceActionManager;
 using FaceTools::Action::FaceAction;
@@ -32,17 +33,11 @@ using MS = FaceTools::Action::ModelSelector;
 
 namespace {
 
-// Synchronise the view actors for the given model to the model transform.
-void syncViewActors( const FM* fm)
+void syncViewActorsToModelTransform( const FM* fm)
 {
-    assert(fm);
-    vtkSmartPointer<vtkMatrix4x4> vmat = RVTK::toVTK( fm->model().transformMatrix());
     for ( FaceTools::Vis::FV* fv : fm->fvs())
-    {
-        fv->actor()->PokeMatrix(vmat);
-        fv->syncActorDeltaToVisualisations();
-    }   // end for
-}   // end syncViewActors
+        fv->syncToModelTransform();
+}   // end syncViewActorsToModelTransform
 
 
 // Rebuild the actors associated with the model.
@@ -73,9 +68,9 @@ FaceActionManager::Ptr FaceActionManager::get( QWidget* parent)
 // private
 FaceActionManager::FaceActionManager()
 {
-    using FaceTools::Interactor::SelectMouseHandler;
-    const SelectMouseHandler* msi = MS::selector();
-    connect( msi, &SelectMouseHandler::onSelected, [this](){ this->doEvent( Event::MODEL_SELECT);});
+    using FaceTools::Interactor::SelectNotifier;
+    const SelectNotifier* sn = MS::selector();
+    connect( sn, &SelectNotifier::onSelected, [this](){ this->doEvent( Event::MODEL_SELECT);});
 }   // end ctor
 
 
@@ -105,6 +100,36 @@ void FaceActionManager::close( const FM* fm)
     fm->unlock();
     MS::remove(fm);
     FileIO::FMM::close(fm);
+
+    // If there are other FaceModels loaded, select one with a preference for models from the default viewer.
+    if ( FileIO::FMM::numOpen() > 0)
+    {
+        bool movedView = false;
+        Vis::FV *nextfv = nullptr;
+
+        if ( !MS::defaultViewer()->attached().empty())
+            nextfv = MS::defaultViewer()->attached().first();
+        else
+        {
+            // Get the next FaceView to select from one of the other viewers.
+            for ( const FMV* fmv : MS::viewers())
+            {
+                if ( !fmv->attached().empty())
+                {
+                    nextfv = fmv->attached().first();
+                    break;
+                }   // end if
+            }   // end for
+
+            // Since the default viewer is empty, we move this newly selected FaceView into the default viewer.
+            ActionMoveView::move( nextfv, MS::defaultViewer());
+            movedView = true;
+        }   // end else
+
+        MS::setSelected( nextfv);
+        if ( movedView)
+            get()->doEvent( Event::VIEWER_CHANGE);
+    }   // end if
 }   // end close
 
 
@@ -151,12 +176,12 @@ void FaceActionManager::doEvent( EventGroup egrp)
     if ( fm && egrp.has( Event::AFFINE_CHANGE))
     {
         if ( !egrp.has( Event::ALL_VIEWS))
-            syncViewActors( fm);
+            syncViewActorsToModelTransform( fm);
         else
         {
             const FVS& aset = MS::selectedView()->viewer()->attached();
             for ( const FM* vm : aset.models())
-                syncViewActors(vm);
+                syncViewActorsToModelTransform( vm);
         }   // end else
     }   // end if
 

@@ -19,7 +19,7 @@
 #define FACE_TOOLS_H
 
 #include "FaceTypes.h"
-#include "LandmarkSet.h"
+#include "LndMrk/LandmarkSet.h"
 #include "MiscFunctions.h"
 #include <Viewer.h> // RVTK
 #include <Orientation.h>    // RFeatures

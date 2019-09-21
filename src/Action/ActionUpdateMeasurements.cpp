@@ -15,10 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionUpdateMeasurements.h>
-#include <MetricCalculatorManager.h>
+#include <Action/ActionUpdateMeasurements.h>
+#include <Metric/MetricCalculatorManager.h>
+#include <Vis/FaceView.h>
 #include <FaceModel.h>
-#include <FaceView.h>
 #include <QDebug>
 #include <algorithm>
 using FaceTools::Action::ActionUpdateMeasurements;

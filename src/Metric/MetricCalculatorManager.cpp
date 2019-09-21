@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <MetricCalculatorManager.h>
+#include <Metric/MetricCalculatorManager.h>
 #include <QDir>
 #include <QFile>
 #include <QTextStream>

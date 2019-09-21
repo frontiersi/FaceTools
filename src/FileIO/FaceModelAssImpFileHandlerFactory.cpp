@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <FaceModelAssImpFileHandlerFactory.h>
-#include <FaceModelFileHandlerException.h>
+#include <FileIO/FaceModelAssImpFileHandlerFactory.h>
+#include <FileIO/FaceModelFileHandlerException.h>
 #include <algorithm>
 #include <iomanip>
 #include <cassert>

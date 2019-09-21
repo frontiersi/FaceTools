@@ -15,9 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionSetMinScalarColour.h>
-#include <SurfaceMetricsMapper.h>
-#include <FaceView.h>
+#include <Action/ActionSetMinScalarColour.h>
+#include <Vis/SurfaceMetricsMapper.h>
+#include <Vis/FaceView.h>
 #include <QColorDialog>
 #include <algorithm>
 using FaceTools::Action::ActionSetMinScalarColour;

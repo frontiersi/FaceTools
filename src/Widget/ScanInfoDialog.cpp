@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,11 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ScanInfoDialog.h>
+#include <Widget/ScanInfoDialog.h>
 #include <ui_ScanInfoDialog.h>
-#include <MetricCalculatorManager.h>
-#include <PhenotypeManager.h>
-#include <FaceModelManager.h>
+#include <Metric/MetricCalculatorManager.h>
+#include <Metric/PhenotypeManager.h>
+#include <FileIO/FaceModelManager.h>
 #include <Ethnicities.h>
 #include <FaceModel.h>
 #include <FaceTools.h>

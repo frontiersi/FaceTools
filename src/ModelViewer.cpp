@@ -31,7 +31,7 @@
 #include <QVBoxLayout>
 using FaceTools::ModelViewer;
 using RFeatures::CameraParams;
-using FaceTools::Interactor::MVI;
+using FaceTools::Interactor::ViewerNotifier;
 using FaceTools::Interactor::MouseHandler;
 using QTools::VtkViewerInteractorManager;
 using QTools::InteractionMode;
@@ -74,8 +74,8 @@ ModelViewer::~ModelViewer() { delete _qviewer;}
 
 
 // protected
-bool ModelViewer::attach( MVI* v) { return _qviewer->attach( v);}
-bool ModelViewer::detach( MVI* v) { return _qviewer->detach( v);}
+bool ModelViewer::attach( ViewerNotifier* v) { return _qviewer->attach( v);}
+bool ModelViewer::detach( ViewerNotifier* v) { return _qviewer->detach( v);}
 bool ModelViewer::attach( MouseHandler* v) { return _qviewer->attach( v);}
 bool ModelViewer::detach( MouseHandler* v) { return _qviewer->detach( v);}
 

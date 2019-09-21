@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <MetricCalculator.h>
-#include <MetricCalculatorTypeRegistry.h>
+#include <Metric/MetricCalculator.h>
+#include <Metric/MetricCalculatorTypeRegistry.h>
 #include <Ethnicities.h>
 #include <FaceModel.h>
 #include <MiscFunctions.h>

@@ -31,10 +31,9 @@
 #define EYE3_MODEL_FILE  "haarcascade_righteye_2splits.xml"
 #define EYE4_MODEL_FILE  "haarcascade_mcs_righteye.xml"
 
-typedef unsigned char byte;
+using byte = unsigned char;
 
-namespace FaceTools {
-namespace Detect {
+namespace FaceTools { namespace Detect {
 
 class FaceTools_EXPORT FeaturesDetector
 {
@@ -69,8 +68,7 @@ private:
     static bool findEyes();
 };  // end class
 
-}   // end namespace
-}   // end namespace
+}}   // end namespaces
 
 #endif
 

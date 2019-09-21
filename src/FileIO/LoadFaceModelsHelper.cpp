@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <LoadFaceModelsHelper.h>
-#include <FaceModelManager.h>
+#include <FileIO/LoadFaceModelsHelper.h>
+#include <FileIO/FaceModelManager.h>
 #include <FaceModel.h>
 #include <QMessageBox>
 using FaceTools::FileIO::LoadFaceModelsHelper;

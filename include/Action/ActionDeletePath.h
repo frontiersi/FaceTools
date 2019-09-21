@@ -19,16 +19,14 @@
 #define FACE_TOOLS_ACTION_DELETE_PATH_H
 
 #include "FaceAction.h"
-#include <PathsInteractor.h>
+#include <Interactor/PathsHandler.h>
 
 namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionDeletePath : public FaceAction
 { Q_OBJECT
 public:
-    ActionDeletePath( const QString&, const QIcon&,
-                      Vis::PathSetVisualisation*,
-                      Interactor::PathsInteractor::Ptr);
+    ActionDeletePath( const QString&, const QIcon&, Interactor::PathsHandler::Ptr);
 
     QString toolTip() const override { return "Remove the selected path from the model.";}
 
@@ -41,8 +39,7 @@ private slots:
     void doOnLeavePath();
 
 private:
-    Vis::PathSetVisualisation *_vis;
-    Interactor::PathsInteractor::Ptr _pint;
+    Interactor::PathsHandler::Ptr _handler;
 };  // end class
 
 }}   // end namespace

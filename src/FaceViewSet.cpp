@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,6 @@
 #include <FaceViewSet.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <FaceView.h>
 #include <algorithm>
 using FaceTools::FaceViewSet;
 using FaceTools::Vis::FV;

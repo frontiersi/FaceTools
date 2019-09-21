@@ -42,6 +42,10 @@ FaceTools_EXPORT QTemporaryFile* writeToTempFile( const QString& rfile);
 
 FaceTools_EXPORT std::string getDateTimeDigits( const std::string&); // Get the first 10 digits as a string from given string.
 
+// Construct and return a string of the form "P pos[0] X | pos[1] Y | pos[2] Z" where fw is the field width
+// that each value takes up. Floating point representation with precision of 2 d.p. is used.
+FaceTools_EXPORT QString posString( const QString prefix, const cv::Vec3f& pos, int fw=8);
+
 FaceTools_EXPORT long getDateTimeSecs( const std::string&);
 
 FaceTools_EXPORT cv::Point calcCentre( const cv::Rect&, double scaleFactor=1.0);

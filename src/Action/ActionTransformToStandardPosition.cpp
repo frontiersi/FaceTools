@@ -15,11 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionTransformToStandardPosition.h>
-#include <ActionOrientCameraToFace.h>
+#include <Action/ActionTransformToStandardPosition.h>
+#include <Action/ActionOrientCameraToFace.h>
+#include <Vis/FaceView.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
-#include <FaceView.h>
 using FaceTools::Action::ActionTransformToStandardPosition;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;

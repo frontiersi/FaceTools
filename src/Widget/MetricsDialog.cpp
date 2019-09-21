@@ -15,16 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <MetricsDialog.h>
-#include <CheckAllTableHeader.h>
+#include <Widget/MetricsDialog.h>
+#include <Widget/CheckAllTableHeader.h>
 #include <ui_MetricsDialog.h>
-#include <IntTableWidgetItem.h>
-#include <MetricCalculatorManager.h>
-#include <SyndromeManager.h>
+#include <Widget/IntTableWidgetItem.h>
+#include <Metric/MetricCalculatorManager.h>
+#include <Metric/SyndromeManager.h>
 #include <Ethnicities.h>
-#include <ModelSelector.h>
-#include <PhenotypeManager.h>
-#include <FaceModelManager.h>
+#include <Action/ModelSelector.h>
+#include <Metric/PhenotypeManager.h>
+#include <FileIO/FaceModelManager.h>
 #include <FaceModel.h>
 #include <FileIO.h>
 #include <algorithm>

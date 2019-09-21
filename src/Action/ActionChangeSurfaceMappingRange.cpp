@@ -15,9 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionChangeSurfaceMappingRange.h>
-#include <SurfaceMetricsMapper.h>
-#include <FaceView.h>
+#include <Action/ActionChangeSurfaceMappingRange.h>
+#include <Vis/SurfaceMetricsMapper.h>
+#include <Vis/FaceView.h>
 #include <cmath>
 #include <cassert>
 using FaceTools::Action::ActionChangeSurfaceMappingRange;

@@ -15,11 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <MetricVisualiser.h>
-#include <MetricCalculatorManager.h>
+#include <Vis/MetricVisualiser.h>
+#include <Metric/MetricCalculatorManager.h>
+#include <Metric/MetricValue.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <MetricValue.h>
 #include <vtkProperty.h>
 #include <vtkTextProperty.h>
 #include <QDebug>

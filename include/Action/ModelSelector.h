@@ -19,8 +19,8 @@
 #define FACE_TOOLS_MODEL_SELECTOR_H
 
 #include <FaceModelViewer.h>
-#include <BoundingVisualisation.h>
-#include <SelectMouseHandler.h>
+#include <Vis/BoundingVisualisation.h>
+#include <Interactor/SelectNotifier.h>
 #include <QStatusBar>
 using IMode = QTools::InteractionMode;
 
@@ -46,7 +46,7 @@ public:
     // Call AFTER using addViewer to add all required viewers since the
     // construction of a ModelViewerInteractor derived type will call
     // ModelSelector::viewers() in its constructor.
-    static const Interactor::SelectMouseHandler* selector();
+    static const Interactor::SelectNotifier* selector();
 
     // Set/get the interaction mode for the viewers (camera - default, or actor).
     static void setInteractionMode( IMode, bool useCameraOffActor=false);
@@ -55,6 +55,15 @@ public:
     // Return the viewer that the mouse was last over. Never returns null.
     // This is NOT necessarily the same as the currently selected FaceView's viewer!
     static FMV* mouseViewer();
+
+    // Return the view the cursor is currently over (null if none).
+    static Vis::FV* cursorView() { return sn().view();}
+
+    // Return the prop the cursor is currently over (null if none).
+    static const vtkProp* cursorProp() { return sn().prop();}
+
+    // Return the viewer that the selected model is currently in. May be null!
+    static FMV* selectedViewer() { return isViewSelected() ? selectedView()->viewer() : nullptr;}
 
     // Returns current mouse cursor position relative to the mouse viewer.
     static QPoint mousePos() { return mouseViewer()->mouseCoords();}
@@ -99,14 +108,14 @@ private:
     using Ptr = std::shared_ptr<ModelSelector>;
     static ModelSelector::Ptr _me;
     static Ptr me();
-    static Interactor::SelectMouseHandler& msi();
+    static Interactor::SelectNotifier& sn();
 
     Vis::BoundingVisualisation _bvis;
     std::vector<FMV*> _viewers;
     QStatusBar* _sbar;
     bool _autoFocus;
     int _defv;  // Default viewer index
-    Interactor::SelectMouseHandler *_msi;
+    Interactor::SelectNotifier *_sn;
 
     void doOnSelected( Vis::FV*, bool);
     ModelSelector();

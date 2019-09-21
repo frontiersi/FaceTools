@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <FaceAction.h>
-#include <FaceActionWorker.h>
+#include <Action/FaceAction.h>
+#include <Action/FaceActionWorker.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <QThread>

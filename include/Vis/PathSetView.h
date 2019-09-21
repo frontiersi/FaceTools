@@ -18,12 +18,6 @@
 #ifndef FACE_TOOLS_PATH_SET_VIEW_H
 #define FACE_TOOLS_PATH_SET_VIEW_H
 
-/**
- * Used by PathSetVisualisation to manage the view elements of paths
- * by path ID for a specific pathset (associated with a FaceModel).
- * Also provides for hash table lookup access of paths by vtkProp.
- */
-
 #include "PathView.h"
 #include <PathSet.h>
 #include <vtkTextActor.h>
@@ -33,7 +27,7 @@ namespace FaceTools { namespace Vis {
 class FaceTools_EXPORT PathSetView
 {
 public:
-    explicit PathSetView( const PathSet&);
+    PathSetView();
     virtual ~PathSetView();
 
     bool isVisible() const;                             // Returns true iff ANY path shown
@@ -42,15 +36,16 @@ public:
     void setText( const Path&, int xpos, int ypos);
     void setTextVisible( bool);
 
-    void addPath( const Path&);
+    void sync( const PathSet&, const vtkMatrix4x4*);
+
+    void addPath( const Path&, const vtkMatrix4x4*);
     void movePath( const Path&);
-    void erasePath( int pathId);
+    void erasePath( int pid);
 
     PathView::Handle* handle( const vtkProp*) const;    // Return the handle mapped to the given prop (if any).
     PathView* pathView( int pathId) const;              // Return the requested path view.
 
-    // Refresh all path visualisations to match _paths.
-    void sync( const PathSet&, const cv::Matx44d&);
+    void pokeTransform( const vtkMatrix4x4*);
 
     void updateTextColours();
 

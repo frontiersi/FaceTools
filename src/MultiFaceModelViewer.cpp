@@ -16,8 +16,8 @@
  ************************************************************************/
 
 #include <MultiFaceModelViewer.h>
-#include <FaceModelManager.h>
-#include <ModelSelector.h>
+#include <FileIO/FaceModelManager.h>
+#include <Action/ModelSelector.h>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 using FaceTools::MultiFaceModelViewer;
@@ -26,6 +26,7 @@ using FaceTools::Vis::FV;
 using FaceTools::FM;
 
 namespace {
+
 QToolButton* makeButton()
 {
     QToolButton* b = new QToolButton;
@@ -45,20 +46,28 @@ QToolButton* makeButton()
     return b;
 }   // makeButton
 
+
+QString currentModelName( const FM* fm)
+{
+    QString cname = FaceTools::FileIO::FMM::filepath(fm).c_str();
+    if ( !fm->isSaved())
+        cname += " (*)";
+    return cname;
+}   // end currentModelName
+
 }   // end namespace
 
 
-// public
 MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent) : QWidget(parent)
 {
     for ( size_t i = 0; i < 3; ++i) // Left (0), middle (1), and right (2) viewers
     {
         _fmvs.push_back( new FMV(this));
-        connect( _fmvs[i], &FMV::onAttached, [=]( FV* fv){ doOnViewerChanged( i, fv);});
-        connect( _fmvs[i], &FMV::onDetached, [=]( FV* fv){ doOnViewerChanged( i, fv);});
+        connect( _fmvs[i], &FMV::onAttached, [=]( FV* fv){ _doOnViewerChanged( i, fv);});
+        connect( _fmvs[i], &FMV::onDetached, [=]( FV* fv){ _doOnViewerChanged( i, fv);});
         _modelLists.push_back( new QComboBox(this));
         connect( _modelLists[i], QOverload<const QString&>::of( &QComboBox::activated),
-                 [=](const QString &txt){ doOnComboBoxChanged( i, txt);});
+                 [=](const QString &txt){ _doOnComboBoxChanged( i, txt);});
     }   // end for
 
     QVBoxLayout* v0layout = new QVBoxLayout;
@@ -127,8 +136,8 @@ MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent) : QWidget(parent)
     _splitter->setCollapsible(1, false);
     _splitter->setCollapsible(2, false);
 
-    setViewerVisible( 0, false);
-    setViewerVisible( 2, false);
+    _setViewerVisible( 0, false);
+    _setViewerVisible( 2, false);
 }   // end ctor
 
 
@@ -148,7 +157,7 @@ void MultiFaceModelViewer::setCopyRightToCentreAction( QAction *action) { _copyB
 
 
 // private
-void MultiFaceModelViewer::setViewerVisible( size_t idx, bool visible)
+void MultiFaceModelViewer::_setViewerVisible( size_t idx, bool visible)
 {
     assert(idx == 0 || idx == 2);
     setUpdatesEnabled(false);   // Pause widget update to lessen appearance of flicker
@@ -163,20 +172,7 @@ void MultiFaceModelViewer::setViewerVisible( size_t idx, bool visible)
     _splitter->widget( i)->setVisible(visible);
 
     setUpdatesEnabled(true);
-}   // end setViewerVisible
-
-
-namespace  {
-
-QString currentModelName( const FM* fm)
-{
-    QString cname = FaceTools::FileIO::FMM::filepath(fm).c_str();
-    if ( !fm->isSaved())
-        cname += " (*)";
-    return cname;
-}   // end currentModelName
-
-}   // end namespace
+}   // end _setViewerVisible
 
 
 // public slot
@@ -212,8 +208,7 @@ void MultiFaceModelViewer::doOnUpdateModelLists( const FM* fm)
 }   // end doOnUpdateModelLists
 
 
-// private
-void MultiFaceModelViewer::doOnComboBoxChanged( size_t i, const QString &txt)
+void MultiFaceModelViewer::_doOnComboBoxChanged( size_t i, const QString &txt)
 {
     const std::string fname = txt.split( " (*)")[0].toStdString(); // Strip "(*)" if present
     FM* fm = FaceTools::FileIO::FMM::model( fname);
@@ -221,13 +216,12 @@ void MultiFaceModelViewer::doOnComboBoxChanged( size_t i, const QString &txt)
     FV* fv = _fmvs[i]->get(fm);
     assert(fv);
     FaceTools::Action::ModelSelector::setSelected(fv);
-}   // end doOnComboBoxChanged
+}   // end _doOnComboBoxChanged
 
 
-// private
-void MultiFaceModelViewer::doOnViewerChanged( size_t idx, const FV *fv)
+void MultiFaceModelViewer::_doOnViewerChanged( size_t idx, const FV *fv)
 {
     doOnUpdateModelLists( fv->data());
     if ( idx != 1)
-        setViewerVisible( idx, !_fmvs.at(idx)->attached().empty());
-}   // end doOnViewerChanged
+        _setViewerVisible( idx, !_fmvs.at(idx)->attached().empty());
+}   // end _doOnViewerChanged

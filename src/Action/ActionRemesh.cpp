@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionRemesh.h>
+#include <Action/ActionRemesh.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <ObjModelVertexAdder.h>   // RFeatures

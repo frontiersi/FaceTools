@@ -19,7 +19,7 @@
 #define FACE_TOOLS_ACTION_SHOW_SCAN_INFO_H
 
 #include "ActionUpdateThumbnail.h"
-#include <ScanInfoDialog.h>
+#include <Widget/ScanInfoDialog.h>
 
 namespace FaceTools { namespace Action {
 

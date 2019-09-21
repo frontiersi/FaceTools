@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionUndo.h>
+#include <Action/ActionUndo.h>
 using FaceTools::Action::ActionUndo;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;

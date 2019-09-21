@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <FeaturesDetector.h>
+#include <Detect/FeaturesDetector.h>
 #include <FeatureUtils.h>   // RFeatures
 #include <RectCluster.h>    // RFeatures
 #include <Random.h>         // rlib

@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <PathSetVisualisation.h>
+#include <Vis/PathSetVisualisation.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <algorithm>
@@ -57,8 +57,9 @@ void PathSetVisualisation::apply( FV* fv, const QPoint*)
     assert(fv);
     if ( !_hasView(fv))
     {
-        const PathSet& paths = fv->data()->currentAssessment()->paths();
-        _views[fv] = new PathSetView( paths);
+        _views[fv] = new PathSetView;
+        const PathSet& pset = fv->data()->currentAssessment()->paths();
+        _views.at(fv)->sync( pset, fv->actor()->GetMatrix());
     }   // end if
     _views.at(fv)->setVisible( true, fv->viewer());
 }   // end apply
@@ -95,6 +96,22 @@ bool PathSetVisualisation::isVisible( const FV *fv) const
 }   // end isVisible
 
 
+void PathSetVisualisation::addPath( const FM* fm, int pathId)
+{
+    const Path& path = *fm->currentAssessment()->paths().path(pathId);
+    for ( FV* fv : fm->fvs())
+    {
+        if ( !_hasView(fv))
+            apply( fv, nullptr);
+        else
+        {
+            _views[fv]->addPath( path, fv->actor()->GetMatrix());
+            _views[fv]->setVisible( true, fv->viewer());
+        }   // end else
+    }   // end for
+}   // end addPath
+
+
 void PathSetVisualisation::movePath( const FM* fm, int pathId)
 {
     const Path& path = *fm->currentAssessment()->paths().path(pathId);
@@ -104,12 +121,38 @@ void PathSetVisualisation::movePath( const FM* fm, int pathId)
 }   // end movePath
 
 
+void PathSetVisualisation::erasePath( const FM* fm, int pathId)
+{
+    for ( FV* fv : fm->fvs())
+    {
+        if ( _hasView(fv))
+            _views.at(fv)->erasePath(pathId);
+    }   // end for
+}   // end erasePath
+
+
+void PathSetVisualisation::syncPaths( const FM* fm)
+{
+    const PathSet& pset = fm->currentAssessment()->paths();
+    for ( FV* fv : fm->fvs())
+    {
+        if ( _hasView(fv))
+            _views.at(fv)->sync( pset, fv->actor()->GetMatrix());
+    }   // end for
+}   // end syncPaths
+
+
 void PathSetVisualisation::setText(  const FM* fm, int pid, int xpos, int ypos)
 {
     const Path& path = *fm->currentAssessment()->paths().path(pid);
     for ( FV* fv : fm->fvs())
+    {
         if ( _hasView(fv))
+        {
             _views.at(fv)->setText( path, xpos, ypos);
+            checkState(fv);
+        }   // end if
+    }   // end for
 }   // end setText
 
 
@@ -146,15 +189,11 @@ PathView::Handle* PathSetVisualisation::pathHandle0( const FV* fv, int pid) cons
 }   // end pathHandle0
 
 
-void PathSetVisualisation::syncActorsToData( const FV *fv, const cv::Matx44d &d)
+void PathSetVisualisation::syncToViewTransform( const FV* fv, const vtkMatrix4x4* d)
 {
     if ( _hasView(fv))
-    {
-        _views.at(fv)->sync( fv->data()->currentAssessment()->paths(), d);
-        if ( !_views.at(fv)->isVisible())
-            purge( const_cast<FV*>(fv), Event::NONE);
-    }   // end if
-}   // end syncActorsToData
+        _views.at(fv)->pokeTransform( d);
+}   // end syncToViewTransform
 
 
 void PathSetVisualisation::checkState( const FV* fv)

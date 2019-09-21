@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <LandmarksManager.h>
+#include <LndMrk/LandmarksManager.h>
 #include <MiscFunctions.h>
 #include <FileIO.h> // rlib
 #include <boost/algorithm/string.hpp>
@@ -146,3 +146,16 @@ bool LandmarksManager::save( const std::string& fname)
     file.close();
     return true;
 }   // end save
+
+
+QString LandmarksManager::makeLandmarkString( int id, FaceTools::FaceLateral lat)
+{
+    assert(landmark(id));
+    QString lmname = landmark(id)->name();
+    QString lats;
+    if ( lat == FACE_LATERAL_LEFT)
+        lats = " (L)";
+    else if ( lat == FACE_LATERAL_RIGHT)
+        lats = " (R)";
+    return lmname + lats;
+}   // end makeLateralString

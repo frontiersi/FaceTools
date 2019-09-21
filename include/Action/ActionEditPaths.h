@@ -19,18 +19,14 @@
 #define FACE_TOOLS_ACTION_EDIT_PATHS_H
 
 #include "ActionVisualise.h"
-#include <PathSetVisualisation.h>
-#include <PathsInteractor.h>
+#include <Interactor/PathsHandler.h>
 
 namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionEditPaths : public ActionVisualise
 { Q_OBJECT
 public:
-    ActionEditPaths( const QString&, const QIcon&,
-                     Vis::PathSetVisualisation*,
-                     Interactor::PathsInteractor::Ptr,
-                     const QKeySequence& ks=QKeySequence());
+    ActionEditPaths( const QString&, const QIcon&, Interactor::PathsHandler::Ptr, const QKeySequence& ks=QKeySequence());
 
     QString toolTip() const override { return "Show custom point-to-point measurements if present.";}
 
@@ -42,8 +38,7 @@ protected:
     void restoreState( const UndoState*) override;
 
 private:
-    Interactor::PathsInteractor::Ptr _pint;
-    Vis::PathSetVisualisation *_vis;
+    Interactor::PathsHandler::Ptr _handler;
 };  // end class
 
 }}   // end namespaces

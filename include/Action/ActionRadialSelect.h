@@ -24,8 +24,8 @@
  */
 
 #include "ActionVisualise.h"
-#include <LoopSelectVisualisation.h>
-#include <RadialSelectInteractor.h>
+#include <Vis/RadialSelectVisualisation.h>
+#include <Interactor/RadialSelectHandler.h>
 
 namespace FaceTools { namespace Action {
 
@@ -48,8 +48,8 @@ protected:
     void doAfterAction( Event) override;
 
 private:
-    Vis::LoopSelectVisualisation *_vis;
-    std::shared_ptr<Interactor::RadialSelectInteractor> _interactor;
+    Vis::RadialSelectVisualisation *_vis;
+    std::shared_ptr<Interactor::RadialSelectHandler> _handler;
 };  // end class
 
 }}   // end namespace

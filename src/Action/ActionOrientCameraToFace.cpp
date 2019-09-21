@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionOrientCameraToFace.h>
+#include <Action/ActionOrientCameraToFace.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <FaceTools.h>

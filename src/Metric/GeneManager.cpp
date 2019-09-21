@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <GeneManager.h>
+#include <Metric/GeneManager.h>
 #include <MiscFunctions.h>
 #include <FileIO.h> // rlib
 #include <iostream>

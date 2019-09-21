@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <CameraWorker.h>
+#include <Action/CameraWorker.h>
 #include <FaceModelViewer.h>
 #include <Transformer.h>
 #include <cmath>

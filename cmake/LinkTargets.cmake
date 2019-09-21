@@ -38,6 +38,10 @@ if(WITH_ASSIMP)
     target_link_libraries( ${PROJECT_NAME} ${ASSIMP_LIBRARIES})
 endif()
 
+if(WITH_NANOFLANN)
+    target_link_libraries( ${PROJECT_NAME} nanoflann::nanoflann)
+endif()
+
 if(WITH_TINYXML)
     target_link_libraries( ${PROJECT_NAME} ${tinyxml_LIBRARY})
 endif()

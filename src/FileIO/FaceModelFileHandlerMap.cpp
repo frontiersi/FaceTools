@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <FaceModelFileHandlerMap.h>
+#include <FileIO/FaceModelFileHandlerMap.h>
 #include <MiscFunctions.h>
 #include <FaceTools.h>
 #include <FileIO.h> // rlib

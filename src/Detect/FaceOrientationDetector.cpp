@@ -15,11 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <FaceOrientationDetector.h>
-#include <FaceFinder2D.h>
+#include <Detect/FaceOrientationDetector.h>
+#include <Detect/FaceFinder2D.h>
+#include <LndMrk/LandmarksManager.h>
 #include <FaceTools.h>
 #include <FaceModel.h>
-#include <LandmarksManager.h>
 #include <ObjModelSurfacePointFinder.h> // RFeatures
 #include <FeatureUtils.h>               // RFeatures
 #include <algorithm>
@@ -123,7 +123,6 @@ bool detect2DEyes( const cv::Mat_<byte>& img, cv::Point2f& f0, cv::Point2f& f1)
     return true;
 }   // end detect2DEyes
 
-
 }   // end namespace
 
 
@@ -145,8 +144,7 @@ void FaceOrientationDetector::setLandmarksToUpdate(const IntSet &ul)
 }   // end setLandmarksToUpdate
 
 
-// private
-float FaceOrientationDetector::orient()
+float FaceOrientationDetector::_orient()
 {
     cv::Point2f f0, f1;
 
@@ -165,7 +163,7 @@ float FaceOrientationDetector::orient()
 
     const float eprop = static_cast<float>(cv::norm( f1 - f0));
     return eprop * _dfact; // Detection range
-}   // end orient
+}   // end _orient
 
 
 bool FaceOrientationDetector::detect( LandmarkSet& lmks)
@@ -188,7 +186,7 @@ bool FaceOrientationDetector::detect( LandmarkSet& lmks)
     // Reset orientation and camera
     _err = "";
     _nvec = cv::Vec3f(0,0,1);
-    _v0 = _v1 = cv::Vec3f(0,0,0);
+    _v0 = _v1 = _model->centreFront();  // Initial focal point as centre of the front of the model's bounding box
 
     // Saved params for detection
     cv::Vec3f sv0, sv1, snvec;
@@ -205,7 +203,7 @@ bool FaceOrientationDetector::detect( LandmarkSet& lmks)
     while ( i < MAX_OALIGN)  // Use 4 attempts to align at any particular detection range
     {
         std::cerr << "Detecting face (orientation) at range " << orng << std::endl;
-        setCameraToFace( orng);    // Set camera to orientation range
+        _setCameraToFace( orng);    // Set camera to orientation range
 
         /*
         std::ostringstream oss;
@@ -214,7 +212,7 @@ bool FaceOrientationDetector::detect( LandmarkSet& lmks)
         */
 
         _err = "";
-        drng = orient();
+        drng = _orient();
         if ( drng > 0)
         {
             sdrng = drng;
@@ -265,7 +263,7 @@ bool FaceOrientationDetector::detect( LandmarkSet& lmks)
         _nvec = snvec;
 
         std::cerr << "Landmark detection range set to " << sdrng << std::endl;
-        setCameraToFace( sdrng); // Set camera to detection range
+        _setCameraToFace( sdrng); // Set camera to detection range
         //RFeatures::showImage( _vwr.snapshot(), "Pre-detection", true);
 
         if ( !FLD::detect( _vwr, _model, lmks, _ulmks))
@@ -283,7 +281,7 @@ bool FaceOrientationDetector::detect( LandmarkSet& lmks)
             FaceTools::findNormal( _model, _v0, _v1, _nvec);
             cv::normalize( snvec + _nvec, _nvec);
             /*
-            setCameraToFace( sdrng);
+            _setCameraToFace( sdrng);
             RFeatures::showImage( _vwr.snapshot(), "Adjusted post-detection", true);
             */
         }   // end else
@@ -293,12 +291,11 @@ bool FaceOrientationDetector::detect( LandmarkSet& lmks)
 }   // end detect
 
 
-// private
 // Standardise the position of the camera looking at the face from a range decided by
 // the inter-eye distance of the detected face. This should be run twice because the
 // second calculation will be more accurate due to being based on a standardised range
 // (and benefitting from a more upright orientation).
-void FaceOrientationDetector::setCameraToFace( float crng)
+void FaceOrientationDetector::_setCameraToFace( float crng)
 {
     cv::Vec3f evec = _v1 - _v0;
     // Update camera position for better detection
@@ -312,8 +309,8 @@ void FaceOrientationDetector::setCameraToFace( float crng)
     // Use adjusted up vector and eye vector to calculate a new normal vector.
     cv::normalize( evec.cross( uv), _nvec);
 
-    const cv::Vec3f m = 0.5f * (_v0 + _v1);                 // Mid-point between eyes
-    const cv::Vec3f f = m - 0.2f*ediff*uv;                          // Focus slightly below eye mid-point
+    const cv::Vec3f m = 0.5f * (_v0 + _v1);              // Mid-point between eyes
+    const cv::Vec3f f = m - 0.2f*ediff*uv;               // Focus slightly below eye mid-point
     const cv::Vec3f p = crng*_nvec + m - 0.5f*ediff*uv;  // Want to have camera looking up slightly
 
     // Need to calculate a new up vector because the normal is adjusted to point slightly downward
@@ -321,7 +318,7 @@ void FaceOrientationDetector::setCameraToFace( float crng)
     cv::normalize( _nvec.cross( evec), uv);
 
     _vwr.setCamera( RFeatures::CameraParams( p, f, uv));
-}   // end setCameraToFace
+}   // end _setCameraToFace
 
 
 RFeatures::Orientation FaceOrientationDetector::orientation() const

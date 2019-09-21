@@ -19,8 +19,8 @@
 #define FACE_TOOLS_ACTION_FACE_ACTION_H
 
 #include "UndoStates.h"
+#include "ModelSelector.h"
 #include <PluginInterface.h>    // QTools
-#include <ModelSelector.h>
 #include <QAction>
 
 namespace FaceTools { namespace Action {

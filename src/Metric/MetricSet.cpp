@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <MetricSet.h>
+#include <Metric/MetricSet.h>
 using FaceTools::Metric::MetricSet;
 using FaceTools::Metric::MetricValue;
 

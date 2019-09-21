@@ -15,10 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionExportPDF.h>
+#include <Action/ActionExportPDF.h>
 #include <U3DCache.h>
-#include <ReportManager.h>
-#include <FaceModelManager.h>
+#include <Report/ReportManager.h>
+#include <FileIO/FaceModelManager.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 

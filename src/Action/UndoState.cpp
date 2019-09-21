@@ -15,15 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <UndoState.h>
-#include <UndoStates.h>
-#include <FaceAction.h>
-#include <FaceModel.h>
+#include <Action/UndoState.h>
+#include <Action/UndoStates.h>
+#include <Action/FaceAction.h>
 #include <cassert>
 using FaceTools::Action::UndoState;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::EventGroup;
-using FaceTools::Landmark::LandmarkSet;
+using MS = FaceTools::Action::ModelSelector;
 
 
 void FaceTools::Action::storeUndo( const FaceAction* a, EventGroup egrp)
@@ -46,48 +45,29 @@ UndoState::Ptr UndoState::create( const FaceAction* a, EventGroup egrp, bool aut
 
 
 UndoState::UndoState( const FaceAction* a, EventGroup egrp, bool ar)
-    : _action( const_cast<FaceAction*>(a)), _egrp(egrp), _autoRestore(ar)
+    : _action( const_cast<FaceAction*>(a)), _egrp(egrp), _autoRestore(ar),
+      _name(a->displayName()), _sfm( MS::selectedModel()) // Could be null
 {
-    _name = a->displayName();
-    _fm = ModelSelector::selectedModel();
-    _metaSaved = _fm->isMetaSaved();
-    _modelSaved = _fm->isModelSaved();
-
-    // If auto-restoring, backup the needed data elements.
-    if ( _autoRestore)
+    // If auto-restoring, backup the needed data elements otherwise the setUserData function will be used.
+    if ( isAutoRestore())
     {
-        if ( egrp.has(Event::GEOMETRY_CHANGE) || egrp.has(Event::ORIENTATION_CHANGE))
+        FMS fms;    // Get the models to save state for
+
+        if ( egrp.has(Event::ALL_VIEWERS))
         {
-            _model = _fm->_model->deepCopy(true/*share materials*/);
-            _kdtree = _fm->_kdtree;
-            _bnds.clear();    // Just in case
-            for ( const auto& b : _fm->_bnds)
-                _bnds.push_back( b->deepCopy());
+            for ( FMV* fmv : MS::viewers())
+            {
+                const FMS fms1 = fmv->attached().models();
+                fms.insert( fms1.begin(), fms1.end());
+            }   // end for
         }   // end if
+        else if ( egrp.has(Event::ALL_VIEWS) && MS::selectedViewer())
+            fms = MS::selectedViewer()->attached().models();
+        else if ( _sfm)
+            fms.insert(_sfm);
 
-        if ( egrp.has(Event::AFFINE_CHANGE))
-            _tmat = _fm->model().transformMatrix();
-
-        if ( egrp.has(Event::CONNECTIVITY_CHANGE))
-            _manifolds = _fm->_manifolds;
-
-        if ( egrp.has(Event::GEOMETRY_CHANGE)
-          || egrp.has(Event::LANDMARKS_CHANGE)
-          || egrp.has(Event::ASSESSMENT_CHANGE)
-          || egrp.has(Event::FACE_DETECTED)
-          || egrp.has(Event::PATHS_CHANGE))
-            _ass = _fm->currentAssessment()->deepCopy();
-
-        if ( egrp.has(Event::METADATA_CHANGE))
-        {
-            _source = _fm->_source;
-            _studyId = _fm->_studyId;
-            _dob = _fm->_dob;
-            _sex = _fm->_sex;
-            _methnicity = _fm->_methnicity;
-            _pethnicity = _fm->_pethnicity;
-            _cdate = _fm->_cdate;
-        }   // end if
+        for ( FM* fm : fms)
+            _fstates.push_back( FaceModelState::create(fm, egrp));
     }   // end if
 }   // end ctor
 
@@ -109,47 +89,17 @@ void UndoState::restore() const
 {
     assert(_action != nullptr);
 
-    _fm->lockForWrite();
-
-    if ( !_autoRestore)
+    if ( !isAutoRestore())
+    {
+        _sfm->lockForWrite();
         _action->restoreState(this);    // Call the custom restore function
+        _sfm->unlock();
+    }   // end if
     else
     {
-        if ( _egrp.has(Event::GEOMETRY_CHANGE) || _egrp.has(Event::ORIENTATION_CHANGE))
-        {
-            _fm->_model = _model;
-            _fm->_kdtree = _kdtree;
-            _fm->_bnds = _bnds;
-        }   // end if
-
-        if ( _egrp.has(Event::AFFINE_CHANGE))
-            _fm->addTransformMatrix( _tmat * _fm->model().transformMatrix().inv());
-
-        if ( _egrp.has(Event::CONNECTIVITY_CHANGE))
-            _fm->_manifolds = _manifolds;
-
-        if ( _egrp.has(Event::GEOMETRY_CHANGE)
-          || _egrp.has(Event::LANDMARKS_CHANGE)
-          || _egrp.has(Event::ASSESSMENT_CHANGE)
-          || _egrp.has(Event::FACE_DETECTED)
-          || _egrp.has(Event::PATHS_CHANGE))
-            _fm->setAssessment( _ass);
-
-        if ( _egrp.has(Event::METADATA_CHANGE))
-        {
-            _fm->_source = _source;
-            _fm->_studyId = _studyId;
-            _fm->_dob = _dob;
-            _fm->_sex = _sex;
-            _fm->_methnicity = _methnicity;
-            _fm->_pethnicity = _pethnicity;
-            _fm->_cdate = _cdate;
-        }   // end if
+        for ( const auto& fstate : _fstates)
+            fstate->restore(_egrp);
     }   // end if
 
-    _fm->setMetaSaved( _metaSaved);
-    _fm->setModelSaved( _modelSaved);
-    _fm->unlock();
-
     _action->onEvent(_egrp);
-}   // end _restore
+}   // end restore

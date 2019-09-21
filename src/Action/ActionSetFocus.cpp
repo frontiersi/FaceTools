@@ -15,9 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionSetFocus.h>
+#include <Action/ActionSetFocus.h>
 #include <FaceModelViewer.h>
-#include <FaceView.h>
+#include <Vis/FaceView.h>
 #include <algorithm>
 using FaceTools::Action::ActionSetFocus;
 using FaceTools::Action::FaceAction;

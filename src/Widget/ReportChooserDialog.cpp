@@ -15,10 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ReportChooserDialog.h>
+#include <Widget/ReportChooserDialog.h>
 #include <ui_ReportChooserDialog.h>
+#include <Report/ReportManager.h>
 #include <U3DCache.h>
-#include <ReportManager.h>
 #include <QListView>
 #include <QStandardItemModel>
 using FaceTools::Widget::ReportChooserDialog;

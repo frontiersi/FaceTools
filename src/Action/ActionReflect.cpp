@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionReflect.h>
-#include <ActionInvertNormals.h>
+#include <Action/ActionReflect.h>
+#include <Action/ActionInvertNormals.h>
 #include <FaceModel.h>
 using FaceTools::Action::ActionReflect;
 using FaceTools::Action::FaceAction;

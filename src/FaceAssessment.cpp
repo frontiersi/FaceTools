@@ -101,7 +101,7 @@ bool FaceAssessment::swapLandmarkLaterals()
 }   // end swapLandmarkLaterals
 
 
-bool FaceAssessment::addTransform( const cv::Matx44d &T)
+bool FaceAssessment::addTransformMatrix( const cv::Matx44d &T)
 {
     bool setok = false;
     if ( !_landmarks->empty())
@@ -112,19 +112,19 @@ bool FaceAssessment::addTransform( const cv::Matx44d &T)
 
     if ( !_paths->empty())
     {
-        _paths->transform(T);
+        _paths->transform(T);   // Paths are transformed directly
         setok = true;
     }   // end if
 
     return setok;
-}   // end addTransform
+}   // end addTransformMatrix
 
 
-void FaceAssessment::fixTransform()
+void FaceAssessment::fixTransformMatrix()
 {
     _landmarks->fixTransformMatrix();
     // Note here that path vertices are never passed through a transform.
-}   // end fixTransform
+}   // end fixTransformMatrix
 
 
 bool FaceAssessment::moveLandmarksToSurface( const FM* fm)

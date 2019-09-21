@@ -17,7 +17,6 @@
 
 #include <FaceModel.h>
 #include <FaceModelViewer.h>
-#include <BaseVisualisation.h>
 #include <FaceTools.h>
 #include <VtkTools.h>       // RVTK
 #include <algorithm>
@@ -27,8 +26,6 @@ using FaceTools::FaceModel;
 using FaceTools::Landmark::LandmarkSet;
 using FaceTools::FaceAssessment;
 using FaceTools::FMVS;
-using FaceTools::Vis::VisualisationLayers;
-using FaceTools::Vis::BaseVisualisation;
 using FaceTools::Vis::FV;
 using namespace RFeatures;
 
@@ -107,8 +104,8 @@ void FaceModel::update( ObjModel::Ptr model, bool updateConnectivity)
     _kdtree = ObjModelKDTree::create( *_model);
 
     // Recalculate path positions on the model over all assessments
-    for ( auto& ass : _ass)
-        ass.get()->recalculatePaths(this);
+    _recalculatePaths();
+    // Don't move landmarks to surface automatically since this always slightly moves the landmarks.
 
     _makeOrientationBounds();
 }   // end update
@@ -119,18 +116,21 @@ void FaceModel::_makeOrientationBounds()
     // Matrix transform to sync the bounds to is defined either by the model
     // without semantic orientation information (i.e. just assuming model bounds
     // along world axes), or by the landmarks if present.
-    // Calculate bounds with respect to the orientation matrix (uses landmarks if set).
     cv::Matx44d T = _model->transformMatrix();  // Identity matrix normally
-    //std::cerr << "_makeOrientationBounds: " << std::endl;
-    //std::cerr << T << std::endl;
     const LandmarkSet& lmks = currentAssessment()->landmarks();
     if ( !lmks.empty())
         T = lmks.orientation().asMatrix( lmks.fullMean());
+
     const size_t nm = _manifolds->count();
     _bnds.resize(nm+1);
     for ( size_t i = 0; i < nm; ++i)
     {
         const IntSet& mvidxs = _manifolds->manifold(int(i))->vertices(*_model);
+        // By providing the current orientation of the model (either via its landmarks or
+        // simply as the model's transform from its last fixed position) in the creation
+        // of the bounds, the bounds are created with this transform in mind so that when
+        // the inverse of the given transform is applied, the bounds will be upright and
+        // in standard position.
         _bnds[i+1] = ObjModelBounds::create( *_model, T, &mvidxs);
     }   // end for
 
@@ -190,13 +190,14 @@ void FaceModel::addTransformMatrix( const cv::Matx44d& T)
 {
     _model->addTransformMatrix( T);
     _kdtree->addTransformMatrix( T);
-    // Update the bounds
-    for ( auto& b : _bnds)
-        b->addTransformMatrix(T);
 
     bool addedTransform = true;
     for ( auto& a : _ass)
-        addedTransform = a.get()->addTransform(T) && addedTransform;
+        addedTransform = a.get()->addTransformMatrix(T) && addedTransform;
+
+    // Have to do it this way because the model may not yet have landmarks defined.
+    for ( auto& b : _bnds)
+        b->addTransformMatrix(T);
 
     if ( addedTransform)
         setMetaSaved( false);
@@ -204,15 +205,15 @@ void FaceModel::addTransformMatrix( const cv::Matx44d& T)
 }   // end addTransformMatrix
 
 
-void FaceModel::fixOrientation()
+void FaceModel::fixTransformMatrix()
 {
     _model->fixTransformMatrix();
     for ( auto& a : _ass)
-        a.get()->fixTransform();
+        a.get()->fixTransformMatrix();
     _kdtree = ObjModelKDTree::create( *_model);
     _makeOrientationBounds();
     setModelSaved( false);
-}   // end fixOrientation
+}   // end fixTransformMatrix
 
 
 void FaceModel::setMetaSaved( bool s) { _savedMeta = s;}
@@ -225,6 +226,16 @@ cv::Vec3f FaceModel::centre() const
     const cv::Matx44d& T = _bnds[0]->transformMatrix();
     return cv::Vec3f( float(T(0,3)), float(T(1,3)), float(T(2,3)));
 }   // end centre
+
+
+cv::Vec3f FaceModel::centreFront() const
+{
+    assert(!_bnds.empty());
+    const cv::Vec6d cns = _bnds[0]->cornersAs6d();  // Untransformed corners
+    cv::Vec3d cfront( 0.5 * (cns[0] + cns[1]), 0.5 * (cns[2] + cns[3]), cns[5]);
+    RFeatures::transform( _bnds[0]->transformMatrix(), cfront);
+    return cfront;  // Cast on return
+}   // end centreFront
 
 
 Orientation FaceModel::orientation() const
@@ -399,11 +410,13 @@ IntSet FaceModel::assessmentIds() const
 void FaceModel::setLandmarks( LandmarkSet::Ptr lmks)
 {
     assert( _cass);
+    // When setting landmarks, they are provided in their detected state meaning that
+    // the internal transform matrix of the landmarks must be the identity matrix.
+    // After setting, the orientation must be reconstructed after transforming the
+    // model into its new standard position.
+    assert( lmks->transformMatrix() == cv::Matx44d::eye());
     if ( _cass->setLandmarks(lmks))
-    {
         setMetaSaved(false);
-        _syncOrientationBounds();
-    }   // end if
 }   // end setLandmarks
 
 
@@ -439,12 +452,22 @@ void FaceModel::swapLandmarkLaterals()
 }   // end swapLandmarkLaterals
 
 
+void FaceModel::_recalculatePaths()
+{
+    for ( auto& ass : _ass)
+        ass.get()->recalculatePaths(this);
+}   // end _recalculatePaths
+
+
 void FaceModel::moveLandmarksToSurface()
 {
     bool moved = false;
-    for ( auto& a : _ass)
-        if ( a.get()->moveLandmarksToSurface(this))
+    for ( auto& ass : _ass)
+        if ( ass.get()->moveLandmarksToSurface(this))
             moved = true;
+
+    _recalculatePaths();
+
     if ( moved)
     {
         setMetaSaved(false);

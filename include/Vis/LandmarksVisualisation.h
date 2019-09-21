@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,18 +52,18 @@ public:
     // Set/update the view of the given landmark.
     void updateLandmark( const FM*, int);
 
-    // Update all views of all landmarks for the given model.
-    void updateLandmarks( const FM*);
+    // Update all views of all landmarks for the given model's current assessment.
+    void syncLandmarks( const FM*);
 
     // Return ID of landmark if given prop is for a landmark or -1 if not.
     // On return of >= 0, lat is set to the face lateral that the landmark appears.
     int landmarkId( const FV*, const vtkProp*, FaceLateral& lat) const;
 
-    void syncActorsToData( const FV*, const cv::Matx44d& m=cv::Matx44d::eye()) override;
+    void syncToViewTransform( const FV*, const vtkMatrix4x4*) override;
 
 private:
     std::unordered_map<const FV*, LandmarkSetView*> _views;
-    bool hasView( const FV*) const;
+    bool _hasView( const FV*) const;
 };  // end class
 
 }}   // end namespaces

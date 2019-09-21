@@ -15,11 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionSmooth.h>
+#include <Action/ActionSmooth.h>
+#include <FaceModelCurvature.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <ObjModelSmoother.h>   // RFeatures
-#include <FaceModelCurvature.h>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionSmooth;
 using FaceTools::Action::Event;

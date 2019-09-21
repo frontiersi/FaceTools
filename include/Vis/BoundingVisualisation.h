@@ -34,7 +34,7 @@ public:
     void setVisible( FV*, bool) override;
     bool isVisible( const FV*) const override;
 
-    void syncActorsToData( const FV*, const cv::Matx44d& d=cv::Matx44d::eye()) override;
+    void syncToViewTransform( const FV*, const vtkMatrix4x4*) override;
 
 private:
     std::unordered_map<const FV*, BoundingView*> _views;

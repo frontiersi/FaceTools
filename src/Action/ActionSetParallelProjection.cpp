@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionSetParallelProjection.h>
-#include <FaceModelManager.h>
+#include <Action/ActionSetParallelProjection.h>
+#include <FileIO/FaceModelManager.h>
 #include <vtkRenderer.h>
 #include <vtkCamera.h>
 #include <algorithm>

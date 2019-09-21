@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionSaveScreenshot.h>
+#include <Action/ActionSaveScreenshot.h>
 #include <FaceModelViewer.h>
 #include <FeatureUtils.h>
 #include <QImageTools.h>

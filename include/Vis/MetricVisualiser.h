@@ -18,7 +18,7 @@
 #ifndef FACE_TOOLS_VIS_METRIC_VISUALISER_H
 #define FACE_TOOLS_VIS_METRIC_VISUALISER_H
 
-#include <BaseVisualisation.h>
+#include "BaseVisualisation.h"
 #include <FaceViewSet.h>
 #include <vtkTextActor.h>
 
@@ -34,7 +34,7 @@ public:
 
     /*
     bool belongs( const vtkProp*, const FV*) const;
-    void syncActorsToData( const FV*, const cv::Matx44d&) override
+    void syncToViewTransform( const FV*, const vtkMatrix4x4*) override;
     bool isAvailable( const FM*) const override;
     bool isVisible( const FV*) const override;
     */

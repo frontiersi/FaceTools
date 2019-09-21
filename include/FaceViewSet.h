@@ -18,7 +18,7 @@
 #ifndef FACE_TOOLS_FACE_VIEW_SET_H
 #define FACE_TOOLS_FACE_VIEW_SET_H
 
-#include <FaceView.h>
+#include "Vis/FaceView.h"
 
 namespace FaceTools {
 

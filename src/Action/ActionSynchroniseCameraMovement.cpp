@@ -15,10 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionSynchroniseCameraMovement.h>
-#include <ModelViewerInteractor.h>
+#include <Action/ActionSynchroniseCameraMovement.h>
+#include <Interactor/ViewerNotifier.h>
 #include <FaceModelViewer.h>
-#include <FaceView.h>
+#include <Vis/FaceView.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionSynchroniseCameraMovement;
@@ -28,12 +28,12 @@ using FaceTools::FVS;
 using FaceTools::Vis::FV;
 using FaceTools::FMV;
 using FaceTools::ModelViewer;
-using FaceTools::Interactor::MVI;
+using FaceTools::Interactor::ViewerNotifier;
 using MS = FaceTools::Action::ModelSelector;
 
 
 namespace {
-class CameraMoveHandler : public MVI
+class CameraMoveHandler : public ViewerNotifier
 {
 protected:
     void cameraStart() override

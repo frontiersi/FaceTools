@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <FaceModelFileHandler.h>
+#include <FileIO/FaceModelFileHandler.h>
 #include <cassert>
 using FaceTools::FileIO::FaceModelFileHandler;
 using FaceTools::FM;

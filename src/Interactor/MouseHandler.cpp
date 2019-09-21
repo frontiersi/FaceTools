@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <MouseHandler.h>
-#include <ModelSelector.h>
+#include <Interactor/MouseHandler.h>
+#include <Action/ModelSelector.h>
 using FaceTools::Interactor::MouseHandler;
 using FaceTools::FMV;
 using MS = FaceTools::Action::ModelSelector;

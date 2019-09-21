@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 Spatial Information Systems Research Limited
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,8 +18,8 @@
 #ifndef FACE_TOOLS_METRIC_CIRCULARITY_METRIC_CALCULATOR_TYPE_H
 #define FACE_TOOLS_METRIC_CIRCULARITY_METRIC_CALCULATOR_TYPE_H
 
-#include <MetricCalculatorType.h>
-#include <RegionVisualiser.h>
+#include "MetricCalculatorType.h"
+#include "../Vis/RegionVisualiser.h"
 
 namespace FaceTools { namespace Metric {
 

@@ -15,10 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <Chart.h>
-#include <FaceModel.h>
+#include <Metric/Chart.h>
+#include <Metric/MetricCalculatorManager.h>
 #include <Ethnicities.h>
-#include <MetricCalculatorManager.h>
+#include <FaceModel.h>
 #include <QtCharts/QSplineSeries>
 #include <QtCharts/QScatterSeries>
 #include <QtCharts/QValueAxis>

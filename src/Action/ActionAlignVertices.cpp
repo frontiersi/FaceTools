@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionAlignVertices.h>
+#include <Action/ActionAlignVertices.h>
 #include <FaceModelViewer.h>
 #include <FaceTools.h>
 #include <FaceModel.h>

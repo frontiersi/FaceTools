@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <LandmarkSet.h>
+#include <LndMrk/LandmarkSet.h>
 #include <FaceTools.h>
 #include <FaceModel.h>
 #include <ObjModelSurfacePointFinder.h>

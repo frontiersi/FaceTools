@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionShowModelProperties.h>
+#include <Action/ActionShowModelProperties.h>
 #include <FaceModel.h>
 using FaceTools::Action::ActionShowModelProperties;
 using FaceTools::Action::ActionDiscardManifold;

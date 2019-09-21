@@ -15,8 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <ActionEditLandmarks.h>
-#include <ModelSelector.h>
+#include <Action/ActionEditLandmarks.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <VtkTools.h>
@@ -24,7 +23,7 @@ using FaceTools::Action::ActionEditLandmarks;
 using FaceTools::Action::Event;
 using FaceTools::Action::UndoState;
 using FaceTools::Action::ActionVisualise;
-using FaceTools::Interactor::LandmarksInteractor;
+using FaceTools::Interactor::LandmarksHandler;
 using FaceTools::Vis::LandmarksVisualisation;
 using FaceTools::FVS;
 using FaceTools::FM;
@@ -37,10 +36,10 @@ Q_DECLARE_METATYPE( FaceTools::Landmark::LandmarkSet::Ptr)
 ActionEditLandmarks::ActionEditLandmarks( const QString& dn, const QIcon& ico, const QKeySequence& ks)
     : ActionVisualise( dn, ico, _vis = new LandmarksVisualisation, ks)
 {
-    LandmarksInteractor *lint = new LandmarksInteractor( *_vis);
-    connect( lint, &LandmarksInteractor::onStartedDrag, [this](){ storeUndo(this);});
-    connect( lint, &LandmarksInteractor::onFinishedDrag, [this](){ emit onEvent( Event::LANDMARKS_CHANGE);});
-    _interactor = std::shared_ptr<LandmarksInteractor>( lint);
+    LandmarksHandler *lint = new LandmarksHandler( *_vis);
+    connect( lint, &LandmarksHandler::onStartedDrag, [this](){ storeUndo(this);});
+    connect( lint, &LandmarksHandler::onFinishedDrag, [this](){ emit onEvent( Event::LANDMARKS_CHANGE);});
+    _handler = std::shared_ptr<LandmarksHandler>( lint);
     addTriggerEvent( Event::LOADED_MODEL);
     addTriggerEvent( Event::FACE_DETECTED);
     addTriggerEvent( Event::LANDMARKS_CHANGE);
@@ -56,10 +55,10 @@ ActionEditLandmarks::~ActionEditLandmarks()
 bool ActionEditLandmarks::checkState( Event e)
 {
     const bool chk = ActionVisualise::checkState( e);
-    _interactor->setEnabled(chk);
+    _handler->setEnabled(chk);
     const FM* fm = MS::selectedModel();
     _vis->setHighlighted( fm);  // un-highlights all before highlighting only model's landmarks if not null
-    _vis->updateLandmarks( fm);
+    _vis->syncLandmarks( fm);
     return chk;
 }   // end checkState
 
@@ -97,5 +96,5 @@ void ActionEditLandmarks::restoreState( const UndoState* us)
 {
     Landmark::LandmarkSet::Ptr lmks = us->userData("Lmks").value<Landmark::LandmarkSet::Ptr>();
     us->model()->setLandmarks(lmks);
-    _vis->updateLandmarks( us->model());
+    _vis->syncLandmarks( us->model());
 }   // end restoreState
