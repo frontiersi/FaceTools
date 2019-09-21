@@ -46,7 +46,7 @@ public:
 private:
     std::unordered_map<const FV*, T> _views;
 
-    static_assert( std::is_convertible<T, LabelsView>::value, "Value type doesn't derive from FaceTools::Vis::LabelsView!");
+    static_assert( std::is_base_of<LabelsView, T>::value, "Value type doesn't derive from FaceTools::Vis::LabelsView!");
 };  // end class
 
 #include "LabelsVisualisation.cpp"
