@@ -23,7 +23,23 @@ using FaceTools::Interactor::ActorMoveNotifier;
 using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
 using FaceTools::FMV;
+using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
+
+
+namespace {
+
+void updateFaceViewMatrices( const FM* fm, vtkMatrix4x4* vt)
+{
+    for ( FV* fv : fm->fvs())
+    {
+        fv->actor()->PokeMatrix( vt);
+        fv->syncVisualisationsToViewTransform();
+        fv->viewer()->updateRender();
+    }   // end for
+}   // end updateFaceViewMatrices
+
+}   // end namespace
 
 
 void ActorMoveNotifier::actorStart( const vtkProp3D* prop)
@@ -40,19 +56,8 @@ void ActorMoveNotifier::actorStart( const vtkProp3D* prop)
 void ActorMoveNotifier::actorMove( const vtkProp3D* prop)
 {
     FV* fv = viewFromActor( prop);
-    if ( fv)
-    {
-        // Propogate the matrix of the affected actor to all of the associated FaceView actors.
-        vtkMatrix4x4* mat = fv->actor()->GetMatrix();
-
-        const FM* fm = fv->data();
-        for ( FV* f : fm->fvs())
-        {
-            f->actor()->PokeMatrix( mat);
-            f->syncVisualisationsToViewTransform();
-            f->viewer()->updateRender();
-        }   // end for
-    }   // end if
+    if ( fv) // Propogate the matrix of the affected actor to all associated FaceView actors.
+        updateFaceViewMatrices( fv->data(), fv->actor()->GetMatrix());
 }   // end actorMove
 
 
@@ -61,14 +66,14 @@ void ActorMoveNotifier::actorStop( const vtkProp3D* prop)
     FV* fv = viewFromActor( prop);
     if ( fv)
     {
+        // Catch up the data transform to the actor's.
         FM* fm = fv->data();
         fm->lockForWrite();
-        // Catch up the data transform to the actor's.
         const cv::Matx44d& cmat = fm->model().transformMatrix();
-        const cv::Matx44d vmat = RVTK::toCV( fv->actor()->GetMatrix());
-        const cv::Matx44d dmat = vmat * cmat.inv();
-        fm->addTransformMatrix( dmat);
+        vtkMatrix4x4 *vt = fv->actor()->GetMatrix();
+        fm->addTransformMatrix( RVTK::toCV( vt) * cmat.inv());
         fm->unlock();
+
         MS::showStatus( "Finished moving model.", 5000);
         emit onActorStop(fv);
     }   // end if

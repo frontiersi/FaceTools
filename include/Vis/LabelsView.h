@@ -37,7 +37,15 @@ public:
     void setVisible( bool, ModelViewer*);
     bool visible() const { return _visible;}
 
-    void setColours( const QColor& fg, const QColor& bg);
+    virtual void setColours( const QColor& fg, const QColor& bg);
+
+    // Transforming the view also sets moving to false.
+    void transform( const cv::Matx44d&);
+
+    // Set moving to true only when the parent model's view transform doesn't agree with its model transform.
+    void setMoving( bool v) { _moving = v;}
+
+    bool moving() const { return _moving;}
 
 protected:
     virtual vtkSmartPointer<vtkPolyData> createLabels( const RFeatures::ObjModel&) const = 0;
@@ -47,6 +55,8 @@ private:
     vtkSmartPointer<vtkActor2D> _labels;
     vtkSmartPointer<vtkPointSetToLabelHierarchy> _filter;
     bool _visible;
+    bool _moving;
+    cv::Matx44d _lt;    // Last transform applied
 };  // end class
 
 }}   // end namespace

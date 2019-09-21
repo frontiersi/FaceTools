@@ -27,6 +27,8 @@ class FaceTools_EXPORT PolyLabelsView : public LabelsView
 public:
     PolyLabelsView() : LabelsView( 19, true) {}
 
+    void setColours( const QColor& fg, const QColor& bg) override;
+
 protected:
     vtkSmartPointer<vtkPolyData> createLabels( const RFeatures::ObjModel&) const override;
 };  // end class

@@ -38,9 +38,9 @@ vtkSmartPointer<vtkPolyData> PolyLabelsView::createLabels( const RFeatures::ObjM
     {
         vlabels->SetValue( i, fid);
 
-        cv::Vec3d mpos = (model.vtx(model.fvidxs(fid)[0]) +
-                          model.vtx(model.fvidxs(fid)[1]) +
-                          model.vtx(model.fvidxs(fid)[2])) * 1.0/3;
+        cv::Vec3d mpos = (model.uvtx(model.fvidxs(fid)[0]) +
+                          model.uvtx(model.fvidxs(fid)[1]) +
+                          model.uvtx(model.fvidxs(fid)[2])) * 1.0/3;
 
         points->SetPoint( i, &mpos[0]);
         vertices->InsertNextCell(1);
@@ -52,3 +52,10 @@ vtkSmartPointer<vtkPolyData> PolyLabelsView::createLabels( const RFeatures::ObjM
     pdata->GetPointData()->AddArray( vlabels);
     return pdata;
 }   // end createLabels
+
+
+void PolyLabelsView::setColours( const QColor& fg, const QColor& bg)
+{
+    const QColor nfg = QColor::fromRgbF( 0.5 * fg.redF(), 0.5 * fg.greenF(), 0.5 * fg.blueF() + 0.5);
+    LabelsView::setColours( nfg, bg);
+}   // end setColours

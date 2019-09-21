@@ -27,6 +27,8 @@ class FaceTools_EXPORT VertexLabelsView : public LabelsView
 public:
     VertexLabelsView() : LabelsView( 16, false) {}
 
+    void setColours( const QColor& fg, const QColor& bg) override;
+
 protected:
     vtkSmartPointer<vtkPolyData> createLabels( const RFeatures::ObjModel&) const override;
 };  // end class

@@ -31,11 +31,6 @@ template <class T>
 class LabelsVisualisation : public BaseVisualisation
 {
 public:
-    LabelsVisualisation()
-    {
-        static_assert( std::is_base_of<LabelsView, T>::value, "Value type not derived from FaceTools::Vis::LabelsView!");
-    }   // end ctor
-
     ~LabelsVisualisation() override;
 
     void apply( FV*, const QPoint* mc=nullptr) override;
@@ -49,7 +44,9 @@ public:
     void checkState( const FV*) override;
 
 private:
-    std::unordered_map<const FV*, T*> _views;
+    std::unordered_map<const FV*, T> _views;
+
+    static_assert( std::is_convertible<T, LabelsView>::value, "Value type doesn't derive from FaceTools::Vis::LabelsView!");
 };  // end class
 
 #include "LabelsVisualisation.cpp"

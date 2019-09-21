@@ -17,6 +17,7 @@
 
 #include <Vis/LabelsView.h>
 #include <ModelViewer.h>
+#include <VtkTools.h>   // RVTK
 #include <vtkLabelPlacementMapper.h>
 #include <vtkTextProperty.h>
 #include <vtkPointData.h>
@@ -29,15 +30,17 @@ void LabelsView::refresh( const RFeatures::ObjModel& model)
 {
     vtkSmartPointer<vtkPolyData> pdata = createLabels( model);
 
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInputData( pdata);
+    _actor->SetMapper(mapper);
+
     _filter->SetInputData( pdata);
     _filter->SetLabelArrayName( pdata->GetPointData()->GetArrayName(0));
     vtkSmartPointer<vtkLabelPlacementMapper> lmapper = vtkSmartPointer<vtkLabelPlacementMapper>::New();
     lmapper->SetInputConnection( _filter->GetOutputPort());
     _labels->SetMapper( lmapper);
 
-    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputData( pdata);
-    _actor->SetMapper(mapper);
+    transform( model.transformMatrix());
 }   // end refresh
 
 
@@ -45,7 +48,9 @@ LabelsView::LabelsView( int fontSize, bool boldOn)
     : _actor( vtkSmartPointer<vtkActor>::New()),
       _labels( vtkSmartPointer<vtkActor2D>::New()),
       _filter( vtkSmartPointer<vtkPointSetToLabelHierarchy>::New()),
-      _visible( false)
+      _visible( false),
+      _moving( false),
+      _lt( cv::Matx44d::eye())
 {
     _actor->GetProperty()->SetRepresentationToPoints();
     _actor->GetProperty()->SetPointSize(2);
@@ -83,3 +88,11 @@ void LabelsView::setVisible( bool v, ModelViewer* vwr)
     }   // end if
     _visible = v;
 }   // end setVisible
+
+
+void LabelsView::transform( const cv::Matx44d& m)
+{
+    RVTK::fixTransform( _actor, RVTK::toVTK( m * _lt.inv()));
+    _moving = false;
+    _lt = m;    // Store last transform applied
+}   // end transform

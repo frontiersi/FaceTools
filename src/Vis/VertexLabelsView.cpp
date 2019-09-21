@@ -37,7 +37,7 @@ vtkSmartPointer<vtkPolyData> VertexLabelsView::createLabels( const RFeatures::Ob
     for ( int vid : vids)
     {
         vlabels->SetValue( i, vid);
-        points->SetPoint( i, &model.vtx(vid)[0]);
+        points->SetPoint( i, &model.uvtx(vid)[0]);
         vertices->InsertNextCell(1);
         vertices->InsertCellPoint(i++);
     }   // end for
@@ -47,3 +47,10 @@ vtkSmartPointer<vtkPolyData> VertexLabelsView::createLabels( const RFeatures::Ob
     pdata->GetPointData()->AddArray( vlabels);
     return pdata;
 }   // end createLabels
+
+
+void VertexLabelsView::setColours( const QColor& fg, const QColor& bg)
+{
+    const QColor nfg = QColor::fromRgbF( 0.5 * fg.redF() + 0.5, 0.5 * fg.greenF(), 0.5 * fg.blueF());
+    LabelsView::setColours( nfg, bg);
+}   // end setColours

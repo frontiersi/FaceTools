@@ -19,21 +19,6 @@ using FaceTools::Vis::FV;
 using FaceTools::FM;
 using FaceTools::Action::Event;
 
-namespace {
-bool nearIdentity( const cv::Matx44d& d, size_t ndp=8)
-{
-    const cv::Matx44d I = cv::Matx44d::eye();
-    for ( int i = 0; i < 16; ++i)
-    {
-        if ( (RFeatures::roundndp(d.val[i], ndp) - I.val[i]) != 0.0)
-            return false;
-    }   // end for
-    return true;
-}   // end nearIdentity
-
-}   // end namespace
-
-
 template <class T>
 LabelsVisualisation<T>::~LabelsVisualisation()
 {
@@ -46,10 +31,7 @@ template <class T>
 void LabelsVisualisation<T>::apply( FV* fv, const QPoint*)
 {
     if ( _views.count(fv) == 0)
-    {
-        _views[fv] = new T;
-        _views[fv]->refresh( fv->data()->model());
-    }   // end if
+        _views[fv].refresh( fv->data()->model());
 }   // end apply
 
 
@@ -58,10 +40,7 @@ bool LabelsVisualisation<T>::purge( FV* fv, Event)
 {
     setVisible(fv, false);
     if (_views.count(fv) > 0)
-    {
-        delete _views[fv];
         _views.erase(fv);
-    }   // end if
     return true;
 }   // end purge
 
@@ -70,36 +49,47 @@ template <class T>
 void LabelsVisualisation<T>::setVisible( FV* fv, bool v)
 {
     if (_views.count(fv) > 0)
-        _views.at(fv)->setVisible(v, fv->viewer());
+    {
+        _views.at(fv).setVisible( v, fv->viewer());
+        syncToViewTransform( fv, fv->actor()->GetMatrix());
+    }   // end if
 }   // end setVisible
 
 
 template <class T>
 bool LabelsVisualisation<T>::isVisible( const FV* fv) const
 {
-    return _views.count(fv) > 0 ? _views.at(fv)->visible() : false;
+    return _views.count(fv) > 0 ? _views.at(fv).visible() : false;
 }   // end isVisible
 
 
 template <class T>
 void LabelsVisualisation<T>::syncToViewTransform( const FV *fv, const vtkMatrix4x4* d)
 {
-    if ( _views.count(fv) == 0)
-        return;
-
-    if ( !nearIdentity( RVTK::toCV(d)))
-        setVisible( const_cast<FV*>(fv), false);
-    else
+    if ( _views.count(fv) > 0 && (_views.at(fv).visible() || _views.at(fv).moving()))
     {
-        _views.at(fv)->refresh( fv->data()->model());
-        setVisible( const_cast<FV*>(fv), isVisible(fv));
-    }   // end else
+        const cv::Matx44d& dt = fv->data()->model().transformMatrix();  // Data transform
+        const cv::Matx44d vt = RVTK::toCV( d);
+
+        // If the model's data transform is different to the model's view transform, hide the visualisation,
+        // otherwise if we were moving transform the visualisation to match the model's transform.
+        if ( dt == vt)
+        {
+            _views.at(fv).transform( dt);
+            _views.at(fv).setVisible( true, fv->viewer());
+        }   // end if
+        else
+        {
+            _views.at(fv).setVisible( false, fv->viewer());
+            _views.at(fv).setMoving( true);
+        }   // end else
+    }   // end if
 }   // end syncToViewTransform
 
 
 template <class T>
 void LabelsVisualisation<T>::checkState( const FV* fv)
 {
-    QColor bg = fv->viewer()->backgroundColour();
-    _views.at(fv)->setColours( chooseContrasting(bg), bg);
+    const QColor bg = fv->viewer()->backgroundColour();
+    _views.at(fv).setColours( chooseContrasting(bg), bg);
 }   // end checkState
