@@ -39,12 +39,13 @@ std::unordered_map<QString, Report::Ptr> ReportManager::_reports;
 
 bool ReportManager::init( const QString& pdflatex, const QString& idtfConverter, const QString& inkscape)
 {
-    PDFGenerator::pdflatex = pdflatex.toStdString();
     U3DExporter::IDTFConverter = idtfConverter.toStdString();
-    std::cerr << "IDTFConverter : " << U3DExporter::IDTFConverter << " ("
-              << (U3DExporter::isAvailable()  ? "" : "not ") << "available)" << std::endl;
-    std::cerr << "pdflatex      : " << PDFGenerator::pdflatex << " ("
-              << (PDFGenerator::isAvailable() ? "" : "not ") << "available)" << std::endl;
+    if ( !U3DExporter::isAvailable())
+        std::cerr << "WARNING: IDTFConverter " << U3DExporter::IDTFConverter << " unavailable!" << std::endl;
+
+    PDFGenerator::pdflatex = pdflatex.toStdString();
+    if ( !PDFGenerator::isAvailable())
+        std::cerr << "WARNING: pdflatex " << PDFGenerator::pdflatex << " unavailable!" << std::endl;
 
     _inkscape = inkscape;
     //_tmpdir.setAutoRemove(false);   // Uncomment for debug

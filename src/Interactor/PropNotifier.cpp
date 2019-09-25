@@ -25,11 +25,8 @@ using FaceTools::Vis::FV;
 using FaceTools::FMV;
 using MS = FaceTools::Action::ModelSelector;
 
-
 PropNotifier::PropNotifier() : _mnow(nullptr), _pnow(nullptr) {}
 
-void PropNotifier::enterViewer( FMV*) { _testPoint();}
-void PropNotifier::leaveViewer( FMV*) { _testPoint();}
 bool PropNotifier::mouseMove() { return _testPoint();}
 bool PropNotifier::leftDrag() { return _testPoint();}
 bool PropNotifier::middleDrag() { return _testPoint();}

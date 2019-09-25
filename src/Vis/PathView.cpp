@@ -97,7 +97,6 @@ void PathView::update( const std::list<cv::Vec3f>& vtxs)
     {
         if ( _viewer)
             _viewer->remove(_lprop);
-        _lprop->Delete();
         _lprop = nullptr;
     }   // end if
 
@@ -106,7 +105,6 @@ void PathView::update( const std::list<cv::Vec3f>& vtxs)
     {
         if ( _viewer)
             _viewer->remove(_pprop);
-        _pprop->Delete();
         _pprop = nullptr;
     }   // end if
 #endif

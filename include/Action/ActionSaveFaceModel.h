@@ -18,7 +18,7 @@
 #ifndef FACE_TOOLS_ACTION_SAVE_FACE_MODEL_H
 #define FACE_TOOLS_ACTION_SAVE_FACE_MODEL_H
 
-#include "FaceAction.h"
+#include "ActionSaveAsFaceModel.h"
 
 namespace FaceTools { namespace Action {
 
@@ -26,6 +26,8 @@ class FaceTools_EXPORT ActionSaveFaceModel : public FaceAction
 { Q_OBJECT
 public:
     ActionSaveFaceModel( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence::Save);
+
+    void setSaveAsAction( ActionSaveAsFaceModel *sa) { _saveAs = sa;}
 
     QString toolTip() const override { return "Save the selected model.";}
 
@@ -38,6 +40,7 @@ protected:
 private:
     std::unordered_map<std::string, QStringList> _fails;    // Error messages --> filenames
     EventGroup _egrp;
+    ActionSaveAsFaceModel *_saveAs;
 };  // end class
 
 }}   // end namespace

@@ -18,8 +18,8 @@
 #ifndef FACE_TOOLS_INTERACTOR_MOVEMENT_NOTIFIER_H
 #define FACE_TOOLS_INTERACTOR_MOVEMENT_NOTIFIER_H
 
+#include <FaceTypes.h>
 #include "ViewerNotifier.h"
-#include "../FaceTypes.h"
 
 namespace FaceTools { namespace Interactor {
 

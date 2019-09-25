@@ -98,8 +98,14 @@ public:
     // Set whether the camera autofocuses on the selected model upon selection (on by default).
     static void setAutoFocusOnSelectEnabled( bool);
 
+    // Set whether bounding/orientation boxes are shown for the selected model (on by default).
+    static void setShowBoundingBoxesOnSelected( bool);
+
     // Synchronise all bounding cuboid actors to match the model's orientation bounds.
     static void syncBoundingVisualisation( const FM*);
+
+    // Provide a delegate function that will be executed on all open views and then updateRender (if set true).
+    static void updateAllViews( const std::function<void(Vis::FV*)>&, bool updateRender=false);
 
     // Update rendering across all viewers.
     static void updateRender();
@@ -114,10 +120,11 @@ private:
     std::vector<FMV*> _viewers;
     QStatusBar* _sbar;
     bool _autoFocus;
+    bool _showBoxes;
     int _defv;  // Default viewer index
     Interactor::SelectNotifier *_sn;
 
-    void doOnSelected( Vis::FV*, bool);
+    void _doOnSelected( Vis::FV*, bool);
     ModelSelector();
     ModelSelector( const ModelSelector&) = delete;
     void operator=( const ModelSelector&) = delete;

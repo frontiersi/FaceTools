@@ -65,11 +65,13 @@ FV* ViewerNotifier::viewFromActor( const vtkProp3D* prop) const
 {
     FV* fv = nullptr;
     FMV* fmv = static_cast<FMV*>(mouseViewer());
+
     if ( fmv)
     {
         fv = fmv->attached().find(prop);
         if ( fv && fv->actor() != prop)
             fv = nullptr;
     }   // end if
+
     return fv;
 }   // end viewFromActor

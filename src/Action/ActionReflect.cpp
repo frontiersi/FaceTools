@@ -47,11 +47,13 @@ bool ActionReflect::checkEnable( Event)
 
 bool ActionReflect::doBeforeAction( Event)
 {
-    _ev = Event::AFFINE_CHANGE;
+    // Even though its an affine change on the model, we need to treat it as a geometry change
+    // for the purposes of visualisation since VTK will need to rebuild its normals.
+    _ev = Event::GEOMETRY_CHANGE;
     FM* fm = MS::selectedModel();
     fm->lockForRead();
     if ( !fm->currentAssessment()->landmarks().empty())  // Will also have to invert normals if landmarks present
-        _ev.add( {Event::LANDMARKS_CHANGE, Event::GEOMETRY_CHANGE});
+        _ev.add( {Event::LANDMARKS_CHANGE, Event::ORIENTATION_CHANGE});
     fm->unlock();
     return true;
 }   // end doBeforeAction
@@ -76,11 +78,12 @@ void ActionReflect::doAction( Event)
         // Translate to origin, reflect through YZ plane, then translate back.
         const cv::Matx44d m = lmks.orientation().asMatrix( lmks.fullMean());
         rmat = m * rmat * m.inv();
-        ActionInvertNormals::invertNormals( fm->wmodel());
     }   // end if
 
+    ActionInvertNormals::invertNormals( fm->wmodel());
     fm->addTransformMatrix(rmat);
     fm->swapLandmarkLaterals();
+    fm->wmodel()->fixTransformMatrix();
     fm->unlock();
 }   // end doAction
 

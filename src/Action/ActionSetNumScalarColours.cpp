@@ -36,8 +36,8 @@ void ActionSetNumScalarColours::postInit()
     QWidget* p = static_cast<QWidget*>(parent());
     _spinBox = new QSpinBox(p);
     _spinBox->setAlignment( Qt::AlignRight);
-    _spinBox->setRange( 2, 99);
-    _spinBox->setSingleStep( 1);
+    _spinBox->setRange( 2, 98);
+    _spinBox->setSingleStep( 2);
     _spinBox->setButtonSymbols(QAbstractSpinBox::PlusMinus);
     _spinBox->setEnabled(false);
 }   // end postInit

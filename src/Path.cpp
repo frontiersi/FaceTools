@@ -49,9 +49,9 @@ bool Path::recalculate( const FM* fm)
     psum = 0;
 
     vtxs.clear();
-    if ( findPath( fm, v0, v1, vtxs)) // v4.0.3 of Cliniface
+    //if ( findPath( fm, v0, v1, vtxs)) // v4.1.0 of Cliniface
     //if ( findStraightPath( fm, v0, v1, cv::Vec3f(0,0,1), vtxs))
-    //if ( findCurveFollowingPath( fm, v0, v1, vtxs))
+    if ( findCurveFollowingPath( fm, v0, v1, vtxs))
     {
         assert( !vtxs.empty());
         const cv::Vec3f* vp = &vtxs.front();

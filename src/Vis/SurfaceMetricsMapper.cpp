@@ -67,7 +67,7 @@ vtkLookupTable* SurfaceMetricsMapper::scalarLookupTable() { return _cmapper.look
 void SurfaceMetricsMapper::rebuild()
 {
     _cmapper.rebuild();
-    std::for_each( std::begin(_fvs), std::end(_fvs), [this](FV *fv){ this->refreshActorSurface(fv->actor());});
+    std::for_each( std::begin(_fvs), std::end(_fvs), [this](FV *fv){ this->_refreshActorSurface(fv->actor());});
     _fvs.updateRenderers();
 }   // end rebuild
 
@@ -77,12 +77,6 @@ bool SurfaceMetricsMapper::mapMetrics( FV *fv)
     const FM* fm = fv->data();
     if ( !init(fm))
         return false;
-
-    if ( !_smapper->mapsPolys())
-    {
-        std::cerr << "[ERROR] FaceTools::Vis::SurfaceMetricsMapper::mapMetrics: Non-polygon mappings currently not supported!" << std::endl;
-        return false;
-    }   // end if
 
     _smapper->mapMetrics( fm->model(), fv->actor());
     done( fm);
@@ -105,22 +99,33 @@ void SurfaceMetricsMapper::add( FV *fv)
 {
     _fvs.insert(fv);
     vtkActor *actor = fv->actor();
-    vtkCellData *celldata = RVTK::getPolyData(actor)->GetCellData();
+
+    vtkDataSetAttributes *dset = nullptr;
+    if ( _smapper->mapsPolys())
+        dset = (vtkDataSetAttributes*)RVTK::getPolyData(actor)->GetCellData();
+    else
+        dset = (vtkDataSetAttributes*)RVTK::getPolyData(actor)->GetPointData();
+
     if ( isScalarMapping())
     {
         actor->GetMapper()->SetLookupTable( _cmapper.lookupTable().vtk());
-        celldata->SetActiveScalars( label().c_str());
-        actor->GetMapper()->SetScalarVisibility( true);
+        dset->SetActiveScalars( label().c_str());
+        // If scalar mapping vertices, turn on the interpolation of scalars before mapping to the
+        // geometry to make an internal texture map for better (boundaried) rendering of colours.
+        if ( !_smapper->mapsPolys())
+            actor->GetMapper()->SetInterpolateScalarsBeforeMapping(true);
     }   // end if
     else
-        celldata->SetActiveVectors( label().c_str());
-    refreshActorSurface(actor);
+        dset->SetActiveVectors( label().c_str());
+
+    actor->GetMapper()->SetScalarVisibility( isScalarMapping());
+
+    _refreshActorSurface(actor);
 }   // end add
 
 
-// private
-void SurfaceMetricsMapper::refreshActorSurface( vtkActor *actor)
+void SurfaceMetricsMapper::_refreshActorSurface( vtkActor *actor)
 {
     if ( isScalarMapping())
         actor->GetMapper()->SetScalarRange( double(minVisible()), double(maxVisible()));
-}   // end refreshActorSurface
+}   // end _refreshActorSurface

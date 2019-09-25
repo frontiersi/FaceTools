@@ -44,11 +44,11 @@ protected:
 private:
     const Landmark::LmkList* _lmks0;
     const Landmark::LmkList* _lmks1;
-    std::unordered_map<const FV*, vtkActor*> _actor0;
-    std::unordered_map<const FV*, vtkActor*> _actor1;
+    std::unordered_map<const FV*, vtkSmartPointer<vtkActor> > _actor0;
+    std::unordered_map<const FV*, vtkSmartPointer<vtkActor> > _actor1;
 
-    void applyActor( const FV*, const Landmark::LmkList*, std::unordered_map<const FV*, vtkActor*>&);
-    void purgeActor( const FV*, std::unordered_map<const FV*, vtkActor*>&);
+    void applyActor( const FV*, const Landmark::LmkList*, std::unordered_map<const FV*, vtkSmartPointer<vtkActor> >&);
+    void purgeActor( const FV*, std::unordered_map<const FV*, vtkSmartPointer<vtkActor> >&);
 };  // end class
 
 }}   // end namespaces

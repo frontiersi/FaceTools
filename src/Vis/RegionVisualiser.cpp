@@ -166,7 +166,7 @@ void RegionVisualiser::doPurge( const FV *fv)
 
 
 // private
-void RegionVisualiser::applyActor( const FV *fv, const LmkList* lmks, std::unordered_map<const FV*, vtkActor*>& actors)
+void RegionVisualiser::applyActor( const FV *fv, const LmkList* lmks, std::unordered_map<const FV*, vtkSmartPointer<vtkActor> >& actors)
 {
     const FM* fm = fv->data();
     std::vector<cv::Vec3f> vtxs;
@@ -179,13 +179,12 @@ void RegionVisualiser::applyActor( const FV *fv, const LmkList* lmks, std::unord
 
 
 // private
-void RegionVisualiser::purgeActor( const FV *fv, std::unordered_map<const FV*, vtkActor*>& actors)
+void RegionVisualiser::purgeActor( const FV *fv, std::unordered_map<const FV*, vtkSmartPointer<vtkActor> >& actors)
 {
     if ( actors.count(fv) > 0)
     {
         FMV* viewer = fv->viewer();
         viewer->remove( actors.at(fv));
-        actors.at(fv)->Delete();
         actors.erase(fv);
     }   // end if
 }   // end purgeActor

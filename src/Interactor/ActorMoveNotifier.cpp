@@ -73,8 +73,6 @@ void ActorMoveNotifier::actorStop( const vtkProp3D* prop)
         vtkMatrix4x4 *vt = fv->actor()->GetMatrix();
         fm->addTransformMatrix( RVTK::toCV( vt) * cmat.inv());
         fm->unlock();
-
-        MS::showStatus( "Finished moving model.", 5000);
         emit onActorStop(fv);
     }   // end if
 }   // end actorStop

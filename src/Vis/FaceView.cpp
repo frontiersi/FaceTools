@@ -19,6 +19,7 @@
 #include <Vis/SurfaceMetricsMapper.h>
 #include <Vis/BaseVisualisation.h>
 #include <Vis/MetricVisualiser.h>
+#include <Action/ModelSelector.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <vtkProperty.h>
@@ -34,6 +35,17 @@ using FaceTools::FMV;
 using FaceTools::FM;
 using FaceTools::Action::Event;
 using FaceTools::Action::EventGroup;
+using MS = FaceTools::Action::ModelSelector;
+
+
+// static definitions
+bool FaceView::s_smoothLighting(false);
+
+void FaceView::setSmoothLighting( bool v)
+{
+    s_smoothLighting = v;
+    MS::updateAllViews( []( FV* fv){ fv->reset();}, true);
+}   // end setSmoothLighting
 
 
 FaceView::FaceView( FM* fm, FMV* viewer)
@@ -80,8 +92,6 @@ FaceView::~FaceView()
         purge( *_vlayers.begin(), Event::NONE);
     setViewer(nullptr);
     _data->eraseView(this);
-    if ( _actor)
-        _actor->Delete();
 }   // end dtor
 
 
@@ -132,12 +142,17 @@ void FaceView::reset()
     if ( _actor)
     {
         _viewer->remove(_actor);    // Remove the actor
-        _actor->Delete();
         _actor = nullptr;
     }   // end if
 
     // Create the new actor from the data
-    _actor = RVTK::VtkActorCreator::generateActor( _data->model(), _texture);
+    _actor = RVTK::VtkActorCreator::generateActor( _data->model());
+    _texture = _actor->GetTexture();
+
+    vtkProperty* property = _actor->GetProperty();
+    property->SetInterpolationToFlat(); // No lighting interpolation
+    if ( s_smoothLighting)
+        property->SetInterpolationToPhong();
 
     setBackfaceCulling(bface);
     setTextured(tex);
@@ -302,10 +317,7 @@ void FaceView::setWireframe( bool v)
     assert(_actor);
     vtkProperty* p = _actor->GetProperty();
     if (v)
-    {
         p->SetEdgeColor(0.0, 0.7, 0.1);
-        //p->SetLineWidth(1.0f);
-    }   // end if
     p->SetEdgeVisibility(v);
 }   // end setWireframe
 
@@ -319,9 +331,11 @@ bool FaceView::wireframe() const
 void FaceView::setTextured( bool v)
 {
     assert(_actor);
+    vtkProperty* property = _actor->GetProperty();
+
     if ( v && _texture)
     {
-        _actor->GetProperty()->SetColor( 1.0, 1.0, 1.0);    // Set the base colour to white
+        property->SetColor( 1.0, 1.0, 1.0);    // Set the base colour to white
         _actor->SetTexture( _texture);
     }   // end if
     else
@@ -329,6 +343,7 @@ void FaceView::setTextured( bool v)
         setColour(_baseCol);
         _actor->SetTexture( nullptr);
     }   // end else
+
     _updateModelLighting();
 }   // end setTextured
 

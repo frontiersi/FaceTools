@@ -40,9 +40,11 @@ signals:
     void onEnterProp( Vis::FV*, const vtkProp*);
     void onLeaveProp( Vis::FV*, const vtkProp*);
 
+protected:
+    virtual void enterViewer( FMV*) {}
+    virtual void leaveViewer( FMV*) {}
+
 private:
-    void enterViewer( FMV*) override;
-    void leaveViewer( FMV*) override;
     bool mouseMove() override;
     bool leftDrag() override;
     bool middleDrag() override;

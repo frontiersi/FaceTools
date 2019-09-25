@@ -58,7 +58,7 @@ protected:
     virtual void actorSpin( const vtkProp3D*){}
     virtual void actorPan( const vtkProp3D*){}
     virtual void actorMove( const vtkProp3D*){} // Generic non-specific ongoing movement
-    virtual void actorStop( const vtkProp3D*){}  // After actor movement stopped.
+    virtual void actorStop( const vtkProp3D*){} // After actor movement stopped.
 */
 
 private:

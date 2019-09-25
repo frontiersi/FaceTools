@@ -31,11 +31,16 @@ using MS = FaceTools::Action::ModelSelector;
 
 
 ActionToggleCameraActorInteraction::ActionToggleCameraActorInteraction( const QString& dn, const QIcon& ico, const QKeySequence& ks)
-    : FaceAction( dn, ico, ks)
+    : FaceAction( dn, ico, ks), _dblClickDrag(false)
 {
+    const Interactor::SelectNotifier *sn = MS::selector();
+    connect( sn, &Interactor::SelectNotifier::onDoubleClickedSelected, this, &ActionToggleCameraActorInteraction::_doDoubleClicked);
+    connect( sn, &Interactor::SelectNotifier::onLeftButtonUp, this, &ActionToggleCameraActorInteraction::_doLeftButtonUp);
+
     _moveNotifier = std::shared_ptr<ActorMoveNotifier>( new ActorMoveNotifier);
-    connect( &*_moveNotifier, &ActorMoveNotifier::onActorStart, this, &ActionToggleCameraActorInteraction::doOnActorStart);
-    connect( &*_moveNotifier, &ActorMoveNotifier::onActorStop, this, &ActionToggleCameraActorInteraction::doOnActorStop);
+    connect( &*_moveNotifier, &ActorMoveNotifier::onActorStart, this, &ActionToggleCameraActorInteraction::_doOnActorStart);
+    connect( &*_moveNotifier, &ActorMoveNotifier::onActorStop, this, &ActionToggleCameraActorInteraction::_doOnActorStop);
+
     setCheckable( true, false);
 }   // end ctor
 
@@ -63,24 +68,13 @@ QString ActionToggleCameraActorInteraction::whatsThis() const
 
 bool ActionToggleCameraActorInteraction::checkState( Event)
 {
-    const FM* fm = MS::selectedModel();
-
-    /*
-    // Always disable actor moving if the selected model has more than 1 view
-    if ( fm && fm->fvs().size() > 1)
-        MS::setInteractionMode(IMode::CAMERA_INTERACTION);
-    */
-
-    // Sync the move handler
-    _moveNotifier->setEnabled( MS::interactionMode() == IMode::ACTOR_INTERACTION);
-    return _moveNotifier->isEnabled();
+    return MS::interactionMode() == IMode::ACTOR_INTERACTION;
 }   // end checkState
 
 
 bool ActionToggleCameraActorInteraction::checkEnable( Event)
 {
     const FM* fm = MS::selectedModel();
-    //return (fm && fm->fvs().size() == 1) || isChecked();
     return fm || isChecked();
 }   // end checkEnabled
 
@@ -100,15 +94,33 @@ void ActionToggleCameraActorInteraction::doAction( Event)
 }   // end doAction
 
 
-void ActionToggleCameraActorInteraction::doOnActorStart()
+void ActionToggleCameraActorInteraction::_doOnActorStart()
 {
     storeUndo( this, Event::AFFINE_CHANGE);
-}   // end doOnActorStart
+}   // end _doOnActorStart
 
 
-void ActionToggleCameraActorInteraction::doOnActorStop()
+void ActionToggleCameraActorInteraction::_doOnActorStop()
 {
-    //std::cerr << "Stopped moving actor" << std::endl;
     emit onEvent( Event::AFFINE_CHANGE);
-}   // end doOnActorStop
+}   // end _doOnActorStop
 
+
+// Called only when user double clicks on an already selected model.
+void ActionToggleCameraActorInteraction::_doDoubleClicked()
+{
+    _dblClickDrag = true;
+    setChecked( true);
+    execute( Event::USER);
+}   // end _doDoubleClicked
+
+
+void ActionToggleCameraActorInteraction::_doLeftButtonUp()
+{
+    if ( _dblClickDrag)
+    {
+        _dblClickDrag = false;
+        setChecked( false);
+        execute( Event::USER);
+    }   // end if
+}   // end _doLeftButtonUp

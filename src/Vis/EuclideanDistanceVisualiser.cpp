@@ -157,7 +157,7 @@ void EuclideanDistanceVisualiser::doPurge( const FV *fv)
 
 
 // private
-void EuclideanDistanceVisualiser::applyActor( const FV *fv, const LmkList* ll, std::unordered_map<const FV*, vtkActor*>& actors)
+void EuclideanDistanceVisualiser::applyActor( const FV *fv, const LmkList* ll, std::unordered_map<const FV*, vtkSmartPointer<vtkActor> >& actors)
 {
     const FM* fm = fv->data();
 
@@ -168,7 +168,7 @@ void EuclideanDistanceVisualiser::applyActor( const FV *fv, const LmkList* ll, s
     assert( lmks.has(ll->back()));
     const std::vector<cv::Vec3f> vtxs = { lmks.pos(ll->front()), lmks.pos(ll->back())};
 
-    vtkActor* actor = actors[fv] = RVTK::VtkActorCreator::generateLineActor( vtxs);
+    vtkSmartPointer<vtkActor> actor = actors[fv] = RVTK::VtkActorCreator::generateLineActor( vtxs);
     vtkProperty* property = actor->GetProperty();
     property->SetRepresentationToWireframe();
     property->SetRenderLinesAsTubes(false);
@@ -184,13 +184,12 @@ void EuclideanDistanceVisualiser::applyActor( const FV *fv, const LmkList* ll, s
 
 
 // private
-void EuclideanDistanceVisualiser::purgeActor( const FV *fv, std::unordered_map<const FV*, vtkActor*>& actors)
+void EuclideanDistanceVisualiser::purgeActor( const FV *fv, std::unordered_map<const FV*, vtkSmartPointer<vtkActor> >& actors)
 {
     if ( actors.count(fv) > 0)
     {
         FMV* viewer = fv->viewer();
         viewer->remove( actors.at(fv));
-        actors.at(fv)->Delete();
         actors.erase(fv);
     }   // end if
 }   // end purgeActor

@@ -31,7 +31,7 @@ using MS = FaceTools::Action::ModelSelector;
 
 
 ActionSaveFaceModel::ActionSaveFaceModel( const QString& dn, const QIcon& ico, const QKeySequence& ks)
-    : FaceAction( dn, ico, ks)
+    : FaceAction( dn, ico, ks), _saveAs( nullptr)
 {
     setAsync(true);
 }   // end ctor
@@ -43,16 +43,26 @@ bool ActionSaveFaceModel::checkEnable( Event)
         return false;
     const FM *fm = MS::selectedModel();
     fm->lockForRead();
-    const bool isrdy = !fm->isSaved() && (FMM::hasPreferredFileFormat(fm) || !fm->hasMetaData());
+    bool isrdy = !fm->isSaved();
+    if ( !_saveAs)
+        isrdy = !fm->isSaved() && ( FMM::hasPreferredFileFormat(fm) || !fm->hasMetaData());
     fm->unlock();
     return isrdy;
 }   // end testReady
 
 
-bool ActionSaveFaceModel::doBeforeAction( Event)
+bool ActionSaveFaceModel::doBeforeAction( Event e)
 {
-    MS::showStatus("Saving...");
-    return true;
+    bool isNormalSave = true;
+    const FM *fm = MS::selectedModel();
+    if ( FMM::hasPreferredFileFormat(fm) || !fm->hasMetaData())
+        MS::showStatus("Saving...");
+    else if ( _saveAs)
+    {
+        _saveAs->execute(e);
+        isNormalSave = false;   // Will cause this action to cancel and allow the SaveAs action to complete.
+    }   // end else
+    return isNormalSave;
 }   // end doBeforeAction
 
 

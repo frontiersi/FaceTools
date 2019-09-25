@@ -28,7 +28,7 @@ LoopView::LoopView( const RFeatures::ObjModel& model, double lw) : _model(model)
 void LoopView::add( const std::list<int>& vidxs, double r, double g, double b, double a)
 {
     // The returned actor has the model's current transform matrix poked to it.
-    vtkActor* actor = RVTK::VtkActorCreator::generateLineActor( _model, vidxs, true);
+    vtkSmartPointer<vtkActor> actor = RVTK::VtkActorCreator::generateLineActor( _model, vidxs, true);
 
     vtkProperty* property = actor->GetProperty();
     property->SetRepresentationToWireframe();

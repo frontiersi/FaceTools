@@ -17,6 +17,7 @@
 
 #include <Vis/PolyLabelsView.h>
 #include <vtkPointData.h>
+#include <cassert>
 using FaceTools::Vis::PolyLabelsView;
 
 
@@ -27,24 +28,25 @@ vtkSmartPointer<vtkPolyData> PolyLabelsView::createLabels( const RFeatures::ObjM
     vtkSmartPointer<vtkCellArray> vertices = vtkSmartPointer<vtkCellArray>::New();
     vtkSmartPointer<vtkIntArray> vlabels = vtkSmartPointer<vtkIntArray>::New();
 
-    const IntSet& fids = model.faces();
-    const int np = static_cast<int>(fids.size());
+    assert( model.hasSequentialFaceIds());
+
+    const int np = model.numPolys();
     points->SetNumberOfPoints( np);
     vlabels->SetNumberOfValues( np);
     vlabels->SetName( "polyIds");
 
-    int i = 0;
-    for ( int fid : fids)
+    for ( int i = 0; i < np; ++i)
     {
-        vlabels->SetValue( i, fid);
+        vlabels->SetValue( i, i);
 
-        cv::Vec3d mpos = (model.uvtx(model.fvidxs(fid)[0]) +
-                          model.uvtx(model.fvidxs(fid)[1]) +
-                          model.uvtx(model.fvidxs(fid)[2])) * 1.0/3;
+        const int* fvidxs = model.fvidxs(i);
+        cv::Vec3d mpos = (model.uvtx(fvidxs[0]) +
+                          model.uvtx(fvidxs[1]) +
+                          model.uvtx(fvidxs[2])) * 1.0/3;
 
         points->SetPoint( i, &mpos[0]);
         vertices->InsertNextCell(1);
-        vertices->InsertCellPoint(i++);
+        vertices->InsertCellPoint(i);
     }   // end for
 
     pdata->SetVerts( vertices);

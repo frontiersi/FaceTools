@@ -18,10 +18,12 @@
 #include <Interactor/SelectNotifier.h>
 #include <Action/ModelSelector.h>
 #include <FaceModelViewer.h>
+#include <FaceModel.h>
 #include <cassert>
 using FaceTools::Interactor::SelectNotifier;
 using FaceTools::ModelViewer;
 using FaceTools::Vis::FV;
+using FaceTools::FMV;
 using MS = FaceTools::Action::ModelSelector;
 
 
@@ -83,11 +85,35 @@ FV* SelectNotifier::_underPoint() const
 }   // end _underPoint
 
 
+void SelectNotifier::enterViewer( FMV *fmv)
+{
+    if ( _selected && _selected->viewer() != fmv)
+    {
+        // Set the selected view as the one having fmv as its viewer
+        for ( FV *fv : _selected->data()->fvs())
+        {
+            if ( fv->viewer() == fmv)
+            {
+                setSelected( fv, true);
+                break;
+            }   // end if
+        }   // end for
+    }   // end if
+}   // end enterViewer
+
+
 bool SelectNotifier::leftButtonDown()
 {
     setSelected( _underPoint(), true);
     return false;
 }   // end leftButtonDown
+
+
+bool SelectNotifier::leftButtonUp()
+{
+    emit onLeftButtonUp();
+    return false;
+}   // end leftButtonUp
 
 
 bool SelectNotifier::rightButtonDown()
@@ -101,8 +127,13 @@ bool SelectNotifier::leftDoubleClick()
 {
     FV* fv = _underPoint();
     if ( fv)
+    {
         setSelected( fv, true);
+        emit onDoubleClickedSelected();
+    }   // end if
+    /*
     else // deselect if double clicked off a model
         _eraseSelected();
+    */
     return false;
 }   // end leftDoubleClick

@@ -56,7 +56,7 @@ void BoundingView::pokeTransform( vtkActor* actor, const vtkMatrix4x4* d)
 {
     /*
     static int fcount = 0;
-    std::cerr << "\nFCOUNT: " << (fcount++) << std::endl;
+    std::cerr << "\nFCOUNT: " << std::hex << actor << " " << (fcount++) << std::endl;
     */
 
     // Bounds transform already has model transform applied so need to remove before adding the provided view transform.

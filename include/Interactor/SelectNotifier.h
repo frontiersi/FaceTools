@@ -43,9 +43,13 @@ public:
 
 signals:
     void onSelected( Vis::FV*, bool);   // Fired selection / deselection of a model.
+    void onDoubleClickedSelected();     // Double clicked the selected model (fires after onSelected).
+    void onLeftButtonUp();
 
 private:
+    void enterViewer( FMV*) override;
     bool leftButtonDown() override;
+    bool leftButtonUp() override;
     bool rightButtonDown() override;
     bool leftDoubleClick() override;
 

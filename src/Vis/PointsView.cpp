@@ -27,8 +27,7 @@ using FaceTools::ModelViewer;
 PointsView::PointsView( const RFeatures::ObjModel& model, const IntSet& vidxs, double ps, double r, double g, double b, double a)
 {
     // The returned actor has the model's current transform matrix applied to it.
-    vtkActor* actor = RVTK::VtkActorCreator::generatePointsActor( model, vidxs);
-
+    vtkSmartPointer<vtkActor> actor = RVTK::VtkActorCreator::generatePointsActor( model, vidxs);
     vtkProperty* property = actor->GetProperty();
     property->SetRepresentationToPoints();
     property->SetPointSize( ps);

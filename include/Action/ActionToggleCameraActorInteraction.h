@@ -37,11 +37,14 @@ protected:
     void doAction( Event) override;
 
 private slots:
-    void doOnActorStart();
-    void doOnActorStop();
+    void _doOnActorStart();
+    void _doOnActorStop();
+    void _doDoubleClicked();
+    void _doLeftButtonUp();
 
 private:
     std::shared_ptr<Interactor::ActorMoveNotifier> _moveNotifier;
+    bool _dblClickDrag;
 };  // end class
 
 

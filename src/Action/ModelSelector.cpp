@@ -78,6 +78,7 @@ const SelectNotifier* ModelSelector::selector() { return &sn();}
 
 void ModelSelector::setInteractionMode(IMode m, bool v)
 {
+    //std::cerr << "SET INTERACTION MODE TO: " << (m == IMode::ACTOR_INTERACTION ? "ACTOR" : "CAMERA") << std::endl;
     setCursor( Qt::CursorShape::ArrowCursor);
     if ( m == IMode::ACTOR_INTERACTION)
         setCursor( Qt::CursorShape::DragMoveCursor);
@@ -163,6 +164,36 @@ void ModelSelector::setSelected( FV* fv)
 void ModelSelector::setAutoFocusOnSelectEnabled( bool v) { me()->_autoFocus = v;}
 
 
+void ModelSelector::setShowBoundingBoxesOnSelected( bool v)
+{
+    me()->_showBoxes = v;
+
+    // Do nothing if the SelectNotifier is not yet constructed
+    if ( me()->_sn == nullptr)
+        return;
+
+    FV *fv = me()->selectedView();
+    if ( fv)
+    {
+        me()->_doOnSelected( fv, true); // Refresh presence of bounding box around selected view
+        fv->viewer()->updateRender();
+    }   // end if
+}   // end setShowBoundingBoxesOnSelected
+
+
+void ModelSelector::updateAllViews( const std::function<void(FV*)>& fn, bool doUpdateRender)
+{
+    for ( FMV* fmv : me()->_viewers)
+    {
+        for ( FV *fv : fmv->attached())
+            fn(fv);
+        if ( doUpdateRender)
+            fmv->updateRender();
+    }   // end for
+
+}   // end updateAllViews
+
+
 void ModelSelector::updateRender()
 {
     for ( FMV* fmv : me()->_viewers)
@@ -193,24 +224,25 @@ SelectNotifier& ModelSelector::sn()
     if ( !me()->_sn)
     {
         SelectNotifier* fvsi = me()->_sn = new SelectNotifier;
-        QObject::connect( fvsi, &SelectNotifier::onSelected,
-                          [](FV* fv, bool s){ me()->doOnSelected( fv, s);});
+        QObject::connect( fvsi, &SelectNotifier::onSelected, [](FV* fv, bool s){ me()->_doOnSelected( fv, s);});
     }   // end if
     return *me()->_sn;
 }   // end sn
 
 
 // private
-ModelSelector::ModelSelector() : _sbar(nullptr), _autoFocus(true), _defv(-1), _sn(nullptr) {}
+ModelSelector::ModelSelector() : _sbar(nullptr), _autoFocus(true), _showBoxes(true), _defv(-1), _sn(nullptr) {}
 
 
-// private
-void ModelSelector::doOnSelected( FV *fv, bool v)
+void ModelSelector::_doOnSelected( FV *fv, bool v)
 {
-    //std::cerr << "ModelSelector::doOnSelected: selected model = " << std::hex << fv->data() << std::dec << std::endl;
     if ( v)
     {
-        fv->apply(&_bvis);   // Apply the bounding box around the model
+        if ( _showBoxes)
+            fv->apply(&_bvis);   // Apply the bounding box around the model
+        else
+            _bvis.setVisible(fv,false);
+
         if ( _autoFocus)
         {
             if ( fv->data()->currentAssessment()->landmarks().empty())
@@ -221,4 +253,4 @@ void ModelSelector::doOnSelected( FV *fv, bool v)
     }   // end if
     else
         _bvis.setVisible(fv,false);
-}   // end doOnSelected
+}   // end _doOnSelected

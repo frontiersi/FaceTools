@@ -67,9 +67,9 @@ private:
     ModelViewer *_viewer;
     int _id;
     Handle *_h0, *_h1;
-    vtkActor* _lprop;
+    vtkSmartPointer<vtkActor> _lprop;
 #ifndef NDEBUG
-    vtkActor* _pprop;
+    vtkSmartPointer<vtkActor> _pprop;
 #endif
 
     PathView( const PathView&) = delete;

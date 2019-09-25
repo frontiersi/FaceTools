@@ -27,19 +27,19 @@ vtkSmartPointer<vtkPolyData> VertexLabelsView::createLabels( const RFeatures::Ob
     vtkSmartPointer<vtkCellArray> vertices = vtkSmartPointer<vtkCellArray>::New();
     vtkSmartPointer<vtkIntArray> vlabels = vtkSmartPointer<vtkIntArray>::New();
 
-    const IntSet& vids = model.vtxIds();
-    const int nv = static_cast<int>(vids.size());
+    assert( model.hasSequentialVertexIds());
+
+    const int nv = model.numVtxs();
     points->SetNumberOfPoints( nv);
     vlabels->SetNumberOfValues( nv);
     vlabels->SetName( "vertexIds");
 
-    int i = 0;
-    for ( int vid : vids)
+    for ( int i = 0; i < nv; ++i)
     {
-        vlabels->SetValue( i, vid);
-        points->SetPoint( i, &model.uvtx(vid)[0]);
+        vlabels->SetValue( i, i);
+        points->SetPoint( i, &model.uvtx(i)[0]);
         vertices->InsertNextCell(1);
-        vertices->InsertCellPoint(i++);
+        vertices->InsertCellPoint(i);
     }   // end for
 
     pdata->SetVerts( vertices);

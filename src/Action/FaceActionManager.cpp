@@ -68,9 +68,8 @@ FaceActionManager::Ptr FaceActionManager::get( QWidget* parent)
 // private
 FaceActionManager::FaceActionManager()
 {
-    using FaceTools::Interactor::SelectNotifier;
-    const SelectNotifier* sn = MS::selector();
-    connect( sn, &SelectNotifier::onSelected, [this](){ this->doEvent( Event::MODEL_SELECT);});
+    const Interactor::SelectNotifier *sn = MS::selector();
+    connect( sn, &Interactor::SelectNotifier::onSelected, [this](){ this->doEvent( Event::MODEL_SELECT);});
 }   // end ctor
 
 

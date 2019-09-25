@@ -100,7 +100,7 @@ private:
     float _minv, _maxv;
     QTools::ScalarColourRangeMapper _cmapper;
     FVS _fvs;
-    void refreshActorSurface( vtkActor*);
+    void _refreshActorSurface( vtkActor*);
 };  // end class
 
 }}   // end namespaces

@@ -68,7 +68,7 @@ bool ActionChangeSurfaceMappingRange::checkEnable( Event)
         _widget->setMin( vmin);
         _widget->setMax( vmax);
 
-        const float ss = (rmax - rmin) / 20;
+        const float ss = (rmax - rmin) / 40;
         _widget->setSingleStepSize( ss);
 
         connect( _widget, &QTools::RangeMinMax::rangeChanged, this, &ActionChangeSurfaceMappingRange::doOnWidgetRangeChanged);
