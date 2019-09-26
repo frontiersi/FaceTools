@@ -81,30 +81,39 @@ void SelectNotifier::_eraseSelected()
 
 FV* SelectNotifier::_underPoint() const
 {
-    return _available.find( MS::mouseViewer()->getPointedAt(MS::mousePos()));
+    FMV *fmv = mouseViewer();   // Current viewer the mouse is in
+    return _available.find( fmv->getPointedAt( fmv->mouseCoords()));
 }   // end _underPoint
 
 
-void SelectNotifier::enterViewer( FMV *fmv)
+FV* SelectNotifier::_findSelected() const
 {
-    if ( _selected && _selected->viewer() != fmv)
+    FV *nfv = _underPoint();
+    if ( !nfv && _selected && (_selected->viewer() != mouseViewer()))
     {
-        // Set the selected view as the one having fmv as its viewer
-        for ( FV *fv : _selected->data()->fvs())
+        // If the mouse viewer has only a single view attached, make this the selected one.
+        if ( mouseViewer()->attached().size() == 1)
+            nfv = mouseViewer()->attached().first();
+        else
         {
-            if ( fv->viewer() == fmv)
+            // Otherwise, set the selected view of the currently selected model as the one having fmv as its viewer.
+            for ( FV *fv : _selected->data()->fvs())
             {
-                setSelected( fv, true);
-                break;
-            }   // end if
-        }   // end for
+                if ( fv->viewer() == mouseViewer())
+                {
+                    nfv = fv;
+                    break;
+                }   // end if
+            }   // end for
+        }   // end else
     }   // end if
-}   // end enterViewer
+    return nfv;
+}   // end _findSelected
 
 
 bool SelectNotifier::leftButtonDown()
 {
-    setSelected( _underPoint(), true);
+    setSelected( _findSelected(), true);
     return false;
 }   // end leftButtonDown
 
@@ -116,24 +125,18 @@ bool SelectNotifier::leftButtonUp()
 }   // end leftButtonUp
 
 
-bool SelectNotifier::rightButtonDown()
-{
-    setSelected( _underPoint(), true);
-    return false;
-}   // end rightButtonDown
-
-
 bool SelectNotifier::leftDoubleClick()
 {
-    FV* fv = _underPoint();
+    FV* fv = _findSelected();
     if ( fv)
     {
         setSelected( fv, true);
         emit onDoubleClickedSelected();
     }   // end if
-    /*
-    else // deselect if double clicked off a model
-        _eraseSelected();
-    */
+
     return false;
 }   // end leftDoubleClick
+
+
+bool SelectNotifier::rightButtonDown() { return leftButtonDown();}
+bool SelectNotifier::rightDoubleClick() { return leftDoubleClick();}

@@ -47,17 +47,18 @@ signals:
     void onLeftButtonUp();
 
 private:
-    void enterViewer( FMV*) override;
     bool leftButtonDown() override;
     bool leftButtonUp() override;
     bool rightButtonDown() override;
     bool leftDoubleClick() override;
+    bool rightDoubleClick() override;
 
     Vis::FV* _selected;
     FVS _available;
 
     void _eraseSelected();
-    Vis::FV* _underPoint() const;
+    Vis::FV *_underPoint() const;
+    Vis::FV *_findSelected() const;
 };  // end class
 
 }}   // end namespace

@@ -46,22 +46,23 @@ protected:
     // the standard camera/actor movement interactions.
     virtual bool mouseMove( ){ return false;}  // Move mouse with no buttons depressed.
 
-    virtual bool leftButtonDown( ){ return false;}  // Not called if leftDoubleClick
-    virtual bool leftButtonUp( ){ return false;}    // Not called if leftDoubleClick
-    virtual bool leftDoubleClick( ){ return false;}
+    virtual bool leftButtonDown(){ return false;}  // Not called if leftDoubleClick
+    virtual bool leftButtonUp() { return false;}    // Not called if leftDoubleClick
+    virtual bool leftDoubleClick(){ return false;}
 
-    virtual bool middleButtonDown( ){ return false;}
-    virtual bool middleButtonUp( ){ return false;}
+    virtual bool middleButtonDown(){ return false;}
+    virtual bool middleButtonUp(){ return false;}
 
-    virtual bool rightButtonDown( ){ return false;}
-    virtual bool rightButtonUp( ){ return false;}
+    virtual bool rightButtonDown(){ return false;}
+    virtual bool rightButtonUp(){ return false;}
+    virtual bool rightDoubleClick() { return false;}
 
-    virtual bool leftDrag( ){ return false;}   // Move mouse with left button depressed.
-    virtual bool rightDrag( ){ return false;}  // Move mouse with right button depressed.
-    virtual bool middleDrag( ){ return false;} // Move mouse with middle button depressed.
+    virtual bool leftDrag(){ return false;}   // Move mouse with left button depressed.
+    virtual bool rightDrag(){ return false;}  // Move mouse with right button depressed.
+    virtual bool middleDrag(){ return false;} // Move mouse with middle button depressed.
 
-    virtual bool mouseWheelForward( ){ return false;}
-    virtual bool mouseWheelBackward( ){ return false;}
+    virtual bool mouseWheelForward(){ return false;}
+    virtual bool mouseWheelBackward(){ return false;}
 */
 
 private:

@@ -27,6 +27,7 @@ using FaceTools::Action::FaceActionManager;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::EventGroup;
 using FaceTools::Action::Event;
+using FaceTools::FileIO::FMM;
 using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
 
@@ -134,9 +135,8 @@ void FaceActionManager::close( const FM* fm)
 
 void FaceActionManager::doEvent( EventGroup egrp)
 {
-    const Event E = egrp.event();
     const FM* fm = MS::selectedModel();
-    if ( egrp.is(Event::ACT_CANCELLED))
+    if ( (!fm && FMM::numOpen() > 0) || egrp.is(Event::ACT_CANCELLED))
         return;
 
 #ifndef NDEBUG
@@ -147,6 +147,8 @@ void FaceActionManager::doEvent( EventGroup egrp)
     // executed actions always refresh their own state upon completion).
     // NOTE sact may be null since a FaceAction may not be causing this call!
     FaceAction* sact = qobject_cast<FaceAction*>( sender());
+
+    const Event E = egrp.event();
 
     // Purge actions first.
     for ( FaceAction* act : _actions)
