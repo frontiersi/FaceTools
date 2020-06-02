@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,59 +16,35 @@
  ************************************************************************/
 
 #include <PathSet.h>
-#include <algorithm>
-#include <Transformer.h>    // RFeatures
+#include <cassert>
 using FaceTools::PathSet;
 using FaceTools::Path;
 using FaceTools::FM;
-using PathPair = std::pair<int, Path>;
-using RFeatures::ObjModelKDTree;
+using FaceTools::Vec3f;
+using FaceTools::Mat4f;
 
 
-PathSet::Ptr PathSet::create()
-{
-    return Ptr( new PathSet, [](PathSet* d){delete d;});
-}   // end create
+PathSet::PathSet() : _sid(0) {}
 
-
-PathSet::Ptr PathSet::deepCopy() const
-{
-    PathSet* pths = new PathSet;
-    *pths = *this;
-    return Ptr( pths, [](PathSet* d){ delete d;});
-}   // end deepCopy
-
-
-// private
-PathSet::PathSet() : _sid(0)//, _aid(-1)
-{
-}   // end ctor
-
-
-// private
 PathSet::~PathSet(){}
 
 
-void PathSet::recalculate( const FM* fm)
+void PathSet::update( const FM* fm)
 {
     for ( auto& p : _paths)
-        p.second.recalculate( fm);
-}   // end recalculate
+        p.second.update( fm);
+}   // end update
 
 
-// private
-int PathSet::setPath( const Path& path)
+int PathSet::_setPath( const Path& path)
 {
-    _paths[path.id] = path;
-    _ids.insert(path.id);
-    return path.id;
-}   // end setPath
+    _paths[path.id()] = path;
+    _ids.insert(path.id());
+    return path.id();
+}   // end _setPath
 
 
-int PathSet::addPath( const cv::Vec3f& v)
-{
-    return setPath( Path( _sid++, v));
-}   // end addPath
+int PathSet::addPath( const Vec3f& v) { return _setPath( Path( _sid++, v));}   // end addPath
 
 
 bool PathSet::removePath( int id)
@@ -81,46 +57,52 @@ bool PathSet::removePath( int id)
 }   // end removePath
 
 
+void PathSet::reset()
+{
+    _paths.clear();
+    _ids.clear();
+    _sid = 0;
+}   // end reset
+
+
 bool PathSet::renamePath( int id, const std::string& nm)
 {
     if ( _ids.count(id) == 0)
         return false;
-    _paths.at(id).name = nm;
+    _paths.at(id).setName(nm);
     return true;
 }   // end renamePath
 
 
-Path* PathSet::path( int pid)
+Path& PathSet::path( int pid)
 {
-    if ( !has(pid))
-        return nullptr;
-    return &_paths.at(pid);
+    assert( has(pid));
+    return _paths.at(pid);
 }   // end path
 
 
-const Path* PathSet::path( int pid) const
+const Path& PathSet::path( int pid) const
 {
-    if ( !has(pid))
-        return nullptr;
-    return &_paths.at(pid);
+    assert( has(pid));
+    return _paths.at(pid);
 }   // end path
 
 
-void PathSet::transform( const cv::Matx44d& T)
+QString PathSet::name( int pid) const { return QString::fromStdString( path(pid).name());}
+
+
+void PathSet::transform( const Mat4f& T)
 {
-    const RFeatures::Transformer mover(T);
     for ( auto& p : _paths)
-    {
-        std::list<cv::Vec3f>& vtxs = p.second.vtxs;
-        std::for_each(std::begin(vtxs), std::end(vtxs), [&](cv::Vec3f& v) { mover.transform(v); });  // Move in-place
-    }   // end for
+        p.second.transform(T);
 }   // end transform
 
 
-void PathSet::write( PTree& pathsNode) const
+void PathSet::write( PTree& pathsNode, bool withExtras) const
 {
-    std::for_each( std::begin(_paths), std::end(_paths), [&](const PathPair& p){ pathsNode << p.second;});
-}   // end operator<<
+    for ( const auto& p : _paths)
+        p.second.write( pathsNode, withExtras);
+}   // end write
 
 
 bool PathSet::read( const PTree& pathsNode)
@@ -128,10 +110,10 @@ bool PathSet::read( const PTree& pathsNode)
     for ( const PTree::value_type& lvt : pathsNode)
     {
         Path path;
-        lvt.second >> path;
-        path.id = _sid++;
-        setPath(path);
+        path.read( lvt.second);
+        path.setId( _sid++);
+        _setPath(path);
     }   // end for
     return true;
-}   // end operator>>
+}   // end read
 

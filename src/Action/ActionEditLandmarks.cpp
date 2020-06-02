@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,85 +16,141 @@
  ************************************************************************/
 
 #include <Action/ActionEditLandmarks.h>
-#include <FaceModel.h>
-#include <FaceTools.h>
-#include <VtkTools.h>
+#include <Action/ActionUpdateMeasurements.h>
+#include <Action/ActionOrientCameraToFace.h>
+#include <LndMrk/LandmarksManager.h>
+#include <Metric/MetricManager.h>
 using FaceTools::Action::ActionEditLandmarks;
+using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Action::UndoState;
-using FaceTools::Action::ActionVisualise;
-using FaceTools::Interactor::LandmarksHandler;
-using FaceTools::Vis::LandmarksVisualisation;
-using FaceTools::FVS;
-using FaceTools::FM;
 using FaceTools::Vis::FV;
+using FaceTools::Interactor::LandmarksHandler;
+using FaceTools::Widget::LandmarksDialog;
+using FaceTools::FaceLateral;
 using MS = FaceTools::Action::ModelSelector;
-
-Q_DECLARE_METATYPE( FaceTools::Landmark::LandmarkSet::Ptr)
+using LMAN = FaceTools::Landmark::LandmarksManager;
 
 
 ActionEditLandmarks::ActionEditLandmarks( const QString& dn, const QIcon& ico, const QKeySequence& ks)
-    : ActionVisualise( dn, ico, _vis = new LandmarksVisualisation, ks)
+    : FaceAction( dn, ico, ks), _handler( LandmarksHandler::create()),
+        _dialog(nullptr),
+        _actShow(nullptr), _actAlign(nullptr), _actRestore(nullptr), _actShowLabels(nullptr),
+        _lmid(-1), _lat(FACE_LATERAL_MEDIAL)
 {
-    LandmarksHandler *lint = new LandmarksHandler( *_vis);
-    connect( lint, &LandmarksHandler::onStartedDrag, [this](){ storeUndo(this);});
-    connect( lint, &LandmarksHandler::onFinishedDrag, [this](){ emit onEvent( Event::LANDMARKS_CHANGE);});
-    _handler = std::shared_ptr<LandmarksHandler>( lint);
-    addTriggerEvent( Event::LOADED_MODEL);
-    addTriggerEvent( Event::FACE_DETECTED);
-    addTriggerEvent( Event::LANDMARKS_CHANGE);
+    setCheckable( true, false);
+    addTriggerEvent( Event::MASK_CHANGE | Event::CLOSED_MODEL);
 }   // end ctor
 
 
-ActionEditLandmarks::~ActionEditLandmarks()
+void ActionEditLandmarks::postInit()
 {
-    delete _vis;
-}   // end dtor
+    assert(_actShow);
+    assert(_actAlign);
+    assert(_actRestore);
+    assert(_actShowLabels);
+
+    _dialog = new LandmarksDialog( static_cast<QWidget*>(parent()));
+    _dialog->setShowAction( _actShow);
+    _dialog->setAlignAction( _actAlign);
+    _dialog->setRestoreAction( _actRestore);
+    _dialog->setLabelsAction( _actShowLabels);
+
+    connect( &*_handler, &LandmarksHandler::onEnterLandmark, _dialog, &LandmarksDialog::setSelectedLandmark);
+    connect( &*_handler, &LandmarksHandler::onStartedDrag, this, &ActionEditLandmarks::_doOnStartedDrag);
+    connect( &*_handler, &LandmarksHandler::onDoingDrag, this, &ActionEditLandmarks::_doOnDoingDrag);
+    connect( &*_handler, &LandmarksHandler::onFinishedDrag, this, &ActionEditLandmarks::_doOnDoingDrag);
+    connect( _dialog, &LandmarksDialog::finished, this, &ActionEditLandmarks::_doOnClosedDialog);
+}   // end postInit
 
 
 bool ActionEditLandmarks::checkState( Event e)
 {
-    const bool chk = ActionVisualise::checkState( e);
-    _handler->setEnabled(chk);
-    const FM* fm = MS::selectedModel();
-    _vis->setHighlighted( fm);  // un-highlights all before highlighting only model's landmarks if not null
-    _vis->syncLandmarks( fm);
-    return chk;
+    const FM *fm = MS::selectedModel();
+    _handler->refreshState();
+    return fm && (_dialog->isVisible() || (has(e, Event::MASK_CHANGE) && has(e, Event::LANDMARKS_CHANGE) && fm->hasLandmarks()));
 }   // end checkState
 
 
-bool ActionEditLandmarks::doBeforeAction( Event)
+void ActionEditLandmarks::doAction( Event e)
 {
-    return true;//!EventGroup(e).is(Event::ASSESSMENT_CHANGE);
-}   // end doBeforeAction
-
-
-void ActionEditLandmarks::doAfterAction( Event)
-{
-    if ( isChecked())
+    if ( isChecked() && !_dialog->isVisible())
     {
-        MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-        if ( MS::selectedModel()->currentAssessment()->hasLandmarks())
-            MS::showStatus( "Move landmarks by left-clicking and dragging.");
+        QString msg;
+        const FM *fm = MS::selectedModel();
+        MS::setLockSelected(true);
+        if ( fm && has( e, Event::MASK_CHANGE) && fm->hasMask())
+            msg = tr("Review and confirm landmark placement in the main viewer");
+        _dialog->setMessage( msg);
+
+        _egrp = Event::NONE;
+        _lmid = -1;
+        _lat = FACE_LATERAL_MEDIAL;
+        for ( int id : LMAN::ids())
+            LMAN::landmark(id)->setLocked( false);
+
+        _dialog->show();
     }   // end if
-    else
-        MS::clearStatus();
-}   // end doAfterAction
+    else if ( _dialog->isVisible())
+        _doOnClosedDialog();
+}   // end doAction
 
 
-UndoState::Ptr ActionEditLandmarks::makeUndoState() const
+void ActionEditLandmarks::_doOnClosedDialog()
 {
-    UndoState::Ptr us = UndoState::create( this, Event::LANDMARKS_CHANGE);
-    us->setName( "Move Landmark");
-    Landmark::LandmarkSet::Ptr lmks = us->model()->currentAssessment()->landmarks().deepCopy();
-    us->setUserData( "Lmks", QVariant::fromValue(lmks));
-    return us;
-}   // end makeUndoState
+    setChecked(false);
+    _dialog->hide();
+    for ( int id : LMAN::ids())
+        LMAN::landmark(id)->setLocked( true);
+
+    const FV *fv = MS::selectedView();
+    if ( fv)
+    {
+        // If landmarks were changed and the model is out of alignment, realign.
+        _egrp |= Event::CAMERA_CHANGE;
+        ActionOrientCameraToFace::orientToFace( fv, 1);
+        MS::setLockSelected(false);
+        MS::setInteractionMode( IMode::CAMERA_INTERACTION);
+        emit onEvent( _egrp);
+    }   // end if
+    _egrp = Event::NONE;
+}   // end _doOnClosedDialog
 
 
-void ActionEditLandmarks::restoreState( const UndoState* us)
+void ActionEditLandmarks::saveState( UndoState &us) const
 {
-    Landmark::LandmarkSet::Ptr lmks = us->userData("Lmks").value<Landmark::LandmarkSet::Ptr>();
-    us->model()->setLandmarks(lmks);
-    _vis->syncLandmarks( us->model());
+    us.setName( "Move Landmark");
+    us.setUserData( "LandmarkId", QVariant::fromValue(_lmid));
+    us.setUserData( "LandmarkLat", QVariant::fromValue(_lat));
+    const Vec3f &pos = us.model()->currentLandmarks().pos(_lmid, _lat);
+    us.setUserData( "LandmarkPos", QVariant::fromValue(pos));
+}   // end saveState
+
+
+void ActionEditLandmarks::restoreState( const UndoState &us)
+{
+    _lmid = us.userData("LandmarkId").value<int>();
+    _lat = us.userData("LandmarkLat").value<FaceLateral>();
+    us.model()->setLandmarkPosition( _lmid, _lat, us.userData("LandmarkPos").value<Vec3f>());
+    if ( has( us.events(), Event::METRICS_CHANGE))
+        ActionUpdateMeasurements::updateMeasurementsForLandmark( us.model(), _lmid);
 }   // end restoreState
+
+
+void ActionEditLandmarks::_doOnStartedDrag( int lmid, FaceLateral lat)
+{
+    _lmid = lmid;
+    _lat = lat;
+    _egrp = Event::LANDMARKS_CHANGE;
+    if ( !Metric::MetricManager::metricsForLandmark( lmid).empty())
+        _egrp |= Event::METRICS_CHANGE;
+    storeUndo( this, _egrp, false);
+}   // end _doOnStartedDrag
+
+
+void ActionEditLandmarks::_doOnDoingDrag( int lmid, FaceLateral)
+{
+    // Update measurements related to the moved landmark
+    ActionUpdateMeasurements::updateMeasurementsForLandmark( MS::selectedModel(), lmid);
+    emit onEvent( _egrp);
+}   // end _doOnDoingDrag

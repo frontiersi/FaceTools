@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,14 +27,12 @@ using FaceTools::FileIO::FMM;
 using FaceTools::Action::FAM;
 using FaceTools::FMS;
 using FaceTools::FM;
-using FaceTools::Action::EventGroup;
-using MS = FaceTools::Action::ModelSelector;
 
 
 ActionCloseAllFaceModels::ActionCloseAllFaceModels( const QString& dname, const QIcon& icon, const QKeySequence& ks)
     : FaceAction( dname, icon, ks) {}
 
-bool ActionCloseAllFaceModels::checkEnable( Event) { return FMM::numOpen() > 0;}
+bool ActionCloseAllFaceModels::isAllowed( Event) { return FMM::numOpen() > 0;}
 
 bool ActionCloseAllFaceModels::doBeforeAction( Event)
 {
@@ -53,7 +51,7 @@ bool ActionCloseAllFaceModels::doBeforeAction( Event)
     bool doclose = true;
     if ( doshowmsg)
     {
-        static const QString msg = tr("Model(s) have unsaved changes! Close anyway?");
+        static const QString msg = tr("Model(s) are unsaved! Really close?");
         doclose = QMessageBox::Yes == QMessageBox::warning( static_cast<QWidget*>(parent()), tr("Unsaved changes!"), msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     }   // end if
 
@@ -64,17 +62,14 @@ bool ActionCloseAllFaceModels::doBeforeAction( Event)
 void ActionCloseAllFaceModels::doAction( Event)
 {
     UndoStates::clear();
-    for ( const FMV* fmv : MS::viewers())
-    {
-        const FMS fms = fmv->attached().models();   // Copy out since closing
-        for ( const FM* fm : fms)
-            FAM::close( fm);
-    }   // end fmv
+    const FMS& models = FMM::opened();
+    while ( !models.empty())
+        FAM::close( *models.begin());
 }   // end doAction
 
 
-void ActionCloseAllFaceModels::doAfterAction( Event)
+Event ActionCloseAllFaceModels::doAfterAction( Event)
 {
-    MS::setInteractionMode(IMode::CAMERA_INTERACTION);
-    emit onEvent( { Event::CLOSED_MODEL, Event::ALL_VIEWERS, Event::ALL_VIEWS, Event::VIEWER_CHANGE});
+    ModelSelector::setInteractionMode(IMode::CAMERA_INTERACTION);
+    return Event::CLOSED_MODEL | Event::ALL_VIEWERS | Event::ALL_VIEWS | Event::VIEWER_CHANGE;
 }   // end doAfterAction

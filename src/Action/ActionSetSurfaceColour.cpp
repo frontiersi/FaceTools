@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2018 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,12 +33,12 @@ ActionSetSurfaceColour::ActionSetSurfaceColour( const QString& dname)
 }   // end ctor
 
 
-bool ActionSetSurfaceColour::checkEnable( Event)
+bool ActionSetSurfaceColour::isAllowed( Event)
 {
     if ( MS::isViewSelected())
         setIconColour( MS::selectedView()->colour());
     return MS::isViewSelected();
-}   // end checkEnabled
+}   // end isAllowedd
 
 
 bool ActionSetSurfaceColour::doBeforeAction( Event)
@@ -53,8 +53,10 @@ bool ActionSetSurfaceColour::doBeforeAction( Event)
 void ActionSetSurfaceColour::doAction( Event)
 {
     MS::selectedView()->setColour( _curColour);
-    emit onEvent( Event::VIEW_CHANGE);
 }   // end doAction
+
+
+Event ActionSetSurfaceColour::doAfterAction( Event) { return Event::VIEW_CHANGE;}
 
 
 void ActionSetSurfaceColour::setIconColour( const QColor& colour)

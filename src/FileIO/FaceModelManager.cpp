@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 #include <MiscFunctions.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
-#include <FileIO.h> // rlib
+#include <rlib/FileIO.h>
 #include <QFileInfo>
 #include <QDebug>
 #include <boost/algorithm/string.hpp>
@@ -100,11 +100,8 @@ bool FaceModelManager::write( const FM* cfm, std::string* fpath)
     {
         _mfiles.erase(delfilepath);
         _setModelFilepath( fm, savefilepath);
-        fm->setModelSaved(true);
-        if ( fm->hasMetaData())
-            fm->setMetaSaved(false);
-        if ( isPreferredFileFormat(savefilepath) || !fm->hasMetaData())
-            fm->setMetaSaved(true);
+        fm->setModelSaved( fileio->canWriteTextures() || !fm->hasTexture());
+        fm->setMetaSaved( isPreferredFileFormat(savefilepath) || !fm->hasMetaData());
     }   // end else
 
     return _err.empty();

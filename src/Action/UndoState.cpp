@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,30 +21,29 @@
 #include <cassert>
 using FaceTools::Action::UndoState;
 using FaceTools::Action::FaceAction;
-using FaceTools::Action::EventGroup;
+using FaceTools::Action::Event;
 using MS = FaceTools::Action::ModelSelector;
 
 
-void FaceTools::Action::storeUndo( const FaceAction* a, EventGroup egrp)
+void FaceTools::Action::storeUndo( const FaceAction* a, Event egrp, bool autoRestore)
 {
-    UndoStates::storeUndo( a, egrp, true);
+    UndoStates::storeUndo( a, egrp, autoRestore);
 }   // end storeUndo
 
 
-void FaceTools::Action::storeUndo( const FaceAction* a)
+void FaceTools::Action::scrapLastUndo( const FM *fm)
 {
-    EventGroup egrp;
-    UndoStates::storeUndo( a, egrp, false);
-}   // end storeUndo
+    UndoStates::scrapLastUndo( fm);
+}   // end scrapLastUndo
 
 
-UndoState::Ptr UndoState::create( const FaceAction* a, EventGroup egrp, bool autoRestore)
+UndoState::Ptr UndoState::create( const FaceAction* a, Event egrp, bool autoRestore)
 {
     return Ptr( new UndoState(a, egrp, autoRestore), [](UndoState* x){ delete x;});
 }   // end create
 
 
-UndoState::UndoState( const FaceAction* a, EventGroup egrp, bool ar)
+UndoState::UndoState( const FaceAction* a, Event egrp, bool ar)
     : _action( const_cast<FaceAction*>(a)), _egrp(egrp), _autoRestore(ar),
       _name(a->displayName()), _sfm( MS::selectedModel()) // Could be null
 {
@@ -53,7 +52,7 @@ UndoState::UndoState( const FaceAction* a, EventGroup egrp, bool ar)
     {
         FMS fms;    // Get the models to save state for
 
-        if ( egrp.has(Event::ALL_VIEWERS))
+        if ( has( egrp, Event::ALL_VIEWERS))
         {
             for ( FMV* fmv : MS::viewers())
             {
@@ -61,7 +60,7 @@ UndoState::UndoState( const FaceAction* a, EventGroup egrp, bool ar)
                 fms.insert( fms1.begin(), fms1.end());
             }   // end for
         }   // end if
-        else if ( egrp.has(Event::ALL_VIEWS) && MS::selectedViewer())
+        else if ( has( egrp, Event::ALL_VIEWS) && MS::selectedViewer())
             fms = MS::selectedViewer()->attached().models();
         else if ( _sfm)
             fms.insert(_sfm);
@@ -85,14 +84,14 @@ QVariant UndoState::userData( const QString& s) const
 }   // end userData
 
 
-void UndoState::restore() const
+Event UndoState::restore() const
 {
     assert(_action != nullptr);
 
     if ( !isAutoRestore())
     {
         _sfm->lockForWrite();
-        _action->restoreState(this);    // Call the custom restore function
+        _action->restoreState(*this);    // Call the custom restore function
         _sfm->unlock();
     }   // end if
     else
@@ -101,5 +100,5 @@ void UndoState::restore() const
             fstate->restore(_egrp);
     }   // end if
 
-    _action->onEvent(_egrp);
+    return _egrp | Event::RESTORE_CHANGE;
 }   // end restore

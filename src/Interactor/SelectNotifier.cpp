@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@ using FaceTools::FMV;
 using MS = FaceTools::Action::ModelSelector;
 
 
-SelectNotifier::SelectNotifier() : _selected(nullptr)
+SelectNotifier::SelectNotifier() : _locked(false), _selected(nullptr)
 {
 }   // end ctor
 
@@ -40,7 +40,6 @@ void SelectNotifier::add( FV* fv)
     assert( fv != _selected);
     assert( !_available.has(fv));
     _available.insert(fv);
-    setSelected( fv, true);
 }   // end add
 
 
@@ -49,17 +48,21 @@ void SelectNotifier::remove( FV* fv)
     assert(fv);
     if ( !fv)
         return;
+    assert( _selected != fv);
     assert( _available.has(fv));
     _available.erase(fv);
-    setSelected( fv, false);
 }   // end remove
 
 
 void SelectNotifier::setSelected( FV* fv, bool selected)
 {
-    if ( fv && (fv == _selected) != selected)    // Only change if needing to
+    if ( !isLocked() && fv && (fv == _selected) != selected)    // Only change if needing to
     {
-        _eraseSelected();
+        if ( _selected)
+            emit onSelected( _selected, false);
+
+        _selected = nullptr;
+
         if ( selected)
         {
             assert( _available.has(fv));
@@ -68,15 +71,6 @@ void SelectNotifier::setSelected( FV* fv, bool selected)
         }   // end if
     }   // end if
 }   // end setSelected
-
-
-void SelectNotifier::_eraseSelected()
-{
-    FV* fv = _selected;
-    _selected = nullptr;
-    if ( fv)
-        emit onSelected( fv, false);
-}   // end _eraseSelected
 
 
 FV* SelectNotifier::_underPoint() const

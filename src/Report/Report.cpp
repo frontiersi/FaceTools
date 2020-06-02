@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,27 +16,28 @@
  ************************************************************************/
 
 #include <Report/Report.h>
-#include <Metric/MetricCalculatorManager.h>
+#include <Metric/MetricManager.h>
 #include <Metric/PhenotypeManager.h>
 #include <Metric/Chart.h>
-#include <PDFGenerator.h>
+#include <r3dio/PDFGenerator.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <Ethnicities.h>
-#include <MathUtil.h>   // rlib
+#include <rlib/MathUtil.h>
 #include <QtSvg/QSvgGenerator>
+#include <QtCharts/QChartView>
 #include <QPixmap>
 #include <QFile>
 #include <QtDebug>
-using MCM = FaceTools::Metric::MetricCalculatorManager;
-using MC = FaceTools::Metric::MetricCalculator;
+using MM = FaceTools::Metric::MetricManager;
+using MC = FaceTools::Metric::Metric;
 using FaceTools::Metric::GrowthData;
 using FaceTools::Metric::MetricValue;
 using FaceTools::Metric::MetricSet;
 
 using FaceTools::Report::Report;
-using RFeatures::CameraParams;
-using RFeatures::ObjModel;
+using r3d::CameraParams;
+using r3d::Mesh;
 using FaceTools::FM;
 using FaceTools::Metric::PhenotypeManager;
 using FaceTools::Metric::Phenotype;
@@ -82,7 +83,7 @@ Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _os(nullptr), _model(nullp
     _lua.set_function( "addCustomLatex", [this]( const std::string& s) { this->addCustomLatex( QString::fromStdString(s));});
     _lua.set_function( "addFootnoteSources", [this]( const sol::table &mids){ this->_addFootnoteSources(mids);});
 
-    _lua.set_function( "metric", MCM::metric);
+    _lua.set_function( "metric", MM::metric);
     _lua.set_function( "metricSource", [this](int mid){ return this->_metricCurrentSource(mid).toStdString();});
     _lua.set_function( "footnoteIndices", [this]( const sol::table &mids){ return this->_footnoteIndices(mids);});
     _lua.set_function( "round", []( double v, size_t nd){ return rlib::round(v,nd);});
@@ -96,8 +97,8 @@ Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _os(nullptr), _model(nullp
                                     "zscore", &MetricValue::zscore,
                                     "mean", &MetricValue::mean);
 
-    _lua.new_usertype<MC>( "MC",
-                           "currentGrowthData", &MC::currentGrowthData);
+    //_lua.new_usertype<MC>( "MC",
+    //                       "currentGrowthData", &MC::growthData);
 
     _lua.new_usertype<GrowthData>( "GrowthData",
                                    "source", &GrowthData::source,
@@ -287,7 +288,7 @@ bool Report::generate( const FM* fm, const QString& u3dfile, const QString& pdff
     qInfo( "Generating PDF from LaTeX...");
 
     // Need to generate from within the directory.
-    RModelIO::PDFGenerator pdfgen(true);
+    r3dio::PDFGenerator pdfgen(true);
     const bool genOk = pdfgen( texfile.fileName().toStdString(), false);
     if ( !genOk)
     {
@@ -363,7 +364,7 @@ bool Report::_writeLatex( QTextStream& os) const
     if ( hasSource || hasStudyId)
         os << " \\\\" << endl;
 
-    os << "\\textbf{Reporting Date:} " << QDate::currentDate().toString("dd MMMM yyyy") << "\\\\" << endl;
+    os << "\\textbf{Report Date:} " << QDate::currentDate().toString("dd MMMM yyyy") << "\\\\" << endl;
 
     os << "}" << endl;
 
@@ -443,7 +444,7 @@ void Report::_addLatexFigure( float wmm, float hmm, const std::string& caption)
 
 void Report::_addLatexGrowthCurvesChart( int mid, size_t d, int footnotemark)
 {
-    MC::CPtr mc = MCM::metric(mid);
+    MC::CPtr mc = MM::metric(mid);
     assert(mc);
     if ( !mc)
         return;
@@ -453,7 +454,7 @@ void Report::_addLatexGrowthCurvesChart( int mid, size_t d, int footnotemark)
     const QString imname = QString("chart_%1").arg(abs(chartid));   // abs (LOL)
     chartid++;
 
-    GrowthData::CPtr gd = mc->currentGrowthData();
+    const GrowthData *gd = mc->growthData().current();
     Metric::Chart* chart = new Metric::Chart( gd, d, _model);
 
     QtCharts::QChartView cview( chart);
@@ -545,8 +546,8 @@ void Report::_addLatexNotes()
     QTextStream& os = *_os;
 
     FaceAssessment::CPtr ass = _model->currentAssessment();
-    os << R"( \normalsize{\textbf{Assessor:} )" << sanit(ass->assessor()) << R"(} \\)" << endl;
-    os << R"( \small{)" << sanit( ass->hasNotes() ? ass->notes() : "Nothing recorded.") << R"(} \\)" << endl;
+    os << " \\normalsize{\\textbf{" << tr("Assessor") << ":} " << sanit(ass->assessor()) << R"(} \\)" << endl;
+    os << R"( \small{)" << sanit( ass->hasNotes() ? ass->notes() : tr("Nothing recorded.")) << R"(} \\)" << endl;
 }   // end _addLatexNotes
 
 
@@ -557,10 +558,10 @@ void Report::_addLatexPhenotypicVariationsList()
 
     const IntSet pids = PhenotypeManager::discover(_model, -1); // Use the current assessment id
     if ( pids.empty())
-        os << "No atypical phenotypic variations identified." << endl;
+        os << tr("No dysmorphological features identified.") << endl;
     else
     {
-        os << "\\textbf{Identified atypical phenotypic variations:}" << endl
+        os << "\\textbf{" << tr("Dysmorphological Features") << ":}" << endl
            << "\\begin{itemize}" << endl;
         for ( int pid : pids)
             os << "\t\\item " << PhenotypeManager::phenotype(pid)->name() << endl;
@@ -595,9 +596,9 @@ void Report::_addLatexLineBreak()
 
 QString Report::_metricCurrentSource( int mid) const
 {
-    GrowthData::CPtr gd;
-    if ( MCM::metric(mid))
-        gd = MCM::metric(mid)->currentGrowthData();
+    const GrowthData *gd = nullptr;
+    if ( MM::metric(mid))
+        gd = MM::metric(mid)->growthData().current();
     if ( !gd)
         return "";
     QString src = gd->source();

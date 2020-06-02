@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2018 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,9 +18,10 @@
 #include <FileIO/FaceModelFileHandlerMap.h>
 #include <MiscFunctions.h>
 #include <FaceTools.h>
-#include <FileIO.h> // rlib
+#include <rlib/FileIO.h>
 #include <algorithm>
 #include <QStringList>
+#include <QRegularExpression>
 using FaceTools::FileIO::FaceModelFileHandlerMap;
 using FaceTools::FileIO::FaceModelFileHandler;
 
@@ -77,14 +78,12 @@ QStringList createFilters( const std::unordered_map<QString, QStringSet>& dsmap)
 }   // end namespace
 
 
-// public
 QStringList FaceModelFileHandlerMap::createSimpleImportFilters() const { return createSimpleFilter(_importExtDescMap);}
 QStringList FaceModelFileHandlerMap::createSimpleExportFilters() const { return createSimpleFilter(_exportExtDescMap);}
 
 QStringList FaceModelFileHandlerMap::createRawImportFilters() const { return createRawFilterList(_importExtDescMap);}
 QStringList FaceModelFileHandlerMap::createRawExportFilters() const { return createRawFilterList(_exportExtDescMap);}
 
-// public
 QString FaceModelFileHandlerMap::createAllImportFilter() const
 {
     QStringList ifilters = createSimpleImportFilters();
@@ -92,7 +91,6 @@ QString FaceModelFileHandlerMap::createAllImportFilter() const
 }   // end createAllImportFilter
 
 
-// public
 QString FaceModelFileHandlerMap::createAllExportFilter() const
 {
     QStringList efilters = createSimpleExportFilters();
@@ -100,38 +98,93 @@ QString FaceModelFileHandlerMap::createAllExportFilter() const
 }   // end createAllExportFilter
 
 
-// public
-QString FaceModelFileHandlerMap::createImportFilters( bool prependAll) const
+QStringList FaceModelFileHandlerMap::createImportFilters( bool prependAll) const
 {
     QStringList filters = createFilters( _importDescExtMap);
     if ( prependAll)
         filters.prepend( createAllImportFilter());
-    return filters.join(";;");
+    return filters;
 }   // end createImportFilters
 
 
-// public
-QString FaceModelFileHandlerMap::createExportFilters( bool prependAll) const
+QStringList FaceModelFileHandlerMap::createExportFilters( bool prependAll) const
 {
     QStringList filters = createFilters( _exportDescExtMap);
     if ( prependAll)
         filters.prepend( createAllExportFilter());
-    return filters.join(";;");
+    return filters;
 }   // end createExportFilters
 
 
-// public
-QString FaceModelFileHandlerMap::getFilter( const QString& ext) const
+QStringList FaceModelFileHandlerMap::createImportFilters( const QStringSet &exts, bool prependAll) const
+{
+    std::unordered_map<QString, QStringSet> descExtMap;
+    for ( const QString &ext : exts)
+        if ( _importExtDescMap.count(ext) > 0)
+            descExtMap[_importExtDescMap.at(ext)].insert( ext);
+
+    QStringList filters = createFilters( descExtMap);
+    if ( prependAll)
+        filters.prepend( createAllImportFilter());
+    return filters;
+}   // end createImportFilters
+
+
+QStringList FaceModelFileHandlerMap::createExportFilters( const QStringSet &exts, bool prependAll) const
+{
+    std::unordered_map<QString, QStringSet> descExtMap;
+    for ( const QString &ext : exts)
+        if ( _exportExtDescMap.count(ext) > 0)
+            descExtMap[_exportExtDescMap.at(ext)].insert( ext);
+
+    QStringList filters = createFilters( descExtMap);
+    if ( prependAll)
+        filters.prepend( createAllImportFilter());
+    return filters;
+}   // end createExportFilters
+
+
+QStringSet FaceModelFileHandlerMap::importExtensions() const
+{
+    QStringSet ss;
+    for ( const auto &p : _importExtDescMap)
+        ss.insert( p.first);
+    return ss;
+}   // end importExtensions
+
+
+QStringSet FaceModelFileHandlerMap::exportExtensions() const
+{
+    QStringSet ss;
+    for ( const auto &p : _exportExtDescMap)
+        ss.insert( p.first);
+    return ss;
+}   // end exportExtensions
+
+
+QString FaceModelFileHandlerMap::filterForExtension( const QString& ext) const
 {
     QString sxt = ext.toLower();
     if ( _fileInterfaces.count(sxt) == 0)
         return QString();
     QString desc = _fileInterfaces.at(sxt)->getFileDescription();
     return desc + " (*." + sxt + ")";
-}   // end getFilter
+}   // end filterForExtension
 
 
-// public
+QString FaceModelFileHandlerMap::extensionForFilter( const QString& filter) const
+{
+    const QStringList toks = filter.split(QRegularExpression(R"(\(\*\..*\))"));
+    const QString desc = toks.isEmpty() ? "" : toks.first().trimmed();
+    QString ext;
+    if ( _exportDescExtMap.count(desc) > 0)
+        ext = *_exportDescExtMap.at(desc).begin();
+    else if ( _importDescExtMap.count(desc) > 0)
+        ext = *_importDescExtMap.at(desc).begin();
+    return ext;
+}   // end extensionForFilter
+
+
 FaceModelFileHandler* FaceModelFileHandlerMap::readInterface( const std::string& fname) const
 {
     FaceModelFileHandler* fileio = nullptr;
@@ -142,7 +195,6 @@ FaceModelFileHandler* FaceModelFileHandlerMap::readInterface( const std::string&
 }   // end readInterface
 
 
-// public
 FaceModelFileHandler* FaceModelFileHandlerMap::writeInterface( const std::string& fname) const
 {
     FaceModelFileHandler* fileio = nullptr;
@@ -153,7 +205,6 @@ FaceModelFileHandler* FaceModelFileHandlerMap::writeInterface( const std::string
 }   // end writeInterface
 
 
-// public
 void FaceModelFileHandlerMap::add( FaceModelFileHandler* fileio)
 {
     const QStringSet& exts = fileio->getFileExtensions();
@@ -179,7 +230,6 @@ void FaceModelFileHandlerMap::add( FaceModelFileHandler* fileio)
 }   // end add
 
 
-// public
 std::ostream& FaceTools::FileIO::operator<<( std::ostream& os, const FaceModelFileHandlerMap& fmap)
 {
     for ( const auto& fp : fmap._fileInterfaces)

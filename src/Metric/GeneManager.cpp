@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2018 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 
 #include <Metric/GeneManager.h>
 #include <MiscFunctions.h>
-#include <FileIO.h> // rlib
+#include <rlib/FileIO.h>
 #include <iostream>
 #include <cassert>
 using FaceTools::Metric::GeneManager;

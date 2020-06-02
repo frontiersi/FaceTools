@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,160 +16,116 @@
  ************************************************************************/
 
 #include <Action/ActionAlignLandmarks.h>
-#include <FaceModelViewer.h>
-#include <FaceTools.h>
+#include "Action/ActionUpdateMeasurements.h"
+#include <LndMrk/LandmarksManager.h>
 #include <FaceModel.h>
-#include <algorithm>
-#include <ObjModelAligner.h>
-#include <Transformer.h>
-using FaceTools::Action::ActionAlignLandmarks;
+#include <FaceTools.h>
 using FaceTools::Action::FaceAction;
+using FaceTools::Action::ActionAlignLandmarks;
 using FaceTools::Action::Event;
-using FaceTools::FVS;
-using FaceTools::FMS;
-using FaceTools::Vis::FV;
-using FaceTools::Landmark::LandmarkSet;
+using FaceTools::Interactor::LandmarksHandler;
 using FaceTools::FM;
-using RFeatures::ObjModel;
 using MS = FaceTools::Action::ModelSelector;
+using LMAN = FaceTools::Landmark::LandmarksManager;
 
-namespace {
 
-ObjModel::Ptr makeLandmarksModel( const LandmarkSet& lmks)
+ActionAlignLandmarks::ActionAlignLandmarks( const QString& dn, const QIcon& ico, LandmarksHandler::Ptr handler)
+    : FaceAction(dn, ico), _handler(handler)
 {
-    ObjModel::Ptr mod = ObjModel::create();
-
-    // Sort the landmark ids so that the vertices of a landmarks model are always added in the same order.
-    const IntSet& lmids = lmks.ids();
-    std::vector<int> ids( std::begin(lmids), std::end(lmids));
-    std::sort( std::begin(ids), std::end(ids));
-
-    for ( int id : ids)
-    {
-        if ( LDMKS_MAN::landmark(id)->isBilateral())
-        {
-            mod->addVertex( lmks.pos(id, FaceTools::FACE_LATERAL_LEFT));
-            mod->addVertex( lmks.pos(id, FaceTools::FACE_LATERAL_RIGHT));
-        }   // end if
-        else
-            mod->addVertex( lmks.pos(id, FaceTools::FACE_LATERAL_MEDIAL));
-    }   // end for
-    return mod;
-}   // end makeLandmarksModel
-
-/*
-// Calculate and return the root mean square error of displacement over all models.
-double calcRMS( const ObjModel* tmod, const std::vector<ObjModel::Ptr>& lms)
-{
-    assert(!lms.empty());
-
-    double rms = 0;
-    const int n = tmod->numVtxs();
-    for ( int vidx = 0; vidx < n; ++vidx)
-    {
-        const cv::Vec3f& tv = tmod->vtx(vidx);
-        for ( ObjModel::Ptr m : lms)
-        {
-            const cv::Vec3f& v = m->vtx(vidx);
-            rms += double(powf(v[0] - tv[0],2) + powf(v[1] - tv[1],2) + powf(v[2] - tv[2],2));
-        }   // end for
-    }   // end for
-    rms = sqrt( rms / (n*int(lms.size())));
-
-    return rms;
-}   // end calcRMS
-*/
-
-}   // end namespace
-
-
-ActionAlignLandmarks::ActionAlignLandmarks( const QString& dn, const QIcon& ico)
-    : FaceAction(dn, ico)
-{
-    setAsync(true);
 }   // end ctor
 
 
-bool ActionAlignLandmarks::checkEnable( Event)
+QString ActionAlignLandmarks::toolTip() const
 {
-    // Enabled only if the selected viewer has other models with landmarks.
-    const FV* fv = MS::selectedView();
-    bool ready = false;
-    if ( fv && fv->viewer()->attached().size() >= 2)
-    {
-        const FM* fm = fv->data();
-        fm->lockForRead();
-        const LandmarkSet& lmks = fm->currentAssessment()->landmarks();
-        if ( !lmks.empty())
-        {
-            // Get the other models from the viewer.
-            FMS fms = fv->viewer()->attached().models();
-            fms.erase(const_cast<FM*>(fm));
-            // If at least one other model in the viewer with landmarks, then enable this action.
-            for ( const FM* fm2 : fms)
-            {
-                fm2->lockForRead();
-                ready = !fm2->currentAssessment()->landmarks().empty();
-                fm2->unlock();
-                if ( ready)
-                    break;
-            }   // end for
-        }   // end if
-        fm->unlock();
-    }   // end if
-    return ready;
-}   // end checkEnabled
+    return "Centre medial landmarks and reflect right lateral landmarks to left lateral.";
+}   // end toolTip
+
+
+QString ActionAlignLandmarks::whatsThis() const
+{
+    QStringList htxt;
+    htxt << "Remap landmarks so that the medial landmarks are coincident with the YZ plane";
+    htxt << "and the landmarks in the right lateral are reflected through this plane to the";
+    htxt << "left lateral. Use this function to help manually place landmarks on new custom";
+    htxt << "symmetric coregistration masks. Note that landmarks should already be in their";
+    htxt << "approximately required positions.";
+    return htxt.join(" ");
+}   // end whatsThis
+
+
+bool ActionAlignLandmarks::isAllowed( Event)
+{
+    const FM* fm = MS::selectedModel();
+    return fm && fm->hasLandmarks() && fm->isAligned();
+}   // end isAllowedd
 
 
 bool ActionAlignLandmarks::doBeforeAction( Event)
 {
-    MS::showStatus( "Aligning to landmarks on selected face...");
+    // TODO Warn about only being applicable for symmetric faces
+    storeUndo( this, Event::LANDMARKS_CHANGE | Event::METRICS_CHANGE);
     return true;
 }   // end doBeforeAction
 
 
+namespace {
+
+void centreMedialLandmarks( FM *fm)
+{
+    // Set all the medial landmark positions to be at X=0 and iteratively reposition
+    // them until change in the x position is <= MAX_XPOS_DIFF.
+    const r3d::KDTree &kdt = fm->kdtree();
+    const FaceTools::Landmark::LandmarkSet &lmks = fm->currentLandmarks();
+    static const float MAX_XPOS_DIFF = 1.0e-8f;
+    static const size_t MAX_ITERATIONS = 10;
+    const std::unordered_map<int, r3d::Vec3f>& mlmks = lmks.lateral( FaceTools::FACE_LATERAL_MEDIAL);
+    for ( const auto &p : mlmks)
+    {
+        r3d::Vec3f pos = p.second;
+        size_t i = 0;
+        while ( (fabsf(pos[0]) > MAX_XPOS_DIFF) && (i < MAX_ITERATIONS))
+        {
+            pos[0] = 0.0f;
+            pos = FaceTools::toSurface( kdt, pos);
+            i++;
+        }   // end while
+        pos[0] = 0.0f;
+        fm->setLandmarkPosition( p.first, FaceTools::FACE_LATERAL_MEDIAL, pos);
+    }   // end for
+}   // end centreMedialLandmarks
+
+
+void reflectLateralLandmarks( FM *fm)
+{
+    const std::unordered_map<int, r3d::Vec3f>& lmks = fm->currentLandmarks().lateral( FaceTools::FACE_LATERAL_LEFT);
+    for ( const auto &p : lmks)
+    {
+        r3d::Vec3f pos = p.second;
+        pos[0] = -pos[0];
+        fm->setLandmarkPosition( p.first, FaceTools::FACE_LATERAL_RIGHT, pos);
+    }   // end for
+}   // end reflectLateralLandmarks
+
+}   // end namespace
+
+
 void ActionAlignLandmarks::doAction( Event)
 {
-    storeUndo(this, {Event::AFFINE_CHANGE, Event::ALL_VIEWS});
-    FV* fv = MS::selectedView();
-
-    FM* tfm = fv->data();   // Target model whose landmarks we want the other models' landmarks to align with.
-    tfm->lockForRead();
-    ObjModel::Ptr tlmks = makeLandmarksModel( tfm->currentAssessment()->landmarks());    // Create the target landmarks model
-    tfm->unlock();
-
-    FMS fms = fv->viewer()->attached().models(); // Get models from the same viewer as the target model
-    fms.erase(tfm); // Ensure the target model is removed
-
-    // Create the landmarks models for each FaceModel that isn't the target model
-    std::unordered_map<FM*, ObjModel::Ptr> lmods;
-    for ( FM* fm : fms)
-    {
-        fm->lockForRead();
-        lmods[fm] = makeLandmarksModel( fm->currentAssessment()->landmarks());
-        fm->unlock();
-    }   // end for
-
-    const std::vector<double> weights( size_t(tlmks->numVtxs()), 1.0);
-    RFeatures::ObjModelProcrustesSuperimposition aligner( *tlmks, weights);
-
-    // Align each of the landmark models to the target landmark model and use the calculated transform on the whole model.
-    for ( const auto& p : lmods)
-    {
-        const ObjModel& lmod = *p.second;
-        const cv::Matx44d T = aligner.calcTransform( lmod);    // Calculate transform to the target landmarks
-        FM* fm = p.first;
-        fm->lockForWrite();
-        fm->addTransformMatrix( T);
-        fm->unlock();
-    }   // end for
+    FM *fm = MS::selectedModel();
+    fm->lockForWrite();
+    centreMedialLandmarks( fm);
+    reflectLateralLandmarks( fm);
+    for ( const Vis::FV *fv : fm->fvs())
+        for ( int lmid : LMAN::ids())
+            _handler->visualisation().refreshLandmark( fv, lmid);
+    ActionUpdateMeasurements::updateAllMeasurements( fm);
+    fm->unlock();
 }   // end doAction
 
 
-void ActionAlignLandmarks::doAfterAction( Event)
+Event ActionAlignLandmarks::doAfterAction( Event)
 {
-    MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-    MS::showStatus( "Finished alignment by landmarks.", 5000);
-    emit onEvent( {Event::AFFINE_CHANGE, Event::ALL_VIEWS});
+    MS::showStatus("Made landmarks laterally symmetric.", 5000);
+    return Event::LANDMARKS_CHANGE | Event::METRICS_CHANGE;
 }   // end doAfterAction
 

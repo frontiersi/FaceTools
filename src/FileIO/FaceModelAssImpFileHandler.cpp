@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2018 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ using FaceTools::FileIO::FaceModelAssImpFileHandler;
 using FaceTools::FM;
 
 // private
-FaceModelAssImpFileHandler::FaceModelAssImpFileHandler( RModelIO::AssetImporter* importer, const QString& qext)
+FaceModelAssImpFileHandler::FaceModelAssImpFileHandler( r3dio::AssetImporter* importer, const QString& qext)
     : _assimp(importer)
 {
     const std::string ext = qext.toLower().toStdString();
@@ -37,7 +37,7 @@ FM* FaceModelAssImpFileHandler::read( const QString& qfname)
     _err = "";
     FM* fm = nullptr;
     const std::string fname = qfname.toStdString();
-    RFeatures::ObjModel::Ptr model = _assimp->load(fname);
+    r3d::Mesh::Ptr model = _assimp->load(fname);
     if ( model)
         fm = new FM(model);
     else

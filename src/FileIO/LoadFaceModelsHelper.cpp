@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,20 +19,25 @@
 #include <FileIO/FaceModelManager.h>
 #include <FaceModel.h>
 #include <QMessageBox>
+#include <QFile>
 using FaceTools::FileIO::LoadFaceModelsHelper;
-using FaceTools::FM;
+
 
 LoadFaceModelsHelper::LoadFaceModelsHelper( QWidget* parent) : _parent(parent) {}
 
 int LoadFaceModelsHelper::setFilteredFilenames( const QStringList& fnames)
 {
     // Get the supported filenames.
+    QStringList notpres;
     QStringList notsupp;
     QStringList areopen;
     _filenames.clear();
+
     for ( const QString& qfname : fnames)
     {
-        if ( !FMM::canRead( qfname.toStdString()))
+        if ( !QFile::exists( qfname))
+            notpres << qfname;
+        else if ( !FMM::canRead( qfname.toStdString()))
             notsupp << qfname;
         else if ( FMM::isOpen( qfname.toStdString()))
             areopen << qfname;
@@ -55,6 +60,11 @@ int LoadFaceModelsHelper::setFilteredFilenames( const QStringList& fnames)
     }   // end if
 
     // Show warning for not supported files
+    if ( notpres.size() == 1)
+        QMessageBox::warning( _parent, QObject::tr("Not existent file!"), QObject::tr( "Can't find file ") + notpres.join(" "));
+    else if ( notpres.size() > 1)
+        QMessageBox::warning( _parent, QObject::tr("Not existent files!"), QObject::tr( "Can't find files ") + notpres.join(" "));
+
     if ( notsupp.size() == 1)
         QMessageBox::warning( _parent, QObject::tr("Unsupported file type!"), notsupp.join(" ") + QObject::tr(" has an unsupported format!"));
     else if ( notsupp.size() > 1)

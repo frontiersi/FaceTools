@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,107 +16,68 @@
  ************************************************************************/
 
 #include <Action/ActionRadialSelect.h>
-#include <Vis/FaceView.h>
-#include <LndMrk/LandmarkSet.h>
+#include <LndMrk/LandmarksManager.h>
 #include <FaceModel.h>
-#include <FaceTools.h>
-#include <VtkTools.h>
-#include <FaceModelViewer.h>
-#include <cassert>
 using FaceTools::Action::ActionRadialSelect;
 using FaceTools::Action::ActionVisualise;
-using FaceTools::Action::Event;
-using FaceTools::Vis::RadialSelectVisualisation;
 using FaceTools::Interactor::RadialSelectHandler;
-using FaceTools::Landmark::LandmarkSet;
+using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
-using FaceTools::FVS;
 using FaceTools::FM;
-using FaceTools::FaceLateral;
 using MS = FaceTools::Action::ModelSelector;
+using LMAN = FaceTools::Landmark::LandmarksManager;
 
 
-ActionRadialSelect::ActionRadialSelect( const QString& dn, const QIcon& ico)
-    : ActionVisualise( dn, ico, _vis = new RadialSelectVisualisation)
+ActionRadialSelect::ActionRadialSelect( const QString& dn, const QIcon& ico, RadialSelectHandler::Ptr handler)
+    : ActionVisualise( dn, ico, &handler->visualisation()), _handler(handler)
 {
-    addPurgeEvent( Event::GEOMETRY_CHANGE);
+    addPurgeEvent( Event::MESH_CHANGE);
 }   // end ctor
 
 
-ActionRadialSelect::~ActionRadialSelect()
+bool ActionRadialSelect::checkState( Event e)
 {
-    delete _vis;
-}   // end dtor
-
-
-double ActionRadialSelect::radius() const { return _handler ? _handler->radius() : 0.0;}
-
-cv::Vec3f ActionRadialSelect::centre() const { return _handler ? _handler->centre() : cv::Vec3f(0,0,0);}
-
-
-size_t ActionRadialSelect::selectedFaces( IntSet& fs) const { return _handler ? _handler->selectedFaces(fs) : 0;}
-
-
-bool ActionRadialSelect::checkEnable( Event e)
-{
-    return MS::interactionMode() == IMode::CAMERA_INTERACTION && ActionVisualise::checkEnable(e);
-}   // end checkEnable
+    _handler->refreshState();
+    return ActionVisualise::checkState( e);
+}   // end checkState
 
 
 void ActionRadialSelect::doAction( Event e)
 {
-    ActionVisualise::doAction( e);
-
-    const FV* fv = MS::selectedView();
-    const FM* fm = fv->data();
-
     if ( isChecked())
     {
-        fm->lockForRead();
-        cv::Vec3f cpos = fm->centreFront();
-        const LandmarkSet& lmks = fm->currentAssessment()->landmarks();
+        const FV* fv = MS::selectedView();
+        const FM* fm = fv->data();
 
-        const QPoint& mpos = primedMousePos();
+        fm->lockForRead();
         // In the first case, select as the centre the point projected onto the surface my the
         // given 2D point (mouse coords). In the second instance, use pronasale if available,
         // otherwise just use the point on the surface closest to the model's centre.
-        if ( !fv->projectToSurface( mpos, cpos) && lmks.hasCode( Landmark::PRN))
-            cpos = lmks.pos( Landmark::PRN);
-        else
-            cpos = fm->findClosestSurfacePoint(cpos);
+        Vec3f tpos = fm->findClosestSurfacePoint( fm->centreFront());
+        const Landmark::LandmarkSet& lmks = fm->currentLandmarks();
+        const QPoint& mpos = primedMousePos();
+        if ( !fv->projectToSurface( mpos, tpos) && lmks.has( LMAN::codeId(Landmark::PRN)))
+            tpos = lmks.pos( Landmark::PRN);
 
-        // If landmarks set, get the radius as 2.3 times the distance between pronasale and pupils.
-        double rad = radius();
-        if ( lmks.hasCode( Landmark::P) && lmks.hasCode( Landmark::PRN))
-        {
-            cv::Vec3f mp = 0.5f * (lmks.pos(Landmark::P, FACE_LATERAL_LEFT) + lmks.pos(Landmark::P, FACE_LATERAL_RIGHT));
-            rad = 2.3 * cv::norm( mp - lmks.pos(Landmark::PRN));
-        }   // end if
+        float rad = _handler->radius();
+        if ( fm->hasLandmarks())
+            rad = sqrtf(fm->currentLandmarks().sqRadius());
+        else if ( rad == 0.0f)
+            rad = fm->bounds()[0]->diagonal()/4;
 
-        if ( !_handler || _handler->model() != fm)
-        {
-            _handler = std::shared_ptr<RadialSelectHandler>( new RadialSelectHandler( *_vis, fm));
-            rad = radius();
-        }   // end if
         fm->unlock();
 
-        _handler->set( cpos, rad);   // Causes visualisation to be updated
-        _vis->setHighlighted( fm, false);
+        _handler->init( fm, tpos, rad);
     }   // end isChecked
+
+    ActionVisualise::doAction( e);
 }   // end doAction
 
 
-void ActionRadialSelect::doAfterAction( Event e)
+Event ActionRadialSelect::doAfterAction( Event e)
 {
-    ActionVisualise::doAfterAction( e);
     MS::clearStatus();
     if ( isChecked())
-        MS::showStatus( "Reposition area by left-click and dragging the centre handle; change radius using the mouse wheel.");
+        MS::showStatus( "Reposition by left-click and dragging the centre handle; change radius using the mouse wheel.");
+    return ActionVisualise::doAfterAction( e);
 }   // end doAfterAction
-
-
-void ActionRadialSelect::purge( const FM* fm, Event e)
-{
-    _handler = nullptr;
-    ActionVisualise::purge(fm, e);
-}   // end purge

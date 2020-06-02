@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,21 +17,19 @@
 
 #include <Action/CameraWorker.h>
 #include <FaceModelViewer.h>
-#include <Transformer.h>
+#include <r3d/Transformer.h>
 #include <cmath>
 using FaceTools::Action::CameraWorker;
 using FaceTools::FaceModelViewer;
-using RFeatures::Transformer;
-using RFeatures::CameraParams;
 
 
 // public
-CameraWorker::CameraWorker( FaceModelViewer* v, size_t fps, double hs, double vs, double hmax, double vmax)
+CameraWorker::CameraWorker( FaceModelViewer* v, size_t fps, float hs, float vs, float hmax, float vmax)
     : _viewer(v),
       _fps(fps),
       _hs(hs), _vs(vs),
-      _ABS_MAX_H_RADS(hmax * CV_PI/180),
-      _ABS_MAX_V_RADS(vmax * CV_PI/180),
+      _ABS_MAX_H_RADS( hmax * float(EIGEN_PI/180)),
+      _ABS_MAX_V_RADS( vmax * float(EIGEN_PI/180)),
       _cp( _viewer->camera()),
       _timer(nullptr),
       _hdiff(0), _vdiff(0),
@@ -48,12 +46,12 @@ void CameraWorker::start()
     stop(); // Ensure stopped
     _cp = _viewer->camera(); // The base camera
 
-    const int mspf =  static_cast<int>(1000.0/_fps);
-    _hdiff = 2.0*mspf*_ABS_MAX_H_RADS/(_hs * 1000);
-    _vdiff = 2.0*mspf*_ABS_MAX_V_RADS/(_vs * 1000);
+    const int mspf =  static_cast<int>(1000.0f/_fps);
+    _hdiff = 2.0f*mspf*_ABS_MAX_H_RADS/(_hs * 1000);
+    _vdiff = 2.0f*mspf*_ABS_MAX_V_RADS/(_vs * 1000);
 
-    _hangle = 0.0;
-    _vangle = 0.0;
+    _hangle = 0.0f;
+    _vangle = 0.0f;
 
     _timer = new QTimer(this);
     connect( _timer, &QTimer::timeout, this, &CameraWorker::createFrame);
@@ -80,18 +78,18 @@ void CameraWorker::createFrame()
     if ( fabs(_vangle) > _ABS_MAX_V_RADS)
         _vdiff = -_vdiff;
 
-    cv::Vec3f cdir;
-    cv::normalize( _cp.pos - _cp.focus, cdir);
+    Vec3f cdir = _cp.pos() - _cp.focus();
+    cdir.normalize();
 
-    Transformer r0( _hangle, _cp.up); // Angle about camera vertical (left and right)
-    Transformer r1( _vangle, _cp.up.cross(cdir)); // Angle about camera horizontal (up and down)
+    r3d::Transformer r0( _hangle, _cp.up()); // Angle about camera vertical (left and right)
+    r3d::Transformer r1( _vangle, _cp.up().cross(cdir)); // Angle about camera horizontal (up and down)
 
     r0.rotate( cdir);
     r1.rotate( cdir);
-    cdir *= _viewer->cameraDistance();   // Set magnitude of position vector
+    cdir *= _viewer->camera().distance();   // Set magnitude of position vector
 
-    CameraParams cp = _cp;
-    cp.pos = cp.focus + cdir;    // Set new camera position given current focus
+    r3d::CameraParams cp = _cp;
+    cp.set( cp.focus(), cp.focus() + cdir); // Set new camera position given current focus
     _viewer->setCamera(cp);
     _viewer->updateRender();
 }   // end createFrame

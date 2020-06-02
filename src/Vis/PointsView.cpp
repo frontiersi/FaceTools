@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  ************************************************************************/
 
 #include <Vis/PointsView.h>
-#include <VtkActorCreator.h>    // RVTK
+#include <r3dvis/VtkActorCreator.h>
 #include <vtkProperty.h>
 #include <algorithm>
 #include <cassert>
@@ -24,10 +24,10 @@ using FaceTools::Vis::PointsView;
 using FaceTools::ModelViewer;
 
 
-PointsView::PointsView( const RFeatures::ObjModel& model, const IntSet& vidxs, double ps, double r, double g, double b, double a)
+PointsView::PointsView( const r3d::Mesh &mesh, const IntSet& vidxs, double ps, double r, double g, double b, double a)
 {
     // The returned actor has the model's current transform matrix applied to it.
-    vtkSmartPointer<vtkActor> actor = RVTK::VtkActorCreator::generatePointsActor( model, vidxs);
+    vtkSmartPointer<vtkActor> actor = r3dvis::VtkActorCreator::generatePointsActor( mesh, vidxs);
     vtkProperty* property = actor->GetProperty();
     property->SetRepresentationToPoints();
     property->SetPointSize( ps);

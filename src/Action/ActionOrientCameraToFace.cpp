@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,9 +18,8 @@
 #include <Action/ActionOrientCameraToFace.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <FaceTools.h>
-#include <Transformer.h>    // RFeatures
-#include <algorithm>
+#include <r3d/Transformer.h>
+#include <r3d/CameraParams.h>
 using FaceTools::Action::ActionOrientCameraToFace;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
@@ -29,37 +28,67 @@ using FaceTools::ModelViewer;
 using MS = FaceTools::Action::ModelSelector;
 
 
-ActionOrientCameraToFace::ActionOrientCameraToFace( const QString& dn, const QIcon& ico, double d, double r, const QKeySequence& ks)
-    : FaceAction( dn, ico, ks), _distance(d), _urads(r)
-{
-}   // end ctor
+ActionOrientCameraToFace::ActionOrientCameraToFace( const QString& dn, const QIcon& ico, const QKeySequence& ks, float dp, int ax, float r)
+    : FaceAction( dn, ico, ks), _dprop(dp), _raxis(std::max(0, std::min( ax, 2))), _urads(r) {}
 
 
-bool ActionOrientCameraToFace::checkEnable( Event)
+bool ActionOrientCameraToFace::isAllowed( Event)
 {
     return MS::isViewSelected();
-}   // end checkEnabled
+}   // end isAllowed
 
 
-void ActionOrientCameraToFace::doAction(Event)
+void ActionOrientCameraToFace::doAction( Event)
 {
-    orientToFace( MS::selectedView(), _distance, _urads);
-    emit onEvent( Event::CAMERA_CHANGE);
+    const FV *fv = MS::selectedView();
+    if ( !fv)
+    {
+        for ( FMV* vwr : MS::viewers())
+        {
+            vwr->resetDefaultCamera();
+            vwr->setCameraFocus( Vec3f::Zero());
+        }   // end for
+        _e = Event::CAMERA_CHANGE | Event::ALL_VIEWERS;
+    }   // end if
+    else
+    {
+        orientToFace( fv, _dprop, _raxis, _urads);
+        _e = Event::CAMERA_CHANGE;
+    }   // end else
 }   // end doAction
 
 
-void ActionOrientCameraToFace::orientToFace( const FV *fv, double dist, double rads)
+Event ActionOrientCameraToFace::doAfterAction( Event)
 {
+    MS::setInteractionMode( IMode::CAMERA_INTERACTION);
+    return _e;
+}   // end doAfterAction
+
+
+void ActionOrientCameraToFace::orientToFace( const FV *fv, float dprop, int raxis, float rads)
+{
+    assert(fv);
     const FM* fm = fv->data();
 
     fm->lockForRead();
-    const cv::Vec3f focus = fm->centre();
-    RFeatures::Orientation on = fm->orientation();
+    const Mat4f& T = fm->transformMatrix();
     fm->unlock();
 
-    // Rotate the orientation about its up vector by the set amount.
-    on.rotate( RFeatures::Transformer( rads, on.uvec()).matrix());
+    const r3d::Mat3f R = r3d::Transformer( rads, T.block<3,1>(0,raxis)).matrix().block<3,3>(0,0);
+    const r3d::Mat3f nR = R * T.block<3,3>(0,0);
+    Vec3f uvec = nR.block<3,1>(0,1);
+    uvec.normalize();
+    Vec3f nvec = nR.block<3,1>(0,2);
+    nvec.normalize();
 
-    // Set the camera as needed.
-    fv->viewer()->setCamera( focus, on.nvec(), on.uvec(), dist);
+    const Vec3f focus = T.block<3,1>(0,3); // The point of focus is the model alignment centre
+
+    const r3d::CameraParams cp = fv->viewer()->camera();
+    float dst = cp.distance();
+    if ( dprop > 0)
+        dst = 1.7f * dprop * fm->bounds()[0]->diagonal();
+    dst = std::max(200.0f, dst);    // Minimum of 200 in case of unforeseen issue
+
+    const r3d::CameraParams ncp( focus + dst*nvec, focus, uvec, cp.fov());
+    fv->viewer()->setCamera( ncp);
 }   // end orientToFace

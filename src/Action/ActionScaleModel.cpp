@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,27 +40,26 @@ void ActionScaleModel::postInit()
 }   // end postInit
 
 
-bool ActionScaleModel::checkEnable( Event)
-{
-    return MS::isViewSelected();
-}   // ed checkEnabled
+bool ActionScaleModel::isAllowed( Event) { return MS::isViewSelected();}
 
 
 bool ActionScaleModel::doBeforeAction( Event)
 {
-    bool doResize = false;
     _dialog->reset( MS::selectedModel());
+    _smat = Mat4f::Identity();
+
     if ( _dialog->exec() > 0)
     {
-        doResize = true;
-        const double x = _dialog->xScaleFactor();
-        const double y = _dialog->yScaleFactor();
-        const double z = _dialog->zScaleFactor();
-        _smat = cv::Matx44d( x, 0, 0, 0, // Scaling matrix
-                             0, y, 0, 0,
-                             0, 0, z, 0,
-                             0, 0, 0, 1);
+        _smat(0,0) = float(_dialog->xScaleFactor());
+        _smat(1,1) = float(_dialog->yScaleFactor());
+        _smat(2,2) = float(_dialog->zScaleFactor());
+    }   // end if
+
+    bool doResize = false;
+    if ( !_smat.isIdentity() && !_smat.isZero())
+    {
         MS::showStatus("Resizing model...");
+        doResize = true;
     }   // end if
 
     return doResize;
@@ -69,7 +68,7 @@ bool ActionScaleModel::doBeforeAction( Event)
 
 void ActionScaleModel::doAction( Event)
 {
-    storeUndo(this, Event::AFFINE_CHANGE);
+    storeUndo(this, Event::AFFINE_CHANGE | Event::CAMERA_CHANGE);
     FM* fm = MS::selectedModel();
     fm->lockForWrite();
     fm->addTransformMatrix( _smat);
@@ -77,10 +76,14 @@ void ActionScaleModel::doAction( Event)
 }   // end doAction
 
 
-void ActionScaleModel::doAfterAction( Event)
+Event ActionScaleModel::doAfterAction( Event)
 {
+    // Also apply the scale transform to the camera position (focus is fixed)
+    const Vec3f cpos = r3d::transform( _smat, MS::selectedViewer()->camera().pos());
+    MS::selectedViewer()->setCameraPosition(cpos);
+
     MS::showStatus( "Finished resizing model.", 5000);
     MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-    emit onEvent( Event::AFFINE_CHANGE);
+    return Event::AFFINE_CHANGE;
 }   // end doAfterAction
 

@@ -25,15 +25,20 @@
     <file alias="MARKER">res/icons/icons8-marker-30.png</file>
 
     <file alias="CHART">res/icons/icons8-plot-40.png</file>
-    <file alias="METRICS">res/icons/measuring.svg</file>
+    <file alias="METRICS">res/icons/measuring.png</file>
     <file alias="FACEQ">res/icons/icons8-decision-40.png</file>
-    <file alias="MODEL_INFO">res/icons/icons8-identification-documents-30.png</file>
+    <file alias="MODEL_INFO">res/icons/icons8-contact-info-40.png</file>
     <file alias="BELOW">res/icons/icons8-below-48.png</file>
     <file alias="ABOVE">res/icons/icons8-above-48.png</file>
     <file alias="SAVE_AS">res/icons/icons8-save_as.png</file>
 
     <file alias="LOCK">res/icons/icons8-lock-40.png</file>
     <file alias="UNLOCK">res/icons/icons8-unlock-40.png</file>
+
+    <file alias="TAGS">res/icons/icons8-tags-40.png</file>
+    <file alias="ALIGN_CENTRE">res/icons/icons8-align-center-64.png</file>
+    <file alias="RESTORE">res/icons/icons8-restore-50.png</file>
+    <file alias="ISSUE">res/icons/icons8-medium-risk-40.png</file>
 </qresource>
 </RCC>
 

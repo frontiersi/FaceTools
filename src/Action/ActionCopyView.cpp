@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,35 +39,27 @@ ActionCopyView::ActionCopyView( FMV *tv, FMV *sv, const QString& dn, const QIcon
 }   // end ctor
 
 
-bool ActionCopyView::checkEnable( Event)
+bool ActionCopyView::isAllowed( Event)
 {
     const FV* fv = MS::selectedView();
     bool allowed = fv && !_tviewer->isAttached(fv->data());   // Allowed if data not already on the target viewer
     if ( allowed && _sviewer != nullptr)
         allowed = _sviewer->attached().has(fv);
     return allowed;
-}   // end checkEnabled
+}   // end isAllowed
 
 
 void ActionCopyView::doAction( Event)
 {
-    FV* fv = MS::selectedView();
-    // If there exist FVs in the target viewer, copy their visualisations
-    // to the new FV. Otherwise, copy over visualisations from source FV.
-    FV* cfv = _tviewer->attached().first();
-    if ( cfv == nullptr)
-        cfv = fv;
+    FV* sfv = MS::selectedView();
+    MS::setSelected(nullptr);
 
-    FM* fm = fv->data();
-    fm->lockForRead();
-    FV* nfv = MS::addFaceView( fm, _tviewer); // Create the new FV from the underlying data.
-
-    // Copy over visualisations (where available) to the target view if
-    // they're visible as well as other state information.
-    nfv->copyFrom( cfv);
-
-    fm->unlock();
+    FM* fm = sfv->data();
+    FV* nfv = MS::add( fm, _tviewer); // Create the new FV from the underlying data.
+    nfv->copyFrom( sfv); // Copy over visualisations from the source to new face view
 
     MS::setSelected( nfv);
-    emit onEvent( Event::VIEWER_CHANGE);
 }   // end doAction
+
+
+Event ActionCopyView::doAfterAction( Event) { return Event::VIEWER_CHANGE;}

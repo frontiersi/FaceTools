@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,11 +17,15 @@
 
 #include <Vis/VertexLabelsView.h>
 #include <vtkPointData.h>
+#include <FaceModel.h>
 using FaceTools::Vis::VertexLabelsView;
+using FaceTools::FM;
 
 
-vtkSmartPointer<vtkPolyData> VertexLabelsView::createLabels( const RFeatures::ObjModel& model) const
+vtkSmartPointer<vtkPolyData> VertexLabelsView::createLabels( const FM *fm) const
 {
+    const r3d::Mesh& model = fm->mesh();
+
     vtkSmartPointer<vtkPolyData> pdata = vtkSmartPointer<vtkPolyData>::New();
     vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
     vtkSmartPointer<vtkCellArray> vertices = vtkSmartPointer<vtkCellArray>::New();
@@ -29,7 +33,7 @@ vtkSmartPointer<vtkPolyData> VertexLabelsView::createLabels( const RFeatures::Ob
 
     assert( model.hasSequentialVertexIds());
 
-    const int nv = model.numVtxs();
+    const int nv = int(model.numVtxs());
     points->SetNumberOfPoints( nv);
     vlabels->SetNumberOfValues( nv);
     vlabels->SetName( "vertexIds");

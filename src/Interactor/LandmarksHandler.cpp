@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,107 +25,116 @@ using FaceTools::Interactor::LandmarksHandler;
 using FaceTools::Vis::LandmarksVisualisation;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
+using FaceTools::Vec3f;
 using FaceTools::FaceLateral;
 using MS = FaceTools::Action::ModelSelector;
+using LMAN = FaceTools::Landmark::LandmarksManager;
 
 
-LandmarksHandler::LandmarksHandler( LandmarksVisualisation& vis)
-    : _vis(vis), _drag(-1), _hover(-1), _lat(FACE_LATERAL_MEDIAL) {}
+LandmarksHandler::Ptr LandmarksHandler::create() { return Ptr( new LandmarksHandler);}
+
+// private
+LandmarksHandler::LandmarksHandler()
+    : _hoverId(-1), _dragId(-1), _lat(FACE_LATERAL_MEDIAL) {}
+
+
+void LandmarksHandler::refreshState()
+{
+    setEnabled( MS::isViewSelected() && MS::selectedView()->isApplied(&_vis));
+}   // end refreshState
 
 
 void LandmarksHandler::doEnterProp( FV *fv, const vtkProp *p)
 {
     if ( fv == MS::selectedView())
     {
-        _hover = _vis.landmarkId( fv, p, _lat);    // Sets _lat as an out parameter
-        // Ignore other landmarks if dragging one already
-        if ( _drag < 0 && _hover >= 0)
-            _enterLandmark( _hover, _lat);
+        const int hid = _vis.landmarkId( fv, p, _lat);    // Sets _lat as an out parameter
+        if ( _dragId < 0 && hid >= 0) // Ignore other landmarks if dragging one already
+        {
+            _hoverId = hid;
+            _vis.setLabelVisible( fv, hid, _lat, true);
+            _vis.setLandmarkHighlighted( fv, hid, _lat, true);
+            const Vec3f& pos = fv->data()->currentLandmarks().pos( hid, _lat);
+            MS::showStatus( posString( LMAN::makeLandmarkString( hid, _lat), pos), 5000);
+            MS::setCursor( Qt::CursorShape::CrossCursor);
+            emit onEnterLandmark( hid, _lat);
+        }   // end if
     }   // end if
 }   // end doEnterProp
 
 
 void LandmarksHandler::doLeaveProp( FV* fv, const vtkProp* p)
 {
-    if ( fv == MS::selectedView())
+    if ( _dragId < 0)
     {
-        _hover = _vis.landmarkId( fv, p, _lat);
-        if ( _drag < 0)
-            _leaveLandmark( _hover, _lat);
-        _hover = -1;
+        FaceLateral lat;
+        const int hid = _vis.landmarkId( fv, p, lat);
+        if ( lat == _lat && hid == _hoverId)
+            _leaveLandmark();
     }   // end if
 }   // end doLeaveProp
 
 
+void LandmarksHandler::_leaveLandmark()
+{
+    const FV *fv = MS::selectedView();
+    _vis.setLabelVisible( fv, _hoverId, _lat, false);
+    _vis.setLandmarkHighlighted( fv, _hoverId, _lat, false);
+    MS::restoreCursor();
+    emit onLeaveLandmark( _hoverId, _lat); 
+    _hoverId = -1;
+    _lat = FACE_LATERAL_MEDIAL;
+}   // end _leaveLandmark
+
+
 bool LandmarksHandler::leftButtonDown()
 {
-    _drag = _hover;
-    if ( _drag >= 0)
-        emit onStartedDrag(_drag);
-    return _drag >= 0;
+    FaceLateral lat;
+    const int lmid = _vis.landmarkId( MS::selectedView(), MS::cursorProp(), lat);
+    if ( lmid >= 0 && lmid == _hoverId && lat == _lat && !LMAN::landmark( lmid)->isLocked())
+    {
+        _dragId = lmid;
+        emit onStartedDrag( _dragId, _lat);
+    }   // end if
+    return _dragId >= 0;
 }   // end leftButtonDown
 
 
 bool LandmarksHandler::leftButtonUp()
 {
     bool swallowed = false;
-    if ( _drag >= 0)
+    if ( _dragId >= 0)
     {
-        emit onFinishedDrag( _drag);
-        if ( _hover < 0)
-            _leaveLandmark( _drag, _lat);
-        _drag = -1;
+        emit onFinishedDrag( _dragId, _lat);
+        _dragId = -1;
         swallowed = true;
     }   // end if
     return swallowed;
-}   // end doOnLeftButtonUp
+}   // end leftButtonUp
 
 
 bool LandmarksHandler::leftDrag()
 {
     bool swallowed = false;
-    if ( MS::cursorView() && _drag >= 0)
+    if ( _dragId >= 0)
     {
         // Get the position on the surface of the actor
-        if ( MS::cursorView()->projectToSurface( MS::mousePos(), _dpos))
+        const FV *fv = MS::selectedView();
+        Vec3f dpos;
+        if ( fv->projectToSurface( fv->viewer()->mouseCoords(), dpos))
         {
+            FM* fm = fv->data();
+            fm->lockForWrite();
+            fm->setLandmarkPosition( _dragId, _lat, dpos);
+            for ( const auto& f : fm->fvs())
+                _vis.refreshLandmark( f, _dragId);
+            fm->unlock();
+
+            MS::showStatus( posString( LMAN::makeLandmarkString( _dragId, _lat), dpos), 5000);
+            MS::setCursor( Qt::CursorShape::CrossCursor);
+            emit onDoingDrag( _dragId, _lat);
             swallowed = true;
-            _landmarkMove( _drag, _lat, _dpos);
         }   // end if
     }   // end if
     return swallowed;
 }   // end leftDrag
-
-
-void LandmarksHandler::_landmarkMove( int id, FaceLateral lat, const cv::Vec3f& pos)
-{
-    FM* fm = MS::selectedModel();
-    fm->lockForWrite();
-    fm->setLandmarkPosition( id, lat, pos); // Also updates the model's orientation
-    _vis.updateLandmark( fm, id);
-    MS::showStatus( posString( Landmark::LandmarksManager::makeLandmarkString( id, lat) + ": ", pos), 5000);
-    MS::syncBoundingVisualisation( fm); // Reflect the orientation update in the
-    fm->unlock();
-    MS::setCursor(Qt::CursorShape::CrossCursor);
-    MS::updateRender();
-}   // end _landmarkMove
-
-
-void LandmarksHandler::_enterLandmark( int id, FaceLateral lat)
-{
-    FM* fm = MS::selectedModel();
-    _vis.setLandmarkHighlighted( fm, id, lat, true);
-    const cv::Vec3f pos = fm->currentAssessment()->landmarks().pos( id, lat);
-    MS::showStatus( posString( Landmark::LandmarksManager::makeLandmarkString( id, lat) + ": ", pos), 5000);
-    MS::setCursor(Qt::CursorShape::CrossCursor);
-    MS::updateRender();
-}   // end _enterLandmark
-
-
-void LandmarksHandler::_leaveLandmark( int id, FaceLateral lat)
-{
-    FM* fm = MS::selectedModel();
-    _vis.setLandmarkHighlighted( fm, id, lat, false);
-    MS::restoreCursor();
-    MS::updateRender();
-}   // end _leaveLandmark

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  ************************************************************************/
 
 #include <Metric/Chart.h>
-#include <Metric/MetricCalculatorManager.h>
+#include <Metric/MetricManager.h>
 #include <Ethnicities.h>
 #include <FaceModel.h>
 #include <QtCharts/QSplineSeries>
@@ -25,14 +25,14 @@
 using FaceTools::Metric::Chart;
 using FaceTools::Metric::GrowthData;
 using FaceTools::FM;
-using MCM = FaceTools::Metric::MetricCalculatorManager;
+using MM = FaceTools::Metric::MetricManager;
 
 using namespace QtCharts;
 
 
 namespace {
 
-QScatterSeries* createMetricPoint( double age, double val, const QString& title, const QColor& c)
+QAbstractSeries* createMetricPoint( double age, double val, const QString& title, const QColor& c)
 {
     QScatterSeries *dpoints = new QScatterSeries;
     dpoints->setName( title);
@@ -44,20 +44,43 @@ QScatterSeries* createMetricPoint( double age, double val, const QString& title,
 }   // end createMetricPoint
 
 
-void updateXAxisRange( QValueAxis& xaxis, double xmin, double xmax)
+void updateAxisRange( QValueAxis& axis, int mi, int ma, int maxTicks=16)
 {
-    xaxis.setRange( xmin, xmax);
-    int nyears = (int(xmax) - int(xmin));   // TODO make xtick count change on resizing of window
-    int tc = nyears + 1;
-    if ( nyears > 20)
-        tc /= 2;
-    xaxis.setTickCount( tc);
-}   // end updateXAxisRange
+    int t = ma - mi;   // TODO make xtick count change on resizing of window
+    int shifted = 0;
+    while ( t >= maxTicks)
+    {
+        if ( t % 2 == 0)
+            t /= 2;
+        else if ( t % 3 == 0)
+            t /= 3;
+        else if ( t % 5 == 0)
+            t /= 5;
+        else if ( t % 7 == 0)
+            t /= 7;
+        else
+        {
+            ma++;
+            t = ma - mi;
+            shifted++;
+        }   // end else
+    }   // end while
+
+    if ( shifted >= 2)
+    {
+        const int hshift = shifted/2;   // Integer (don't care about possible remainder)
+        ma -= hshift;
+        mi -= hshift;
+    }   // end if
+
+    axis.setRange( mi, ma);
+    axis.setTickCount( t + 1);
+}   // end updateAxisRange
 
 }   // end namespace
 
 
-Chart::Ptr Chart::create( GrowthData::CPtr gd, size_t d, const FM* fm)
+Chart::Ptr Chart::create( const GrowthData *gd, size_t d, const FM* fm)
 {
     return Ptr( new Chart( gd, d, fm));
 }   // end create
@@ -65,57 +88,59 @@ Chart::Ptr Chart::create( GrowthData::CPtr gd, size_t d, const FM* fm)
 
 Chart::Ptr Chart::create( int mid, size_t d, const FM* fm)
 {
-    assert(MCM::metric(mid) != nullptr);
-    GrowthData::CPtr gd = MCM::metric(mid)->currentGrowthData();
+    assert(MM::metric(mid) != nullptr);
+    const GrowthData *gd = MM::metric(mid)->growthData().current();
     return Ptr( new Chart( gd, d, fm));
 }   // end create
 
 
-Chart::Chart( GrowthData::CPtr gd, size_t d, const FM* fm) : _gdata(gd), _dim(d)
+Chart::Chart( const GrowthData *gd, size_t d, const FM* fm) : _gdata(gd), _dim(d)
 {
-    double xmin, xmax;
-    _addSeriesToChart( xmin, xmax);
+    float xmin, xmax, ymin, ymax;
+    xmin = ymin = FLT_MAX;
+    xmax = ymax = -FLT_MAX;
+
     if ( fm)
     {
-        const double age = fm->age();
-        xmin = std::min<double>( xmin, age);
-        xmax = std::max<double>( xmax, age);
-        _addDataPoints( fm);
+        _addDataPoints( fm, ymin, ymax);
+        xmin = floorf(fm->age());
+        xmax = ceilf(fm->age());
     }   // end if
 
-    this->createDefaultAxes();
+    _addSeriesToChart( xmin, xmax, ymin, ymax);
+    xmin = floorf(xmin);
+    xmax = ceilf(xmax);
+    ymin = floorf(ymin);
+    ymax = ceilf(ymax);
 
-    QValueAxis* xaxis = new QValueAxis;
+    createDefaultAxes();
+
+    QValueAxis* xaxis = static_cast<QValueAxis*>(this->axes(Qt::Horizontal).first());
     xaxis->setLabelFormat( "%d");
-    updateXAxisRange( *xaxis, xmin, xmax);
+    xaxis->setTitleText(tr("Age (years)"));
+    updateAxisRange( *xaxis, int(xmin), int(xmax));
 
-    this->setAxisX( xaxis);
+    QValueAxis* yaxis = static_cast<QValueAxis*>(this->axes(Qt::Vertical).first());
+    yaxis->setLabelFormat( "%d");
+    MC::Ptr metric = MM::metric(gd->metricId());
+    yaxis->setTitleText( tr("%1 (%2)").arg(metric->category()).arg(metric->units()));
+    updateAxisRange( *yaxis, int(ymin), int(ymax));
 
     this->legend()->setAlignment(Qt::AlignRight);
     this->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
 
     this->setBackgroundVisible(false);
     this->setDropShadowEnabled(false);
-    this->axisX()->setTitleText( "Age from birth (years)");
-
-    // TODO Change the Y axis title to depend upon the calculation type (angle, distance, area etc).
-    this->axisY()->setTitleText( QString("Distance (%1)").arg(FM::LENGTH_UNITS));
 }   // end ctor
 
 
 Chart::~Chart() { }   // end dtor
 
 
-void Chart::setYAxisTitle( const QString& ytitle)
-{
-    this->axisY()->setTitleText( ytitle);
-}   // end setYAxisTitle
-
-
 namespace {
-QString makeTitleString( GrowthData::CPtr gd, size_t dim)
+QString makeTitleString( const GrowthData *gd, size_t dim)
 {
-    QString title = MCM::metric(gd->metricId())->name();
+    QString title = MM::metric(gd->metricId())->name();
     // For multi-dimensional metrics, specify the dimension being shown.
     if ( gd->dims() > 1)
         title += QString( " [Dimension %1]").arg(dim + 1);
@@ -123,7 +148,7 @@ QString makeTitleString( GrowthData::CPtr gd, size_t dim)
 }   // end makeTitleString
 
 
-QString makeDemographicString( GrowthData::CPtr gd)
+QString makeDemographicString( const GrowthData *gd)
 {
     // Get the statics info as "sex; ethnicity; N"
     const QString ethName = FaceTools::Ethnicities::name( gd->ethnicity());
@@ -136,7 +161,7 @@ QString makeDemographicString( GrowthData::CPtr gd)
 }   // end makeDemographicString
 
 
-QString makeSourceString( GrowthData::CPtr gd, const QString& lb)
+QString makeSourceString( const GrowthData *gd, const QString& lb)
 {
     // Get the source and any note on the same line, with long notes underneath.
     QString src = gd->source();
@@ -154,10 +179,6 @@ QString Chart::makeRichTextTitleString() const
     const QString title = makeTitleString( _gdata, _dim);
     const QString demog = makeDemographicString( _gdata);
     const QString src = makeSourceString( _gdata, "<br>");
-    // Format as centred:
-    // <big><b>Title</b> (Sex; Ethnicity; N=n)</big>
-    //           <em>Source Note
-    //               LongNote</em>
     return QString("<center><big><b>%1</b> (%2)</big><br><em>%3</em></center>").arg( title, demog, src);
 }   // end makeRichTextTitleString
 
@@ -176,64 +197,68 @@ QString Chart::makeLatexTitleString( int fnm) const
 void Chart::addTitle() { this->setTitle( makeRichTextTitleString());}
 
 
-void Chart::_addDataPoints( const FM* fm)
+void Chart::_addDataPoints( const FM* fm, float &ymin, float &ymax)
 {
-    GrowthData::CPtr gd = _gdata;
+    const GrowthData *gd = _gdata;
     const int mid = gd->metricId();
-    const double age = fm->age();
+    const float age = fm->age();
     FaceAssessment::CPtr ass = fm->currentAssessment();
 
-    if ( MCM::metric(mid)->isBilateral())
+    if ( MM::metric(mid)->isBilateral())
     {
-        if ( ass->cmetricsL().has(mid) && ass->cmetricsR().has(mid))
+        if ( ass->cmetricsL().has(mid))
         {
+            assert( ass->cmetricsR().has(mid));
             const MetricValue& mvl = ass->cmetricsL().metric( mid);
             const MetricValue& mvr = ass->cmetricsR().metric( mid);
+            const float val = 0.5f * (mvl.value(_dim) + mvr.value(_dim));
 
-            this->addSeries( createMetricPoint( age, mvl.value(_dim), "Left", Qt::blue));
-            this->addSeries( createMetricPoint( age, mvr.value(_dim), "Right", Qt::darkGreen));
-
-            const double val = 0.5 * (mvl.value(_dim) + mvr.value(_dim));
+            this->addSeries( createMetricPoint( age, mvl.value(_dim), "Right", Qt::blue));
+            this->addSeries( createMetricPoint( age, mvr.value(_dim), "Left", Qt::darkGreen));
             this->addSeries( createMetricPoint( age, val, "Mean", Qt::red));
+
+            ymin = std::min( mvl.value(_dim), mvr.value(_dim));
+            ymax = std::max( mvl.value(_dim), mvr.value(_dim));
         }   // end if
     }   // end if
-    else
+    else if ( ass->cmetrics().has(mid))
     {
-        if ( ass->cmetrics().has(mid))
-        {
-            const MetricValue &mv = ass->cmetrics().metric( mid);
-            this->addSeries( createMetricPoint( age, mv.value(_dim), "Subject", Qt::red));
-        }   // end if
-    }   // end else
+        const MetricValue &mv = ass->cmetrics().metric( mid);
+        this->addSeries( createMetricPoint( age, mv.value(_dim), "Subject", Qt::red));
+        ymin = ymax = mv.value(_dim);
+    }   // end else if
 }   // end _addDataPoints
 
 
-void Chart::_addSeriesToChart( double &x0, double &x1)
+void Chart::_addSeriesToChart( float &x0, float &x1, float &y0, float &y1)
 {
-    x0 = DBL_MAX;
-    x1 = -DBL_MAX;
-
-    QSplineSeries *mseries = new QSplineSeries;
-    QSplineSeries *z1pseries = new QSplineSeries;
-    QSplineSeries *z2pseries = new QSplineSeries;
-    QSplineSeries *z1nseries = new QSplineSeries;
-    QSplineSeries *z2nseries = new QSplineSeries;
+    QLineSeries *mseries = new QSplineSeries;
+    QLineSeries *z1pseries = new QSplineSeries;
+    QLineSeries *z2pseries = new QSplineSeries;
+    QLineSeries *z1nseries = new QSplineSeries;
+    QLineSeries *z2nseries = new QSplineSeries;
 
     assert( _gdata);
     rlib::RSD::CPtr rd = _gdata->rsd(_dim);
-    const int minx = int(rd->tmin());
-    const int maxx = int(rd->tmax() + 0.5);
+    const int minx = int(floorf(rd->tmin()));
+    const int maxx = int(ceilf(rd->tmax()));
+    x0 = minx;
+    x1 = maxx;
 
     for ( int i = minx; i <= maxx; ++i)
     {
-        double a = i;
-        double m = rd->mval(a);
-        double z = rd->zval(a);
+        float a = i;
+        float m = rd->mval(a);
+        float z = rd->zval(a);
+
         mseries->append( a, m);
         z1pseries->append( a, m + z);
         z2pseries->append( a, m + 2*z);
         z1nseries->append( a, m - z);
         z2nseries->append( a, m - 2*z);
+
+        y0 = std::min( y0, m - 2*z);
+        y1 = std::max( y1, m + 2*z);
     }   // end for
 
     z2pseries->setName("+2SD");
@@ -264,7 +289,4 @@ void Chart::_addSeriesToChart( double &x0, double &x1)
     addSeries(mseries);
     addSeries(z1nseries);
     addSeries(z2nseries);
-
-    x0 = std::min<double>( x0, minx);
-    x1 = std::max<double>( x1, maxx);
 }   // end _addSeriesToChart

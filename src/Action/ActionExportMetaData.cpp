@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,8 +21,6 @@
 #include <FaceModel.h>
 #include <QMessageBox>
 #include <QSet>
-#include <VtkTools.h>
-#include <FileIO.h> // rlib
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/filesystem.hpp>
@@ -46,10 +44,8 @@ void ActionExportMetaData::postInit()
     _fdialog = new QFileDialog( static_cast<QWidget*>(parent()));
     _fdialog->setWindowTitle( QObject::tr("Export metadata to..."));
     _fdialog->setFileMode( QFileDialog::AnyFile);
-    _fdialog->setMimeTypeFilters( _mimefilters);
-    _fdialog->setDefaultSuffix( _mimefilters.front());
     _fdialog->setAcceptMode( QFileDialog::AcceptSave);
-    _fdialog->setOption( QFileDialog::DontUseNativeDialog);
+    //_fdialog->setOption( QFileDialog::DontUseNativeDialog);
 }   // end postInit
 
 
@@ -59,11 +55,13 @@ QString ActionExportMetaData::toolTip() const
 }   // end toolTip
 
 
-bool ActionExportMetaData::checkEnable( Event) { return MS::isViewSelected();}
+bool ActionExportMetaData::isAllowed( Event) { return MS::isViewSelected();}
 
 
 QString ActionExportMetaData::_getFileName( const FM* fm)
 {
+    _fdialog->setMimeTypeFilters( _mimefilters);
+
     std::string filename = FMM::filepath( fm);
     boost::filesystem::path outpath( filename);
     filename = outpath.replace_extension( _mimeDB.mimeTypeForName( _fdialog->selectedMimeTypeFilter()).preferredSuffix().toStdString()).string();
@@ -82,7 +80,7 @@ QString ActionExportMetaData::_getFileName( const FM* fm)
         else
             break;
 
-        bool isValidFile = false;
+        bool isValidMime = false;
         QMimeType mtype = _mimeDB.mimeTypeForFile(QFileInfo(fname));
         if ( mtype.isValid())
         {
@@ -90,17 +88,16 @@ QString ActionExportMetaData::_getFileName( const FM* fm)
             {
                 if ( mtype.inherits( mn))
                 {
-                    isValidFile = true;
+                    isValidMime = true;
                     break;
                 }   // end if
             }   // end for
         }   // end if
 
-        if ( !isValidFile)
+        if ( !isValidMime)
         {
-            static const QString msg = QObject::tr("Not a valid file format; please choose one of the listed formats.");
-            QMessageBox::information( static_cast<QWidget*>(parent()), QObject::tr("Invalid File Format"), msg);
-            fname = "";
+            boost::filesystem::path fpath( fname.toStdString());
+            fname = fpath.replace_extension( _mimeDB.mimeTypeForName( _fdialog->selectedMimeTypeFilter()).preferredSuffix().toStdString()).string().c_str();
         }   // end if
     }   // end while
 
@@ -133,7 +130,7 @@ void ActionExportMetaData::doAction( Event)
     FM* fm = MS::selectedModel();
     fm->lockForRead();
     PTree tree;
-    FileIO::FaceModelXMLFileHandler::exportMetaData( fm, FMM::filepath(fm), tree);
+    FileIO::exportMetaData( fm, FMM::filepath(fm), true/* export path metrics*/, tree);
     fm->unlock();
 
     QMimeType mtype = _mimeDB.mimeTypeForFile(QFileInfo(_filename));
@@ -157,7 +154,8 @@ void ActionExportMetaData::doAction( Event)
 }   // end doAction
 
 
-void ActionExportMetaData::doAfterAction( Event)
+Event ActionExportMetaData::doAfterAction( Event)
 {
     MS::showStatus( QString("Exported meta data to '%1'.").arg(_filename), 5000);
+    return Event::NONE;
 }   // end doAfterAction

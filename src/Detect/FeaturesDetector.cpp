@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,15 +16,16 @@
  ************************************************************************/
 
 #include <Detect/FeaturesDetector.h>
-#include <FeatureUtils.h>   // RFeatures
-#include <RectCluster.h>    // RFeatures
-#include <Random.h>         // rlib
+#include <rimg/FeatureUtils.h>
+#include <rimg/RectCluster.h>
+#include <rlib/Random.h>
 #include <algorithm>
 #include <boost/filesystem/path.hpp>
 #include <cassert>
 using FaceTools::Detect::FeaturesDetector;
-using HCD = RFeatures::HaarCascadeDetector;
-using RC = RFeatures::RectCluster::Ptr;
+using HCD = rimg::HaarCascadeDetector;
+using RC = rimg::RectCluster::Ptr;
+using byte = unsigned char;
 
 namespace {
 
@@ -61,7 +62,7 @@ void showDebug( const cv::Mat_<byte>& gimg, const std::string& title,
         for ( const cv::Rect& r : rects)
             cv::rectangle( dimg, r, col, 2);
     }   // end foreach
-    RFeatures::showImage( dimg, title, false);
+    rimg::showImage( dimg, title, false);
 }   // end showDebug
 */
 
@@ -103,7 +104,6 @@ bool FeaturesDetector::initialise( const std::string& pdir)
     s_eyeDetectors.push_back( HCD::create( createPath( pdir, EYE1_MODEL_FILE)));
     s_eyeDetectors.push_back( HCD::create( createPath( pdir, EYE2_MODEL_FILE)));
     s_eyeDetectors.push_back( HCD::create( createPath( pdir, EYE3_MODEL_FILE)));
-    s_eyeDetectors.push_back( HCD::create( createPath( pdir, EYE4_MODEL_FILE)));
 
     for ( const HCD::Ptr hcd : s_faceDetectors)
     {
@@ -138,7 +138,7 @@ bool FeaturesDetector::findEyes()
 
     // Get the two largest clusters
     std::vector<RC> clusters;
-    RFeatures::clusterRects( eyes, 0.5, clusters);
+    rimg::clusterRects( eyes, 0.5, clusters);
     if ( clusters.size() < 2)   // Need at least two clusters of detections
         return false;
 
@@ -158,8 +158,8 @@ bool FeaturesDetector::findEyes()
                             (int)cvRound((meanBox0.height + meanBox1.height)/2));
 
     // Find the left and right centre points of the eyes
-    const cv::Point_<float> cp0 = RFeatures::calcOffset( meanBox0, cv::Point2f(0.5, 0.5));
-    const cv::Point_<float> cp1 = RFeatures::calcOffset( meanBox1, cv::Point2f(0.5, 0.5));
+    const cv::Point_<float> cp0 = rimg::calcOffset( meanBox0, cv::Point2f(0.5, 0.5));
+    const cv::Point_<float> cp1 = rimg::calcOffset( meanBox1, cv::Point2f(0.5, 0.5));
     cv::Point lcp( cvRound(cp0.x), cvRound(cp0.y));
     cv::Point rcp( cvRound(cp1.x), cvRound(cp1.y));
     if ( lcp.x >= rcp.x)
@@ -177,7 +177,7 @@ bool FeaturesDetector::findEyes()
 // public static
 bool FeaturesDetector::find( const cv::Mat_<byte> img)
 {
-    const cv::Mat_<byte> dimg = RFeatures::contrastStretch( img);
+    const cv::Mat_<byte> dimg = rimg::contrastStretch( img);
     // Create member instances
     std::for_each( s_faceDetectors.begin(), s_faceDetectors.end(), [=]( HCD::Ptr hcd){ hcd->setImage(dimg);});
 
@@ -187,7 +187,7 @@ bool FeaturesDetector::find( const cv::Mat_<byte> img)
         return false;
 
     std::vector<RC> clusters;
-    RFeatures::clusterRects( faces, 0.7f, clusters);
+    rimg::clusterRects( faces, 0.7f, clusters);
     if ( clusters.empty())
         return false;
 
@@ -205,7 +205,7 @@ bool FeaturesDetector::find( const cv::Mat_<byte> img)
     // Only use the top 3/5ths of the face box for the eyes
     cv::Rect topHalf = s_faceBox;
     topHalf.height = (int)cvRound(3*((double)(s_faceBox.height))/5);
-    cv::Mat_<byte> thimg = RFeatures::contrastStretch( dimg( topHalf));
+    cv::Mat_<byte> thimg = rimg::contrastStretch( dimg( topHalf));
     cv::medianBlur( thimg, thimg, 5);
     std::for_each( s_eyeDetectors.begin(), s_eyeDetectors.end(), [=]( HCD::Ptr hcd){ hcd->setImage( thimg);});
 

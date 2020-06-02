@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,149 +16,68 @@
  ************************************************************************/
 
 #include <FaceTools.h>
-#include <Detect/FaceShapeLandmarks2DDetector.h>
-#include <Metric/MetricCalculatorManager.h>
 #include <LndMrk/LandmarksManager.h>
 #include <Vis/FaceView.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <Ethnicities.h>
-#include <OffscreenModelViewer.h>   // RVTK
-#include <Transformer.h>        // RFeatures
+#include <r3dvis/OffscreenMeshViewer.h>
+#include <r3d/Transformer.h>
+#include <r3d/IterativeSurfacePathFinder.h>
+#include <r3d/SurfaceGlobalPlanePathFinder.h>
+#include <r3d/SurfaceLocalPlanePathFinder.h>
+#include <r3d/SurfacePointFinder.h>
+#include <r3d/SurfaceCurveFinder.h>
 #include <algorithm>
-using namespace RFeatures;
-using namespace FaceTools::Landmark;
-using MCM = FaceTools::Metric::MetricCalculatorManager;
-using MC = FaceTools::Metric::MetricCalculator;
-using FaceTools::Metric::GrowthData;
-using FaceTools::Metric::MetricValue;
 using FaceTools::FM;
+using namespace r3d;
 
 
 namespace {
 
-cv::Vec3f calcMeanNormalBetweenPoints( const ObjModel& model, int v0, int v1)
-{
-    RFeatures::DijkstraShortestPathFinder pfinder( model);
-    pfinder.setEndPointVertexIndices( v0, v1);
-    std::vector<int> vidxs;
-    pfinder.findShortestPath( vidxs);
-    const int n = int(vidxs.size()) - 1;
-    cv::Vec3f nrm(0,0,0);
-    for ( int i = 0; i < n; ++i)
-    {
-        const IntSet& sfs = model.spolys( vidxs[size_t(i)], vidxs[size_t(i+1)]);
-        std::for_each( std::begin(sfs), std::end(sfs), [&](int f){ nrm += model.calcFaceNorm(f);});
-    }   // end for
-    cv::normalize( nrm, nrm);
-    return nrm;
-}   // end calcMeanNormalBetweenPoints
-
-
-void updateNormal( const FM* fm, const cv::Vec3f& v0, int e0, const cv::Vec3f& v1, int e1, cv::Vec3f& nvec)
+void updateNormal( const KDTree &kdt, const Vec3f& v0, const Vec3f& v1, Vec3f& nvec)
 {
     // Estimate "down" vector from cross product of base vector with current (inaccurate) face normal.
-    const cv::Vec3f evec = v1 - v0;
-    cv::Vec3f dvec;
-    cv::normalize( evec.cross(nvec), dvec);
+    const Vec3f evec = v1 - v0;
+    Vec3f dvec = evec.cross(nvec);
+    dvec.normalize();
 
-    // Find reference locations further down the face from e0 and e1
-    const float pdelta = float(1.0 * cv::norm(evec));
-    const int r0 = fm->findVertex( v0 + dvec * pdelta);
-    const int r1 = fm->findVertex( v1 + dvec * pdelta);
+    // Find reference locations further down the face from v0 and v1 (at about nostril height)
+    const float pdelta = 0.5f * evec.norm();
+    const Vec3f r0 = FaceTools::toSurface( kdt, v0 + pdelta * dvec);
+    const Vec3f r1 = FaceTools::toSurface( kdt, v1 + pdelta * dvec);
 
-    // The final view vector is defined as the mean normal along the path over
-    // the model between the provided points and the shifted points.
-    const cv::Vec3f vv0 = calcMeanNormalBetweenPoints( fm->model(), r0, e0);
-    const cv::Vec3f vv1 = calcMeanNormalBetweenPoints( fm->model(), r1, e1);
-    cv::normalize( vv0 + vv1, nvec);
+    const Vec3f n0 = (r0-v0).cross(r1-v0);
+    const Vec3f n1 = (r0-v1).cross(r1-v1);
+    nvec = n0 + n1;
+    nvec.normalize();
 }   // end updateNormal
 
 }   // end namespace
 
 
-// public
-void FaceTools::findNormal( const FM* fm, const cv::Vec3f& v0, const cv::Vec3f& v1, cv::Vec3f& nvec)
+Vec3f FaceTools::findNormal( const KDTree &kdt, const Vec3f& v0, const Vec3f& v1, const Vec3f& invec)
 {
-    const int e0 = fm->findVertex( v0);
-    const int e1 = fm->findVertex( v1);
-    static const double MIN_DELTA = 1e-8;
+    static const float MIN_DELTA = 1e-7f;
     static const int MAX_TRIES = 12;
 
-    double delta = MIN_DELTA + 1;
+    Vec3f nvec = invec;
+    float delta = MIN_DELTA + 1;
     int tries = 0;
-    while ( fabs(delta) > MIN_DELTA && tries < MAX_TRIES)
+    while ( fabsf(delta) > MIN_DELTA && tries < MAX_TRIES)
     {
-        const cv::Vec3f invec = nvec;
-        updateNormal( fm, v0, e0, v1, e1, nvec);
-        delta = cv::norm( nvec - invec);
+        const Vec3f dnvec = nvec;
+        updateNormal( kdt, v0, v1, nvec);
+        delta = (nvec - dnvec).squaredNorm();
         tries++;
     }   // end while
+    return nvec;
 }   // end findNormal
 
 
-double FaceTools::calcFaceCropRadius( const cv::Vec3f& fcentre, const cv::Vec3f& v0, const cv::Vec3f& v1, double G)
+float FaceTools::calcFaceCropRadius( const Vec3f& fcentre, const Vec3f& v0, const Vec3f& v1, float G)
 {
-    return G * (cv::norm( fcentre - v0) + cv::norm( fcentre - v1))/2;
+    return G * (( fcentre - v0).norm() + (fcentre - v1).norm())/2;
 }   // end calcFaceCropRadius
-
-
-ObjModel::Ptr FaceTools::createFromVertices( const cv::Mat_<cv::Vec3f>& vrow)
-{
-    ObjModel::Ptr omod = ObjModel::create();
-    const int npoints = vrow.cols;
-    const cv::Vec3f* vptr = vrow.ptr<cv::Vec3f>(0);
-    for ( int i = 0; i < npoints; ++i)
-        omod->addVertex( vptr[i]);
-    return omod;
-}   // end createFromVertices
-
-
-ObjModel::Ptr FaceTools::createFromSubset( const ObjModel& smod, const IntSet& vidxs)
-{
-    ObjModel::Ptr omod = ObjModel::create();
-    std::for_each( std::begin(vidxs), std::end(vidxs), [&](int vidx){ omod->addVertex( smod.vtx(vidx));});
-    return omod;
-}   // end createFromSubset
-
-
-ObjModel::Ptr FaceTools::createFromTransformedSubset( const ObjModel& smod, const IntSet& vidxs, const cv::Matx44d& T,
-                                                      std::unordered_map<int,int>* newVidxsToSource)
-{
-    const RFeatures::Transformer transformer(T);
-    ObjModel::Ptr omod = ObjModel::create();
-    for ( int vidx : vidxs)
-    {
-        cv::Vec3f v = smod.vtx(vidx);
-        transformer.transform( v);
-        const int nvidx = omod->addVertex(v);
-        if ( newVidxsToSource)
-            (*newVidxsToSource)[nvidx] = vidx;
-    }   // end for
-    return omod;
-}   // end createFromTransformedSubset
-
-
-// Flatten m to XY plane and return it, also setting fmap to be the
-// vertex ID mapping from the returned flattened object to the original object m.
-ObjModel::Ptr FaceTools::makeFlattened( const ObjModel& m, std::unordered_map<int,int>* fmap)
-{
-    if ( fmap)
-        fmap->clear();
-    int nvidx;
-    ObjModel::Ptr fmod = ObjModel::create();
-    const IntSet& vids = m.vtxIds();
-    for ( int vidx : vids)
-    {
-        cv::Vec3f v = m.vtx(vidx);
-        v[2] = 0;
-        nvidx = fmod->addVertex(v);
-        if ( fmap)
-            (*fmap)[nvidx] = vidx;
-    }   // end for
-    // fmod is now a flattened version
-    return fmod;
-}   // end makeFlattened
 
 
 void FaceTools::updateRenderers( const FMS& fms)
@@ -173,165 +92,124 @@ void FaceTools::updateRenderers( const FMS& fms)
 }   // end updateRenderers
 
 
-cv::Vec3f FaceTools::toSurface( const FM* fm, const cv::Vec3f& v)
+Vec3f FaceTools::toSurface( const KDTree &kdt, const Vec3f& v)
 {
-    int notused;
-    cv::Vec3f fv;
-    const RFeatures::ObjModelSurfacePointFinder spfinder( fm->model());
-    int vidx = fm->findVertex(v);
-    spfinder.find( v, vidx, notused, fv);
-    return fv;
+    return SurfacePointFinder( kdt.mesh()).find( v, kdt.find(v));
 }   // end toSurface
 
 
-cv::Vec3f FaceTools::toTarget( const FM* fm, const cv::Vec3f& s, const cv::Vec3f& t)
+Vec3f FaceTools::toTarget( const KDTree &kdt, const Vec3f& s, const Vec3f& t)
 {
-    const RFeatures::ObjModelSurfacePointFinder spfinder( fm->model());
-    int vidx = fm->findVertex(s);
-    int notused;
-    cv::Vec3f fv;
-    spfinder.find( t, vidx, notused, fv);
-    return fv;
+    return SurfacePointFinder( kdt.mesh()).find( t, kdt.find(s));
 }   // end toTarget
 
 
-bool FaceTools::findPath( const FM* fm, const cv::Vec3f& p0, const cv::Vec3f& p1, std::list<cv::Vec3f>& pts)
+bool FaceTools::findPath( const KDTree& kdt, const Vec3f& p0, const Vec3f& p1, std::list<Vec3f>& pts)
 {
-    RFeatures::ObjModelSurfaceCurveFinder scfinder0( fm->model(), fm->kdtree());
-    RFeatures::ObjModelSurfaceCurveFinder scfinderR( fm->model(), fm->kdtree());
+    SurfaceCurveFinder scfinder0( kdt);
+    SurfaceCurveFinder scfinderR( kdt);
  
-    //std::cerr << "Finding path with endpoints: " << p0 << ", " << p1;
-    double psum0 = scfinder0.findPath( p0, p1);
-    double psumr = scfinderR.findPath( p1, p0);
-    if ( psum0 + psumr < 0.0)
+    float psum0 = scfinder0.findPath( p0, p1);
+    float psumr = scfinderR.findPath( p1, p0);
+    if ( psum0 + psumr < 0.0f)
     {
         //std::cerr << " not found!" << std::endl;
         return false;
     }   // end if
 
     if ( psum0 < 0)
-        psum0 = DBL_MAX;
+        psum0 = FLT_MAX;
     if ( psumr < 0)
-        psumr = DBL_MAX;
+        psumr = FLT_MAX;
 
-    const std::vector<cv::Vec3f>* lpath = &scfinder0.lastPath();
+    const std::vector<Vec3f>* lpath = &scfinder0.lastPath();
     if ( psumr < psum0)
         lpath = &scfinderR.lastPath();
     assert( lpath);
-    pts = std::list<cv::Vec3f>( lpath->begin(), lpath->end());
+    pts = std::list<Vec3f>( lpath->begin(), lpath->end());
     if ( psumr < psum0)
         pts.reverse();
 
-    //std::cerr << " surface path length = " << std::min(psumr, psum0) << std::endl;
     return true;
 }   // end findPath
 
 
-bool FaceTools::findStraightPath( const FM* fm, const cv::Vec3f& p0, const cv::Vec3f& p1, const cv::Vec3f& focVec, std::list<cv::Vec3f>& pts)
+bool FaceTools::findStraightPath( const KDTree &kdt, const Vec3f& p0, const Vec3f& p1, std::list<Vec3f>& pts)
 {
-    ObjModelSurfaceGlobalPlanePathFinder pfinder( fm->model(), fm->kdtree(), focVec);
-    if ( pfinder.findPath( p0, p1) >= 0)
+    IterativeSurfacePathFinder pfinder( kdt);
+    if ( pfinder.findPath( p0, p1) > 0)
     {
-        const std::vector<cv::Vec3f>& lpath = pfinder.lastPath();
-        pts = std::list<cv::Vec3f>( lpath.begin(), lpath.end());
+        const std::vector<Vec3f>& lpath = pfinder.lastPath();
+        pts = std::list<Vec3f>( lpath.begin(), lpath.end());
     }   // end if
     return !pts.empty();
 }   // end findStraightPath
 
 
-bool FaceTools::findCurveFollowingPath( const FM* fm, const cv::Vec3f& p0, const cv::Vec3f& p1, std::list<cv::Vec3f>& pts)
+bool FaceTools::findCurveFollowingPath( const KDTree &kdt, const Vec3f& p0, const Vec3f& p1, std::list<Vec3f>& pts)
 {
-    ObjModelSurfaceLocalPlanePathFinder pfinder( fm->model(), fm->kdtree());
+    SurfaceLocalPlanePathFinder pfinder( kdt);
     if ( pfinder.findPath( p0, p1) >= 0)
     {
-        const std::vector<cv::Vec3f>& lpath = pfinder.lastPath();
-        pts = std::list<cv::Vec3f>( lpath.begin(), lpath.end());
+        const std::vector<Vec3f>& lpath = pfinder.lastPath();
+        pts = std::list<Vec3f>( lpath.begin(), lpath.end());
     }   // end if
     return !pts.empty();
 }   // end findCurveFollowingPath
 
 
-cv::Vec3f FaceTools::findDeepestPoint2( const FM* fm, const cv::Vec3f& p0, const cv::Vec3f& p1, double *dout)
+bool FaceTools::findOrientedPath( const KDTree &kdt, const Vec3f& p0, const Vec3f& p1, const Vec3f &u, std::list<Vec3f>& pts)
 {
-    const ObjModel& model = fm->model();
-    DijkstraShortestPathFinder spfinder( model);
-    const int v0 = fm->findVertex(p0);
-    const int v1 = fm->findVertex(p1);
-    spfinder.setEndPointVertexIndices( v0, v1);
-    std::vector<int> vpids;
-    spfinder.findShortestPath( vpids);
-
-    cv::Vec3f u;
-    cv::normalize( p1 - p0, u);
-
-    double maxd = 0;
-    int bv = v0;
-    const size_t n = vpids.size();
-    for ( size_t i = 0; i < n; ++i)
+    SurfaceGlobalPlanePathFinder pfinder( kdt, u);
+    if ( pfinder.findPath( p0, p1) >= 0)
     {
-        int vidx = vpids[i];
-        const cv::Vec3f& p = model.vtx(vidx);
-        const cv::Vec3f dv = p - p0;
-        const double h = cv::norm(dv);
-        const double theta = acos( double(dv.dot(u))/h);
-        const double o = h*sin(theta);
-        if ( o >= maxd)
-        {
-            maxd = o;
-            bv = vidx;
-        }   // end if
-    }   // end for
-
-    if ( dout)
-        *dout = maxd;
-
-    return model.vtx(bv);
-}   // end findDeepestPoint2
-
-
-cv::Vec3f FaceTools::findDeepestPoint( const FM* fm, const cv::Vec3f& p0, const cv::Vec3f& p1, double *dout)
-{
-    std::list<cv::Vec3f> pts;
-    const bool foundPath = findPath( fm, p0, p1, pts);
-    if ( !foundPath)
-    {
-        std::cerr << "[WARNING] FaceTools::findDeepestPoint: Failed to find path using SurfaceCurveFinder - using DijkstraShortestPathFinder instead." << std::endl;
-        return findDeepestPoint2( fm, p0, p1, dout);
+        const std::vector<Vec3f>& lpath = pfinder.lastPath();
+        pts = std::list<Vec3f>( lpath.begin(), lpath.end());
     }   // end if
+    return !pts.empty();
+}   // end findOrientedPath
 
-    cv::Vec3f u;
-    cv::normalize( p1 - p0, u);
 
-    double maxd = 0;
-    cv::Vec3f dp;   // Deepest point
-    for ( const cv::Vec3f& p : pts)
+Vec3f FaceTools::findHighOrLowPoint( const KDTree& kdt, const Vec3f& p0, const Vec3f& p1)
+{
+    const Vec3f u = p1-p0;
+    const Vec3f r = u.cross(Vec3f(0,0,1));
+    Vec3f dv = r.cross(u);   // Normalise the direction vector for depth
+    dv.normalize();
+
+    std::list<Vec3f> pts;
+    const bool foundPath = findStraightPath( kdt, p0, p1, pts);
+    if ( !foundPath)
+        std::cerr << "[ERROR] FaceTools::findHighOrLowPoint: findStraightPath returned false!" << std::endl;
+
+    const Vec3f a = 0.5f * (p1 + p0);
+    float maxd = 0;
+    Vec3f dp = a;   // Absolute deepest point
+    for ( const Vec3f& p : pts)
     {
-        const cv::Vec3f dv = p - p0;
-        const double h = cv::norm(dv);
-        const double theta = acos( double(dv.dot(u))/h);
-        const double o = h*sin(theta);
-        if ( o >= maxd)
+        const Vec3f pa = p - a;
+        const float d = fabsf(pa.dot(dv));  // Absolute deepest (i.e. hill or valley)
+        if ( d >= maxd)
         {
-            maxd = o;
+            maxd = d;
             dp = p;
         }   // end if
     }   // end for
 
-    if ( dout)
-        *dout = maxd;
-
     return dp;
-}   // end findDeepestPoint
+}   // end findHighOrLowPoint
 
 
 cv::Mat_<cv::Vec3b> FaceTools::makeThumbnail( const FM* fm, const cv::Size& dims, float d)
 {
-    RVTK::OffscreenModelViewer omv( dims, 1);
-    omv.setModel( fm->model());
-    const cv::Vec3f centre = fm->centre();
-    const RFeatures::Orientation on = fm->orientation();
-    const cv::Vec3f cpos = (d * on.nvec()) + centre;
-    const CameraParams cam( cpos, centre, on.uvec(), 30);
+    r3dvis::OffscreenMeshViewer omv( dims, 1);
+    omv.setModel( fm->mesh());
+    const Mat4f& T = fm->transformMatrix();
+    const Vec3f centre = T.block<3,1>(0,3);
+    const Vec3f uvec = T.block<3,1>(0,1);
+    const Vec3f nvec = T.block<3,1>(0,2);
+    const Vec3f cpos = (d * nvec) + centre;
+    const CameraParams cam( cpos, centre, uvec, 30);
     omv.setCamera( cam);
     return omv.snapshot();
 }   // end makeThumbnail

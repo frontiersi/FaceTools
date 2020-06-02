@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,12 +18,8 @@
 #ifndef FACE_TOOLS_H
 #define FACE_TOOLS_H
 
-#include "FaceTypes.h"
-#include "LndMrk/LandmarkSet.h"
-#include "MiscFunctions.h"
-#include <Viewer.h> // RVTK
-#include <Orientation.h>    // RFeatures
-#include <QtCharts/QChartView>
+#include "FaceTools/FaceTypes.h"
+#include <r3d/KDTree.h>
 
 namespace FaceTools {
 
@@ -33,45 +29,27 @@ namespace FaceTools {
 // be given by the surface locations of the left and right pupils.
 // After obtaining the normal vector, the up vector is calculated simply
 // as the normalized vector vnorm.cross(v1-v0)
-FaceTools_EXPORT void findNormal( const FM*,
-                                  const cv::Vec3f& v0,    // Position of left eye
-                                  const cv::Vec3f& v1,    // Position of right eye
-                                  cv::Vec3f& vnorm);      // Output face norm
+FaceTools_EXPORT Vec3f findNormal( const r3d::KDTree&,
+                                   const Vec3f &v0,     // Position of left eye
+                                   const Vec3f &v1,     // Position of right eye
+                                   const Vec3f &vnorm); // Output face norm
 
 // Return the point closest to v on the surface of the model.
-FaceTools_EXPORT cv::Vec3f toSurface( const FM*, const cv::Vec3f& v);
+FaceTools_EXPORT Vec3f toSurface( const r3d::KDTree&, const Vec3f& v);
 
 // Starting at the point on the surface closest to s, return the point on the surface closest to t.
-FaceTools_EXPORT cv::Vec3f toTarget( const FM*, const cv::Vec3f& s, const cv::Vec3f& t);
+FaceTools_EXPORT Vec3f toTarget( const r3d::KDTree&, const Vec3f& s, const Vec3f& t);
 
-FaceTools_EXPORT bool findPath( const FM*, const cv::Vec3f& p0, const cv::Vec3f& p1, std::list<cv::Vec3f>& pts);
-FaceTools_EXPORT bool findStraightPath( const FM*, const cv::Vec3f& p0, const cv::Vec3f& p1, const cv::Vec3f& focVec, std::list<cv::Vec3f>& pts);
-FaceTools_EXPORT bool findCurveFollowingPath( const FM*, const cv::Vec3f& p0, const cv::Vec3f& p1, std::list<cv::Vec3f>& pts);
+FaceTools_EXPORT bool findPath( const r3d::KDTree&, const Vec3f& p0, const Vec3f& p1, std::list<Vec3f>& pts);
+FaceTools_EXPORT bool findStraightPath( const r3d::KDTree&, const Vec3f& p0, const Vec3f& p1, std::list<Vec3f>& pts);
+FaceTools_EXPORT bool findCurveFollowingPath( const r3d::KDTree&, const Vec3f& p0, const Vec3f& p1, std::list<Vec3f>& pts);
+FaceTools_EXPORT bool findOrientedPath( const r3d::KDTree&, const Vec3f& p0, const Vec3f& p1, const Vec3f& u, std::list<Vec3f>&);
 
-// Find the point farthest off the straight line distance between p0 and p1 along the shortest contour over the mesh between these points.
-// If parameter d is not null, on return it is set with the distance the returned point is orthogonally from the baseline vector p0->p1.
-FaceTools_EXPORT cv::Vec3f findDeepestPoint( const FM*, const cv::Vec3f&, const cv::Vec3f&, double *d=nullptr);
-FaceTools_EXPORT cv::Vec3f findDeepestPoint2( const FM*, const cv::Vec3f&, const cv::Vec3f&, double *d=nullptr);
+// Find the hill or valley point between p0 and p1 along the straight contour between these points.
+FaceTools_EXPORT Vec3f findHighOrLowPoint( const r3d::KDTree&, const Vec3f&, const Vec3f&);
 
 // Calculate cropping radius for a face as G times the distance from the face centre to the point halfway between the eyes.
-FaceTools_EXPORT double calcFaceCropRadius( const cv::Vec3f& faceCentre, const cv::Vec3f& leye, const cv::Vec3f& reye, double G);
-
-// Create a vertices only ObjModel from the given row of points.
-FaceTools_EXPORT RFeatures::ObjModel::Ptr createFromVertices( const cv::Mat_<cv::Vec3f>& row);
-
-// Create a vertices only ObjModel from the given subset of vertices.
-FaceTools_EXPORT RFeatures::ObjModel::Ptr createFromSubset( const RFeatures::ObjModel&, const IntSet& vidxs);
-
-// Given a source model and a subset of vertices (vidxs), create and return a new
-// points only model consisting of the given vertices transformed using matrix T.
-// On return, if newVidxsToOld is not null, it is set with vertex mappings of the
-// new (returned) object to the given vertex indices on the source model (vidxs).
-FaceTools_EXPORT RFeatures::ObjModel::Ptr createFromTransformedSubset( const RFeatures::ObjModel& source, const IntSet& vidxs,
-                                                                       const cv::Matx44d& T, std::unordered_map<int,int>* newVidxsToOld=nullptr);
-
-// Flatten the source face to be in the XY plane, and set entries in provided map (if given) to key the source vertices
-// from the new vertices in the returned (flattened) model.
-FaceTools_EXPORT RFeatures::ObjModel::Ptr makeFlattened( const RFeatures::ObjModel& source, std::unordered_map<int,int>* newVidxsToOld=nullptr);
+FaceTools_EXPORT float calcFaceCropRadius( const Vec3f& faceCentre, const Vec3f& leye, const Vec3f& reye, float G);
 
 // Update exactly once all renderers referenced by all views of all models in the provided set.
 FaceTools_EXPORT void updateRenderers( const FMS&);

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 using FaceTools::Action::UndoStates;
 using FaceTools::Action::UndoState;
 using FaceTools::Action::FaceAction;
-using FaceTools::Action::EventGroup;
+using FaceTools::Action::Event;
 using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
 
@@ -39,47 +39,57 @@ UndoStates::Ptr UndoStates::get()
 
 
 void UndoStates::clear( const FM* fm) { get()->_clear(fm);}
-void UndoStates::_clear( const FM* fm) { _stacks.erase(fm);}
+void UndoStates::_clear( const FM* fm)
+{
+    assert(fm);
+    _stacks.erase(fm);
+}   // end _clear
 
 
 void UndoStates::clear() { get()->_clear();}
 void UndoStates::_clear() { _stacks.clear();}
 
 
-void UndoStates::storeUndo( const FaceAction* a, EventGroup egrp, bool autoRestore) { get()->_storeUndo(a, egrp, autoRestore);}
-void UndoStates::_storeUndo( const FaceAction* a, EventGroup egrp, bool autoRestore)
+void UndoStates::storeUndo( const FaceAction* a, Event e, bool autoRestore) { get()->_storeUndo(a, e, autoRestore);}
+void UndoStates::_storeUndo( const FaceAction* a, Event e, bool autoRestore)
 {
 #ifndef NDEBUG
     std::cerr << "UndoStates::storeUndo: thread ID = " << QThread::currentThreadId() << std::endl;
 #endif
-    UndoState::Ptr us;
-    if ( autoRestore)
-        us = UndoState::create( a, egrp, autoRestore);
-    else
-    {
-        us = a->makeUndoState();
-        if ( !us)
-        {
-            assert( false);
-            return;
-        }   // end if
-    }   // end else
+    UndoState::Ptr us = UndoState::create( a, e, autoRestore);
+    if ( !autoRestore)
+        a->saveState( *us);
 
     _mutex.lockForWrite();
     Stacks& stacks = _stacks[us->model()];
     if ( stacks.undos.size() == MAX_RESTORES)
         stacks.undos.pop_back();
     stacks.undos.push_front( us);   // Push to undo stack
+    stacks.oldRedos = stacks.redos; // In case of scrapping - can roll back
     stacks.redos.clear(); // Clear the redo stack
     _mutex.unlock();
     emit onUpdated();
 }   // end _storeUndo
 
 
-bool UndoStates::canUndo() { return get()->_canUndo();}
-bool UndoStates::_canUndo()
+void UndoStates::scrapLastUndo( const FM *fm) { get()->_scrapLastUndo( fm);}
+void UndoStates::_scrapLastUndo( const FM *fm)
 {
-    const FM* fm = MS::selectedModel();
+    assert( _canUndo( fm));
+    _mutex.lockForWrite();
+    Stacks& stacks = _stacks.at(fm);
+    UndoState::Ptr ustate = stacks.undos.front();
+    stacks.undos.pop_front();
+    stacks.redos = stacks.oldRedos;
+    stacks.oldRedos.clear();
+    _mutex.unlock();
+    emit onUpdated();
+}   // end _scrapLastUndo
+
+
+bool UndoStates::canUndo() { return get()->_canUndo( MS::selectedModel());}
+bool UndoStates::_canUndo( const FM *fm)
+{
     _mutex.lockForRead();
     const bool notEmpty = _stacks.count(fm) > 0 && !_stacks.at(fm).undos.empty();
     _mutex.unlock();
@@ -87,10 +97,9 @@ bool UndoStates::_canUndo()
 }   // end _canUndo
 
 
-bool UndoStates::canRedo() { return get()->_canRedo();}
-bool UndoStates::_canRedo()
+bool UndoStates::canRedo() { return get()->_canRedo( MS::selectedModel());}
+bool UndoStates::_canRedo( const FM *fm)
 {
-    const FM* fm = MS::selectedModel();
     _mutex.lockForRead();
     const bool notEmpty = _stacks.count(fm) > 0 && !_stacks.at(fm).redos.empty();
     _mutex.unlock();
@@ -124,48 +133,47 @@ QString UndoStates::_redoActionName()
 }   // end _redoActionName
 
 
-void UndoStates::undo() { get()->_undo();}
-void UndoStates::_undo()
+Event UndoStates::undo() { return get()->_undo( MS::selectedModel());}
+Event UndoStates::_undo( const FM *fm)
 {
-    assert( canUndo());
+    assert( _canUndo( fm));
 
     _mutex.lockForWrite();
-    Stacks& stacks = _stacks.at(MS::selectedModel());
+    Stacks& stacks = _stacks.at(fm);
     UndoState::Ptr ustate = stacks.undos.front();
     stacks.undos.pop_front();
 
     // Before restoring state, we save the current state for redo purposes
-    UndoState::Ptr rstate;
-    if ( ustate->isAutoRestore())
-        rstate = UndoState::create( ustate->action(), ustate->events(), true);
-    else
-        rstate = ustate->action()->makeUndoState();
+    UndoState::Ptr rstate = UndoState::create( ustate->action(), ustate->events(), ustate->isAutoRestore());
+    if ( !ustate->isAutoRestore())
+        ustate->action()->saveState( *rstate);
     stacks.redos.push_front( rstate);
+    stacks.oldRedos.clear();
     _mutex.unlock();
 
-    ustate->restore();
+    Event e = ustate->restore();
     emit get()->onUpdated();
+    return e;
 }   // end _undo
 
 
-void UndoStates::redo() { get()->_redo();}
-void UndoStates::_redo()
+Event UndoStates::redo() { return get()->_redo( MS::selectedModel());}
+Event UndoStates::_redo( const FM *fm)
 {
-    assert( canRedo());
+    assert( _canRedo( fm));
 
     _mutex.lockForWrite();
-    Stacks& stacks = _stacks.at(MS::selectedModel());
+    Stacks& stacks = _stacks.at( fm);
     UndoState::Ptr rstate = stacks.redos.front();
     stacks.redos.pop_front();
     // Before restoring state, we save the current state for undo purposes
-    UndoState::Ptr ustate;
-    if ( rstate->isAutoRestore())
-        ustate = UndoState::create( rstate->action(), rstate->events(), true);
-    else
-        ustate = rstate->action()->makeUndoState();
+    UndoState::Ptr ustate = UndoState::create( rstate->action(), rstate->events(), rstate->isAutoRestore());
+    if ( !rstate->isAutoRestore())
+        rstate->action()->saveState( *ustate);
     stacks.undos.push_front( ustate);
     _mutex.unlock();
 
-    rstate->restore();
+    Event e = rstate->restore();
     emit get()->onUpdated();
+    return e;
 }   // end _redo

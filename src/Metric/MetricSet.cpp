@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -57,7 +57,7 @@ void MetricSet::reset()
 }   // end reset
 
 
-void MetricSet::write( PTree& node, double age) const
+void MetricSet::write( PTree& node, float age) const
 {
     for ( int id : _ids)
         metric(id).write(node, age);

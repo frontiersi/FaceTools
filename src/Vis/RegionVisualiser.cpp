@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,175 +16,33 @@
  ************************************************************************/
 
 #include <Vis/RegionVisualiser.h>
-#include <LndMrk/LandmarksManager.h>
-#include <FaceModelViewer.h>
+#include <Metric/RegionMetricType.h>
 #include <FaceModel.h>
-#include <FaceTools.h>
-#include <VtkTools.h>           // RVTK
-#include <VtkActorCreator.h>    // RVTK
-#include <vtkProperty.h>
-#include <vtkFollower.h>
 using FaceTools::Vis::RegionVisualiser;
-using FaceTools::Vis::MetricVisualiser;
 using FaceTools::Vis::FV;
-using FaceTools::FMV;
-using FaceTools::FM;
-using FaceTools::FaceLateral;
-using FaceTools::Landmark::LmkList;
-
-
-RegionVisualiser::RegionVisualiser( int id, const LmkList* lmks0, const LmkList* lmks1)
-    : MetricVisualiser( id), _lmks0(lmks0), _lmks1(lmks1) {}
-
-
-namespace {
-void highlight( vtkActor* actor, bool v)
-{
-    vtkProperty* prop = actor->GetProperty();
-    if ( v)
-    {
-        prop->SetLineWidth(8.0);
-        prop->SetColor( 0.8, 0.2, 0.2);
-        prop->SetOpacity(0.99);
-    }   // end if
-    else
-    {
-        prop->SetLineWidth(2.0);
-        prop->SetColor( 0.2, 0.2, 1.0);
-        prop->SetOpacity(0.3);
-    }   // end else
-}   // end highlight
-
-
-void setActorProperties( vtkActor* actor)
-{
-    vtkProperty* prop = actor->GetProperty();
-    prop->SetRepresentationToWireframe();
-    prop->SetRenderLinesAsTubes(false);
-    prop->SetAmbient( 1);
-    prop->SetDiffuse( 0);
-    prop->SetSpecular(0);
-    highlight( actor, false);
-    actor->SetPickable(false);
-}   // end setActorProperties
-
-/*
-void setLineColour( vtkActor* actor, const QColor& bg)
-{
-    QColor col = FaceTools::chooseContrasting( bg);
-    vtkProperty* prop = actor->GetProperty();
-    prop->SetColor( col.redF(), col.greenF(), col.blueF());
-}   // end setLineColour
-*/
-}   // end namespace
-
-
-bool RegionVisualiser::belongs( const vtkProp* p, const FV *fv) const
-{
-    return ( _rep0.count(fv) > 0 && _rep0.at(fv) == p) || ( _rep1.count(fv) > 0 && _rep1.at(fv) == p);
-}   // end belongs
-
-
-void RegionVisualiser::syncToViewTransform( const FV *fv, const vtkMatrix4x4* cvm)
-{
-    vtkMatrix4x4* vm = const_cast<vtkMatrix4x4*>(cvm);
-    if ( _rep0.count(fv) > 0)
-        _rep0.at(fv)->PokeMatrix(vm);
-    if ( _rep1.count(fv) > 0)
-        _rep1.at(fv)->PokeMatrix(vm);
-}   // end syncToViewTransform
-
-
-void RegionVisualiser::setHighlighted( const FV* fv, bool v)
-{
-    if ( _rep0.count(fv) > 0)
-        highlight( _rep0.at(fv), v);
-    if ( _rep1.count(fv) > 0)
-        highlight( _rep1.at(fv), v);
-}   // end setHighlighted
-
-
-void RegionVisualiser::doSetVisible( const FV* fv, bool v)
-{
-    if ( _rep0.count(fv) > 0)
-        _rep0.at(fv)->SetVisibility(v);
-    if ( _rep1.count(fv) > 0)
-        _rep1.at(fv)->SetVisibility(v);
-}   // end doSetVisible
-
-
-bool RegionVisualiser::isVisible( const FV *fv) const
-{
-    bool vis = false;
-    if ( _rep0.count(fv) > 0)
-        vis = _rep0.at(fv)->GetVisibility() != 0;
-    if ( _rep1.count(fv) > 0)
-        vis &= _rep1.at(fv)->GetVisibility() != 0;
-    return vis;
-}   // end isVisible
-
-
-void RegionVisualiser::checkState( const FV*)
-{
-    /*
-    const QColor bg = fv->viewer()->backgroundColour();
-    if ( _rep0.count(fv) > 0)
-        setLineColour( _rep0.at(fv), bg);
-    if ( _rep1.count(fv) > 0)
-        setLineColour( _rep0.at(fv), bg);
-    */
-}   // end checkState
-
-
-bool RegionVisualiser::isAvailable( const FM* fm) const
-{
-    using SLMK = Landmark::SpecificLandmark;
-    bool b0 = true;
-    if ( _lmks0)
-        b0 = std::all_of( std::begin(*_lmks0), std::end(*_lmks0), [fm]( const SLMK& lm){ return fm->currentAssessment()->landmarks().has(lm);});
-    bool b1 = true;
-    if ( _lmks1)
-        b1 = std::all_of( std::begin(*_lmks1), std::end(*_lmks1), [fm]( const SLMK& lm){ return fm->currentAssessment()->landmarks().has(lm);});
-    return b0 && b1;
-}   // end isAvailable
 
 
 void RegionVisualiser::doApply( const FV *fv)
 {
-    if ( _lmks0 && !_lmks0->empty())
-        applyActor( fv, _lmks0, _rep0);
-    if ( _lmks1 && !_lmks1->empty())
-        applyActor( fv, _lmks1, _rep1);
+    const Metric::RegionMetricType *rmetric = static_cast<const Metric::RegionMetricType*>(metric());
+    const std::vector<Metric::RegionMeasure> &rinfo = rmetric->regionInfo(fv->data());
+    for ( size_t i = 0; i < rinfo.size(); ++i)
+    {
+        LoopView *lv = new LoopView;
+        lv->setColour( 0.5, 0.1, 0.5);
+        _views[fv].push_back(lv);
+    }   // end for
 }   // end doApply
 
 
-void RegionVisualiser::doPurge( const FV *fv)
+void RegionVisualiser::doRefresh( const FV *fv)
 {
-    purgeActor( fv, _rep0);
-    purgeActor( fv, _rep1);
-}   // end doPurge
-
-
-// private
-void RegionVisualiser::applyActor( const FV *fv, const LmkList* lmks, std::unordered_map<const FV*, vtkSmartPointer<vtkActor> >& actors)
-{
-    const FM* fm = fv->data();
-    std::vector<cv::Vec3f> vtxs;
-    for ( const auto& lmk : *lmks)
-        vtxs.push_back(fm->currentAssessment()->landmarks().pos(lmk));
-    vtkActor* actor = actors[fv] = RVTK::VtkActorCreator::generateLineActor(vtxs, true);
-    setActorProperties(actor);
-    fv->viewer()->add( actor);
-}   // end applyActor
-
-
-// private
-void RegionVisualiser::purgeActor( const FV *fv, std::unordered_map<const FV*, vtkSmartPointer<vtkActor> >& actors)
-{
-    if ( actors.count(fv) > 0)
+    const std::vector<LoopView*> &lviews = _views.at(fv);
+    const Metric::RegionMetricType *rmetric = static_cast<const Metric::RegionMetricType*>(metric());
+    const std::vector<Metric::RegionMeasure> &rinfo = rmetric->regionInfo(fv->data());
+    for ( size_t i = 0; i < rinfo.size(); ++i)
     {
-        FMV* viewer = fv->viewer();
-        viewer->remove( actors.at(fv));
-        actors.erase(fv);
-    }   // end if
-}   // end purgeActor
+        const Metric::RegionMeasure &rm = rinfo.at(i);
+        lviews[i]->update( rm.points);
+    }   // end for
+}   // end doRefresh

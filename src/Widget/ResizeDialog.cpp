@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,6 @@ using FaceTools::Widget::ResizeDialog;
 using FaceTools::FM;
 
 
-// public
 ResizeDialog::ResizeDialog( QWidget *parent) :
     QDialog(parent), _ui(new Ui::ResizeDialog)
 {
@@ -32,7 +31,13 @@ ResizeDialog::ResizeDialog( QWidget *parent) :
     setWindowTitle( parent->windowTitle() + " | Resize Model");
     setWindowFlags( windowFlags() & ~Qt::WindowCloseButtonHint);
 
-    connectSpinBoxes();
+    connect( _ui->resizeXSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::_doOnScaleXSpinBoxChanged);
+    connect( _ui->resizeYSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::_doOnScaleYSpinBoxChanged);
+    connect( _ui->resizeZSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::_doOnScaleZSpinBoxChanged);
+
+    connect( _ui->newXSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::_doOnNewXSpinBoxChanged);
+    connect( _ui->newYSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::_doOnNewYSpinBoxChanged);
+    connect( _ui->newZSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::_doOnNewZSpinBoxChanged);
 
     reset(nullptr);
 }   // end ctor
@@ -83,7 +88,7 @@ void ResizeDialog::reset( const FM* fm)
     double z = 0.0;
     if ( fm)
     {
-        const RFeatures::ObjModelBounds& bnds = *fm->bounds()[0];
+        const r3d::Bounds& bnds = *fm->bounds()[0];
         x = bnds.xlen();
         y = bnds.ylen();
         z = bnds.zlen();
@@ -100,133 +105,144 @@ void ResizeDialog::reset( const FM* fm)
     _ui->lockXButton->setChecked(true);
     _ui->lockYButton->setChecked(true);
     _ui->lockZButton->setChecked(true);
-    doOnScaleXSpinBoxChanged();  // Will update the Y and Z new size spin boxes too since X lock is checked.
+    _doOnScaleXSpinBoxChanged();  // Will update the Y and Z new size spin boxes too since X lock is checked.
 
-    checkCanApply();
+    _checkCanApply();
 }   // end reset
 
 
-void ResizeDialog::checkCanApply()
+void ResizeDialog::_checkCanApply()
 {
     const double x = xScaleFactor();
     const double y = yScaleFactor();
     const double z = zScaleFactor();
     _ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled( x != 1.0 || y != 1.0 || z != 1.0);
-}   // end checkCanApply
+}   // end _checkCanApply
 
 
-void ResizeDialog::connectSpinBoxes()
+void ResizeDialog::_blockSpinBoxSignals( bool v)
 {
-    connect( _ui->resizeXSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::doOnScaleXSpinBoxChanged);
-    connect( _ui->resizeYSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::doOnScaleYSpinBoxChanged);
-    connect( _ui->resizeZSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::doOnScaleZSpinBoxChanged);
-
-    connect( _ui->newXSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::doOnNewXSpinBoxChanged);
-    connect( _ui->newYSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::doOnNewYSpinBoxChanged);
-    connect( _ui->newZSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::doOnNewZSpinBoxChanged);
-}   // end connectSpinBoxes
-
-
-void ResizeDialog::disconnectSpinBoxes()
-{
-    disconnect( _ui->resizeXSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::doOnScaleXSpinBoxChanged);
-    disconnect( _ui->resizeYSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::doOnScaleYSpinBoxChanged);
-    disconnect( _ui->resizeZSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::doOnScaleZSpinBoxChanged);
-
-    disconnect( _ui->newXSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::doOnNewXSpinBoxChanged);
-    disconnect( _ui->newYSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::doOnNewYSpinBoxChanged);
-    disconnect( _ui->newZSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::doOnNewZSpinBoxChanged);
-}   // end disconnectSpinBoxes
+    _ui->resizeXSpinBox->blockSignals( v);
+    _ui->resizeYSpinBox->blockSignals( v);
+    _ui->resizeZSpinBox->blockSignals( v);
+    _ui->newXSpinBox->blockSignals( v);
+    _ui->newYSpinBox->blockSignals( v);
+    _ui->newZSpinBox->blockSignals( v);
+}   // end _blockSpinBoxSignals
 
 
-void ResizeDialog::updateXLocked( double sf)
+void ResizeDialog::_updateXLocked( double sf)
 {
     if ( _ui->lockXButton->isChecked()) // Locked? Then update the other dimensions by the same scale factor to keep aspect ratio.
     {
-        _ui->resizeYSpinBox->setValue(sf);
-        _ui->resizeZSpinBox->setValue(sf);
-        _ui->newYSpinBox->setValue( sf * _ui->oldYLabel->text().toDouble());
-        _ui->newZSpinBox->setValue( sf * _ui->oldZLabel->text().toDouble());
+        if ( _ui->lockYButton->isChecked())
+        {
+            _ui->resizeYSpinBox->setValue(sf);
+            _ui->newYSpinBox->setValue( sf * _ui->oldYLabel->text().toDouble());
+        }   // end if
+        if ( _ui->lockZButton->isChecked())
+        {
+            _ui->resizeZSpinBox->setValue(sf);
+            _ui->newZSpinBox->setValue( sf * _ui->oldZLabel->text().toDouble());
+        }   // end if
     }   // end if
-    checkCanApply();
-}   // end updateXLocked
+    _checkCanApply();
+}   // end _updateXLocked
 
 
-void ResizeDialog::updateYLocked( double sf)
+void ResizeDialog::_updateYLocked( double sf)
 {
     if ( _ui->lockYButton->isChecked()) // Locked? Then update the other dimensions by the same scale factor to keep aspect ratio.
     {
-        _ui->resizeXSpinBox->setValue(sf);
-        _ui->resizeZSpinBox->setValue(sf);
-        _ui->newXSpinBox->setValue( sf * _ui->oldXLabel->text().toDouble());
-        _ui->newZSpinBox->setValue( sf * _ui->oldZLabel->text().toDouble());
+        if ( _ui->lockXButton->isChecked())
+        {
+            _ui->resizeXSpinBox->setValue(sf);
+            _ui->newXSpinBox->setValue( sf * _ui->oldXLabel->text().toDouble());
+        }   // end if
+        if ( _ui->lockZButton->isChecked())
+        {
+            _ui->resizeZSpinBox->setValue(sf);
+            _ui->newZSpinBox->setValue( sf * _ui->oldZLabel->text().toDouble());
+        }   // end if
     }   // end if
-    checkCanApply();
-}   // end updateYLocked
+    _checkCanApply();
+}   // end _updateYLocked
 
 
-void ResizeDialog::updateZLocked( double sf)
+void ResizeDialog::_updateZLocked( double sf)
 {
     if ( _ui->lockZButton->isChecked()) // Locked? Then update the other dimensions by the same scale factor to keep aspect ratio.
     {
-        _ui->resizeXSpinBox->setValue(sf);
-        _ui->resizeYSpinBox->setValue(sf);
-        _ui->newXSpinBox->setValue( sf * _ui->oldXLabel->text().toDouble());
-        _ui->newYSpinBox->setValue( sf * _ui->oldYLabel->text().toDouble());
+        if ( _ui->lockXButton->isChecked())
+        {
+            _ui->resizeXSpinBox->setValue(sf);
+            _ui->newXSpinBox->setValue( sf * _ui->oldXLabel->text().toDouble());
+        }   // end if
+        if ( _ui->lockYButton->isChecked())
+        {
+            _ui->resizeYSpinBox->setValue(sf);
+            _ui->newYSpinBox->setValue( sf * _ui->oldYLabel->text().toDouble());
+        }   // end if
     }   // end if
-    checkCanApply();
-}   // end updateZLocked
+    _checkCanApply();
+}   // end _updateZLocked
 
 
-void ResizeDialog::doOnScaleXSpinBoxChanged()
+void ResizeDialog::_doOnScaleXSpinBoxChanged()
 {
     const double sf = _ui->resizeXSpinBox->value();
+    _blockSpinBoxSignals( true);
     _ui->newXSpinBox->setValue( sf * _ui->oldXLabel->text().toDouble());
-    updateXLocked(sf);
-}   // end doOnXSpinBoxChanged
+    _updateXLocked(sf);
+    _blockSpinBoxSignals( false);
+}   // end _doOnXSpinBoxChanged
 
 
-void ResizeDialog::doOnScaleYSpinBoxChanged()
+void ResizeDialog::_doOnScaleYSpinBoxChanged()
 {
     const double sf = _ui->resizeYSpinBox->value();
+    _blockSpinBoxSignals( true);
     _ui->newYSpinBox->setValue( sf * _ui->oldYLabel->text().toDouble());
-    updateYLocked(sf);
-}   // end doOnYSpinBoxChanged
+    _updateYLocked(sf);
+    _blockSpinBoxSignals( false);
+}   // end _doOnYSpinBoxChanged
 
 
-void ResizeDialog::doOnScaleZSpinBoxChanged()
+void ResizeDialog::_doOnScaleZSpinBoxChanged()
 {
     const double sf = _ui->resizeZSpinBox->value();
+    _blockSpinBoxSignals( true);
     _ui->newZSpinBox->setValue( sf * _ui->oldZLabel->text().toDouble());
-    updateZLocked(sf);
-}   // end doOnZSpinBoxChanged
+    _updateZLocked(sf);
+    _blockSpinBoxSignals( false);
+}   // end _doOnZSpinBoxChanged
 
 
-void ResizeDialog::doOnNewXSpinBoxChanged()
+void ResizeDialog::_doOnNewXSpinBoxChanged()
 {
     const double sf = xScaleFactor();
-    disconnectSpinBoxes();
+    _blockSpinBoxSignals( true);
     _ui->resizeXSpinBox->setValue( QString::number( sf, 'f', 2).toDouble());
-    updateXLocked( sf);
-    connectSpinBoxes();
-}   // end doOnXLineEdited
+    _updateXLocked( sf);
+    _blockSpinBoxSignals( false);
+}   // end _doOnXLineEdited
 
 
-void ResizeDialog::doOnNewYSpinBoxChanged()
+void ResizeDialog::_doOnNewYSpinBoxChanged()
 {
     const double sf = yScaleFactor();
-    disconnectSpinBoxes();
+    _blockSpinBoxSignals( true);
     _ui->resizeYSpinBox->setValue( QString::number( sf, 'f', 2).toDouble());
-    updateYLocked( sf);
-    connectSpinBoxes();
-}   // end doOnYLineEdited
+    _updateYLocked( sf);
+    _blockSpinBoxSignals( false);
+}   // end _doOnYLineEdited
 
 
-void ResizeDialog::doOnNewZSpinBoxChanged()
+void ResizeDialog::_doOnNewZSpinBoxChanged()
 {
     const double sf = zScaleFactor();
-    disconnectSpinBoxes();
+    _blockSpinBoxSignals( true);
     _ui->resizeZSpinBox->setValue( QString::number( sf, 'f', 2).toDouble());
-    updateZLocked( sf);
-    connectSpinBoxes();
-}   // end doOnZLineEdited
+    _updateZLocked( sf);
+    _blockSpinBoxSignals( false);
+}   // end _doOnZLineEdited

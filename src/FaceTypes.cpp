@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,156 +17,113 @@
 
 #include <FaceTypes.h>
 #include <Action/FaceAction.h>
-using FaceTools::Action::EventGroup;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 
 
 QString FaceTools::toSexString( int8_t s)
 {
-    if ( s == FaceTools::UNKNOWN_SEX)
-        return "U";
-
-    std::ostringstream oss;
-    if ( s & FaceTools::FEMALE_SEX)
-        oss << "F ";
-    if ( s & FaceTools::MALE_SEX)
-        oss << "M";
-
-    QString sstr = oss.str().c_str();
-    return sstr.trimmed();
+    if ( s == FEMALE_SEX)
+        return "F";
+    else if ( s == MALE_SEX)
+        return "M";
+    return "F M";
 }   // end toSexString
 
 
 QString FaceTools::toLongSexString( int8_t s)
 {
-    if ( s == FaceTools::UNKNOWN_SEX)
-        return "Unknown";
-
-    QString fstr, mstr, estr;
-    if ( s & FaceTools::FEMALE_SEX)
-        fstr = "Female";
-    if ( s & FaceTools::MALE_SEX)
-        mstr = "Male";
-    if ( !mstr.isEmpty() && !fstr.isEmpty())
-        estr = " / ";
-    return fstr + estr + mstr;
+    if ( s == FEMALE_SEX)
+        return "Female";
+    else if ( s == MALE_SEX)
+        return "Male";
+    return "Female | Male";
 }   // end namespace
 
 
 int8_t FaceTools::fromSexString( const QString& s)
 {
-    int8_t sex = FaceTools::UNKNOWN_SEX;
-    QStringList toks = s.split(QRegExp("\\W+"), QString::SkipEmptyParts);
-
-    for ( const QString& t : toks)
-    {
-        QString lt = t.toLower();
-        if ( lt == "f")
-            sex |= FaceTools::FEMALE_SEX;
-        else if ( lt == "m")
-            sex |= FaceTools::MALE_SEX;
-    }   // end for
-
-    return sex;
+    const QString ss = s.toLower().trimmed();
+    if ( ss == "f" || ss == "female")
+        return FEMALE_SEX;
+    if ( ss == "m" || ss == "male")
+        return MALE_SEX;
+    return UNKNOWN_SEX;
 }   // end fromSexString
 
 
-int8_t FaceTools::fromLongSexString( const QString& s)
+Event FaceTools::Action::operator|( const Event &e0, const Event &e1)
 {
-    int8_t sex = FaceTools::UNKNOWN_SEX;
-    QStringList toks = s.split(QRegExp("\\W+"), QString::SkipEmptyParts);
-
-    for ( const QString& t : toks)
-    {
-        QString lt = t.toLower();
-        if ( lt == "female")
-            sex |= FaceTools::FEMALE_SEX;
-        else if ( lt == "male")
-            sex |= FaceTools::MALE_SEX;
-    }   // end for
-
-    return sex;
-}   // end fromLongSexString
+    return Event( uint32_t(e0) | uint32_t(e1));
+}   // end operator|
 
 
-EventGroup::EventGroup() : _E(Event::NONE) {}
-
-EventGroup::EventGroup( Event E) : _E(E)
-{
-}   // end ctor
-
-EventGroup::EventGroup( std::initializer_list<Event> evs) : _E(*evs.begin())
-{
-    for ( Event e : evs)
-        add( e);
-}   // end ctor
-
-EventGroup::~EventGroup(){}
-
-bool EventGroup::has( EventGroup e) const { return (int(e.event()) & int(_E)) > 0;}
-
-bool EventGroup::is( EventGroup e) const { return _E == e.event();}
-
-Event EventGroup::add( EventGroup ec) { return (_E = Event(int(_E) | int(ec.event())));}
+void FaceTools::Action::operator|=( Event &e, const Event &e1) { e = operator|( e, e1);}
+Event& FaceTools::Action::add( Event &e, const Event &e1) { e = operator|( e, e1); return e;}
+Event& FaceTools::Action::remove( Event &e, const Event &e1) { e = Event( uint32_t(e) & ~uint32_t(e1)); return e;}
+Event FaceTools::Action::operator&( const Event &e0, const Event &e1) { return Event( uint32_t(e0) & uint32_t(e1));}
+bool FaceTools::Action::has( const Event &e0, const Event &e1) { return operator&( e0, e1) != Event::NONE;}
 
 
-std::string EventGroup::name() const
+std::ostream &FaceTools::Action::operator<<( std::ostream &os, const Event &e)
 {
     std::vector<std::string> nms;
 
-    if ( has(Event::ACT_CANCELLED))
-        nms.push_back("ACT_CANCELLED");
-    if ( has(Event::ACT_COMPLETE))
-        nms.push_back("ACT_COMPLETE");
-    if ( has(Event::MODEL_SELECT))
-        nms.push_back("MODEL_SELECT");
-    if ( has(Event::USER))
+    if ( has( e, Event::USER))
         nms.push_back("USER");
-    if ( has(Event::LOADED_MODEL))
+    if ( has( e, Event::LOADED_MODEL))
         nms.push_back("LOADED_MODEL");
-    if ( has(Event::SAVED_MODEL))
+    if ( has( e, Event::SAVED_MODEL))
         nms.push_back("SAVED_MODEL");
-    if ( has(Event::CLOSED_MODEL))
+    if ( has( e, Event::CLOSED_MODEL))
         nms.push_back("CLOSED_MODEL");
-    if ( has(Event::FACE_DETECTED))
-        nms.push_back("FACE_DETECTED");
-    if ( has(Event::GEOMETRY_CHANGE))
-        nms.push_back("GEOMETRY_CHANGE");
-    if ( has(Event::CONNECTIVITY_CHANGE))
+    if ( has( e, Event::MESH_CHANGE))
+        nms.push_back("MESH_CHANGE");
+    if ( has( e, Event::CONNECTIVITY_CHANGE))
         nms.push_back("CONNECTIVITY_CHANGE");
-    if ( has(Event::AFFINE_CHANGE))
+    if ( has( e, Event::AFFINE_CHANGE))
         nms.push_back("AFFINE_CHANGE");
-    if ( has(Event::ORIENTATION_CHANGE))
-        nms.push_back("ORIENTATION_CHANGE");
-    if ( has(Event::SURFACE_DATA_CHANGE))
+    if ( has( e, Event::MASK_CHANGE))
+        nms.push_back("MASK_CHANGE");
+    if ( has( e, Event::SURFACE_DATA_CHANGE))
         nms.push_back("SURFACE_DATA_CHANGE");
-    if ( has(Event::LANDMARKS_CHANGE))
+    if ( has( e, Event::LANDMARKS_CHANGE))
         nms.push_back("LANDMARKS_CHANGE");
-    if ( has(Event::METRICS_CHANGE))
+    if ( has( e, Event::METRICS_CHANGE))
         nms.push_back("METRICS_CHANGE");
-    if ( has(Event::STATISTICS_CHANGE))
-        nms.push_back("STATISTICS_CHANGE");
-    if ( has(Event::PATHS_CHANGE))
+    if ( has( e, Event::STATS_CHANGE))
+        nms.push_back("STATS_CHANGE");
+
+    if ( has( e, Event::PATHS_CHANGE))
         nms.push_back("PATHS_CHANGE");
-    if ( has(Event::VIEW_CHANGE))
+    if ( has( e, Event::VIEW_CHANGE))
         nms.push_back("VIEW_CHANGE");
-    if ( has(Event::VIEWER_CHANGE))
+    if ( has( e, Event::VIEWER_CHANGE))
         nms.push_back("VIEWER_CHANGE");
-    if ( has(Event::CAMERA_CHANGE))
+    if ( has( e, Event::CAMERA_CHANGE))
         nms.push_back("CAMERA_CHANGE");
-    if ( has(Event::ACTOR_MOVE))
+
+    if ( has( e, Event::ACTOR_MOVE))
         nms.push_back("ACTOR_MOVE");
-    if ( has(Event::METADATA_CHANGE))
-        nms.push_back("METADATA_CHANGE");
-    if ( has(Event::ASSESSMENT_CHANGE))
+    if ( has( e, Event::ASSESSMENT_CHANGE))
         nms.push_back("ASSESSMENT_CHANGE");
-    if ( has(Event::U3D_MODEL_CHANGE))
-        nms.push_back("U3D_MODEL_CHANGE");
-    if ( has(Event::ALL_VIEWS))
+
+    if ( has( e, Event::RESTORE_CHANGE))
+        nms.push_back("RESTORE_CHANGE");
+    if ( has( e, Event::ALL_VIEWS))
         nms.push_back("ALL_VIEWS");
-    if ( has(Event::ALL_VIEWERS))
+    if ( has( e, Event::ALL_VIEWERS))
         nms.push_back("ALL_VIEWERS");
+    if ( has( e, Event::MODEL_SELECT))
+        nms.push_back("MODEL_SELECT");
+    if ( has( e, Event::START_MOVE))
+        nms.push_back("START_MOVE");
+    if ( has( e, Event::FINISH_MOVE))
+        nms.push_back("FINISH_MOVE");
+    if ( has( e, Event::CANCELLED))
+        nms.push_back("CANCELLED");
+    if ( has( e, Event::ERR))
+        nms.push_back("ERR");
 
     std::string nm = "[ ";
     if ( nms.empty())
@@ -179,61 +136,5 @@ std::string EventGroup::name() const
     }   // end else
 
     nm += " ]";
-    return nm;
-}   // end name
-
-/*
-bool EventGroup::operator()( const std::function<bool(Event)>& checkEvent)
-{
-    if ( has(Event::ACT_CANCELLED))
-        checkEvent(Event::ACT_CANCELLED);
-    if ( has(Event::ACT_COMPLETE))
-        checkEvent(Event::ACT_COMPLETE);
-    if ( has(Event::MODEL_SELECT))
-        checkEvent(Event::MODEL_SELECT);
-    if ( has(Event::LOADED_MODEL))
-        checkEvent(Event::LOADED_MODEL);
-    if ( has(Event::SAVED_MODEL))
-        checkEvent(Event::SAVED_MODEL);
-    if ( has(Event::CLOSED_MODEL))
-        checkEvent(Event::CLOSED_MODEL);
-    if ( has(Event::FACE_DETECTED))
-        checkEvent(Event::FACE_DETECTED);
-    if ( has(Event::GEOMETRY_CHANGE))
-        checkEvent(Event::GEOMETRY_CHANGE);
-    if ( has(Event::CONNECTIVITY_CHANGE))
-        checkEvent(Event::CONNECTIVITY_CHANGE);
-    if ( has(Event::AFFINE_CHANGE))
-        checkEvent(Event::AFFINE_CHANGE);
-    if ( has(Event::ORIENTATION_CHANGE))
-        checkEvent(Event::ORIENTATION_CHANGE);
-    if ( has(Event::SURFACE_DATA_CHANGE))
-        checkEvent(Event::SURFACE_DATA_CHANGE);
-    if ( has(Event::LANDMARKS_CHANGE))
-        checkEvent(Event::LANDMARKS_CHANGE);
-    if ( has(Event::METRICS_CHANGE))
-        checkEvent(Event::METRICS_CHANGE);
-    if ( has(Event::STATISTICS_CHANGE))
-        checkEvent(Event::STATISTICS_CHANGE);
-    if ( has(Event::PATHS_CHANGE))
-        checkEvent(Event::PATHS_CHANGE);
-    if ( has(Event::VIEW_CHANGE))
-        checkEvent(Event::VIEW_CHANGE);
-    if ( has(Event::VIEWER_CHANGE))
-        checkEvent(Event::VIEWER_CHANGE);
-    if ( has(Event::CAMERA_CHANGE))
-        checkEvent(Event::CAMERA_CHANGE);
-    if ( has(Event::ACTOR_MOVE))
-        checkEvent(Event::ACTOR_MOVE);
-    if ( has(Event::METADATA_CHANGE))
-        checkEvent(Event::METADATA_CHANGE);
-    if ( has(Event::ASSESSMENT_CHANGE))
-        checkEvent(Event::ASSESSMENT_CHANGE);
-    if ( has(Event::U3D_MODEL_CHANGE))
-        checkEvent(Event::U3D_MODEL_CHANGE);
-    if ( has(Event::ALL_VIEWS))
-        checkEvent(Event::ALL_VIEWS);
-    if ( has(Event::ALL_VIEWERS))
-        checkEvent(Event::ALL_VIEWERS);
-}   // end operator()
-*/
+    return os << nm;
+}   // end operator<<

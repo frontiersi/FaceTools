@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 
 #include <Ethnicities.h>
 #include <MiscFunctions.h>
-#include <FileIO.h> // rlib
+#include <rlib/FileIO.h>
 #include <boost/algorithm/string.hpp>
 #include <iostream>
 #include <cassert>

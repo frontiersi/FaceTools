@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,14 +16,15 @@
  ************************************************************************/
 
 #include <Metric/GrowthData.h>
-#include <Metric/MetricCalculatorManager.h>
+#include <Metric/MetricManager.h>
 #include <Ethnicities.h>
 #include <FaceModel.h>
+#include <sol.hpp>
 #include <QSet>
 using FaceTools::Metric::GrowthData;
 using FaceTools::Metric::MetricSet;
 using FaceTools::Metric::MetricValue;
-using MCM = FaceTools::Metric::MetricCalculatorManager;
+using MM = FaceTools::Metric::MetricManager;
 
 
 GrowthData::Ptr GrowthData::create( int mid, size_t ndims, int8_t sex, int ethn)
@@ -34,7 +35,7 @@ GrowthData::Ptr GrowthData::create( int mid, size_t ndims, int8_t sex, int ethn)
 
 // private
 GrowthData::GrowthData( int mid, size_t ndims, int8_t sex, int ethn)
-    : _mid(mid), _sex(sex), _ethn(ethn), _n(0), _rsds(ndims)
+    : _id(-1), _mid(mid), _sex(sex), _ethn(ethn), _n(0), _inplane(false), _rsds(ndims)
 {
 }   // end ctor
 
@@ -107,13 +108,13 @@ void GrowthData::setLongNote( const QString& s)
 
 namespace  {
 
-void createAgeRange( std::vector<double>& trng, double v, double tmax)
+void createAgeRange( std::vector<double>& trng, double v, float tmax)
 {
     trng.clear();
     while ( v < tmax)
     {
         trng.push_back(v);
-        v += 1.0;
+        v += 1;
     }   // end while
     trng.push_back(tmax);
 }   // end createAgeRange
@@ -121,17 +122,18 @@ void createAgeRange( std::vector<double>& trng, double v, double tmax)
 }   // end namespace
 
 
-GrowthData::Ptr GrowthData::create( const std::vector<GrowthData::CPtr>& gds)
+GrowthData::Ptr GrowthData::create( const std::vector<const GrowthData*>& gds)
 {
     const size_t ngds = gds.size();
     assert( ngds > 1);
 
-    const GrowthData::CPtr& g0 = gds.front();
+    const GrowthData *g0 = gds.front();
 
+    const bool inplane = g0->inPlane();
     const size_t nd = g0->dims();
     const int mid = g0->metricId();
 
-    int8_t sex = UNKNOWN_SEX;
+    int8_t sex = g0->sex();
     int nsmps = 0;
 
     QStringList srcs, notes;
@@ -139,10 +141,13 @@ GrowthData::Ptr GrowthData::create( const std::vector<GrowthData::CPtr>& gds)
 
     for ( size_t i = 0; i < ngds; ++i)
     {
-        const GrowthData::CPtr& gi = gds.at(i);
+        const GrowthData *gi = gds.at(i);
         assert( nd == gi->dims());
         assert( mid == gi->metricId());
-        sex |= gi->sex();   // Sex can be different
+        assert( inplane == gi->inPlane());
+
+        if ( gi->sex() != sex)
+            sex = UNKNOWN_SEX;
 
         // There may be some growth data that don't have the number of samples given.
         // In this case, combining them with data that do have N given will lead to
@@ -172,7 +177,7 @@ GrowthData::Ptr GrowthData::create( const std::vector<GrowthData::CPtr>& gds)
 
     // Get the mixed ethnicity if necessary
     IntSet eset;
-    for ( GrowthData::CPtr g : gds)
+    for ( const GrowthData *g : gds)
         eset.insert(g->ethnicity());
     int ethn = Ethnicities::codeMix( eset); // Look for an existing viable mixture
     if ( ethn == 0) // None found so make a new mixture
@@ -187,22 +192,23 @@ GrowthData::Ptr GrowthData::create( const std::vector<GrowthData::CPtr>& gds)
     gc->setSource( QString( "%1.").arg(srcs.join("; ")));
     gc->setNote( notes.join(" ").trimmed());
     gc->setN( std::max( 0, nsmps));
+    gc->setInPlane( inplane);
     // Combine the distributions over each dimension
     std::vector<rlib::RSD::Ptr>& nrsds = gc->_rsds;
     nrsds.resize(nd);
 
     for ( size_t d = 0; d < nd; ++d)
     {
-        double tmin = -DBL_MAX;
-        double tmax = DBL_MAX;
+        float tmin = -FLT_MAX;
+        float tmax = FLT_MAX;
         std::vector<rlib::RSD::CPtr> drsds(ngds);   // Want the average over dimension d
         for ( size_t i = 0; i < ngds; ++i)
         {
             drsds[i] = gds.at(i)->_rsds.at(d);
             // Get the min and max range for the independent variable on this dimension.
             // Note that the combined age domain is the intersection of the age domains over all.
-            tmin = std::max( tmin, drsds[i]->tmin());
-            tmax = std::min( tmax, drsds[i]->tmax());
+            tmin = std::max<float>( tmin, float(drsds[i]->tmin()));
+            tmax = std::min<float>( tmax, float(drsds[i]->tmax()));
         }   // end for
         std::vector<double> trng;
         createAgeRange( trng, tmin, tmax);
@@ -217,8 +223,7 @@ GrowthData::Ptr GrowthData::create( const std::vector<GrowthData::CPtr>& gds)
 GrowthData::~GrowthData(){}
 
 
-
-bool GrowthData::isWithinAgeRange( double age) const
+bool GrowthData::isWithinAgeRange( float age) const
 {
     bool inRng = age > 0.0;
     if ( inRng)
@@ -235,3 +240,177 @@ bool GrowthData::isWithinAgeRange( double age) const
     }   // end if
     return inRng;
 }   // end isWithinAgeRange
+
+
+namespace {
+static const std::string WSTR = "[WARN] FaceTools::Metric::GrowthData::load: ";
+
+void collectDistributionData( const sol::table &data, std::vector<rlib::RSD::Ptr> &rsds)
+{
+    const int tdims = int(data.size());
+    rsds.resize(tdims);
+
+    for ( int j = 1; j <= tdims; ++j)
+    {
+        if ( !data[j].valid())
+        {
+            std::cerr << WSTR << "data dimension is not a table for growth data" << std::endl;
+            continue;
+        }   // end if
+
+        // Collect the data points for this dimension
+        Vec_3DP dvec;
+        sol::table dimj = data[j];
+        for ( size_t k = 1; k <= dimj.size(); ++k)
+        {
+            if ( !dimj[k].valid())
+            {
+                std::cerr << WSTR << "datapoint is not a table for growth data" << std::endl;
+                continue;
+            }   // end if
+
+            sol::table dp = dimj[k];
+            if ( dp.size() != 3 || !dp[1].valid() || !dp[2].valid() || !dp[3].valid())
+            {
+                std::cerr << WSTR << "datapoints must be numberic 3-tuples for growth data" << std::endl;
+                continue;
+            }   // end if
+
+            double t = dp[1];
+            double y = dp[2];
+            double z = dp[3];
+            dvec.push_back( {t,y,z});
+        }   // end for
+
+        rsds[size_t(j-1)] = rlib::RSD::create(dvec);
+    }   // end for
+}   // end collectDistributionData
+}   // end namespace
+
+
+bool GrowthData::load( const QString &fpath)
+{
+    sol::state lua;
+    lua.open_libraries( sol::lib::base);
+
+    bool loadedOkay = false;
+    try
+    {
+        lua.script_file( fpath.toStdString());
+        loadedOkay = true;
+    }   // end try
+    catch ( const sol::error& e)
+    {
+        std::cerr << WSTR << "Unable to load and execute file '" << fpath.toStdString() << "'!" << std::endl;
+        std::cerr << "\t" << e.what() << std::endl;
+        loadedOkay = false;
+    }   // end catch
+
+    if ( !loadedOkay)
+        return false;
+
+    sol::table table = lua["stats"];
+    if ( !table.valid())
+    {
+        std::cerr << WSTR << "Lua file has no global member named stats!" << std::endl;
+        return false;
+    }   // end if
+
+    if ( !table["dists"].valid())
+    {
+        std::cerr << WSTR << "dists member is not a table!" << std::endl;
+        return false;
+    }   // end if
+
+    // Get the metric to add growth data to
+    const int mid = table["mid"].get_or(-1);
+    MC::Ptr mc = MM::metric( mid);
+    if ( !mc)
+    {
+        std::cerr << WSTR << "No metric with ID " << mid << " present!" << std::endl;
+        return false;
+    }   // end if
+
+    sol::table dists = table["dists"]; // Read in the growth data statistics
+    for ( size_t i = 1; i <= dists.size(); ++i)   // for each distribution i in the dists table
+    {
+        if ( !dists[i].valid())
+        {
+            std::cerr << WSTR << "dists member is not a table for metric " << mid << std::endl;
+            continue;
+        }   // end if
+
+        sol::table dist = dists[i];
+
+        const int nsmp = dist["nsmp"].get_or(0);        // Number of sample points
+        const int ethn = dist["ethn"].get_or(0);        // Ethnicity code
+        const bool inpl = dist["inpl"].get_or(true);    // In-plane measurement method
+        QString sexs, srcs, note, lnote;
+        if ( sol::optional<std::string> v = dist["sexs"]) sexs = v.value().c_str();
+        if ( sol::optional<std::string> v = dist["srce"]) srcs = v.value().c_str();
+        if ( sol::optional<std::string> v = dist["note"]) note = v.value().c_str();
+        if ( sol::optional<std::string> v = dist["lnote"]) lnote = v.value().c_str();
+
+        if ( ethn <= 1)
+        {
+            std::cerr << WSTR << "distribution ethnicity not specified for growth data of metric " << mid << std::endl;
+            continue;
+        }   // end if
+
+        if ( sexs.isEmpty())
+        {
+            std::cerr << WSTR << "distribution sexs not specified for growth data of metric " << mid << std::endl;
+            continue;
+        }   // end if
+
+        if ( srcs.isEmpty())
+        {
+            std::cerr << WSTR << "distribution source not specified for growth data of metric " << mid << std::endl;
+            continue;
+        }   // end if
+
+        if ( !dist["data"].valid())
+        {
+            std::cerr << WSTR << "distribution data member is not a table for growth data of metric " << mid << std::endl;
+            continue;
+        }   // end if
+
+        sol::table data = dist["data"];
+        if ( data.size() != mc->dims())
+        {
+            std::cerr << WSTR << "dimensions mismatch for growth data of metric " << mid << std::endl;
+            continue;
+        }   // end if
+
+        GrowthData::Ptr gd = GrowthData::create( mid, mc->dims(), fromSexString(sexs), ethn);
+        gd->setSource( srcs);
+        gd->setN( nsmp);
+        gd->setInPlane( inpl);
+        gd->setNote( note);
+        gd->setLongNote( lnote);
+
+        std::vector<rlib::RSD::Ptr> rsds;
+        collectDistributionData( data, rsds);
+#ifndef NDEBUG
+        if ( mid == 8 && nsmp == 472)
+        {
+            std::cout << "Checking an example set of stats for innercanthal width:" << std::endl;
+            const rlib::RSD &rsd = *rsds[0];
+            const Vec_3DP& vec = rsd.data();
+            using namespace rlib;
+            std::cout << vec << std::endl;
+            std::cout << "Queries (age, mean, sd):" << std::endl;
+            for ( int x = 0; x <= 16; ++x)
+                std::cout << x << " : " << rsd.mval(x) << " : " << rsd.zval(x) << std::endl;
+        }   // end if
+#endif
+
+        for ( size_t j = 0; j < mc->dims(); ++j)
+            if ( rsds.at(j))
+                gd->setRSD( j, rsds.at(j));
+
+        mc->growthData().add( gd);
+    }   // end for
+
+    return true;
+}   // end load

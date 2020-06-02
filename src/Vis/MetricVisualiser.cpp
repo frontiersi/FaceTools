@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,48 +16,72 @@
  ************************************************************************/
 
 #include <Vis/MetricVisualiser.h>
-#include <Metric/MetricCalculatorManager.h>
-#include <Metric/MetricValue.h>
-#include <FaceModelViewer.h>
+#include <LndMrk/LandmarkSet.h>
+#include <Metric/MetricType.h>
 #include <FaceModel.h>
-#include <vtkProperty.h>
-#include <vtkTextProperty.h>
-#include <QDebug>
-#include <sstream>
-#include <iomanip>
 using FaceTools::Vis::MetricVisualiser;
 using FaceTools::Vis::FV;
-using FaceTools::FMV;
-using FaceTools::FM;
-using FaceTools::Action::Event;
-using MCM = FaceTools::Metric::MetricCalculatorManager;
-using MC = FaceTools::Metric::MetricCalculator;
+using FaceTools::Metric::MetricType;
 
 
-MetricVisualiser::MetricVisualiser( int id) : _id(id)
+MetricVisualiser::MetricVisualiser() : _metric(nullptr)
 {}   // end ctor
+
+
+void MetricVisualiser::setMetric( const MetricType *m)
+{
+    _metric = m;
+}   // end setMetric
 
 
 MetricVisualiser::~MetricVisualiser()
 {
     while (!_fvs.empty())
-        purge( const_cast<FV*>(_fvs.first()), Event::NONE);
+        purge( *_fvs.begin());
 }   // end dtor
 
 
-void MetricVisualiser::apply( FV* fv, const QPoint*)
+bool MetricVisualiser::isAvailable( const FV *fv, const QPoint*) const
 {
-    assert(fv);
-    purge(fv, Event::NONE);
-    _fvs.insert(fv);
+    const FM *fm = fv->data();
+    for ( int lmid : metric()->landmarkIds())
+        if ( !fm->currentLandmarks().has(lmid))
+            return false;
+    return true;
+}   // end isAvailable
+
+
+void MetricVisualiser::apply( const FV* fv, const QPoint*)
+{
+    assert(_fvs.count(fv) == 0);
     doApply(fv);
-    setVisible(fv, true);
+    _fvs.insert(fv);
 }   // end apply
 
 
-bool MetricVisualiser::purge( FV* fv, Event)
+void MetricVisualiser::refreshState( const FV* fv)
 {
-    _fvs.erase(fv);
-    doPurge(fv);
-    return true;
+    assert( _fvs.count(fv) > 0);
+    doRefresh(fv);
+}   // end refreshState
+
+
+void MetricVisualiser::setVisible( FV *fv, bool v)
+{
+    if ( _fvs.count(fv) > 0)
+        doSetVisible( fv, v);
+}   // end setVisible
+
+
+void MetricVisualiser::purge( const FV* fv)
+{
+    assert(_fvs.count(fv) > 0);
+    if (_fvs.count(fv) > 0)
+    {
+        doPurge(fv);
+        _fvs.erase(fv);
+    }   // end if
 }   // end purge
+
+
+

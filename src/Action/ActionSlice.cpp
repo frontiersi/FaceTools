@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,50 +17,46 @@
 
 #include <Action/ActionSlice.h>
 #include <FaceModel.h>
-#include <ObjModelTools.h>
+#include <r3d/Slicer.h>
 using FaceTools::Action::ActionSlice;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::FVS;
 using FaceTools::FM;
+using FaceTools::Vec3f;
 using MS = FaceTools::Action::ModelSelector;
 
-using RFeatures::ObjModel;
-using RFeatures::ObjModelSlicer;
-using RFeatures::Transformer;
 
-
-ActionSlice::ActionSlice( const QString &dn, const QIcon& ico, const cv::Vec3f& p, const cv::Vec3f& n)
+ActionSlice::ActionSlice( const QString &dn, const QIcon& ico, const Vec3f& p, const Vec3f& n)
     : FaceAction( dn, ico), _p(p), _n(n)
 {
     setAsync(true);
 }   // end ctor
 
 
-bool ActionSlice::checkEnable( Event)
+bool ActionSlice::isAllowed( Event)
 {
     return MS::isViewSelected();
-}   // end checkEnabled
+}   // end isAllowedd
 
 
 void ActionSlice::doAction( Event)
 {
-    storeUndo( this, {Event::GEOMETRY_CHANGE, Event::CONNECTIVITY_CHANGE, Event::LANDMARKS_CHANGE});
+    storeUndo( this, Event::MESH_CHANGE | Event::CONNECTIVITY_CHANGE | Event::LANDMARKS_CHANGE);
     FM* fm = MS::selectedModel();
 
     fm->lockForRead();
-    ObjModel::Ptr nmod = ObjModelSlicer( fm->model())( _p, _n);    // One half
+    r3d::Mesh::Ptr nmod = r3d::Slicer( fm->mesh())( _p, _n);    // One half
     fm->unlock();
 
     fm->lockForWrite();
-    fm->update(nmod);
-    fm->moveLandmarksToSurface();
+    fm->update( nmod, true, true);
     fm->unlock();
 }   // end doAction
 
 
-void ActionSlice::doAfterAction( Event)
+Event ActionSlice::doAfterAction( Event)
 {
-    emit onEvent( {Event::GEOMETRY_CHANGE, Event::CONNECTIVITY_CHANGE, Event::LANDMARKS_CHANGE});
+    return Event::MESH_CHANGE | Event::CONNECTIVITY_CHANGE | Event::LANDMARKS_CHANGE;
 }   // end doAfterAction
 

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,8 +17,6 @@
 
 #include <Action/ActionUpdateThumbnail.h>
 #include <FaceModel.h>
-#include <cmath>
-#include <cassert>
 using FaceTools::Action::ActionUpdateThumbnail;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
@@ -29,9 +27,9 @@ using MS = FaceTools::Action::ModelSelector;
 ActionUpdateThumbnail::ActionUpdateThumbnail( int w, int h)
     : FaceAction("Thumbnail Updater"), _omv( cv::Size(w,h))
 {
-    addTriggerEvent( Event::ORIENTATION_CHANGE);
-    addTriggerEvent( Event::LANDMARKS_CHANGE);
-    addTriggerEvent( Event::GEOMETRY_CHANGE);
+    addTriggerEvent( Event::ASSESSMENT_CHANGE);
+    addTriggerEvent( Event::MESH_CHANGE);
+    addTriggerEvent( Event::MODEL_SELECT);
 }   // end ctor
 
 
@@ -54,13 +52,21 @@ const cv::Mat ActionUpdateThumbnail::thumbnail( const FM* fm)
 {
     if ( _thumbs.count(fm) > 0)
         return _thumbs.at(fm);
+
     fm->lockForRead();
-    _omv.setModel( fm->model());
-    const cv::Vec3f centre = fm->centre();
-    const RFeatures::Orientation on = fm->orientation();
+    _omv.setModel( fm->mesh());
+    const Mat4f& T = fm->transformMatrix();
     fm->unlock();
-    const cv::Vec3f cpos = (500 * on.nvec()) + centre;
-    const RFeatures::CameraParams cam( cpos, centre, on.uvec(), 30);
+
+    const Vec3f uvec = T.block<3,1>(0,1);
+    const Vec3f nvec = T.block<3,1>(0,2);
+    const Vec3f cent = T.block<3,1>(0,3);
+    float dist = 400.0f;
+    if ( fm->hasLandmarks())
+        dist = sqrtf(fm->currentLandmarks().sqRadius()) * 3.5;
+    const Vec3f cpos = dist * nvec + cent;
+
+    const r3d::CameraParams cam( cpos, cent, uvec, 30);
     _omv.setCamera( cam);
     return _thumbs[fm] = _omv.snapshot();
 }   // end thumbnail
@@ -75,7 +81,7 @@ void ActionUpdateThumbnail::doAction( Event)
 }   // end doAction
 
 
-void ActionUpdateThumbnail::purge( const FM* fm, Event)
-{
-    _thumbs.erase(fm);
-}   // end purge
+bool ActionUpdateThumbnail::isAllowed( Event) { return MS::isViewSelected();}
+
+
+void ActionUpdateThumbnail::purge( const FM* fm) { _thumbs.erase(fm);}

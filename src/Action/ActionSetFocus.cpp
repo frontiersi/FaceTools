@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@ using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
 using FaceTools::FMV;
+using FaceTools::Vec3f;
 using MS = FaceTools::Action::ModelSelector;
 
 
@@ -34,13 +35,13 @@ ActionSetFocus::ActionSetFocus( const QString& dn, const QIcon& icon, const QKey
 }   // end ctor
 
 
-bool ActionSetFocus::checkEnable( Event)
+bool ActionSetFocus::isAllowed( Event)
 {
     return MS::interactionMode() == IMode::CAMERA_INTERACTION;
-}   // end checkEnable
+}   // end isAllowed
 
 
-void ActionSetFocus::setFocus( FMV* vwr, const cv::Vec3f& v)
+void ActionSetFocus::setFocus( FMV* vwr, const Vec3f& v)
 {
     vwr->setCameraFocus( v);
 }   // end setFocus
@@ -63,11 +64,16 @@ bool ActionSetFocus::doBeforeAction( Event)
 void ActionSetFocus::doAction( Event)
 {
     FV* fv = MS::selectedView();
-    cv::Vec3f nf;
+    Vec3f nf;
     QPoint mpos = primedMousePos();
     if ( mpos.x() < 0)
         mpos = MS::mousePos();
     fv->projectToSurface( mpos, nf);
     setFocus( fv->viewer(), nf);
-    emit onEvent( Event::CAMERA_CHANGE);
 }   // end doAction
+
+
+Event ActionSetFocus::doAfterAction( Event)
+{
+    return Event::CAMERA_CHANGE;
+}   // end doAfterAction

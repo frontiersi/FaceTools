@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,12 +17,16 @@
 
 #include <Vis/PolyLabelsView.h>
 #include <vtkPointData.h>
+#include <FaceModel.h>
 #include <cassert>
 using FaceTools::Vis::PolyLabelsView;
+using FaceTools::FM;
 
 
-vtkSmartPointer<vtkPolyData> PolyLabelsView::createLabels( const RFeatures::ObjModel& model) const
+vtkSmartPointer<vtkPolyData> PolyLabelsView::createLabels( const FM* fm) const
 {
+    const r3d::Mesh& model = fm->mesh();
+
     vtkSmartPointer<vtkPolyData> pdata = vtkSmartPointer<vtkPolyData>::New();
     vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
     vtkSmartPointer<vtkCellArray> vertices = vtkSmartPointer<vtkCellArray>::New();
@@ -30,7 +34,7 @@ vtkSmartPointer<vtkPolyData> PolyLabelsView::createLabels( const RFeatures::ObjM
 
     assert( model.hasSequentialFaceIds());
 
-    const int np = model.numPolys();
+    const int np = int(model.numFaces());
     points->SetNumberOfPoints( np);
     vlabels->SetNumberOfValues( np);
     vlabels->SetName( "polyIds");
@@ -40,9 +44,9 @@ vtkSmartPointer<vtkPolyData> PolyLabelsView::createLabels( const RFeatures::ObjM
         vlabels->SetValue( i, i);
 
         const int* fvidxs = model.fvidxs(i);
-        cv::Vec3d mpos = (model.uvtx(fvidxs[0]) +
-                          model.uvtx(fvidxs[1]) +
-                          model.uvtx(fvidxs[2])) * 1.0/3;
+        Vec3f mpos = (model.uvtx(fvidxs[0]) +
+                      model.uvtx(fvidxs[1]) +
+                      model.uvtx(fvidxs[2])) / 3;
 
         points->SetPoint( i, &mpos[0]);
         vertices->InsertNextCell(1);

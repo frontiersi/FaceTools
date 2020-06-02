@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2018 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,16 +16,16 @@
  ************************************************************************/
 
 #include <Report/ReportManager.h>
-#include <PDFGenerator.h>
-#include <U3DExporter.h>
+#include <r3dio/PDFGenerator.h>
+#include <r3dio/U3DExporter.h>
 #include <QFile>
 #include <QDir>
 #include <iostream>
 #include <cassert>
 using FaceTools::Report::ReportManager;
 using FaceTools::Report::Report;
-using RModelIO::PDFGenerator;
-using RModelIO::U3DExporter;
+using r3dio::PDFGenerator;
+using r3dio::U3DExporter;
 
 // Static definitions
 QTemporaryDir ReportManager::_tmpdir;

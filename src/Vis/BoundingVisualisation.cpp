@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,28 +16,23 @@
  ************************************************************************/
 
 #include <Vis/BoundingVisualisation.h>
+#include <Vis/FaceView.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <cassert>
 using FaceTools::Vis::BoundingVisualisation;
 using FaceTools::Vis::FV;
-using FaceTools::Action::Event;
 
 BoundingVisualisation::~BoundingVisualisation()
 {
     while (!_views.empty())
-        purge(const_cast<FV*>(_views.begin()->first), Event::NONE);
+        purge(_views.begin()->first);
 }   // end dtor
 
 
-void BoundingVisualisation::apply( FV* fv, const QPoint*)
+void BoundingVisualisation::apply( const FV* fv, const QPoint*)
 {
     if (_views.count(fv) == 0)
-    {
-        _views[fv] = new BoundingView( fv->data(), 3.0f);
-        _setColour(fv);
-    }   // end if
-    _views.at(fv)->setVisible( true, fv->viewer());
+        _views[fv] = new BoundingView( 2.0f);
 }   // end apply
 
 
@@ -48,26 +43,39 @@ void BoundingVisualisation::setVisible( FV* fv, bool v)
 }   // end setVisible
 
 
-bool BoundingVisualisation::isVisible( const FV *fv) const
+bool BoundingVisualisation::isVisible( const FV* fv) const
 {
-    bool vis = false;
-    if (_views.count(fv) > 0)
-        vis = _views.at(fv)->visible();
-    return vis;
+    return _views.count(fv) > 0 && _views.at(fv)->isVisible();
 }   // end isVisible
 
 
-void BoundingVisualisation::syncToViewTransform( const FV* fv, const vtkMatrix4x4* d)
+void BoundingVisualisation::syncWithViewTransform( const FV* fv)
 {
     if ( _views.count(fv) > 0)
     {
-        _views.at(fv)->pokeTransform( d);
-        _setColour(fv);
+        fv->data()->lockForRead();
+        _setAppearance(fv);
+        fv->data()->unlock();
+        _views.at(fv)->pokeTransform( fv->transformMatrix());
     }   // end if
-}   // end syncToViewTransform
+}   // end syncWithViewTransform
 
 
-bool BoundingVisualisation::purge( FV* fv, Event)
+void BoundingVisualisation::_setAppearance( const FV* fv)
+{
+    static const Vec3f DEFAULT_COL( 0.0f, 0.2f, 0.9f);  // Default colour (blue)
+    static const Vec3f LNDMRK_COL( 0.0f, 0.9f, 0.2f);    // Green
+
+    const FM *fm = fv->data();
+    const Vec3f col = fm->hasLandmarks() ? LNDMRK_COL : DEFAULT_COL;
+    BoundingView *bv = _views.at(fv);
+    bv->update( fm->bounds()[0]->cornersAs6f());
+    bv->setColour( col[0], col[1], col[2], 0.32f);
+    bv->setLineStipplingEnabled( !fm->isAligned());
+}   // end _setAppearance
+
+
+void BoundingVisualisation::purge( const FV* fv)
 {
     if (_views.count(fv) > 0)
     {
@@ -75,16 +83,4 @@ bool BoundingVisualisation::purge( FV* fv, Event)
         delete _views.at(fv);
         _views.erase(fv);
     }   // end if
-    return true;
 }   // end purge
-
-
-void BoundingVisualisation::_setColour( const FV* fv)
-{
-    assert(_views.count(fv) > 0);
-    BoundingView* bv = _views.at(fv);
-    cv::Vec3d col( 0.3, 0.4, 0.9);
-    if ( !fv->data()->currentAssessment()->landmarks().empty())
-        col = cv::Vec3d( 0.4, 0.9, 0.3);
-    bv->setColour( col[0], col[1], col[2], 0.20);
-}   // end _setColour

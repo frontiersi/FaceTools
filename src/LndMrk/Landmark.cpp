@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,132 +17,107 @@
 
 #include <LndMrk/LandmarksManager.h>
 #include <LndMrk/Landmark.h>
+#include <QRegularExpression>
+using FaceTools::Landmark::SpecificLandmark;
 using FaceTools::Landmark::Landmark;
 using FaceTools::Landmark::LmkList;
+using FaceTools::Vec3f;
 
-int FaceTools::Landmark::fromParams( const QString& prms, LmkList& ll0, LmkList& ll1)
+
+bool SpecificLandmark::set( const QString &tok)
 {
-    ll0.clear();
-    ll1.clear();
+    static const std::string ESTR = "[ERROR] FaceTools::Landmark::SpecificLandmark::set: ";
 
-    IntSet lids;    // Store bilateral landmarks referenced to see if we need to populate ll1 as well
-
-    std::istringstream iss( prms.toStdString());
-    std::string tok;
-    while ( iss.good())
+    static const QRegularExpression regexp("^([1-9]{1}|[0-9]{3})?(L|R)?([[:lower:]]+)$");
+    const QRegularExpressionMatch match = regexp.match(tok);
+    if ( !match.hasMatch())
     {
-        iss >> tok;
-        if ( tok.empty())
-            continue;
+        std::cerr << ESTR << "token \"" << tok.toStdString() << "\" does not match regexp!" << std::endl;
+        return false;
+    }   // end if
 
-        SpecificLandmark slmk;
-        slmk.lat = FACE_LATERAL_MEDIAL;
-        std::string code = tok;
+    // Group 1 is the proportion of xyz
+    // Group 2 is the face modifier (defaults to medial unless L or R given)
+    // Group 3 is the landmark code (remaining lower case letters)
+    const QString sprop = match.captured(1); // May be empty
+    const QString sface = match.captured(2); // May be empty
+    const std::string scode = match.captured(3).toStdString();
 
-        if ( tok[0] == 'L')
+    const Landmark* lmk = LandmarksManager::landmark(scode);
+    if ( !lmk)
+    {
+        std::cerr << ESTR << "invalid code: " << scode << std::endl;
+        return false;
+    }   // end if
+
+    id = lmk->id();
+
+    // Left/right modifier?
+    if ( sface == "L")
+        lat = FACE_LATERAL_LEFT;
+    else if ( sface == "R")
+        lat = FACE_LATERAL_RIGHT;
+    else if ( lmk->isBilateral())
+    {
+        std::cerr << ESTR << "bilateral landmark not qualified (L|R)!" << std::endl;
+        return false;
+    }   // end else if
+
+    if ( !lmk->isBilateral() && lat != FACE_LATERAL_MEDIAL)
+    {
+        std::cerr << ESTR << "Non-bilateral landmark with lateral qualifier!" << std::endl;
+        return false;
+    }   // end else
+
+    // Proportion of coordinate
+    if ( !sprop.isEmpty())
+    {
+        const int v = sprop.toInt();
+        if ( sprop.length() == 1)
+            prop[0] = prop[1] = prop[2] = v;
+        else if ( v > 0)
         {
-            code = tok.substr(1);
-            slmk.lat = FACE_LATERAL_LEFT;
-        }   // end if
-        else if ( tok[0] == 'R')
-        {
-            code = tok.substr(1);
-            slmk.lat = FACE_LATERAL_RIGHT;
+            prop[0] = QString(sprop.at(0)).toInt();
+            prop[1] = QString(sprop.at(1)).toInt();
+            prop[2] = QString(sprop.at(2)).toInt();
         }   // end else if
-
-        if ( !LDMKS_MAN::landmark( code))   // Invalid landmark ID!
-        {
-            std::cerr << "[WARNING] FaceTools::Landmark::fromParams: Unknown landmark code " << code << std::endl;
-            return 0;
-        }   // end if
-
-        Landmark* lmk = LDMKS_MAN::landmark(code);
-        const int id = lmk->id();
-        slmk.id = id;
-
-        if ( lmk->isBilateral())
-        {
-            if ( slmk.lat == FACE_LATERAL_MEDIAL)
-                slmk.lat = lids.count(id) == 0 ? FACE_LATERAL_LEFT : FACE_LATERAL_RIGHT;
-
-            if (lids.count(id) == 0)
-                lids.insert(id);
-            else
-                lids.erase(id);
-        }   // end if
         else
         {
-            if ( slmk.lat != FACE_LATERAL_MEDIAL)
-            {
-                std::cerr << "[WARNING] FaceTools::Landmark::fromParams: Non-bilateral landmark with lateral qualifier!" << std::endl;
-                slmk.lat = FACE_LATERAL_MEDIAL;
-            }   // end if
+            std::cerr << ESTR << "Zero weights set for every landmark coordinate!" << std::endl;
+            return false;
         }   // end else
+    }   // end if
 
-        ll0.push_back(slmk);
-    }   // end while
+    return true;
+}   // end set
 
-    if ( !lids.empty())
+
+int FaceTools::Landmark::fromParams( const std::vector<QString>& prms, LmkList& ll)
+{
+    ll.clear();
+
+    Vec3f sums = Vec3f::Zero();
+    for ( const QString &tok : prms)
     {
-        for ( const auto& lmk : ll0)
+        SpecificLandmark slmk;
+        if ( slmk.set( tok))
         {
-            auto olmk = lmk;
-            if ( lmk.lat != FACE_LATERAL_MEDIAL)
-                olmk.lat = lmk.lat == FACE_LATERAL_LEFT ? FACE_LATERAL_RIGHT : FACE_LATERAL_LEFT;
-            ll1.push_back(olmk);
-        }   // end for
-    }   // end if
+            ll.push_back(slmk);
+            sums += slmk.prop;
+        }   // end if
+    }   // end for
 
-    int nset = 0;
-    if ( !ll0.empty())
+    // Adjust proportions of each landmark to set as floats
+    for ( SpecificLandmark &slmk : ll)
     {
-        nset = 1;
-        if ( !ll1.empty())
-            nset = 2;
-    }   // end if
+        slmk.prop[0] = slmk.prop[0] / sums[0];
+        slmk.prop[1] = slmk.prop[1] / sums[1];
+        slmk.prop[2] = slmk.prop[2] / sums[2];
+    }   // end for
 
-    return nset;
+    return static_cast<int>(ll.size());
 }   // end fromParams
 
 
-QString FaceTools::Landmark::toParams( const LmkList& ll)
-{
-    QStringList prms;
-    for ( const auto& l : ll)
-    {
-        QString q("%1");
-        if ( l.lat == FACE_LATERAL_LEFT)
-            q = "L%1";
-        else if ( l.lat == FACE_LATERAL_RIGHT)
-            q = "R%1";
-        prms.append( q.arg( LDMKS_MAN::landmark(l.id)->code().toLower()));
-    }   // end for
-    return prms.join(' ');
-}   // end toParams
-
-
-Landmark::Landmark() : _id(-1) {}
-
-
-void Landmark::cleanStrings()
-{
-    _code.replace( IBAR, '/');
-    _name.replace( IBAR, '/');
-    _synonym.replace( IBAR, '/');
-    _descrip.replace( IBAR, '/');
-}   // end cleanStrings
-
-
-QTextStream& FaceTools::Landmark::operator<<( QTextStream& os, const Landmark& lm)
-{
-    Landmark lmk = lm;
-    lmk.cleanStrings();
-    os << lmk.id() << IBAR
-       << lmk.code() << IBAR
-       << lmk.name() << IBAR
-       << lmk.isBilateral() << IBAR
-       << lmk.synonym() << IBAR
-       << lmk.description();
-    return os;
-}   // end operator<<
+Landmark::Landmark() : _id(-1), _bilateral(false), _superior(false), _visible(true), _locked(true) {}
 

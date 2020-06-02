@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,25 +20,28 @@
 #include <FaceModelViewer.h>
 #include <Action/ActionMoveView.h>
 #include <Action/ModelSelector.h>
+#include <Metric/MetricManager.h>
 #include <FaceModel.h>
 #include <Vis/FaceView.h>
+#include <functional>
 #include <cassert>
 using FaceTools::Action::FaceActionManager;
 using FaceTools::Action::FaceAction;
-using FaceTools::Action::EventGroup;
 using FaceTools::Action::Event;
 using FaceTools::FileIO::FMM;
 using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
+using MM = FaceTools::Metric::MetricManager;
 
 
 namespace {
 
-void syncViewActorsToModelTransform( const FM* fm)
+void pokeViewTransformsWithModel( const FM* fm)
 {
+    vtkSmartPointer<vtkMatrix4x4> vmat = r3dvis::toVTK( fm->transformMatrix());
     for ( FaceTools::Vis::FV* fv : fm->fvs())
-        fv->syncToModelTransform();
-}   // end syncViewActorsToModelTransform
+        fv->pokeTransform( vmat);
+}   // end pokeViewTransformsWithModel
 
 
 // Rebuild the actors associated with the model.
@@ -48,21 +51,35 @@ void rebuildViewActors( const FM* fm)
         fv->reset();
 }   // end rebuildViewActors
 
+
+void applyFnToModels( const Event &e, const FM* fm, const std::function<void( const FM*)> &fn)
+{
+    if ( !has( e, Event::ALL_VIEWS))
+        fn( fm);
+    else
+    {
+        const FaceTools::FVS& aset = MS::selectedView()->viewer()->attached();
+        for ( const FM* vm : aset.models())
+            fn( vm);
+    }   // end else
+}   // end applyFnToModels
+
 }   // end namespace
 
 
-FaceActionManager::Ptr FaceActionManager::_singleton;
+FaceActionManager::Ptr FaceActionManager::s_singleton;
+QMutex FaceActionManager::s_closeLock;
 
 
 // static
 FaceActionManager::Ptr FaceActionManager::get( QWidget* parent)
 {
-    if ( !_singleton)
+    if ( !s_singleton)
     {
-        _singleton = Ptr(new FaceActionManager, [](FaceActionManager* fam){ delete fam;});
-        _singleton->_parent = parent;
+        s_singleton = Ptr(new FaceActionManager, [](FaceActionManager* fam){ delete fam;});
+        s_singleton->_parent = parent;
     }   // end if
-    return _singleton;
+    return s_singleton;
 }   // end get
 
 
@@ -82,9 +99,9 @@ QAction* FaceActionManager::registerAction( FaceAction* act)
     connect( act, &FaceAction::onEvent, &*get(), &FaceActionManager::doEvent);
     connect( act, &FaceAction::onShowHelp, [](const QString& tok){ emit get()->onShowHelp(tok);});
     acts.insert(act);
-    act->init(_singleton->_parent);
+    act->_init(s_singleton->_parent);
     act->refreshState();
-    emit _singleton->onRegisteredAction(act);
+    emit s_singleton->onRegisteredAction(act);
     return act->qaction();
 }   // end registerAction
 
@@ -93,20 +110,22 @@ QAction* FaceActionManager::registerAction( FaceAction* act)
 void FaceActionManager::close( const FM* fm)
 {
     assert(fm);
+    s_closeLock.lock();
     fm->lockForRead();
     const auto& acts = get()->_actions;
     for ( FaceAction* act : acts)
-        act->purge(fm, Event::CLOSED_MODEL);
+        act->purge( fm);
     fm->unlock();
-    MS::remove(fm);
+    MS::remove(fm); // Removes views
+    MM::purge(fm);  // Removes cached metric calculation data
     FileIO::FMM::close(fm);
+
+    bool movedView = false;
+    Vis::FV *nextfv = nullptr;
 
     // If there are other FaceModels loaded, select one with a preference for models from the default viewer.
     if ( FileIO::FMM::numOpen() > 0)
     {
-        bool movedView = false;
-        Vis::FV *nextfv = nullptr;
-
         if ( !MS::defaultViewer()->attached().empty())
             nextfv = MS::defaultViewer()->attached().first();
         else
@@ -122,86 +141,58 @@ void FaceActionManager::close( const FM* fm)
             }   // end for
 
             // Since the default viewer is empty, we move this newly selected FaceView into the default viewer.
-            ActionMoveView::move( nextfv, MS::defaultViewer());
-            movedView = true;
+            if ( nextfv)
+            {
+                ActionMoveView::move( nextfv, MS::defaultViewer());
+                movedView = true;
+            }   // end if
         }   // end else
-
-        MS::setSelected( nextfv);
-        if ( movedView)
-            get()->doEvent( Event::VIEWER_CHANGE);
     }   // end if
+
+    if ( nextfv)
+        MS::setSelected( nextfv);
+    if ( movedView)
+        get()->doEvent( Event::VIEWER_CHANGE);
+    s_closeLock.unlock();
 }   // end close
 
 
-void FaceActionManager::doEvent( EventGroup egrp)
+void FaceActionManager::doEvent( const Event &E)
 {
     const FM* fm = MS::selectedModel();
-    if ( (!fm && FMM::numOpen() > 0) || egrp.is(Event::ACT_CANCELLED))
+    assert( fm || FMM::numOpen() == 0);
+    if ( E == Event::CANCELLED)
         return;
-
-#ifndef NDEBUG
-    std::cerr << "Event " << egrp.name() << " | selected model = " << std::hex << fm << std::dec << std::endl;
-#endif
 
     // The sending action should not be triggered by its own events (note that
     // executed actions always refresh their own state upon completion).
     // NOTE sact may be null since a FaceAction may not be causing this call!
     FaceAction* sact = qobject_cast<FaceAction*>( sender());
 
-    const Event E = egrp.event();
+#ifndef NDEBUG
+    if ( E == Event::NONE && sact)
+        std::cerr << "[WARNING]: " << E << " from " << sact->debugName() << std::endl;
+#endif
 
-    // Purge actions first.
-    for ( FaceAction* act : _actions)
+    if ( fm)
     {
-        if ( act != sact && act->isPurgeEvent(E))
-            act->purge(fm, E);
-    }   // end for
+        // Purge actions first.
+        for ( FaceAction* act : _actions)
+            if ( act != sact && act->isPurgeEvent(E))
+                act->purge( fm);
 
-    // Geometry change events require rebuilding the actors associated with the affected FaceModels.
-    // This also reapplies visualisations and it is necessary that any visualisations that rely upon
-    // associations of data be fully purged first which is why the above loop to purge the actions
-    // comes before this check.
-    if ( fm && (egrp.has(Event::GEOMETRY_CHANGE) || egrp.has(Event::ORIENTATION_CHANGE)))
-    {
-        if ( !egrp.has( Event::ALL_VIEWS))
-            rebuildViewActors( fm);
-        else
-        {
-            const FVS& aset = MS::selectedView()->viewer()->attached();
-            for ( const FM* vm : aset.models())
-                rebuildViewActors(vm);
-        }   // end else
+        // Geometry change events require rebuilding the actors associated with the affected FaceModels.
+        // This also reapplies visualisations and it is necessary that any visualisations that rely upon
+        // associations of data be fully purged first which is why the above loop to purge the actions
+        // comes before this check.
+        if ( has( E, Event::MESH_CHANGE | Event::ASSESSMENT_CHANGE | Event::RESTORE_CHANGE))
+            applyFnToModels( E, fm, rebuildViewActors);   // Also resets view normals
+        else if ( has( E, Event::AFFINE_CHANGE))
+            applyFnToModels( E, fm, pokeViewTransformsWithModel);
+
+        if ( has( E, Event::MESH_CHANGE | Event::AFFINE_CHANGE | Event::ASSESSMENT_CHANGE | Event::LANDMARKS_CHANGE))
+            applyFnToModels( E, fm, MS::syncBoundingVisualisation);
     }   // end if
-
-    // Synchronise affine transformations across view actors
-    if ( fm && egrp.has( Event::AFFINE_CHANGE))
-    {
-        if ( !egrp.has( Event::ALL_VIEWS))
-            syncViewActorsToModelTransform( fm);
-        else
-        {
-            const FVS& aset = MS::selectedView()->viewer()->attached();
-            for ( const FM* vm : aset.models())
-                syncViewActorsToModelTransform( vm);
-        }   // end else
-    }   // end if
-
-    if ( egrp.has(Event::LANDMARKS_CHANGE) || egrp.has(Event::FACE_DETECTED) || egrp.has(Event::ASSESSMENT_CHANGE))
-    {
-        if ( !egrp.has( Event::ALL_VIEWS))
-            MS::syncBoundingVisualisation(fm);
-        else
-        {
-            const FVS& aset = MS::selectedView()->viewer()->attached();
-            for ( const FM* vm : aset.models())
-                MS::syncBoundingVisualisation(vm);
-        }   // end else
-    }   // end if
-
-    // If the action did anything to the camera, always set the interaction
-    // mode back to camera interaction mode.
-    if ( egrp.has(Event::CAMERA_CHANGE))
-        MS::setInteractionMode(IMode::CAMERA_INTERACTION);
 
     // Have actions recheck their own state and whether or not they're enabled, then see
     // if the received event triggers them.
@@ -209,16 +200,16 @@ void FaceActionManager::doEvent( EventGroup egrp)
     {
         // Sending actions should not be able to trigger themselves, and
         // actions are not reentrant generally speaking so running actions are also ignored.
-        if ( act == sact || (act->isRunning() && !act->isReentrant()))
+        if ( act == sact || (act->_isRunning() && !act->isReentrant()))
             continue;
 
         // In refreshing state, actions decide whether to enable themselves and check themselves.
         act->refreshState(E);
 
-        if ( act->isEnabled())
+        if ( act->isEnabled() && act->isTriggerEvent(E))
         {
-            if ( act->isTriggerEvent(E))
-                act->execute(E);
+            assert( !has( E, Event::NONE));
+            act->execute(E);
         }   // end if
     }   // end for
 

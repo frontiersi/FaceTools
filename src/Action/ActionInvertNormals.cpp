@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,15 +17,9 @@
 
 #include <Action/ActionInvertNormals.h>
 #include <FaceModel.h>
-#include <algorithm>
-#include <cassert>
-using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionInvertNormals;
+using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
-using FaceTools::Vis::FV;
-using FaceTools::FVS;
-using FaceTools::FMS;
-using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
 
 
@@ -36,43 +30,34 @@ ActionInvertNormals::ActionInvertNormals( const QString& dn, const QIcon& ico)
 }   // end ctor
 
 
-bool ActionInvertNormals::checkEnable( Event)
+bool ActionInvertNormals::isAllowed( Event)
 {
     return MS::isViewSelected();
-}   // end checkEnabled
+}   // end isAllowed
 
 
 bool ActionInvertNormals::doBeforeAction( Event)
 {
     MS::showStatus( "Inverting normals on selected model...");
+    storeUndo(this, Event::MESH_CHANGE);
     return true;
 }   // end doBeforeAction
 
 
-void ActionInvertNormals::invertNormals(RFeatures::ObjModel::Ptr model)
-{
-    const IntSet& fids = model->faces();
-    for ( int fid : fids)
-        model->reversePolyVertices(fid);
-}   // end invertNormals
-
-
 void ActionInvertNormals::doAction( Event)
 {
-    storeUndo(this, Event::GEOMETRY_CHANGE);
-
     FM* fm = MS::selectedModel();
     fm->lockForWrite();
-    RFeatures::ObjModel::Ptr model = fm->wmodel();
-    invertNormals(model);
-    fm->update( nullptr, false);    // Connectivity update not required
+    r3d::Mesh::Ptr mesh = fm->mesh().deepCopy();
+    mesh->invertNormals();
+    fm->update( mesh, false, false);
     fm->unlock();
 }   // end doAction
 
 
-void ActionInvertNormals::doAfterAction( Event)
+Event ActionInvertNormals::doAfterAction( Event)
 {
     MS::showStatus("Finished inverting model normals.", 5000);
-    emit onEvent( Event::GEOMETRY_CHANGE);
+    return Event::MESH_CHANGE;
 }   // end doAfterAction
 

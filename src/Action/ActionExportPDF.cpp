@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,6 @@
 
 #include <QDesktopServices>
 #include <QTemporaryDir>
-#include <QFileDialog>
 #include <QMessageBox>
 #include <QProcess>
 #include <QFile>
@@ -41,7 +40,9 @@ using FaceTools::Vis::FV;
 using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
 
-bool ActionExportPDF::_openOnSave(false);    // Static
+// static members
+bool ActionExportPDF::_openOnSave(false);
+
 
 // public
 ActionExportPDF::ActionExportPDF( const QString& nm, const QIcon& icon, const QKeySequence& ks)
@@ -55,8 +56,25 @@ ActionExportPDF::ActionExportPDF( const QString& nm, const QIcon& icon, const QK
 
 void ActionExportPDF::postInit()
 {
-    _dialog = new ReportChooserDialog( static_cast<QWidget*>(parent()));
+    QWidget *prnt = static_cast<QWidget*>(parent());
+    _dialog = new ReportChooserDialog( prnt);
+    _fileDialog = createSaveDialog( prnt);
 }   // end postInit
+
+
+// static
+QFileDialog* ActionExportPDF::createSaveDialog( QWidget *prnt)
+{
+    QFileDialog *fd = new QFileDialog( prnt);
+    fd->setWindowTitle( tr("Save Generated Report"));
+    fd->setFileMode( QFileDialog::AnyFile);
+    fd->setViewMode( QFileDialog::Detail);
+    fd->setNameFilter( "Portable Document Format (*.pdf)");
+    fd->setDefaultSuffix( "pdf");
+    fd->setAcceptMode( QFileDialog::AcceptSave);
+    //fd->setOption( QFileDialog::DontUseNativeDialog);
+    return fd;
+}   // end createSaveDialog
 
 
 bool ActionExportPDF::isAvailable( const FM* fm)
@@ -65,7 +83,7 @@ bool ActionExportPDF::isAvailable( const FM* fm)
 }   // end isAvailable
 
 
-bool ActionExportPDF::checkEnable( Event) { return isAvailable(MS::selectedModel());}
+bool ActionExportPDF::isAllowed( Event) { return isAvailable(MS::selectedModel());}
 
 
 // Get the save filepath for the report
@@ -83,7 +101,7 @@ bool ActionExportPDF::doBeforeAction( Event)
 
     const bool doAct = _report != nullptr;
     if ( doAct)
-        MS::showStatus( "Generating report...");
+        MS::showStatus( "Generating report...", 10000);
     return doAct;
 }   // end doBeforeAction
 
@@ -100,49 +118,48 @@ void ActionExportPDF::doAction( Event)
 }   // end doAction
 
 
-void ActionExportPDF::doAfterAction( Event)
+Event ActionExportPDF::doAfterAction( Event)
 {
-    QWidget* prnt = static_cast<QWidget*>(parent());
-
     if ( !_err.isEmpty())
     {
         std::cerr << _err.toStdString() << std::endl;
         MS::showStatus("Failed to generate report!", 5000);
-        QMessageBox::warning( prnt, tr("Report Creation Error!"), _err);
-        return;
+        QMessageBox::warning( static_cast<QWidget*>(parent()), tr("Report Creation Error!"), _err);
     }   // end if
-
-    std::cerr << "Created PDF at '" << _tmpfile.toStdString() << "'" << std::endl;
-    saveGeneratedReport(_tmpfile, prnt);
+    else
+    {
+        //std::cerr << "Created PDF at '" << _tmpfile.toStdString() << "'" << std::endl;
+        saveGeneratedReport(_tmpfile, _fileDialog);
+    }   // end else
+    return Event::NONE;
 }   // end doAfterAction
 
 
 // static
-bool ActionExportPDF::saveGeneratedReport( const QString& tmpfile, const QWidget* prnt)
+bool ActionExportPDF::saveGeneratedReport( const QString& tmpfile, QFileDialog *fdialog)
 {
-    const FM* fm = MS::selectedModel();
-    const std::string fname = FileIO::FMM::filepath( fm);
-    QString outfile = boost::filesystem::path(fname).filename().replace_extension( "pdf").string().c_str();
+    assert( fileDialog);
 
-    QFileDialog fileDialog( const_cast<QWidget*>(prnt));
-    fileDialog.setWindowTitle( tr("Save Generated Report"));
-    fileDialog.setFileMode( QFileDialog::AnyFile);
-    fileDialog.setNameFilter( "Portable Document Format (*.pdf)");
-    fileDialog.setDefaultSuffix( "pdf");
-    fileDialog.selectFile( outfile);
-    fileDialog.setAcceptMode( QFileDialog::AcceptSave);
-    fileDialog.setOption( QFileDialog::DontUseNativeDialog);
+    const FM* fm = MS::selectedModel();
+    boost::filesystem::path outpath( FileIO::FMM::filepath(fm));
+
+    fdialog->setDirectory( QString::fromStdString( outpath.parent_path().string()));
+    QString outfile = outpath.filename().replace_extension( "pdf").string().c_str();
+    fdialog->selectFile( outfile);
 
     bool docopy = false;
     while ( !docopy)
     {
         QStringList fileNames;
-        if ( fileDialog.exec() > 0)
-            fileNames = fileDialog.selectedFiles();
+        if ( fdialog->exec() > 0)
+            fileNames = fdialog->selectedFiles();
 
         outfile = "";
         if ( fileNames.empty())
+        {
+            MS::showStatus( "Report discarded!", 5000);
             break;
+        }   // end if
 
         outfile = fileNames.first();
         docopy = true;
@@ -152,7 +169,7 @@ bool ActionExportPDF::saveGeneratedReport( const QString& tmpfile, const QWidget
             if ( !QFile::remove(outfile))
             {
                 static const QString err = "Unable to remove existing file! Choose a different filename.";
-                QMessageBox::warning( const_cast<QWidget*>(prnt), tr("Report Save Error!"), err);
+                QMessageBox::warning( static_cast<QWidget*>(fdialog->parent()), tr("Report Save Error!"), err);
                 docopy = false; // Try again!
             }   // end if
         }   // end if

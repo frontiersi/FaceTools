@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  ************************************************************************/
 
 #include <FileIO/FaceModelOBJFileHandler.h>
-#include <AssetImporter.h>  // RModelIO
+#include <r3dio/AssetImporter.h>
 #include <QDebug>
 #include <iomanip>
 using FaceTools::FileIO::FaceModelOBJFileHandler;
@@ -36,7 +36,7 @@ FM* FaceModelOBJFileHandler::read( const QString& qfname)
 {
     _err = "";
     FM* fm = nullptr;
-    RFeatures::ObjModel::Ptr model = _importer.load(qfname.toStdString());
+    r3d::Mesh::Ptr model = _importer.load(qfname.toStdString());
     if ( model)
         fm = new FM(model);
     else
@@ -49,7 +49,7 @@ bool FaceModelOBJFileHandler::write( const FM* fm, const QString& qfname)
 {
     _err = "";
     const std::string fname = qfname.toStdString();
-    const RFeatures::ObjModel& model = fm->model();
+    const r3d::Mesh& model = fm->mesh();
     std::cerr << QString("Saving to '%1'").arg(qfname).toStdString() << std::endl;
     if ( !_exporter.save( model, fname))
     {

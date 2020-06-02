@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,15 +47,12 @@ PathSetView::~PathSetView()
 }   // end dtor
 
 
-bool PathSetView::isVisible() const { return !_visible.empty();}
-
-
 void PathSetView::setVisible( bool enable, ModelViewer *viewer)
 {
     if ( _viewer)
         _viewer->remove(_text);
 
-    while ( isVisible())
+    while ( !_visible.empty())
         _showPath( false, *_visible.begin());
 
     _viewer = viewer;
@@ -69,6 +66,9 @@ void PathSetView::setVisible( bool enable, ModelViewer *viewer)
 }   // end setVisible
 
 
+bool PathSetView::isVisible() const { return !_visible.empty();}
+
+
 void PathSetView::_showPath( bool enable, int id)
 {
     assert( _views.count(id) > 0);
@@ -79,20 +79,35 @@ void PathSetView::_showPath( bool enable, int id)
 }   // end _showPath
 
 
+namespace {
+std::string appendValue( float v, const std::string &send="")
+{
+    std::ostringstream oss;
+    oss << " " << std::setw(7) << std::fixed << std::setprecision(2) << v << " " << std::setw(4) << std::left << send;
+    return oss.str();
+}   // end appendValue
+}   // end namespace
+
+
 void PathSetView::setText( const Path& path, int xpos, int ypos)
 {
     const std::string lnunits = FaceTools::FM::LENGTH_UNITS.toStdString();
     // Set the text contents for the label and the caption
-    std::ostringstream oss0, oss1, oss2;
-    if ( !path.name.empty())
-        oss0 << path.name << std::endl;
-    oss1 << "Caliper: " << std::setw(5) << std::fixed << std::setprecision(1) << path.elen << " " << lnunits;
-    oss2 << "\nSurface: ";
-    if ( path.psum > 0.0)
-        oss2 << std::setw(5) << std::fixed << std::setprecision(1) << path.psum << " " << lnunits;
+    std::ostringstream oss0, oss1, oss2, oss3, oss4, oss5, oss6;
+    if ( !path.name().empty())
+        oss0 << std::left << std::setfill(' ') << std::setw(21) << path.name() << std::endl;
+    oss1 << "   Surface:";
+    oss2 << "\n  Direct:" << appendValue( path.euclideanDistance(), lnunits);
+    oss3 << "\n   Ratio:" << appendValue( path.surface2EuclideanRatio());
+    oss4 << "\n   Depth:" << appendValue( path.depth(), lnunits);
+    oss5 << "\n   Angle:" << appendValue( path.angleAtDepth(), "degs");
+    oss6 << "\n    Area:" << appendValue( path.crossSectionalArea(), lnunits + "^2");
+    float psum = path.surfaceDistance();
+    if ( psum > 0.0f)
+        oss1 << appendValue( psum, lnunits);
     else
-        oss2 << " N/A";
-    _text->SetInput( (oss0.str() + oss1.str() + oss2.str()).c_str());
+        oss1 << " N/A ";
+    _text->SetInput( (oss0.str() + oss1.str() + oss2.str() + oss3.str() + oss4.str() + oss5.str() + oss6.str()).c_str());
     _text->SetDisplayPosition( xpos, ypos);
 }   // end setText
 
@@ -112,31 +127,22 @@ PathView* PathSetView::pathView( int id) const
 }   // end pathView
 
 
-void PathSetView::addPath( const Path& path, const vtkMatrix4x4* d)
+void PathSetView::addPath( const Path& path)
 {
-    // The vertices of the given path are always in their transformed positions.
-    // For visualisation, the vertices must be untransformed so that pokeTransform
-    // can be used to keep the view position of the vertices synchronised when
-    // dynamically adjusting the position of the model.
-    const cv::Matx44d imat = RVTK::toCV(d).inv();
-    std::list<cv::Vec3f> vtxs;
-    for ( const cv::Vec3f& v : path.vtxs)
-        vtxs.push_back( RFeatures::transform( imat, v));
-
-    PathView* pview = _views[path.id] = new PathView( path.id, vtxs);
-    pview->pokeTransform(d);
-
+    PathView* pview = _views[path.id()] = new PathView( path.id());
     // Map handle props to the handles themselves for fast lookup.
     _handles[pview->handle0()->prop()] = pview->handle0();
     _handles[pview->handle1()->prop()] = pview->handle1();
+    _handles[pview->depthHandle()->prop()] = pview->depthHandle();
+    updatePath( path);
 }   // end addPath
 
 
-void PathSetView::movePath( const Path& path)
+void PathSetView::updatePath( const Path& path)
 {
-    assert( _views.count(path.id) > 0);
-    _views.at(path.id)->update(path.vtxs);
-}   // end movePath
+    assert( _views.count(path.id()) > 0);
+    _views.at(path.id())->update( path);
+}   // end updatePath
 
 
 void PathSetView::erasePath( int id)
@@ -146,22 +152,20 @@ void PathSetView::erasePath( int id)
     PathView* pv = _views.at(id);
     _handles.erase(pv->handle0()->prop());
     _handles.erase(pv->handle1()->prop());
+    _handles.erase(pv->depthHandle()->prop());
     _views.erase(id);
     delete pv;
 }   // end erasePath
 
 
-void PathSetView::sync( const PathSet& paths, const vtkMatrix4x4* d)
+void PathSetView::sync( const PathSet& paths)
 {
-    bool isVis = isVisible();
-
+    bool isVis = !_visible.empty();
     // First remove any entries from _views that aren't in paths
     IntSet rpids;
     for ( auto& p : _views)
-    {
         if ( !paths.has( p.first))
             rpids.insert(p.first);
-    }   // end for
 
     for ( int pid : rpids)
         erasePath( pid);
@@ -169,11 +173,11 @@ void PathSetView::sync( const PathSet& paths, const vtkMatrix4x4* d)
     // Then add any in paths not yet present or update what is there
     for ( int pid : paths.ids())
     {
-        const Path& path = *paths.path(pid);
+        const Path& path = paths.path(pid);
         if ( _views.count(pid) == 0)
-            addPath( path, d);
+            addPath( path);
         else
-            movePath( path);
+            updatePath( path);
     }   // end for
 
     isVis = isVis && !_views.empty();

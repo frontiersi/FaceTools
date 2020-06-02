@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,18 +17,21 @@
 
 #include <Vis/LabelsView.h>
 #include <ModelViewer.h>
-#include <VtkTools.h>   // RVTK
+#include <FaceModel.h>
+#include <r3dvis/VtkTools.h>
 #include <vtkLabelPlacementMapper.h>
 #include <vtkTextProperty.h>
 #include <vtkPointData.h>
 #include <vtkProperty.h>
 using FaceTools::Vis::LabelsView;
 using FaceTools::ModelViewer;
+using FaceTools::FM;
+using FaceTools::Mat4f;
 
 
-void LabelsView::refresh( const RFeatures::ObjModel& model)
+void LabelsView::refresh( const FM *fm)
 {
-    vtkSmartPointer<vtkPolyData> pdata = createLabels( model);
+    vtkSmartPointer<vtkPolyData> pdata = createLabels( fm);
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputData( pdata);
@@ -38,9 +41,12 @@ void LabelsView::refresh( const RFeatures::ObjModel& model)
     _filter->SetLabelArrayName( pdata->GetPointData()->GetArrayName(0));
     vtkSmartPointer<vtkLabelPlacementMapper> lmapper = vtkSmartPointer<vtkLabelPlacementMapper>::New();
     lmapper->SetInputConnection( _filter->GetOutputPort());
+    lmapper->SetPlaceAllLabels( placeAllLabels());
     _labels->SetMapper( lmapper);
 
-    transform( model.transformMatrix());
+    _moving = false;
+    _lt = Mat4f::Identity();
+    transform( fm->transformMatrix());
 }   // end refresh
 
 
@@ -50,7 +56,7 @@ LabelsView::LabelsView( int fontSize, bool boldOn)
       _filter( vtkSmartPointer<vtkPointSetToLabelHierarchy>::New()),
       _visible( false),
       _moving( false),
-      _lt( cv::Matx44d::eye())
+      _lt( Mat4f::Identity())
 {
     _actor->GetProperty()->SetRepresentationToPoints();
     _actor->GetProperty()->SetPointSize(2);
@@ -90,9 +96,9 @@ void LabelsView::setVisible( bool v, ModelViewer* vwr)
 }   // end setVisible
 
 
-void LabelsView::transform( const cv::Matx44d& m)
+void LabelsView::transform( const Mat4f& m)
 {
-    RVTK::fixTransform( _actor, RVTK::toVTK( m * _lt.inv()));
+    r3dvis::fixTransform( _actor, r3dvis::toVTK( m * _lt.inverse()));
     _moving = false;
     _lt = m;    // Store last transform applied
 }   // end transform

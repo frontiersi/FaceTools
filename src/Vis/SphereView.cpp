@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,8 +16,7 @@
  ************************************************************************/
 
 #include <Vis/SphereView.h>
-#include <Transformer.h>    // RFeatures
-#include <VtkTools.h>       // RVTK
+#include <r3dvis/VtkTools.h>
 #include <vtkProperty.h>
 #include <vtkTextProperty.h>
 #include <vtkTextActor.h>
@@ -25,11 +24,12 @@
 #include <vtkMapper.h>
 #include <algorithm>
 #include <cassert>
-using RVTK::VtkScalingActor;
+using r3dvis::VtkScalingActor;
 using FaceTools::Vis::SphereView;
 using FaceTools::ModelViewer;
+using FaceTools::Vec3f;
 
-void SphereView::_init( const cv::Vec3f& c, double r, bool p, bool fixed)
+void SphereView::_init( const Vec3f& c, float r, bool p, bool fixed)
 {
     if ( _actor)
         delete _actor;
@@ -55,7 +55,7 @@ void SphereView::_init( const cv::Vec3f& c, double r, bool p, bool fixed)
 }   // end _init
 
 
-SphereView::SphereView( const cv::Vec3f& c, double r, bool p, bool fixed)
+SphereView::SphereView( const Vec3f& c, float r, bool p, bool fixed)
     : _vwr(nullptr), _visible(false), _actor(nullptr)
 {
     _init( c, r, p, fixed);
@@ -72,7 +72,7 @@ void SphereView::setResolution( int t)
 {
     t = std::max<int>(t,8);
     _source->SetPhiResolution(t);
-    _source->SetThetaResolution(int(double(t+1)/2));
+    _source->SetThetaResolution(int(float(t+1)/2));
 }   // end setResolution
 
 int SphereView::resolution() const { return _source->GetPhiResolution();}
@@ -83,21 +83,23 @@ bool SphereView::pickable() const { return _actor->pickable();}
 void SphereView::setFixedScale( bool v) { _actor->setFixedScale(v);}
 bool SphereView::fixedScale() const { return _actor->fixedScale();}
 
-void SphereView::setScaleFactor( double v) { _actor->setScaleFactor(v);}
-double SphereView::scaleFactor() const { return _actor->scaleFactor();}
+void SphereView::setScaleFactor( float v) { _actor->setScaleFactor(v);}
+float SphereView::scaleFactor() const { return _actor->scaleFactor();}
 
-void SphereView::setCentre( const cv::Vec3f& pos)
+void SphereView::setCentre( const Vec3f& pos)
 {
-    _actor->setPosition(pos);
+    //r3d::Vec3d dpos = pos.cast<double>();
+    //_source->SetCenter( &dpos[0]);
+    _actor->setPosition( pos);
     _updateCaptionPosition();
 }   // end setCentre
 
-const cv::Vec3f& SphereView::centre() const { return _actor->position();}
+const Vec3f& SphereView::centre() const { return _actor->position();}
 
-void SphereView::setRadius( double r) { _source->SetRadius(r);}
-double SphereView::radius() const { return _source->GetRadius();}
+void SphereView::setRadius( float r) { _source->SetRadius(r);}
+float SphereView::radius() const { return _source->GetRadius();}
 
-double SphereView::opacity() const { return _actor->opacity();}
+float SphereView::opacity() const { return _actor->opacity();}
 
 void SphereView::setColour( double r, double g, double b, double a)
 {
@@ -122,13 +124,13 @@ void SphereView::setCaptionColour( const QColor& tcol)
     _caption->GetCaptionTextProperty()->SetColor( tcol.redF(), tcol.greenF(), tcol.blueF());
 }   // end setCaptionColour
 
-void SphereView::setHighlighted( bool v)
+void SphereView::showCaption( bool v)
 {
     _caption->SetVisibility( v);
     _updateCaptionPosition();
-}   // end setHighlighted
+}   // end showCaption
 
-bool SphereView::highlighted() const { return static_cast<bool>(_caption->GetVisibility());}
+//bool SphereView::highlighted() const { return static_cast<bool>(_caption->GetVisibility());}
 
 const vtkProp* SphereView::prop() const { return _actor->prop();}
 
@@ -162,6 +164,9 @@ void SphereView::setVisible( bool v, ModelViewer* vwr)
 }   // end setVisible
 
 
+bool SphereView::belongs( const vtkProp *prop) const { return prop == _actor->prop();}
+
+
 void SphereView::pokeTransform( const vtkMatrix4x4* d)
 {
     vtkMatrix4x4* vm = const_cast<vtkMatrix4x4*>(d);
@@ -175,7 +180,7 @@ const vtkMatrix4x4* SphereView::transform() const { return _actor->transform();}
 
 void SphereView::_updateCaptionPosition()
 {
-    const cv::Vec3f pos = RFeatures::transform( RVTK::toCV(_actor->transform()), centre());
+    const Vec3f pos = r3d::transform( r3dvis::toEigen(_actor->transform()), centre());
     double attachPoint[3] = {double(pos[0]), double(pos[1]), double(pos[2])};
     _caption->SetAttachmentPoint( attachPoint);
 }   // end _updateCaptionPosition

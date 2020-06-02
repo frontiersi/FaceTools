@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,21 +25,19 @@ using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
 
 
-// public
 ActionUpdateU3D::ActionUpdateU3D() : FaceAction( "U3D Updater")
 {
-    addPurgeEvent( Event::GEOMETRY_CHANGE);
-    addPurgeEvent( Event::ORIENTATION_CHANGE);
-    addTriggerEvent( Event::GEOMETRY_CHANGE);
-    addTriggerEvent( Event::ORIENTATION_CHANGE);
+    addPurgeEvent( Event::MASK_CHANGE);
+    addTriggerEvent( Event::MASK_CHANGE | Event::LOADED_MODEL);
     setAsync( true, true);  // Reentrant!
 }   // end ctor
 
 
-bool ActionUpdateU3D::checkEnable( Event)
+bool ActionUpdateU3D::isAllowed( Event)
 {
-    return U3DCache::isAvailable() && MS::selectedModel();
-}   // end checkEnabled
+    const FM *fm = MS::selectedModel();
+    return fm && fm->hasMask() && fm->isAligned() && U3DCache::isAvailable();
+}   // end isAllowed
 
 
 void ActionUpdateU3D::doAction( Event)
@@ -48,13 +46,12 @@ void ActionUpdateU3D::doAction( Event)
 }   // end doAction
 
 
-void ActionUpdateU3D::purge( const FM* fm, Event)
-{
-    U3DCache::purge(fm);
-}   // end purge
+void ActionUpdateU3D::purge( const FM* fm) { U3DCache::purge(fm);}
 
 
-void ActionUpdateU3D::doAfterAction( Event)
+Event ActionUpdateU3D::doAfterAction( Event)
 {
-    emit onEvent( Event::U3D_MODEL_CHANGE);
+    const std::string fpath = U3DCache::u3dfilepath( MS::selectedModel())->toStdString();
+    std::cout << "[INFO] FaceTools::Action::ActionUpdateU3D::doAfterAction: U3D cached at '" << fpath << "'" << std::endl;
+    return Event::NONE;
 }   // end doAfterAction

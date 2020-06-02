@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,46 +19,43 @@
 #include <FaceModelCurvature.h>
 #include <FaceModel.h>
 #include <algorithm>
+#include <cassert>
 using FaceTools::Action::ActionMapCurvature;
 using FaceTools::Action::Event;
-using FaceTools::FaceModelCurvature;
-using FaceTools::FVS;
 using FaceTools::FM;
+using FaceTools::Vis::FV;
 using MS = FaceTools::Action::ModelSelector;
+using FMC = FaceTools::FaceModelCurvature;
 
 
-// public
 ActionMapCurvature::ActionMapCurvature() : FaceAction( "Map Curvature")
 {
-    addPurgeEvent( Event::GEOMETRY_CHANGE);
-    addTriggerEvent( Event::GEOMETRY_CHANGE);
+    addPurgeEvent( Event::MESH_CHANGE);
+    addTriggerEvent( Event::MESH_CHANGE);
     setAsync(true);
 }   // end ctor
 
 
-bool ActionMapCurvature::checkEnable( Event)
-{
-    const FM* fm = MS::selectedModel();
-    return fm && FaceModelCurvature::rmetrics(fm) == nullptr;
-}   // end checkEnabled
+bool ActionMapCurvature::isAllowed( Event) { return MS::selectedModel();}
 
 
-void ActionMapCurvature::doAction( Event)
+void ActionMapCurvature::doAction( Event e)
 {
-    const FM* fm = MS::selectedModel();
-    fm->lockForRead();
-    FaceModelCurvature::add(fm);    // Blocks
+    FM* fm = MS::selectedModel();
+    fm->lockForWrite();
+    FMC::purge(fm);
+    FMC::add(fm);
     fm->unlock();
 }   // end doAction
 
 
-void ActionMapCurvature::doAfterAction( Event)
+Event ActionMapCurvature::doAfterAction( Event)
 {
-    emit onEvent( Event::SURFACE_DATA_CHANGE);
+    const FM *fm = MS::selectedModel();
+    for ( FV *fv : fm->fvs())
+        fv->resetNormals();
+    return Event::SURFACE_DATA_CHANGE;
 }   // end doAfterAction
 
 
-void ActionMapCurvature::purge( const FM* fm, Event)
-{
-    FaceModelCurvature::purge(fm);
-}   // end purge
+void ActionMapCurvature::purge( const FM* fm) { FMC::purge(fm);}

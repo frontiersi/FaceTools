@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 
 #include <Action/ActionLoadFaceModels.h>
 #include <FileIO/FaceModelManager.h>
+#include <QFileInfo>
 using FaceTools::Action::ActionLoadFaceModels;
 using FaceTools::Action::Event;
 using FaceTools::Action::FaceAction;
@@ -45,27 +46,27 @@ void ActionLoadFaceModels::postInit()
     QWidget* p = static_cast<QWidget*>(parent());
     _loadHelper = new LoadFaceModelsHelper(p);
     _dialog = new QFileDialog(p, tr("Select one or more models to load"));
-    QStringList filters = FMM::fileFormats().createImportFilters().split(";;");
+    QStringList filters = FMM::fileFormats().createImportFilters();
     filters.prepend( "Any file (*)");
     _dialog->setNameFilters(filters);
     _dialog->setViewMode(QFileDialog::Detail);
     _dialog->setFileMode(QFileDialog::ExistingFiles);
-    _dialog->setOption(QFileDialog::DontUseNativeDialog);
-    _dialog->setOption(QFileDialog::DontUseCustomDirectoryIcons);
+    //_dialog->setOption(QFileDialog::DontUseNativeDialog);
+    //_dialog->setOption(QFileDialog::DontUseCustomDirectoryIcons);
 }   // end postInit
 
 
-bool ActionLoadFaceModels::checkEnable( Event)
+bool ActionLoadFaceModels::isAllowed( Event)
 {
     return FMM::numOpen() < FMM::loadLimit();
-}   // end checkEnable
+}   // end isAllowed
 
 
 // public
 bool ActionLoadFaceModels::loadModel( const QString& fname)
 {
     bool loaded = false;
-    if ( checkEnable(Event::NONE))
+    if ( isAllowed(Event::NONE))
     {
         QStringList fnames;
         fnames << fname;
@@ -79,15 +80,22 @@ bool ActionLoadFaceModels::loadModel( const QString& fname)
 bool ActionLoadFaceModels::doBeforeAction( Event)
 {
     if ( _loadHelper->filenames().empty())
-    {
         if (_dialog->exec())
             _loadHelper->setFilteredFilenames( _dialog->selectedFiles());
-    }   // end if
 
     const int nfiles = _loadHelper->filenames().size();
     const bool doLoad = nfiles > 0;
     if ( doLoad)
-        MS::showStatus( QString("Loading model%1...").arg(nfiles > 1 ? "s" : ""));
+    {
+        // Set directory for next load
+        QFileInfo finfo( _loadHelper->filenames().first());
+        finfo.makeAbsolute();
+        _dialog->setDirectory( finfo.absolutePath());
+        if ( nfiles > 1)
+            MS::showStatus( "Loading models ...");
+        else
+            MS::showStatus( QString("Loading %1 ...").arg(finfo.absoluteFilePath()));
+    }   // end if
     return doLoad;
 }   // end doBeforeAction
 
@@ -98,17 +106,27 @@ void ActionLoadFaceModels::doAction( Event)
 }   // end doAction
 
 
-void ActionLoadFaceModels::doAfterAction( Event)
+Event ActionLoadFaceModels::doAfterAction( Event)
 {
     _loadHelper->showLoadErrors();
     const FMS& fms = _loadHelper->lastLoaded();
+    FV *fv = nullptr;
     for ( FM* fm : fms)
-        MS::addFaceView( fm);
+        fv = MS::add( fm, MS::defaultViewer());
+    if ( fv)
+        MS::setSelected( fv);
+
+    Event e;
     if ( !fms.empty())
     {
         MS::showStatus( QString("Finished loading model%1.").arg( fms.size() > 1 ? "s" : ""), 5000);
-        emit onEvent( {Event::LOADED_MODEL, Event::GEOMETRY_CHANGE});
+        e = Event::LOADED_MODEL | Event::MESH_CHANGE;
     }   // end if
     else
+    {
         MS::showStatus( "Error loading model(s)!", 5000);
+        e = Event::ERR;
+    }   // end else
+
+    return e;
 }   // end doAfterAction

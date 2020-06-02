@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,13 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <Detect/FaceFinder2D.h>
-#include <Detect/FeaturesDetector.h>
-#include <MiscFunctions.h>
-#include <FeatureUtils.h>       // RFeatures
+#include <FaceTools/Detect/FaceFinder2D.h>
+#include <FaceTools/MiscFunctions.h>
+#include <rimg/FeatureUtils.h>
 #include <cassert>
 using FaceTools::Detect::FaceFinder2D;
-using FaceTools::Detect::FeaturesDetector;
+using byte = unsigned char;
 
 namespace {
 // Estimate the centre point of the face from the centres of the left and right eyes
@@ -40,21 +39,20 @@ cv::Point2f calcFaceCentrePoint( const cv::Point& lc, const cv::Point& rc)
 }   // end namespace
 
 
-// public
 bool FaceFinder2D::find( const cv::Mat_<byte> lightMap)
 {
     bool found = false;
     _faceBox = cv::RotatedRect();
+    assert( isInit());
     if (!FeaturesDetector::find( lightMap))
-        std::cerr << "[WARNING] FaceTools::Detect::FaceFinder2D::find: Unable to find a face!" << std::endl;
-    else if ( findEyes( lightMap))
+        std::cerr << "[WARNING] FaceTools::Detect::FaceFinder2D::find: No face found!" << std::endl;
+    else if ( _findEyes( lightMap))
         found = true;
     return found;
 }   // end find
 
 
-// private
-bool FaceFinder2D::findEyes( const cv::Mat_<byte> lightMap)
+bool FaceFinder2D::_findEyes( const cv::Mat_<byte> lightMap)
 {
     const cv::Size msz = lightMap.size();
     cv::Rect faceBox = FeaturesDetector::faceBox();
@@ -75,8 +73,8 @@ bool FaceFinder2D::findEyes( const cv::Mat_<byte> lightMap)
 
     // Create the faceBox as a rotated rectangle by using the angles between the
     // eye centres to decide the orientation of the face.
-    const cv::Point lc = RFeatures::calcPixelCentre( leye);
-    const cv::Point rc = RFeatures::calcPixelCentre( reye);
+    const cv::Point lc = rimg::calcPixelCentre( leye);
+    const cv::Point rc = rimg::calcPixelCentre( reye);
     const cv::Point2f fc = calcFaceCentrePoint( lc, rc);
     const float degAngle = FaceTools::calcAngleDegs( lc, rc);
     const float ipdelta = cv::norm(rc-lc);
@@ -90,10 +88,9 @@ bool FaceFinder2D::findEyes( const cv::Mat_<byte> lightMap)
     _reye = FaceTools::toProportion( cv::RotatedRect( rc, reye.size(), degAngle), msz);
 
     return true;
-}   // end findEyes
+}   // end _findEyes
 
 
-// public
 cv::Mat_<cv::Vec3b> FaceFinder2D::drawDebug( cv::Mat_<cv::Vec3b> dimg) const
 {
     const cv::Size msz = dimg.size();
@@ -102,10 +99,10 @@ cv::Mat_<cv::Vec3b> FaceFinder2D::drawDebug( cv::Mat_<cv::Vec3b> dimg) const
     const cv::RotatedRect faceBox = FaceTools::fromProportion( _faceBox, msz);
 
     if ( faceBox.size.area())
-        RFeatures::drawRotatedRect( dimg, faceBox, 2, cv::Scalar(255,255,255));
+        rimg::drawRotatedRect( dimg, faceBox, 2, cv::Scalar(255,255,255));
     if ( leye.size.area())
-        RFeatures::drawRotatedRect( dimg, leye, 2, cv::Scalar(255,50,50));
+        rimg::drawRotatedRect( dimg, leye, 2, cv::Scalar(255,50,50));
     if ( reye.size.area())
-        RFeatures::drawRotatedRect( dimg, reye, 2, cv::Scalar(50,50,255));
+        rimg::drawRotatedRect( dimg, reye, 2, cv::Scalar(50,50,255));
     return dimg;
 }   // end drawDebug

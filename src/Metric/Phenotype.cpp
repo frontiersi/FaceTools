@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,14 +16,14 @@
  ************************************************************************/
 
 #include <Metric/Phenotype.h>
-#include <Metric/MetricCalculatorManager.h>
+#include <Metric/MetricManager.h>
 #include <Ethnicities.h>
 #include <FaceModel.h>
 using FaceTools::Metric::Phenotype;
 using FaceTools::Metric::MetricSet;
 using FaceTools::Metric::MetricValue;
 using FaceTools::Metric::GrowthData;
-using MCM = FaceTools::Metric::MetricCalculatorManager;
+using MM = FaceTools::Metric::MetricManager;
 using FaceTools::FM;
 
 
@@ -82,7 +82,8 @@ Phenotype::Ptr Phenotype::load( const QString& fpath)
 
     if ( sol::optional<std::string> v = table["name"]) hpo->_name = v.value().c_str();
     if ( sol::optional<std::string> v = table["region"]) hpo->_region = v.value().c_str();
-    if ( sol::optional<std::string> v = table["criteria"]) hpo->_criteria = v.value().c_str();
+    if ( sol::optional<std::string> v = table["ocrit"]) hpo->_ocriteria = v.value().c_str();
+    if ( sol::optional<std::string> v = table["scrit"]) hpo->_scriteria = v.value().c_str();
     if ( sol::optional<std::string> v = table["remarks"]) hpo->_remarks = v.value().c_str();
 
     if ( sol::optional<sol::table> v = table["synonyms"])
@@ -90,6 +91,13 @@ Phenotype::Ptr Phenotype::load( const QString& fpath)
         sol::table synonyms = v.value();
         for ( size_t i = 1; i <= synonyms.size(); ++i)
             hpo->_synonyms.append( synonyms[i].get_or_create<std::string>().c_str());
+    }   // end if
+
+    if ( sol::optional<sol::table> v = table["refs"])
+    {
+        sol::table refs = v.value();
+        for ( size_t i = 1; i <= refs.size(); ++i)
+            hpo->_refs.append( refs[i].get_or_create<std::string>().c_str());
     }   // end if
 
     if ( sol::optional<sol::table> v = table["metrics"])
@@ -116,8 +124,10 @@ bool Phenotype::_hasMeasurements( const FM* fm, int aid) const
     // Only evaluate if all the measurements are available for this indication
     for ( int mid : _metrics)
     {
-        assert( MCM::metric(mid));
-        if ( MCM::metric(mid)->isBilateral())
+        if ( !MM::metric(mid))
+            return false;
+
+        if ( MM::metric(mid)->isBilateral())
         {
             if ( !llat.has(mid) || !rlat.has(mid))
                 return false;
@@ -174,8 +184,8 @@ bool Phenotype::isSexMatch( int8_t sex) const
         return false;
     for ( int mid : _metrics)
     {
-        MC::Ptr mc = MCM::metric(mid);
-        GrowthData::CPtr gd = mc->currentGrowthData();  // May be null
+        MC::Ptr mc = MM::metric(mid);
+        const GrowthData *gd = mc->growthData().current();  // May be null
         if ( !gd || ( gd->sex() != sex && gd->sex() != (FEMALE_SEX | MALE_SEX)))
             return false;
     }   // end for
@@ -183,12 +193,12 @@ bool Phenotype::isSexMatch( int8_t sex) const
 }   // end isSexMatch
 
 
-bool Phenotype::isAgeMatch( double age) const
+bool Phenotype::isAgeMatch( float age) const
 {
     for ( int mid : _metrics)
     {
-        MC::Ptr mc = MCM::metric(mid);
-        GrowthData::CPtr gd = mc->currentGrowthData();  // May be null
+        MC::Ptr mc = MM::metric(mid);
+        const GrowthData *gd = mc->growthData().current();  // May be null
         if ( !gd || !gd->isWithinAgeRange(age))
             return false;
     }   // end for
@@ -200,8 +210,8 @@ bool Phenotype::isEthnicityMatch( int ethn) const
 {
     for ( int mid : _metrics)
     {
-        MC::Ptr mc = MCM::metric(mid);
-        GrowthData::CPtr gd = mc->currentGrowthData();  // May be null
+        MC::Ptr mc = MM::metric(mid);
+        const GrowthData *gd = mc->growthData().current();  // May be null
         if ( !gd || !Ethnicities::belongs( gd->ethnicity(), ethn))
             return false;
     }   // end for

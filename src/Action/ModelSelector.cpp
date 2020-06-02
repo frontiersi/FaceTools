@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,13 @@
  ************************************************************************/
 
 #include <Action/ModelSelector.h>
-#include <Action/ActionResetCamera.h>
 #include <Action/ActionOrientCameraToFace.h>
+#include <Action/FaceActionWorker.h>
 #include <Vis/BoundingVisualisation.h>
 #include <Vis/FaceView.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
+#include <vtkCamera.h>
 #include <cassert>
 using FaceTools::Action::ModelSelector;
 using FaceTools::Interactor::SelectNotifier;
@@ -31,6 +32,7 @@ using FaceTools::Vis::FV;
 using FaceTools::FMV;
 using FaceTools::FMS;
 using FaceTools::FM;
+using FaceTools::Action::IMode;
 
 ModelSelector::Ptr ModelSelector::_me;
 
@@ -45,11 +47,19 @@ void ModelSelector::addViewer( FMV* fmv, bool setDefault)
 
 void ModelSelector::setStatusBar( QStatusBar* sb) { me()->_sbar = sb;}
 
+
 void ModelSelector::showStatus( const QString& msg, int timeOut)
 {
     if ( me()->_sbar)
         me()->_sbar->showMessage( QObject::tr( msg.toStdString().c_str()), timeOut);
 }   // end showStatus
+
+
+QString ModelSelector::currentStatus()
+{
+    return me()->_sbar ? me()->_sbar->currentMessage() : "";
+}   // end currentStatus
+
 
 void ModelSelector::clearStatus()
 {
@@ -67,7 +77,9 @@ void ModelSelector::setCursor( Qt::CursorShape cs)
 
 void ModelSelector::restoreCursor()
 {
-    if ( defaultViewer()->interactionMode() == IMode::ACTOR_INTERACTION)
+    if ( FaceActionWorker::numWorkers() > 0)
+        setCursor( Qt::CursorShape::BusyCursor);
+    else if ( defaultViewer()->interactionMode() == IMode::ACTOR_INTERACTION)
         setCursor( Qt::CursorShape::DragMoveCursor);
     else
         setCursor( Qt::CursorShape::ArrowCursor);
@@ -78,12 +90,9 @@ const SelectNotifier* ModelSelector::selector() { return &sn();}
 
 void ModelSelector::setInteractionMode(IMode m, bool v)
 {
-    //std::cerr << "SET INTERACTION MODE TO: " << (m == IMode::ACTOR_INTERACTION ? "ACTOR" : "CAMERA") << std::endl;
-    setCursor( Qt::CursorShape::ArrowCursor);
-    if ( m == IMode::ACTOR_INTERACTION)
-        setCursor( Qt::CursorShape::DragMoveCursor);
     for ( ModelViewer* mv : viewers())
         mv->setInteractionMode(m, v);
+    restoreCursor();
 }   // end setInteractionMode
 
 IMode ModelSelector::interactionMode()
@@ -109,45 +118,41 @@ FMV* ModelSelector::defaultViewer()
 
 const std::vector<FMV*>& ModelSelector::viewers() { return me()->_viewers;}
 
+
+void ModelSelector::setViewAngle( double v)
+{
+    for ( FMV *fmv : viewers())
+    {
+        vtkCamera *cam = const_cast<vtkRenderer*>(fmv->getRenderer())->GetActiveCamera();
+        cam->SetViewAngle(v);
+    }   // end fmv
+}   // end setViewAngle
+
+
 FV* ModelSelector::selectedView() { return sn().selected();}
 
 
-FV* ModelSelector::addFaceView( FM* fm, FMV* tv)
+FV* ModelSelector::add( FM *fm, FMV *tviewer)
 {
-    // If the initial viewer isn't specified, use the same viewer as the currently selected view.
-    // If there is no currently selected view, use the default viewer.
-    if ( !tv)
-    {
-        if ( selectedView())
-            tv = selectedView()->viewer();
-        else if ( me()->_defv >= 0)
-        {
-            tv = defaultViewer();
-            assert(tv);
-        }   // end else if
-        else
-            tv = mouseViewer();
-    }   // end if
-    // Attaches the viewer and creates the base models (calls FaceView::reset)
-    FV* fv = new FV( fm, tv);
-    // Called *after* viewer is attached and causes doOnSelect(fv, true) to be called via signal.
+    FV *fv = new FV( fm, tviewer);
     sn().add(fv);
     return fv;
-}   // end addFaceView
+}   // end add
 
 
-void ModelSelector::removeFaceView( FV* fv)
+void ModelSelector::remove( FV* fv)
 {
-    // Called *before* viewer is detached and causes doOnSelect( fv, false) to be called via signal.
-    sn().remove(fv);
-    delete fv;  // Ensures all visualisations removed
-}   // end removeFaceView
+    sn().setSelected( fv, false);
+    sn().remove( fv);
+    delete fv;  // Ensures all visualisations removed from the corresponding viewer
+}   // end remove
 
 
 void ModelSelector::remove( const FM* fm)
 {
     while ( !fm->fvs().empty())
-        removeFaceView( fm->fvs().first());
+        remove( fm->fvs().first());
+    sn().testMouse();   // Force signals to be emitted with the updated absense of the FaceView's actor
 }   // end remove
 
 
@@ -159,6 +164,9 @@ void ModelSelector::setSelected( FV* fv)
     if ( fv) // The select the given view.
         sn().setSelected( fv, true);
 }   // end setSelected
+
+
+void ModelSelector::setLockSelected( bool v) { sn().setLocked(v);}
 
 
 void ModelSelector::setAutoFocusOnSelectEnabled( bool v) { me()->_autoFocus = v;}
@@ -174,10 +182,7 @@ void ModelSelector::setShowBoundingBoxesOnSelected( bool v)
 
     FV *fv = me()->selectedView();
     if ( fv)
-    {
         me()->_doOnSelected( fv, true); // Refresh presence of bounding box around selected view
-        fv->viewer()->updateRender();
-    }   // end if
 }   // end setShowBoundingBoxesOnSelected
 
 
@@ -201,11 +206,11 @@ void ModelSelector::updateRender()
 }   // end updateRender
 
 
-// Used by FaceActionManager and LandmarksInteractor
+// Used by FaceActionManager
 void ModelSelector::syncBoundingVisualisation( const FM* fm)
 {
     for ( FV* fv : fm->fvs())
-        me()->_bvis.syncToViewTransform( fv, fv->actor()->GetMatrix());
+        me()->_bvis.syncWithViewTransform( fv);
 }   // end syncBoundingVisualisation
 
 
@@ -236,21 +241,14 @@ ModelSelector::ModelSelector() : _sbar(nullptr), _autoFocus(true), _showBoxes(tr
 
 void ModelSelector::_doOnSelected( FV *fv, bool v)
 {
+    if ( v && _showBoxes)
+        fv->apply( &_bvis);   // Apply the bounding box around the model
+    else
+        fv->purge( &_bvis);
+
     if ( v)
     {
-        if ( _showBoxes)
-            fv->apply(&_bvis);   // Apply the bounding box around the model
-        else
-            _bvis.setVisible(fv,false);
-
         if ( _autoFocus)
-        {
-            if ( fv->data()->currentAssessment()->landmarks().empty())
-                ActionResetCamera::resetCamera( fv);
-            else
-                ActionOrientCameraToFace::orientToFace( fv, DEFAULT_CAMERA_DISTANCE);
-        }   // end if
+            ActionOrientCameraToFace::orientToFace( fv, 1.0f);
     }   // end if
-    else
-        _bvis.setVisible(fv,false);
 }   // end _doOnSelected

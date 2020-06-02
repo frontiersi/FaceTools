@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,14 +17,12 @@
 
 #include <Action/ActionRenamePath.h>
 #include <FaceModel.h>
-#include <FaceTools.h>
 #include <QInputDialog>
 #include <cassert>
 using FaceTools::Action::ActionRenamePath;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Interactor::PathsHandler;
-using FaceTools::Vis::PathSetVisualisation;
 using FaceTools::FVS;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
@@ -34,58 +32,39 @@ using MS = FaceTools::Action::ModelSelector;
 ActionRenamePath::ActionRenamePath( const QString& dn, const QIcon& ico, PathsHandler::Ptr handler)
     : FaceAction(dn, ico), _handler(handler)
 {
-    connect( &*_handler, &PathsHandler::onLeavePath, this, &ActionRenamePath::doOnLeavePath);
-    connect( &*_handler, &PathsHandler::onEnterPath, this, &ActionRenamePath::doOnEnterPath);
 }   // end ctor
 
 
-bool ActionRenamePath::checkEnable( Event)
+bool ActionRenamePath::isAllowed( Event)
 {
-    const FV* fv = MS::cursorView();
-    if ( MS::interactionMode() == IMode::ACTOR_INTERACTION || !fv)
-        return false;
-    return fv == MS::selectedView() && _handler->hoverPath();
-}   // end checkEnabled
+    return MS::interactionMode() == IMode::CAMERA_INTERACTION && _handler->hoverPath();
+}   // end isAllowed
 
 
 void ActionRenamePath::doAction( Event)
 {
     storeUndo(this, Event::PATHS_CHANGE);
-    const FV* fv = MS::selectedView();
-    FM* fm = fv->data();
+    FM* fm = MS::selectedModel();
     const int pid = _handler->hoverPath()->pathId();
     assert(pid >= 0);
 
     fm->lockForRead();
-    QString clabel = fm->currentAssessment()->paths().path(pid)->name.c_str();
+    QString clabel = fm->currentAssessment()->paths().name(pid);
     fm->unlock();
 
     QWidget* prnt = static_cast<QWidget*>(parent());
     bool ok = false;
-    QString nlabel = QInputDialog::getText( prnt, tr("Rename path"), tr("New path name:"), QLineEdit::Normal, clabel, &ok);
-    if ( !ok)
-        nlabel = "";
+    const QString nlabel = QInputDialog::getText( prnt, tr("Rename path"), tr("New path name:"), QLineEdit::Normal, clabel, &ok);
 
-    if ( !nlabel.isEmpty() && nlabel != clabel)
+    _e = Event::NONE;
+    if ( ok && nlabel != clabel)
     {
         fm->lockForWrite();
         fm->renamePath( pid, nlabel);
         fm->unlock();
-        emit onEvent( Event::PATHS_CHANGE);
+        _e = Event::PATHS_CHANGE;
     }   // end if
 }   // end doAction
 
 
-void ActionRenamePath::doOnLeavePath()
-{
-    setLocked(true);
-    refreshState();
-}   // end doOnLeavePath
-
-
-void ActionRenamePath::doOnEnterPath()
-{
-    setLocked(false);
-    refreshState();
-}   // end doOnEnterPath
-
+Event ActionRenamePath::doAfterAction( Event) { return _e;}

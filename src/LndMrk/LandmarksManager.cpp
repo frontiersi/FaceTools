@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,8 +17,10 @@
 
 #include <LndMrk/LandmarksManager.h>
 #include <MiscFunctions.h>
-#include <FileIO.h> // rlib
-#include <boost/algorithm/string.hpp>
+#include <QMap>
+#include <QDir>
+#include <QDebug>
+#include <rlib/FileIO.h>
 #include <iostream>
 #include <cassert>
 using FaceTools::Landmark::LandmarksManager;
@@ -30,21 +32,9 @@ QStringList LandmarksManager::_codes;
 std::unordered_map<int, Landmark> LandmarksManager::_lmks;
 std::unordered_map<QString, int> LandmarksManager::_clmks;
 QMap<QString, QString> LandmarksManager::_names;
-
-
-bool LandmarksManager::changeName( int id, const QString& nm)
-{
-    if ( ids().count(id) == 0)
-        return false;
-
-    if ( hasName(nm))
-        return false;
-
-    _names.remove( landmark(id)->name().toLower());
-    landmark(id)->setName(nm);
-    _names[nm.toLower()] = nm;
-    return true;
-}   // end changeName
+IntSet LandmarksManager::_mset;
+IntSet LandmarksManager::_bset;
+IntSet LandmarksManager::_tset;
 
 
 QStringList LandmarksManager::names()
@@ -55,10 +45,62 @@ QStringList LandmarksManager::names()
 }   // end names
 
 
-bool LandmarksManager::hasName( const QString& nm) { return _names.count(nm.toLower()) > 0;}
-bool LandmarksManager::hasName( const std::string& nm) { return hasName( QString(nm.c_str()));}
-bool LandmarksManager::hasCode( const QString& cd) { return _clmks.count(cd.toLower()) > 0;}
-bool LandmarksManager::hasCode( const std::string& nm) { return hasCode( QString(nm.c_str()));}
+bool LandmarksManager::anyLandmarksVisible()
+{
+    for ( auto &p : _lmks)
+        if ( p.second.isVisible())
+            return true;
+    return false;
+}   // end anyLandmarksVisible
+
+
+bool LandmarksManager::hasName( const QString& nm) { return _names.count( nm.toLower()) > 0;}
+bool LandmarksManager::hasName( const std::string& nm) { return hasName( QString::fromStdString(nm));}
+
+bool LandmarksManager::hasCode( const QString& cd) { return _clmks.count( cd.toLower()) > 0;}
+bool LandmarksManager::hasCode( const std::string& nm) { return hasCode( QString::fromStdString(nm));}
+
+int LandmarksManager::codeId( const QString& cd) { return hasCode(cd) ? _clmks.at(cd) : -1;}
+int LandmarksManager::codeId( const std::string& cd) { return hasCode(cd) ? _clmks.at(QString::fromStdString(cd)) : -1;}
+
+
+int LandmarksManager::loadImages( const QString &imgsDir)
+{
+    QDir idir( imgsDir);
+    if ( !idir.exists() || !idir.isReadable())
+    {
+        qWarning() << "Unable to open directory:" << imgsDir;
+        return -1;
+    }   // end if
+
+    // Map filenames to the landmark code. Note that filenames start with underscore. This is because
+    // of "prn.png" which is disallowed in Windows (PRN is a reserved word for files since its a device).
+    QMap<QString, QFileInfo> codeImageFiles;
+    const QFileInfoList filelist = idir.entryInfoList( QDir::Files | QDir::Readable, QDir::Type | QDir::Name);
+    for ( const QFileInfo &finfo : filelist)
+        codeImageFiles[finfo.baseName().toLower().mid(1)] = finfo;  // Note that filenames start with underscore
+
+    int count = 0;
+    for ( auto &p : _lmks)
+    {
+        Landmark &lmk = p.second;
+        if ( codeImageFiles.contains( lmk.code()))
+        {
+            const QString fpath = codeImageFiles[lmk.code()].absoluteFilePath();
+            const QImage img( fpath);
+            if ( img.isNull())
+                qWarning() << "Unable to load image from:" << fpath;
+            else
+            {
+                lmk.setPixmap( QPixmap::fromImage(img));
+                count++;
+            }   // end else
+        }   // end if
+        else
+            qWarning() << "No example image for landmark:" << lmk.name();
+    }   // end for
+    return count;
+}   // end loadImages
 
 
 int LandmarksManager::load( const QString& fname)
@@ -82,70 +124,37 @@ int LandmarksManager::load( const QString& fname)
         return nrecs;
 
     int lrecs = 0;
-    bool ok = false;
-    for ( size_t i = 0; i < size_t(nrecs); ++i)
+    for ( int id = 0; id < nrecs; ++id)
     {
-        const rlib::StringVec& recs = lines[i];
-        int id = QString(recs[0].c_str()).toInt(&ok);
+        const rlib::StringVec& recs = lines[size_t(id)];
 
-        if ( !ok || id < 0 || _lmks.count(id) > 0)
-        {
-            std::cerr << "[ERROR] FaceTools::Landmark::LandmarksManager::load: Skipping invalid id!" << std::endl;
-            continue;
-        }   // end else
+        const QString code = QString::fromStdString( recs[0]).trimmed().toLower();
+        assert( _codes.count(code) == 0);   // Duplicate codes disallowed
+        const QString name = QString::fromStdString( recs[1]).trimmed();
+        assert( _names.count( name.toLower()) == 0);    // Duplicate names disallowed
 
-        const QString code = boost::algorithm::to_lower_copy(recs[1]).c_str();
-        if ( _codes.count(code) > 0)
-        {
-            std::cerr << "[ERROR] FaceTools::Landmark::LandmarksManager::load: Skipping landmark with duplicate code!" << std::endl;
-            continue;
-        }   // end if
-
-        // Get lowercase version of name to check for duplicates
-        QString lname = boost::algorithm::to_lower_copy(recs[2]).c_str();
-        if ( _names.count(lname) > 0)
-        {
-            std::cerr << "[ERROR] FaceTools::Landmark::LandmarksManager::load: Skipping landmark with duplicate name!" << std::endl;
-            continue;
-        }   // end if
-
-        QString name = recs[2].c_str(); // Get original version (possibly upper case)
         Landmark& lmk = _lmks[id];
 
         lmk.setId( id);
         lmk.setCode( code);
         lmk.setName( name);
-        lmk.setBilateral( boost::algorithm::to_lower_copy(recs[3]) == "bilateral");
+        lmk.setBilateral( QString::fromStdString(recs[2]).toLower() == "b");
+        lmk.setSuperior( QString::fromStdString(recs[3]).toLower() == "s");
         lmk.setSynonym( recs[4].c_str());
         lmk.setDescription( recs[5].c_str());
-        lmk.setDeletable(false);
+        lmk.setVisible(true);
 
         _ids.insert(id);
         _codes.append( code);
-        _names[lname] = name;
+        _names[name.toLower()] = name;
         _clmks[code] = id;
         lrecs++;
     }   // end for
 
     _codes.sort();
+    _initAlignmentSets();
     return lrecs;
 }   // end load
-
-
-bool LandmarksManager::save( const std::string& fname)
-{
-    QFile file( fname.c_str());
-    if ( !file.open(QIODevice::WriteOnly | QIODevice::Text))
-        return false;
-
-    QTextStream out(&file);
-    for ( int id : _ids)
-        out << _lmks.at(id) << endl;
-    out << endl;   // Add EoF newline
-
-    file.close();
-    return true;
-}   // end save
 
 
 QString LandmarksManager::makeLandmarkString( int id, FaceTools::FaceLateral lat)
@@ -154,8 +163,42 @@ QString LandmarksManager::makeLandmarkString( int id, FaceTools::FaceLateral lat
     QString lmname = landmark(id)->name();
     QString lats;
     if ( lat == FACE_LATERAL_LEFT)
-        lats = " (L)";
-    else if ( lat == FACE_LATERAL_RIGHT)
         lats = " (R)";
+    else if ( lat == FACE_LATERAL_RIGHT)
+        lats = " (L)";
     return lmname + lats;
-}   // end makeLateralString
+}   // end makeLandmarkString
+
+
+bool LandmarksManager::usedForAlignment( int id)
+{
+    return _mset.count(id) > 0 || _bset.count(id) > 0 || _tset.count(id) > 0;
+}   // end usedForAlignment
+
+
+void LandmarksManager::_initAlignmentSets()
+{
+    _mset.insert( codeId( G));
+    _mset.insert( codeId( N));
+    _mset.insert( codeId( SE));
+    _mset.insert( codeId( SN));
+    _mset.insert( codeId( SL));
+    //_mset.insert( codeId( PG));
+    
+    _bset.insert( codeId( CHK));
+    _bset.insert( codeId(  AC));
+    _bset.insert( codeId( SBAL));
+    _bset.insert( codeId(  GO));
+    _bset.insert( codeId( MMB));
+
+    _tset.insert( codeId( EN));
+    _tset.insert( codeId( EX));
+    _tset.insert( codeId( MF));
+    _tset.insert( codeId( MSO));
+    _tset.insert( codeId( MIO));
+    _tset.insert( codeId( FT));
+    _tset.insert( codeId( LT));
+    _tset.insert( codeId( ZY));
+    _tset.insert( codeId( SCM));
+    _tset.insert( codeId( SCL));
+}   // end _initAlignmentSets

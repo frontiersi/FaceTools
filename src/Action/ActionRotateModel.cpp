@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,20 +16,21 @@
  ************************************************************************/
 
 #include <Action/ActionRotateModel.h>
-#include <Transformer.h>
+#include <r3d/Transformer.h>
 #include <FaceModel.h>
 using FaceTools::Action::ActionRotateModel;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::FVS;
 using FaceTools::FM;
+using FaceTools::Vec3f;
 using MS = FaceTools::Action::ModelSelector;
 
 
-ActionRotateModel::ActionRotateModel( const QString &dn, const QIcon& ico, const cv::Vec3d& raxis, double degs)
+ActionRotateModel::ActionRotateModel( const QString &dn, const QIcon& ico, const Vec3f& raxis, float degs)
     : FaceAction( dn, ico)
 {
-    _rmat = RFeatures::Transformer( degs * CV_PI/180, raxis).matrix();
+    _rmat = r3d::Transformer( degs * EIGEN_PI/180, raxis).matrix();
 }   // end ctor
 
 
@@ -39,10 +40,10 @@ QString ActionRotateModel::toolTip() const
 }   // end toolTip
 
 
-bool ActionRotateModel::checkEnable( Event)
+bool ActionRotateModel::isAllowed( Event)
 {
     return MS::isViewSelected();
-}   // end checkEnabled
+}   // end isAllowedd
 
 
 void ActionRotateModel::doAction( Event)
@@ -51,26 +52,21 @@ void ActionRotateModel::doAction( Event)
     FM* fm = MS::selectedModel();
     fm->lockForWrite();
 
-    cv::Matx44d rmat = _rmat;
-    // If the model has landmarks, then rotate with respect to the head's orientation
+    Mat4f rmat;
+    // If the model has alignment defined, rotate with respect to that
     // otherwise simply rotate about the defined axis.
-    const Landmark::LandmarkSet& lmks = fm->currentAssessment()->landmarks();
-    if ( !lmks.empty())
-    {
-        // Translate to origin, rotate, then translate back.
-        const RFeatures::Orientation on = lmks.orientation();
-        const cv::Matx44d m = on.asMatrix( lmks.fullMean());
-        rmat = m * _rmat * m.inv();
-    }   // end else
+    if ( fm->hasLandmarks())
+        rmat = fm->transformMatrix() * _rmat * fm->inverseTransformMatrix();
+    else
+        rmat = _rmat;
 
     fm->addTransformMatrix(rmat);
     fm->unlock();
 }   // end doAction
 
 
-void ActionRotateModel::doAfterAction( Event)
+Event ActionRotateModel::doAfterAction( Event)
 {
     MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-    emit onEvent( Event::AFFINE_CHANGE);
+    return Event::AFFINE_CHANGE;
 }   // end doAfterAction
-

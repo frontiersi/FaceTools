@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,15 +48,15 @@ void ActionLoadDirFaceModels::postInit()
     _dialog->setViewMode(QFileDialog::Detail);
     _dialog->setFileMode(QFileDialog::Directory);
     _dialog->setOption(QFileDialog::ShowDirsOnly);
-    _dialog->setOption(QFileDialog::DontUseNativeDialog);
-    _dialog->setOption(QFileDialog::DontUseCustomDirectoryIcons);
+    //_dialog->setOption(QFileDialog::DontUseNativeDialog);
+    //_dialog->setOption(QFileDialog::DontUseCustomDirectoryIcons);
 }   // end postInit
 
 
-bool ActionLoadDirFaceModels::checkEnable( Event)
+bool ActionLoadDirFaceModels::isAllowed( Event)
 {
     return FMM::numOpen() < FMM::loadLimit();
-}   // end checkEnabled
+}   // end isAllowedd
 
 
 bool ActionLoadDirFaceModels::doBeforeAction( Event)
@@ -80,17 +80,27 @@ void ActionLoadDirFaceModels::doAction( Event)
 }   // end doAction
 
 
-void ActionLoadDirFaceModels::doAfterAction( Event)
+Event ActionLoadDirFaceModels::doAfterAction( Event)
 {
     _loadHelper->showLoadErrors();
     const FMS& fms = _loadHelper->lastLoaded();
+    FV *fv = nullptr;
     for ( FM* fm : fms)
-        MS::addFaceView( fm);
+        fv = MS::add( fm, MS::defaultViewer());
+    if ( fv)
+        MS::setSelected(fv);
+
+    Event e;
     if ( !fms.empty())
     {
         MS::showStatus( QString("Finished loading model%1.").arg( fms.size() > 1 ? "s" : ""), 5000);
-        emit onEvent( Event(int(Event::LOADED_MODEL) | int(Event::GEOMETRY_CHANGE)));
+        e = Event::LOADED_MODEL | Event::MESH_CHANGE;
     }   // end if
     else
+    {
         MS::showStatus( "Error loading model(s)!", 5000);
+        e = Event::ERR;
+    }   // end else
+
+    return e;
 }   // end doAfterAction

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,18 +21,17 @@
 #include <algorithm>
 #include <cassert>
 using FaceTools::FaceModelViewer;
-using FaceTools::FVFlags;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
 
-FaceModelViewer::FaceModelViewer( QWidget *parent) : ModelViewer(parent)
+FaceModelViewer::FaceModelViewer( QWidget *parent)
+    : ModelViewer(parent)
 {
-    resetCamera();  // Default camera on instantiation
+    resetDefaultCamera();
 }   // end ctor
 
 
 void FaceModelViewer::saveScreenshot() const { saveSnapshot();}
-void FaceModelViewer::resetCamera() { resetDefaultCamera( DEFAULT_CAMERA_DISTANCE);}
 
 
 bool FaceModelViewer::attach( FV* fv)
@@ -57,56 +56,7 @@ bool FaceModelViewer::detach( FV* fv)
 }   // end detach
 
 
-FV* FaceModelViewer::get( const FM* fm) const
-{
-    if ( _models.count(fm) == 0)
-        return nullptr;
-    return _models.at(fm);
-}   // end get
-
-
-size_t FaceModelViewer::findOverlaps( FVFlags &olaps) const
-{
-    std::vector<FV*> fvs( _attached.begin(), _attached.end()); // Make ordered for comparison
-    const size_t n = fvs.size();
-
-    // Initialise all to false.
-    for ( size_t i = 0; i < n; ++i)
-        olaps[fvs[i]] = false;
-
-    size_t numOverlaps = 0;
-    for ( size_t i = 0; i < n; ++i)
-    {
-        FV* ifv = fvs[i];
-        const FM* ifm = ifv->data();
-        const RFeatures::ObjModelBounds& ibnds = *ifm->bounds()[0];
-
-        for ( size_t j = i+1; j < n; ++j)
-        {
-            FV* jfv = fvs[j];
-            const FM* jfm = jfv->data();
-            const RFeatures::ObjModelBounds& jbnds = *jfm->bounds()[0];
-
-            if ( ibnds.intersects( jbnds))
-            {
-                olaps[ifv] = olaps[jfv] = true;
-                numOverlaps++;
-            }   // end if
-        }   // end for
-    }   // end for
-
-    return numOverlaps;
-}   // end findOverlaps
-
-
-void FaceModelViewer::refreshOverlapOpacity( const FVFlags& olaps, double maxOpacityOnOverlap) const
-{
-    for ( FV* fv : _attached)
-    {
-        if ( olaps.at(fv))
-            fv->setOpacity( std::min( fv->opacity(), maxOpacityOnOverlap));
-    }   // end for
-}   // end refreshOpacity
+FV* FaceModelViewer::get( const FM* fm) const { return _models.count(fm) == 0 ? nullptr : _models.at(fm);}
 
 
 // protected

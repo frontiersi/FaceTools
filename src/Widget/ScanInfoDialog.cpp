@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,23 +17,25 @@
 
 #include <Widget/ScanInfoDialog.h>
 #include <ui_ScanInfoDialog.h>
-#include <Metric/MetricCalculatorManager.h>
 #include <Metric/PhenotypeManager.h>
 #include <FileIO/FaceModelManager.h>
+#include <Action/ModelSelector.h>
 #include <Ethnicities.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
-#include <TreeModel.h>
-#include <QImageTools.h>
+#include <QTools/TreeModel.h>
+#include <QTools/QImageTools.h>
 #include <QTreeWidget>
 #include <QPushButton>
+#include <QSignalBlocker>
+#include <QRegularExpressionValidator>
 #include <QMessageBox>
 #include <cmath>
 #include <cassert>
 using FaceTools::Widget::ScanInfoDialog;
-using FaceTools::Metric::MetricCalculatorManager;
 using FaceTools::Metric::PhenotypeManager;
 using FaceTools::FM;
+using MS = FaceTools::Action::ModelSelector;
 
 /*
 // Never allow automatic insertion!
@@ -94,7 +96,6 @@ void _setEthnicityComboBox( QComboBox* cb, int ecode=0)
         {
             const QString& ename = FaceTools::Ethnicities::name(ec);
             rowIdx = cb->findData( ename, Qt::DisplayRole);
-            //std::cerr << QString("Found '%1' at row index %2").arg(ename).arg(rowIdx).toStdString() << std::endl;
             if ( ec != ecode)
             {
                 midx = cb->model()->index( rowIdx, 0, midx);
@@ -146,13 +147,12 @@ QTools::TreeModel* createEthnicityComboBoxModel()
 
 
 ScanInfoDialog::ScanInfoDialog( QWidget *parent) :
-    QDialog(parent), _ui(new Ui::ScanInfoDialog), _model(nullptr),
-    _dialogRootTitle( parent->windowTitle() + " | Assessment Information")
+    QDialog(parent), _ui(new Ui::ScanInfoDialog), _dialogRootTitle( parent->windowTitle() + " | Assessment Information")
 {
     _ui->setupUi(this);
 
     setWindowTitle( _dialogRootTitle);
-    //connect( _ui->buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked, this, &ScanInfoDialog::_doOnApply);
+    connect( _ui->buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked, this, &ScanInfoDialog::_apply);
 
     connect( _ui->maternalEthnicityComboBox, QOverload<int>::of(&QComboBox::activated), this, &ScanInfoDialog::_doOnChangedMaternalEthnicity);
     connect( _ui->paternalEthnicityComboBox, QOverload<int>::of(&QComboBox::activated), this, &ScanInfoDialog::_doOnChangedPaternalEthnicity);
@@ -166,9 +166,14 @@ ScanInfoDialog::ScanInfoDialog( QWidget *parent) :
 
     connect( _ui->notesTextEdit, &QPlainTextEdit::textChanged, this, &ScanInfoDialog::_doOnNotesChanged);
     connect( _ui->assessorComboBox, QOverload<int>::of(&QComboBox::activated), this, &ScanInfoDialog::_doOnAssessorChanged);
-    connect( _ui->assessorComboBox, &QComboBox::editTextChanged, this, &ScanInfoDialog::_doOnEditedAssessorText);
+    connect( _ui->assessorComboBox, &QComboBox::currentTextChanged, this, &ScanInfoDialog::_doOnEditedAssessorText);
+    _ui->assessorComboBox->setInsertPolicy( QComboBox::NoInsert);
 
-    connect( _ui->addAssessmentButton, &QToolButton::clicked, this, &ScanInfoDialog::_doOnAddAssessment);
+    const QRegularExpression re( "\\b[^\\d\\W]+(\\b\\s?[^\\d\\W]*)*");  // One or more words separated by single spaces
+    QRegularExpressionValidator *nameValidator = new QRegularExpressionValidator( re);
+    _ui->assessorComboBox->setValidator( nameValidator);
+
+    connect( _ui->addAssessmentButton, &QToolButton::clicked, this, &ScanInfoDialog::_doOnCopyAssessment);
     connect( _ui->removeAssessmentButton, &QToolButton::clicked, this, &ScanInfoDialog::_doOnDeleteAssessment);
     connect( _ui->copyLandmarksButton, &QToolButton::clicked, this, &ScanInfoDialog::_doOnCopyLandmarks);
 
@@ -176,7 +181,7 @@ ScanInfoDialog::ScanInfoDialog( QWidget *parent) :
     _ui->maternalEthnicityComboBox->setModel( emodel);
     _ui->paternalEthnicityComboBox->setModel( emodel);
 
-    _ui->sexComboBox->addItem( toLongSexString( FEMALE_SEX | MALE_SEX), FEMALE_SEX | MALE_SEX);    // Used for intersex
+    _ui->sexComboBox->addItem( toLongSexString( UNKNOWN_SEX), UNKNOWN_SEX);    // Used for intersex
     _ui->sexComboBox->addItem( toLongSexString( FEMALE_SEX), FEMALE_SEX);
     _ui->sexComboBox->addItem( toLongSexString( MALE_SEX), MALE_SEX);
 
@@ -190,18 +195,22 @@ ScanInfoDialog::~ScanInfoDialog()
 }   // end dtor
 
 
-void ScanInfoDialog::set( FM* fm)
-{
-    _model = fm;
-    refresh();
-}   // end set
-
-
 void ScanInfoDialog::refresh()
 {
     setWindowTitle( _dialogRootTitle);
+
+    { // start signal blocking scope
+    QSignalBlocker b0( _ui->captureDateEdit);
+    QSignalBlocker b1( _ui->dobDateEdit);
+    QSignalBlocker b2( _ui->sexComboBox);
+    QSignalBlocker b3( _ui->maternalEthnicityComboBox);
+    QSignalBlocker b4( _ui->paternalEthnicityComboBox);
+    QSignalBlocker b5( _ui->sourceLineEdit);
+    QSignalBlocker b6( _ui->studyIdLineEdit);
+    QSignalBlocker b7( _ui->assessorComboBox);
+
     _ui->dobDateEdit->setDate( QDate::currentDate());
-    _ui->sexComboBox->setCurrentIndex( _ui->sexComboBox->findData( FEMALE_SEX | MALE_SEX));
+    _ui->sexComboBox->setCurrentIndex( _ui->sexComboBox->findData( UNKNOWN_SEX));
 
     _setEthnicityComboBox( _ui->maternalEthnicityComboBox);
     _setEthnicityComboBox( _ui->paternalEthnicityComboBox);
@@ -209,40 +218,37 @@ void ScanInfoDialog::refresh()
     _ui->captureDateEdit->setDate( QDate::currentDate());
     _ui->sourceLineEdit->clear();
     _ui->studyIdLineEdit->clear();
-    _ui->imageLabel->clear();
     _ui->assessorComboBox->clear();
 
-    _aids.clear();
-
-    if (_model)
+    const FM *fm = MS::selectedModel();
+    if (fm)
     {
-        const QString fpath = FileIO::FMM::filepath(_model).c_str();
+        const QString fpath = FileIO::FMM::filepath(fm).c_str();
         setWindowTitle( _dialogRootTitle + " | " + fpath);
 
-        _ui->dobDateEdit->setDate( _model->dateOfBirth());
-        _ui->sexComboBox->setCurrentIndex( _ui->sexComboBox->findData( _model->sex()));
+        _ui->dobDateEdit->setDate( fm->dateOfBirth());
+        _ui->sexComboBox->setCurrentIndex( _ui->sexComboBox->findData( fm->sex()));
 
-        _setEthnicityComboBox( _ui->maternalEthnicityComboBox, _model->maternalEthnicity());
-        _setEthnicityComboBox( _ui->paternalEthnicityComboBox, _model->paternalEthnicity());
+        _setEthnicityComboBox( _ui->maternalEthnicityComboBox, fm->maternalEthnicity());
+        _setEthnicityComboBox( _ui->paternalEthnicityComboBox, fm->paternalEthnicity());
 
-        _ui->captureDateEdit->setDate( _model->captureDate());
-        _ui->sourceLineEdit->setText( _model->source());
-        _ui->studyIdLineEdit->setText( _model->studyId());
+        _ui->captureDateEdit->setDate( fm->captureDate());
+        _ui->sourceLineEdit->setText( fm->source());
+        _ui->studyIdLineEdit->setText( fm->studyId());
 
-        const IntSet aids = _model->assessmentIds();
-        for ( int ai : aids)
+        for ( int ai : fm->assessmentIds())
         {
-            _aids.insert(ai);
-            FaceAssessment::CPtr ass = _model->assessment(ai);
+            FaceAssessment::CPtr ass = fm->assessment(ai);
             const QString aname = ass->assessor();
             _ui->assessorComboBox->addItem( aname, ai);
         }   // end for
     }   // end if
 
-    _refreshCurrentAssessment();
+    _ui->buttonBox->button(QDialogButtonBox::Apply)->setEnabled( false);
+    _ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled( fm != nullptr);
+    }   // end scope
 
-    _ui->buttonBox->button(QDialogButtonBox::Apply)->setEnabled(false);
-    _ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(_model != nullptr);
+    _refreshCurrentAssessment();
 }   // end refresh
 
 
@@ -259,102 +265,110 @@ QSize ScanInfoDialog::thumbDims() const
 }   // end thumbDims
 
 
-void ScanInfoDialog::_doOnApply()
+void ScanInfoDialog::_apply()
 {
-    assert(_model != nullptr);
+    FM *fm = MS::selectedModel();
+    assert( fm);
 
-    _model->lockForWrite();
+    fm->lockForWrite();
     if ( _ui->dobDateEdit->date() <= QDate::currentDate())
-        _model->setDateOfBirth( _ui->dobDateEdit->date());
+        fm->setDateOfBirth( _ui->dobDateEdit->date());
 
     const int methn = Ethnicities::code( _ui->maternalEthnicityComboBox->currentText());
-    if ( methn != _model->maternalEthnicity())
-        _model->setMaternalEthnicity(methn);
+    if ( methn != fm->maternalEthnicity())
+        fm->setMaternalEthnicity(methn);
 
     const int pethn = Ethnicities::code( _ui->paternalEthnicityComboBox->currentText());
-    if ( pethn != _model->paternalEthnicity())
-        _model->setPaternalEthnicity(pethn);
+    if ( pethn != fm->paternalEthnicity())
+        fm->setPaternalEthnicity(pethn);
 
     const int8_t sex = static_cast<int8_t>(_ui->sexComboBox->currentData().toInt());
-    if ( sex != _model->sex())
-        _model->setSex( sex);
+    if ( sex != fm->sex())
+        fm->setSex( sex);
 
     const QDate date = _ui->captureDateEdit->date();
-    if ( date != _model->captureDate())
-        _model->setCaptureDate(date);
+    if ( date != fm->captureDate())
+        fm->setCaptureDate(date);
 
     const QString src = _ui->sourceLineEdit->text();
-    if ( _model->source() != src)
-        _model->setSource( src);
+    if ( fm->source() != src)
+        fm->setSource( src);
 
     const QString sid = _ui->studyIdLineEdit->text();
-    if ( _model->studyId() != sid)
-        _model->setStudyId( sid);
+    if ( fm->studyId() != sid)
+        fm->setStudyId( sid);
 
     const int aid = _ui->assessorComboBox->currentData().toInt();
 
-    const QString ass = _ui->assessorComboBox->currentText();
-    if ( _model->assessment(aid)->assessor() != ass)    // Change name of assessor?
+    const QString ass = _ui->assessorComboBox->currentText().trimmed();
+    if ( fm->assessment(aid)->assessor() != ass)    // Change name of assessor?
     {
-        _model->assessment(aid)->setAssessor( ass);
-        _model->setMetaSaved(false);
+        fm->assessment(aid)->setAssessor( ass);
+        fm->setMetaSaved(false);
+        _ui->assessorComboBox->setItemText( _ui->assessorComboBox->findData(aid), ass);
     }   // end if
 
     const QString rem = _ui->notesTextEdit->toPlainText();
-    if ( _model->assessment(aid)->notes() != rem)   // Change assessment notes?
+    if ( fm->assessment(aid)->notes() != rem)   // Change assessment notes?
     {
-        _model->assessment(aid)->setNotes( rem);
-        _model->setMetaSaved(false);
+        fm->assessment(aid)->setNotes( rem);
+        fm->setMetaSaved(false);
     }   // end if
 
-    const bool isSaved = _model->isSaved();
-    _model->unlock();
+    const bool isSaved = fm->isSaved();
+    fm->unlock();
 
     if ( !isSaved)
-        emit onUpdated(_model);
-}   // end _doOnApply
+    {
+        emit onAssessmentChanged();
+        refresh();
+    }   // end if
+
+    _checkEnableApply();
+}   // end _apply
 
 
-bool ScanInfoDialog::_isDifferentToCurrent()
+bool ScanInfoDialog::_isDifferentToCurrent() const
 {
-    if ( !_model)
+    const FM *fm = MS::selectedModel();
+    if ( !fm)
         return false;
 
-    if ( _ui->dobDateEdit->date() != _model->dateOfBirth())
+    if ( _ui->dobDateEdit->date() != fm->dateOfBirth())
         return true;
 
     const int methn = Ethnicities::code( _ui->maternalEthnicityComboBox->currentText());
-    if ( methn != _model->maternalEthnicity())
+    if ( methn != fm->maternalEthnicity())
         return true;
 
     const int pethn = Ethnicities::code( _ui->paternalEthnicityComboBox->currentText());
-    if ( pethn != _model->paternalEthnicity())
+    if ( pethn != fm->paternalEthnicity())
         return true;
 
     const int8_t sex = static_cast<int8_t>(_ui->sexComboBox->currentData().toInt());
-    if ( sex != _model->sex())
+    if ( sex != fm->sex())
         return true;
 
     const QDate date = _ui->captureDateEdit->date();
-    if ( date != _model->captureDate())
+    if ( date != fm->captureDate())
         return true;
 
     const QString src = _ui->sourceLineEdit->text();
-    if ( _model->source() != src)
+    if ( fm->source() != src)
         return true;
 
     const QString sid = _ui->studyIdLineEdit->text();
-    if ( _model->studyId() != sid)
+    if ( fm->studyId() != sid)
         return true;
 
     const int aid = _ui->assessorComboBox->currentData().toInt();
 
-    const QString ass = _ui->assessorComboBox->currentText();
-    if ( _model->assessment(aid)->assessor() != ass)
+    const QString ass = _ui->assessorComboBox->currentText().trimmed();
+    if ( fm->assessment(aid)->assessor() != ass)
         return true;
 
     const QString rem = _ui->notesTextEdit->toPlainText();
-    if ( _model->assessment(aid)->notes() != rem)
+    if ( fm->assessment(aid)->notes() != rem)
         return true;
 
     return false;
@@ -363,77 +377,66 @@ bool ScanInfoDialog::_isDifferentToCurrent()
 
 void ScanInfoDialog::_checkEnableApply()
 {
-    const bool isdiff = _isDifferentToCurrent();
-    _ui->buttonBox->button(QDialogButtonBox::Apply)->setEnabled(isdiff);
+    const bool diffToCurrent = _isDifferentToCurrent();
+    _ui->buttonBox->button( QDialogButtonBox::Apply)->setEnabled( diffToCurrent);
+    //_ui->buttonBox->button( QDialogButtonBox::Cancel)->setEnabled( diffToCurrent);
 }   // end _checkEnableApply
 
 
 void ScanInfoDialog::_doOnChangedMaternalEthnicity()
 {
-    assert(_model != nullptr);
+    const FM *fm = MS::selectedModel();
     // If user landed on the "Aggregated" option, set back to the current ethnicity.
-    if (_ui->maternalEthnicityComboBox->currentText() == "Aggregated")
-        _setEthnicityComboBox( _ui->maternalEthnicityComboBox, _model->maternalEthnicity());
+    if ( fm && _ui->maternalEthnicityComboBox->currentText() == "Aggregated")
+        _setEthnicityComboBox( _ui->maternalEthnicityComboBox, fm->maternalEthnicity());
     _checkEnableApply();
 }   // end _doOnChangedMaternalEthnicity
 
 
 void ScanInfoDialog::_doOnChangedPaternalEthnicity()
 {
-    assert(_model != nullptr);
+    const FM *fm = MS::selectedModel();
     // If user landed on the "Aggregated" option, set back to the current ethnicity.
-    if (_ui->paternalEthnicityComboBox->currentText() == "Aggregated")
-        _setEthnicityComboBox( _ui->paternalEthnicityComboBox, _model->paternalEthnicity());
+    if ( fm && _ui->paternalEthnicityComboBox->currentText() == "Aggregated")
+        _setEthnicityComboBox( _ui->paternalEthnicityComboBox, fm->paternalEthnicity());
     _checkEnableApply();
 }   // end _doOnChangedPaternalEthnicity
 
 
 void ScanInfoDialog::_doOnDOBChanged()
 {
-    if ( _model && _ui->dobDateEdit->date() > QDate::currentDate())   // Can't have dates beyond current date!
-        _ui->dobDateEdit->setDate( _model->dateOfBirth());
+    const FM *fm = MS::selectedModel();
+    if ( fm && _ui->dobDateEdit->date() > QDate::currentDate())   // Can't have dates beyond current date!
+        _ui->dobDateEdit->setDate( fm->dateOfBirth());
     _checkEnableApply();
 }   // end _doOnDOBChanged
 
 
 void ScanInfoDialog::_doOnCaptureDateChanged()
 {
-    if ( _model && _ui->captureDateEdit->date() > QDate::currentDate())   // Can't have dates beyond current date!
-        _ui->captureDateEdit->setDate( _model->captureDate());
+    const FM *fm = MS::selectedModel();
+    if ( fm && _ui->captureDateEdit->date() > QDate::currentDate())   // Can't have dates beyond current date!
+        _ui->captureDateEdit->setDate( fm->captureDate());
     _checkEnableApply();
 }   // end _doOnCaptureDateChanged
 
 
-void ScanInfoDialog::_doOnSexChanged()
-{
-    _checkEnableApply();
-}   // end _doOnSexChanged
+void ScanInfoDialog::_doOnSexChanged() { _checkEnableApply();}
 
+void ScanInfoDialog::_doOnSourceChanged() { _checkEnableApply();}
 
-void ScanInfoDialog::_doOnSourceChanged()
-{
-    _checkEnableApply();
-}   // end _doOnSourceChanged
+void ScanInfoDialog::_doOnStudyIdChanged() { _checkEnableApply();}
 
-
-void ScanInfoDialog::_doOnStudyIdChanged()
-{
-    _checkEnableApply();
-}   // end _doOnStudyIdChanged
-
-
-void ScanInfoDialog::_doOnNotesChanged()
-{
-    _checkEnableApply();
-}   // end _doOnNotesChanged
+void ScanInfoDialog::_doOnNotesChanged() { _checkEnableApply();}
 
 
 void ScanInfoDialog::_doOnAssessorChanged()
 {
+    FM *fm = MS::selectedModel();
     const int ai = _ui->assessorComboBox->currentData().toInt();
-    if ( _model && ai >= 0)
+    if ( fm && ai != fm->currentAssessment()->id())
     {
-        _model->setCurrentAssessment(ai);
+        fm->setCurrentAssessment(ai);
         _refreshCurrentAssessment();
         emit onAssessmentChanged();
     }   // end if
@@ -442,14 +445,14 @@ void ScanInfoDialog::_doOnAssessorChanged()
 
 void ScanInfoDialog::_doOnEditedAssessorText()
 {
-    //const int ai = _ui->assessorComboBox->currentData().toInt();
     _checkEnableApply();
 }   // end _doOnEditedAssessorText
 
 
 void ScanInfoDialog::accept()
 {
-    _doOnApply();
+    if ( _isDifferentToCurrent())
+        _apply();
     QDialog::accept();
 }   // end accept
 
@@ -463,77 +466,108 @@ void ScanInfoDialog::reject()
 
 void ScanInfoDialog::_refreshCurrentAssessment()
 {
+    QSignalBlocker b0( _ui->notesTextEdit);
+    QSignalBlocker b1( _ui->assessorComboBox);
+
     _ui->notesTextEdit->clear();
     _ui->addAssessmentButton->setEnabled(false);
     _ui->removeAssessmentButton->setEnabled(false);
     _ui->copyLandmarksButton->setEnabled(false);
 
-    QStringList pterms;
-    if ( _model)
+    QString msg;
+    const FM *fm = MS::selectedModel();
+    if ( fm)
     {
-        FaceAssessment::CPtr cass = _model->currentAssessment();
+        FaceAssessment::CPtr cass = fm->currentAssessment();
         assert(cass);
         _ui->assessorComboBox->setCurrentIndex( _ui->assessorComboBox->findData( cass->id()));
         _ui->notesTextEdit->setPlainText( cass->notes());
         _ui->addAssessmentButton->setEnabled( true);
-        _ui->removeAssessmentButton->setEnabled( _model->assessmentsCount() > 1);
-        _ui->copyLandmarksButton->setEnabled( !cass->landmarks().empty() && _model->assessmentsCount() > 1);
+        _ui->removeAssessmentButton->setEnabled( fm->assessmentsCount() > 1);
+        _ui->copyLandmarksButton->setEnabled( !cass->landmarks().empty() && fm->assessmentsCount() > 1);
 
-        const IntSet ptypes = PhenotypeManager::discover( _model, cass->id());
-        for ( int hid : ptypes)
-            pterms << PhenotypeManager::phenotype(hid)->name();
+        if ( !fm->hasLandmarks())
+            msg = tr("Run face detection for dysmorphological analysis.");
+        else
+        {
+            const IntSet ptypes = PhenotypeManager::discover( fm, cass->id());
+            QStringList pterms;
+            for ( int hid : ptypes)
+                pterms << PhenotypeManager::phenotype(hid)->name();
+            if ( !pterms.isEmpty())
+                msg = tr("Dymorphological features: ") + pterms.join("; ");
+            else
+                msg = tr("No dysmorphological features identified.");
+        }   // end else
     }   // end if
 
-    QString msg = tr("No atypical phenotypic variations identified.");
-    if ( !pterms.isEmpty())
-        msg = pterms.join("; ");
     _ui->hpoTermsLabel->setText(msg);
-}   // end refreshCurrentAssessment
+}   // end _refreshCurrentAssessment
 
 
-void ScanInfoDialog::_doOnAddAssessment()
+void ScanInfoDialog::_doOnCopyAssessment()
 {
-    assert( _model);
+    FM *fm = MS::selectedModel();
+    assert(fm);
 
-    // Set the new assessment ID to be one higher than all existing
+    // Get the new assessment ID to be one higher than all existing
     int naid = 0;
-    for ( int aid : _aids)
+    for ( int aid : fm->assessmentIds())
         naid = std::max(naid,aid);
     naid++;
 
-    // Create the new assessment, add to record of assessment IDs and insert in combobox at current index
-    FaceAssessment::Ptr nass = FaceAssessment::create( naid, "Unknown");
-    _aids.insert( nass->id());
+    FaceAssessment::CPtr cass = fm->currentAssessment();
+
+    // Copy assessment
+    FaceAssessment::Ptr nass = cass->deepCopy();
+    nass->setId( naid);
+    // Set the name to something unique
+    nass->setAssessor("");
+    nass->setAssessor( QString( "%1_%2").arg( nass->assessor()).arg(naid));
+    // Insert in combobox at current index
+    const std::string prevAssessorName = _ui->assessorComboBox->currentText().toStdString();
     const int idx = _ui->assessorComboBox->currentIndex();
     _ui->assessorComboBox->insertItem( idx, nass->assessor(), nass->id());
 
-    // If the current assessment has landmarks and/or paths, copy these in to the new assessment.
-    FaceAssessment::CPtr cass = _model->currentAssessment();
-    if ( cass->hasLandmarks())
-        nass->setLandmarks( cass->landmarks().deepCopy());
-    if ( cass->hasPaths())
-        nass->setPaths( cass->paths().deepCopy());
+    // If the new assessment has landmarks and/or paths, record this for the notes field.
+    std::string notes;
+    if ( nass->hasLandmarks())
+        notes = "Landmarks";
+    if ( nass->hasPaths())
+    {
+        if ( !notes.empty())
+            notes += " and c";
+        else
+            notes += "C";
+        notes += "ustom calliper measurements";
+    }   // end if
+
+    // Set the notes on the new assessment to say that these data were copied over.
+    if ( !notes.empty())
+        notes += " copied over from " + prevAssessorName + "'s assessment.";
+    nass->setNotes( tr(notes.c_str()));
 
     // Change model and refresh
-    _model->setAssessment(nass);
-    _model->setCurrentAssessment(nass->id());
-    _model->setMetaSaved(false);
+    fm->setAssessment(nass);
+    fm->setCurrentAssessment(nass->id());
+    fm->setMetaSaved(false);
     _refreshCurrentAssessment();
     // Set focus to the assessor's name which the user will want to change
     _ui->assessorComboBox->setFocus();
-    emit onUpdated(_model);
     emit onAssessmentChanged();
-}   // end _doOnAddAssessment
+}   // end _doOnCopyAssessment
 
 
 void ScanInfoDialog::_doOnDeleteAssessment()
 {
+    FM *fm = MS::selectedModel();
+    assert(fm);
+
     const int ai = _ui->assessorComboBox->currentData().toInt();
     assert( ai >= 0);
-    assert( _model);
-    assert( _model->assessmentsCount() > 1);
+    assert( fm->assessmentsCount() > 1);
 
-    FaceAssessment::CPtr ass = _model->assessment(ai);
+    FaceAssessment::CPtr ass = fm->assessment(ai);
 
     bool dodel = true;
     // Warn about deletion if the assessment has notes, paths, or landmarks defined.
@@ -547,14 +581,11 @@ void ScanInfoDialog::_doOnDeleteAssessment()
     {
         // Remove from the combo box
         _ui->assessorComboBox->removeItem(_ui->assessorComboBox->currentIndex());   // Changes current index
-        _aids.erase(ai);
-
         // Change model and refresh
-        _model->eraseAssessment(ai);
-        _model->setCurrentAssessment( _ui->assessorComboBox->currentData().toInt());
-        _model->setMetaSaved(false);
+        fm->eraseAssessment(ai);
+        fm->setCurrentAssessment( _ui->assessorComboBox->currentData().toInt());
+        fm->setMetaSaved(false);
         _refreshCurrentAssessment();
-        emit onUpdated(_model);
         emit onAssessmentChanged();
     }   // end if
 }   // end _doOnDeleteAssessment
@@ -562,18 +593,19 @@ void ScanInfoDialog::_doOnDeleteAssessment()
 
 void ScanInfoDialog::_doOnCopyLandmarks()
 {
+    FM *fm = MS::selectedModel();
+    assert(fm);
     const int ai = _ui->assessorComboBox->currentData().toInt();
-    FaceAssessment::CPtr sass = _model->assessment(ai);
+    FaceAssessment::CPtr sass = fm->assessment(ai);
     assert( ai >= 0);
-    assert( _model);
-    assert( _model->assessmentsCount() > 1);
+    assert( fm->assessmentsCount() > 1);
     assert( sass->hasLandmarks());
 
     // Warn about copying if to do so will overwrite other assessment landmark sets.
     bool dowarn = false;
-    for ( int aid : _aids)
+    for ( int aid : fm->assessmentIds())
     {
-        if ( ai != aid && _model->assessment(aid)->hasLandmarks())
+        if ( ai != aid && fm->assessment(aid)->hasLandmarks())
         {
             dowarn = true;
             break;
@@ -589,17 +621,16 @@ void ScanInfoDialog::_doOnCopyLandmarks()
 
     if ( docopy)
     {
-        for ( int aid : _aids)
+        for ( int aid : fm->assessmentIds())
         {
             if ( ai != aid)
             {
-                FaceAssessment::Ptr lass = _model->assessment(aid);
-                lass->setLandmarks( sass->landmarks().deepCopy());
+                FaceAssessment::Ptr lass = fm->assessment(aid);
+                lass->setLandmarks( sass->landmarks());
             }   // end if
         }   // end for
 
-        _model->setMetaSaved(false);
-        emit onCopiedLandmarks();
-        emit onUpdated(_model);
+        fm->setMetaSaved(false);
+        emit onAssessmentChanged();
     }   // end if
 }   // end _doOnCopyLandmarks

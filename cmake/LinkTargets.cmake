@@ -10,10 +10,6 @@ if(WITH_QTOOLS)
     target_link_libraries( ${PROJECT_NAME} ${QTools_LIBRARIES})
 endif()
 
-if(WITH_RVTK)
-    target_link_libraries( ${PROJECT_NAME} ${rVTK_LIBRARIES})
-endif()
-
 if(WITH_RPASCALVOC)
     target_link_libraries( ${PROJECT_NAME} ${rPascalVOC_LIBRARIES})
 endif()
@@ -22,12 +18,24 @@ if(WITH_RLEARNING)
     target_link_libraries( ${PROJECT_NAME} ${rLearning_LIBRARIES})
 endif()
 
-if(WITH_RMODELIO)
-    target_link_libraries( ${PROJECT_NAME} ${rModelIO_LIBRARIES})
+if(WITH_R3DVIS)
+    target_link_libraries( ${PROJECT_NAME} ${r3dvis_LIBRARIES})
 endif()
 
-if(WITH_RFEATURES)
-    target_link_libraries( ${PROJECT_NAME} ${rFeatures_LIBRARIES})
+if(WITH_R3DIO)
+    target_link_libraries( ${PROJECT_NAME} ${r3dio_LIBRARIES})
+endif()
+
+if(WITH_R3D)
+    target_link_libraries( ${PROJECT_NAME} ${r3d_LIBRARIES})
+endif()
+
+if(WITH_RNONRIGID)
+    target_link_libraries( ${PROJECT_NAME} ${rNonRigid_LIBRARIES})
+endif()
+
+if(WITH_RIMG)
+    target_link_libraries( ${PROJECT_NAME} ${rimg_LIBRARIES})
 endif()
 
 if(WITH_RLIB)

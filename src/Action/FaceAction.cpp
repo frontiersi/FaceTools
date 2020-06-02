@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,34 +19,33 @@
 #include <Action/FaceActionWorker.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
+#include <QSignalBlocker>
 #include <QThread>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Action::FaceActionWorker;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::UndoState;
-using FaceTools::Action::EventGroup;
 using FaceTools::Action::Event;
 using MS = FaceTools::Action::ModelSelector;
 
 
 FaceAction::FaceAction()
-    : _action(this), _dname("") { pinit();}
+    : _action(this), _dname("") { _pinit();}
 
 FaceAction::FaceAction( const QString& dn)
-    : _action(this), _dname(dn) { pinit();}
+    : _action(this), _dname(dn) { _pinit();}
 
 FaceAction::FaceAction( const QString& dn, const QIcon& ico)
-    : _action(this), _dname(dn), _icon(ico) { pinit();}
+    : _action(this), _dname(dn), _icon(ico) { _pinit();}
 
 FaceAction::FaceAction( const QString& dn, const QIcon& ico, const QKeySequence& ks)
-    : _action(this), _dname(dn), _icon(ico), _keys(ks) { pinit();}
+    : _action(this), _dname(dn), _icon(ico), _keys(ks) { _pinit();}
 
 
-// private
-void FaceAction::pinit()
+void FaceAction::_pinit()
 {
-    _init = _doasync = _reentrant = false;
+    _doasync = _reentrant = false;
     _runCount = 0;
     _unlocked = true;
     _pevents = _tevents = Event::NONE;
@@ -54,7 +53,7 @@ void FaceAction::pinit()
         _dname = QTools::PluginInterface::displayName();
     _debugName = "\"" + _dname.replace( "\n", " ").remove('&').toStdString() + "\"";
     _mpos = QPoint(-1,-1);
-}   // end pinit
+}   // end _pinit
 
 
 const std::string& FaceAction::debugName() const { return _debugName;}
@@ -67,10 +66,7 @@ void FaceAction::setDisplayName( const QString& dname)
 }   // end setDisplayName
 
 
-void FaceAction::setToolTip( const QString& ttip)
-{
-    _action.setToolTip( ttip);
-}   // end setToolTip
+void FaceAction::setToolTip( const QString& ttip) { _action.setToolTip( ttip);}
 
 
 QString FaceAction::displayName() const { return _dname;}
@@ -87,13 +83,18 @@ void FaceAction::setCheckable( bool b, bool ival)
 
 void FaceAction::refreshState( Event e)
 {
+    e |= Event::USER;
     const bool chk = checkState( e);
-    if ( _action.isCheckable())
-        setChecked( chk);
-    _action.setEnabled( _unlocked && checkEnable( e));
+    if ( _action.isCheckable() && _action.isChecked() != chk)
+    {
+        const QSignalBlocker blocker( _action);
+        _action.setChecked( chk);
+    }   // end if
+
+    _action.setEnabled( _unlocked && isAllowed( e));
     if ( widget())
         widget()->setEnabled( isEnabled());
-}   // end updateState
+}   // end refreshState
 
 
 void FaceAction::setLocked( bool v)
@@ -106,10 +107,10 @@ void FaceAction::setLocked( bool v)
 void FaceAction::primeMousePos(const QPoint &p) { _mpos = p;}
 
 
-void FaceAction::addPurgeEvent( EventGroup e) { _pevents = EventGroup(_pevents).add(e);}
-void FaceAction::addTriggerEvent( EventGroup e) { _tevents = EventGroup(_tevents).add(e);}
-bool FaceAction::isPurgeEvent( EventGroup e) const { return EventGroup(Event(_pevents)).has(e);}
-bool FaceAction::isTriggerEvent( EventGroup e) const { return EventGroup(Event(_tevents)).has(e);}
+void FaceAction::addPurgeEvent( Event e) { _pevents |= e;}
+void FaceAction::addTriggerEvent( Event e) { _tevents |= e;}
+bool FaceAction::isPurgeEvent( Event e) const { return (_pevents & e) != Event::NONE;}
+bool FaceAction::isTriggerEvent( Event e) const { return (_tevents & e) != Event::NONE;}
 
 
 // protected
@@ -120,9 +121,13 @@ void FaceAction::setAsync( bool async, bool reentrant)
 }   // end setAsync
 
 
-void FaceAction::init( QWidget* parent) // Called by FaceActionManager after constructor finished
+void FaceAction::_init( QWidget* parent) // Called by FaceActionManager after constructor finished
 {
-    connect( &_action, &QAction::triggered, [this](){ execute(Event::USER);});
+    if ( _action.isCheckable())
+        connect( &_action, &QAction::toggled, [this](){ execute(Event::USER);});
+    else
+        connect( &_action, &QAction::triggered, [this](){ execute(Event::USER);});
+
     _action.setText( displayName());
 
     QString tooltip = toolTip();
@@ -154,47 +159,50 @@ void FaceAction::init( QWidget* parent) // Called by FaceActionManager after con
         setParent(parent);
 
     _action.setVisible(true);
-    _init = true;
     postInit();
-}   // end init
+}   // end _init
 
 
 bool FaceAction::execute( Event e)
 {
 #ifndef NDEBUG
-    if ( !isEnabled())
-    {
-        std::cerr << "[ERROR] FaceTools::Action::FaceAction::process(): " << debugName() << " action is not enabled!" << std::endl;
-        assert(false);
-    }   // end if
+    if ( e != Event::USER && !isTriggerEvent(e))
+        std::cerr << "[ERROR] FaceTools::Action::FaceAction::execute: Starting from non-user or non-trigger event!" << std::endl;
+    assert( e == Event::USER || isTriggerEvent(e));
 #endif
 
-    assert( e == Event::USER || isTriggerEvent(e));
+    if ( !isAllowed(e))
+        return false;
 
     _runCount++;
+#ifndef NDEBUG
+    assert( _runCount <= 1);
+#endif
     _action.setEnabled(false);
     bool enteredDoAction = false;
 
-#ifndef NDEBUG
-    std::cerr << " => " << debugName() << " (" << EventGroup(e).name() << ") thread ID = " << QThread::currentThreadId() << std::endl;
-#endif
     if ( !doBeforeAction(e))  // Always in the GUI thread
     {
 #ifndef NDEBUG
-        std::cerr << "  ! " << debugName() << std::endl;
+        std::cerr << "Cancelled: " << debugName() << std::endl;
 #endif
         _runCount--;
         refreshState();
-        emit onEvent( Event::ACT_CANCELLED);
+        emit onEvent( Event::CANCELLED);
     }   // end if
     else
     {
+#ifndef NDEBUG
+        std::cerr << "  Started: " << debugName() << "  by event(s) " << e;
+#endif
         enteredDoAction = true;
         if ( isAsync())
         {
-            if ( EventGroup(e).is(Event::USER))
-                MS::setCursor( Qt::CursorShape::BusyCursor);
-
+#ifndef NDEBUG
+            std::cerr << " in new thread " << std::endl;
+#endif
+            if ( e == Event::USER)
+                MS::setLockSelected(true);
             FaceActionWorker *worker = new FaceActionWorker( this, e);
             connect( worker, &FaceActionWorker::workerFinished, this, &FaceAction::endExecute);
             connect( worker, &FaceActionWorker::finished, worker, &FaceActionWorker::deleteLater);
@@ -202,6 +210,9 @@ bool FaceAction::execute( Event e)
         }   // end else
         else
         {
+#ifndef NDEBUG
+            std::cerr << std::endl;
+#endif
             doAction(e);  // Blocks
             endExecute(e);
         }   // end else
@@ -211,54 +222,53 @@ bool FaceAction::execute( Event e)
 }   // end execute
 
 
-void FaceAction::doAfterAction( Event e)
+Event FaceAction::doAfterAction( Event e)
 {
+    Event egrp = Event::NONE;
     // Don't display anything in the status bar for actions that weren't triggered explicitly by the user.
-    if ( !EventGroup(e).is(Event::USER))
-        return;
-
-    QString dname = displayName();
-    if ( _action.isCheckable())
-        dname += (isChecked() ? " ON" : " OFF");
-    int msecs = 2000;
-    if ( isAsync())
+    if ( e == Event::USER)
     {
-        dname = "Finished " + displayName();
-        msecs = 5000;
+        QString dname = displayName();
+        if ( _action.isCheckable())
+            dname += (isChecked() ? " ON" : " OFF");
+        int msecs = 2000;
+        if ( isAsync())
+        {
+            dname = "Finished " + displayName();
+            msecs = 5000;
+        }   // end if
+        MS::showStatus( dname, msecs);
     }   // end if
-    MS::showStatus( dname, msecs);
+    return egrp;
 }   // end doAfterAction
 
 
 // private slot
 void FaceAction::endExecute( Event e)   // Always in GUI thread
 {
-    if ( isAsync() && EventGroup(e).is(Event::USER))
-        MS::restoreCursor();
-
-    doAfterAction( e);
+    MS::setLockSelected(false);
+    Event fev = doAfterAction( e);
     _mpos = QPoint(-1,-1);
 #ifndef NDEBUG
-    std::cerr << " <= " << debugName() << " thread ID = " << QThread::currentThreadId() << std::endl;
+    std::cerr << " Finished: " << debugName() << " did event(s) " << fev << std::endl;
 #endif
     _runCount--;
     refreshState();
-    emit onEvent( Event::ACT_COMPLETE);
+    emit onEvent( fev);
 }   // end endExecute
 
 
-UndoState::Ptr FaceAction::makeUndoState() const
+void FaceAction::saveState( UndoState&) const
 {
-    std::cerr << "[ERROR] FaceTools::Action::FaceAction::makeUndoState: [" << debugName() << "] "
-              << "This function must be overridden to provide a custom UndoState!" << std::endl;
+    std::cerr << "[ERROR] FaceTools::Action::FaceAction::saveState: [" << debugName() << "] "
+              << "This function must be overridden to set the UndoState!" << std::endl;
     assert(false);
-    return nullptr;
-}   // end makeUndoState
+}   // end saveState
 
 
-void FaceAction::restoreState( const UndoState*)
+void FaceAction::restoreState( const UndoState&)
 {
     std::cerr << "[ERROR] FaceTools::Action::FaceAction::restoreState: [" << debugName() << "] "
-              << "This function must be overridden to provide custom UndoState restore!" << std::endl;
+              << "This function must be overridden to restore using the UndoState!" << std::endl;
     assert(false);
 }   // end restoreState

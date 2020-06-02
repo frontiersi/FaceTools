@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ ActionRedo::ActionRedo( const QString &dn, const QIcon& ico, const QKeySequence&
     connect( &*UndoStates::get(), &UndoStates::onUpdated, [this](){ refreshState();});
 }   // end ctor
 
-bool ActionRedo::checkEnable( Event)
+bool ActionRedo::isAllowed( Event)
 {
     const bool cando = UndoStates::canRedo();
     QString dname = _dname;
@@ -41,13 +41,13 @@ bool ActionRedo::checkEnable( Event)
     setDisplayName( dname);
     setToolTip( ttip);
     return cando;
-}   // end checkEnable
+}   // end isAllowed
 
 
 bool ActionRedo::doBeforeAction( Event)
 {
     // Need to save the name of the action being redone here since upon actually doing
-    // the redo, signal onUpdated is emitted which causes checkEnable to execute which
+    // the redo, signal onUpdated is emitted which causes isAllowed to execute which
     // will update the name of the redo action that would otherwise be shown in the
     // status bar by the default implementation of doAfterAction.
     _rname = UndoStates::redoActionName();
@@ -58,11 +58,12 @@ bool ActionRedo::doBeforeAction( Event)
 
 void ActionRedo::doAction( Event)
 {
-    UndoStates::redo();
+    _e = UndoStates::redo();
 }   // end doAction
 
 
-void ActionRedo::doAfterAction( Event)
+Event ActionRedo::doAfterAction( Event)
 {
     MS::showStatus( QString("Finished redoing '%1'").arg(_rname), 3000);
+    return _e;
 }   // end doAfterAction

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 
 #include <Metric/SyndromeManager.h>
 #include <MiscFunctions.h>
-#include <FileIO.h> // rlib
+#include <rlib/FileIO.h>
 #include <iostream>
 #include <cassert>
 using FaceTools::Metric::SyndromeManager;
@@ -30,6 +30,7 @@ QStringList SyndromeManager::_names;
 std::unordered_map<int, Syndrome> SyndromeManager::_syns;
 std::unordered_map<int, IntSet> SyndromeManager::_gsyns;
 std::unordered_map<int, IntSet> SyndromeManager::_hsyns;
+std::unordered_map<QString, int> SyndromeManager::_nsyns;
 
 namespace {
 static const IntSet EMPTY_INT_SET;
@@ -52,6 +53,14 @@ const IntSet& SyndromeManager::geneSyndromes( int gid)
 }   // end geneSyndromes
 
 
+Syndrome *SyndromeManager::syndrome( int id) { return _syns.count(id) > 0 ? &_syns.at(id) : nullptr;}
+
+Syndrome *SyndromeManager::syndrome( const QString& nm)
+{
+    return _nsyns.count(nm) > 0 ? syndrome( _nsyns.at(nm)) : nullptr;
+}   // end syndrome
+
+
 int SyndromeManager::load( const QString& fname)
 {
     QTemporaryFile* tmpfile = writeToTempFile(fname);
@@ -59,11 +68,12 @@ int SyndromeManager::load( const QString& fname)
         return 0;
 
     _ids.clear();
-    _syns.clear();
-    _hsyns.clear();
-    _gsyns.clear();
-    _names.clear();
     _codes.clear();
+    _names.clear();
+    _syns.clear();
+    _gsyns.clear();
+    _hsyns.clear();
+    _nsyns.clear();
 
     const QString fpath = tmpfile->fileName();
     std::vector<rlib::StringVec> lines;
@@ -118,6 +128,7 @@ int SyndromeManager::load( const QString& fname)
         _ids.insert(id);
         _codes.append(syn.code());
         _names.append(syn.name());
+        _nsyns[syn.name()] = id;
         lrecs++;
     }   // end for
 

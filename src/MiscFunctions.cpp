@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,13 +16,15 @@
  ************************************************************************/
 
 #include <MiscFunctions.h>
-#include <DijkstraShortestPathFinder.h>
-#include <FeatureUtils.h>
+#include <rimg/FeatureUtils.h>
+#include <r3d/AStarSearch.h>
 #include <QTextStream>
 #include <QString>
 #include <QFile>
 #include <algorithm>
-using RFeatures::ObjModel;
+using r3d::Mesh;
+using r3d::Vec3f;
+using FaceTools::byte;
 
 
 QString FaceTools::loadTextFromFile( const QString& fname)
@@ -64,7 +66,7 @@ QTemporaryFile* FaceTools::writeToTempFile( const QString& rfile)
 
 
 /*
-void FaceTools::drawPath( const std::vector<cv::Vec3f>& path, cv::Mat& m, cv::Scalar col, int thickness)
+void FaceTools::drawPath( const std::vector<Vec3f>& path, cv::Mat& m, cv::Scalar col, int thickness)
 {
     const int numPts = (int)path.size();
     std::vector<cv::Point> epts(numPts);
@@ -112,11 +114,11 @@ std::string FaceTools::getDateTimeDigits( const std::string& fname)
 }   // end getDateTimeDigits
 
 
-QString FaceTools::posString( const QString prefix, const cv::Vec3f& pos, int fw)
+QString FaceTools::posString( const QString prefix, const Vec3f& pos, int fw)
 {
     const char rep = 'f';
     const int dp = 2;
-    return QString( "%1 %2 X | %3 Y | %4 Z").arg(prefix).arg( pos[0], fw, rep, dp).arg( pos[1], fw, rep, dp).arg( pos[2], fw, rep, dp);
+    return QString( "%1 (XYZ): %2 %3 %4").arg(prefix).arg( pos[0], fw, rep, dp).arg( pos[1], fw, rep, dp).arg( pos[2], fw, rep, dp);
 }   // end posString
 
 
@@ -133,32 +135,32 @@ long FaceTools::getDateTimeSecs( const std::string& fname)
 }   // end getDateTimeSecs
 
 
-cv::Point2i FaceTools::scale( const cv::Point2i& p, double sizeRatio)
+cv::Point2i FaceTools::scale( const cv::Point2i& p, float sizeRatio)
 {
     return cv::Point2i( cvRound(p.x * sizeRatio), cvRound(p.y * sizeRatio));
 }   // end scale
 
 
-cv::Point2f FaceTools::scale( const cv::Point2f& p, double sizeRatio)
+cv::Point2f FaceTools::scale( const cv::Point2f& p, float sizeRatio)
 {
     return cv::Point2f( p.x * sizeRatio, p.y * sizeRatio);
 }   // end scale
 
 
-cv::Rect_<int> FaceTools::scale( const cv::Rect_<int>& r, double sizeRatio)
+cv::Rect_<int> FaceTools::scale( const cv::Rect_<int>& r, float sizeRatio)
 {
     return cv::Rect_<int>( cvRound(r.x * sizeRatio), cvRound(r.y * sizeRatio),
                            cvRound(r.width * sizeRatio), cvRound(r.height * sizeRatio));
 }   // end scale
 
 
-cv::Point FaceTools::calcCentre( const cv::Rect& r, double sizeRatio)
+cv::Point FaceTools::calcCentre( const cv::Rect& r, float sizeRatio)
 {
     return FaceTools::scale( cv::Point( r.x + r.width/2, r.y + r.height/2), sizeRatio);
 }   // end calcCentre
 
 
-cv::Point2f FaceTools::calcCentre( const cv::Rect_<float>& r, double sizeRatio)
+cv::Point2f FaceTools::calcCentre( const cv::Rect_<float>& r, float sizeRatio)
 {
     return FaceTools::scale( cv::Point2f( r.x + r.width/2, r.y + r.height/2), sizeRatio);
 }   // end calcCentre
@@ -188,63 +190,63 @@ cv::Point2f FaceTools::calcMid( const cv::Point2f& p0, const cv::Point2f& p1)
 }   // end calcMid
 
 
-cv::Vec3f FaceTools::calcSum( const std::vector<cv::Vec3f>& vs)
+Vec3f FaceTools::calcSum( const std::vector<Vec3f>& vs)
 {
-    cv::Vec3f m(0,0,0);
-    std::for_each( std::begin(vs), std::end(vs), [&](const cv::Vec3f& v){ m += v;});
+    Vec3f m = Vec3f::Zero();
+    std::for_each( std::begin(vs), std::end(vs), [&](const Vec3f& v){ m += v;});
     return m;
 }   // end calcSum
 
 
-double FaceTools::calcLength( const std::vector<cv::Vec3f>& vs)
+float FaceTools::calcLength( const std::vector<Vec3f>& vs)
 {
     if ( vs.empty())
         return 0;
 
     const size_t n = vs.size();
-    const cv::Vec3f* pv = &vs[0];
-    double len = 0;
+    const Vec3f* pv = &vs[0];
+    float len = 0;
     for ( size_t i = 1; i < n; ++i)
     {
-        len += cv::norm( vs[i] - *pv, cv::NORM_L2);
+        len += ( vs[i] - *pv).norm();
         pv = &vs[i];
     }   // end for
     return len;
 }   // end calcLength
 
 
-double FaceTools::calcLength( const ObjModel* model, const std::vector<int>& vidxs)
+float FaceTools::calcLength( const Mesh* model, const std::vector<int>& vidxs)
 {
-    double len = 0;
+    float len = 0;
     int pvidx = vidxs.front();
     for ( int vidx : vidxs)
     {
-        len += cv::norm( model->vtx(vidx) - model->vtx(pvidx), cv::NORM_L2);
+        len += ( model->vtx(vidx) - model->vtx(pvidx)).norm();
         pvidx = vidx;
     }   // end foreach
     return len;
 }   // end calcLength
 
 
-double FaceTools::getEquidistant( const ObjModel* model, const std::vector<int>& gpath, int j, int H, std::vector<int>& ev)
+float FaceTools::getEquidistant( const Mesh* model, const std::vector<int>& gpath, int j, int H, std::vector<int>& ev)
 {
     assert( H > 0);
-    const double glen = calcLength( model, gpath);
-    const double gstep = glen / H;
+    const float glen = calcLength( model, gpath);
+    const float gstep = glen / H;
 
     const size_t n = gpath.size();
     assert( j >= 0 && size_t(j) < n);
 
     int m = -1;
     ev.resize(size_t(H));
-    cv::Vec3f pv = model->vtx(gpath[size_t(j)]);    // Previous vertex
-    cv::Vec3f v = pv;
-    double gsum = 0;
+    Vec3f pv = model->vtx(gpath[size_t(j)]);    // Previous vertex
+    Vec3f v = pv;
+    float gsum = 0;
 
     for ( size_t i = 0; i < n; ++i)
     {
         v = model->vtx( gpath[size_t(j)]);
-        gsum += cv::norm( v - pv, cv::NORM_L2);
+        gsum += (v - pv).norm();
         if ( int( gsum / gstep) > m)
         {
             m = (m+1) % H;
@@ -259,11 +261,11 @@ double FaceTools::getEquidistant( const ObjModel* model, const std::vector<int>&
 }   // end getEquidistant
 
 
-cv::Vec3f FaceTools::calcMean( const std::vector<cv::Vec3f>& vs)
+Vec3f FaceTools::calcMean( const std::vector<Vec3f>& vs)
 {
-    cv::Vec3f m = calcSum(vs);
+    Vec3f m = calcSum(vs);
     const float s = vs.size();
-    return cv::Vec3f( m[0]/s, m[1]/s, m[2]/s);
+    return Vec3f( m[0]/s, m[1]/s, m[2]/s);
 }   // end calcMean
 
 
@@ -325,7 +327,7 @@ cv::RotatedRect FaceTools::toProportion( const cv::RotatedRect& r, const cv::Siz
 }   // end toProportion
 
 
-void FaceTools::getVertices( const ObjModel* m, const std::vector<int>& uvids, std::vector<cv::Vec3f>& path)
+void FaceTools::getVertices( const Mesh* m, const std::vector<int>& uvids, std::vector<Vec3f>& path)
 {
     const size_t nvs = uvids.size();
     path.resize(nvs);
@@ -333,8 +335,8 @@ void FaceTools::getVertices( const ObjModel* m, const std::vector<int>& uvids, s
         path[i] = m->vtx(uvids[i]);
 }   // end getVertices
 
-
-bool FaceTools::getVertexIndices( const ObjModel* m, const std::vector<cv::Vec3f>& vs, std::vector<int>& vidxs)
+/*
+bool FaceTools::getVertexIndices( const Mesh* m, const std::vector<Vec3f>& vs, std::vector<int>& vidxs)
 {
     const size_t nvs = vs.size();
     vidxs.resize(nvs);
@@ -350,8 +352,7 @@ bool FaceTools::getVertexIndices( const ObjModel* m, const std::vector<cv::Vec3f
     return true;
 }   // end getVertexIndices
 
-/*
-void FaceTools::findNearestVertexIndices( const ObjModel& m, const ObjModelKDTree& kdt, const std::vector<cv::Vec3f>& vs, std::vector<int>& vidxs)
+void FaceTools::findNearestVertexIndices( const Mesh& m, const MeshKDTree& kdt, const std::vector<Vec3f>& vs, std::vector<int>& vidxs)
 {
     const size_t nvs = vs.size();
     vidxs.resize(nvs);
@@ -447,10 +448,10 @@ cv::Rect FaceTools::getMean( const std::list<cv::Rect>& boxes)
         mbox.height += box.height;
     }   // end for
 
-    mbox.x = int(cvRound( double(mbox.x) / nidxs));
-    mbox.y = int(cvRound( double(mbox.y) / nidxs));
-    mbox.width = int(cvRound( double(mbox.width) / nidxs));
-    mbox.height = int(cvRound( double(mbox.height) / nidxs));
+    mbox.x = int(cvRound( float(mbox.x) / nidxs));
+    mbox.y = int(cvRound( float(mbox.y) / nidxs));
+    mbox.width = int(cvRound( float(mbox.width) / nidxs));
+    mbox.height = int(cvRound( float(mbox.height) / nidxs));
     return mbox;
 }   // end getMean
 
@@ -459,21 +460,21 @@ cv::RotatedRect FaceTools::createRotatedRect( const cv::Point& p0, const cv::Poi
 {
     const cv::Vec2f vec( p1.x - p0.x, p1.y - p0.y);
     const cv::Point2f centre = (p0 + p1) * 0.5;
-    const double angle = atan2( double(vec[1]), double(vec[0]));
-    return cv::RotatedRect( centre, sz, float(180.0 * angle/CV_PI));   // Angle in degrees!
+    const float angle = atan2f( vec[1], vec[0]);
+    return cv::RotatedRect( centre, sz, float(180.0 * angle/EIGEN_PI));   // Angle in degrees!
 }   // end createRotatedRect
 
 
 float FaceTools::calcAngleDegs( const cv::Point2f& p0, const cv::Point2f& p1)
 {
-    return atan2f( p1.y - p0.y, p1.x - p0.x) * 180.0f/float(CV_PI);
+    return atan2f( p1.y - p0.y, p1.x - p0.x) * float(180.0/EIGEN_PI);
 }   // end calcAngleDegs
 
 
 cv::Mat FaceTools::rotateUpright( const cv::Mat& img, const cv::RotatedRect& rr)
 {
     // Centre point as an absolute point in img
-    cv::Point2f cp = RFeatures::calcOffset( rr.boundingRect(), cv::Point2f(0.5,0.5));
+    cv::Point2f cp = rimg::calcOffset( rr.boundingRect(), cv::Point2f(0.5,0.5));
     // Get a matrix header for the portion of the image that's actually going to be rotated
     cv::Mat srcImg = img( rr.boundingRect() & cv::Rect(0,0,img.cols,img.rows));
     // Make the centre point relative to this area
@@ -490,7 +491,7 @@ cv::Mat FaceTools::rotateUpright( const cv::Mat& img, const cv::RotatedRect& rr)
 }   // end rotateUpright
 
 
-int FaceTools::findMidway( const ObjModel& model, const std::vector<int>& spidxs)
+int FaceTools::findMidway( const Mesh& model, const std::vector<int>& spidxs)
 {
     const int nidxs = (int)spidxs.size();
     assert( nidxs > 0);
@@ -498,16 +499,16 @@ int FaceTools::findMidway( const ObjModel& model, const std::vector<int>& spidxs
         return -1;
 
     // Get the endpoint vertices
-    const cv::Vec3f& v0 = model.vtx(spidxs[0]);
-    const cv::Vec3f& v1 = model.vtx(spidxs[nidxs-1]);
+    const Vec3f& v0 = model.vtx(spidxs[0]);
+    const Vec3f& v1 = model.vtx(spidxs[nidxs-1]);
 
     int midwayUvidx = spidxs[0];
-    double minDelta = DBL_MAX;
+    float minDelta = FLT_MAX;
     for ( int i = 0; i < nidxs; ++i)
     {
         const int uvidx = spidxs[i];
-        const cv::Vec3f& uv = model.vtx(uvidx);
-        const double delta = pow( cv::norm(uv - v0) - cv::norm(uv - v1), 2);
+        const Vec3f& uv = model.vtx(uvidx);
+        const float delta = pow( (uv - v0).norm() - (uv - v1).norm(), 2);
         if ( delta < minDelta)
         {
             minDelta = delta;
@@ -519,45 +520,45 @@ int FaceTools::findMidway( const ObjModel& model, const std::vector<int>& spidxs
 }   // end findMidway
 
 
-cv::Vec3f FaceTools::getShortestPath( const ObjModel& m, int v0, int v1, std::vector<int>& uvidxs)
+Vec3f FaceTools::getShortestPath( const Mesh& m, int v0, int v1, std::vector<int>& uvidxs)
 {
-    RFeatures::DijkstraShortestPathFinder dspf( m);
+    r3d::AStarSearch dspf( m);
     dspf.setEndPointVertexIndices( v0, v1);
     if ( dspf.findShortestPath(uvidxs) == -1)
-        return cv::Vec3f(0,0,0);
+        return Vec3f(0,0,0);
     const int mp = FaceTools::findMidway( m, uvidxs);
     return m.vtx(mp);
 }   // end getShortestPath
 
 
-cv::Vec3f FaceTools::calcDirectionVectorFromBase( const cv::Vec3f& v0, const cv::Vec3f& v1, const cv::Vec3f& apex)
+Vec3f FaceTools::calcDirectionVectorFromBase( const Vec3f& v0, const Vec3f& v1, const Vec3f& apex)
 {
-    cv::Vec3f base; // Get the normalised base vector
-    cv::normalize(v1 - v0, base);
+    Vec3f base = v1 - v0; // Get the normalised base vector
+    base.normalize();
     // Dot product of (apex - v0) with the normalised base vector gives the projection
     // of (apex - v0) along the base vector.
     const float d = (apex - v0).dot(base);
     // This distance d along the base from v0 gives the midpoint along the base of the triangle.
     // The direction vector whose magnitude is also the triangle's height is then simply apex-midpoint.
-    const cv::Vec3f midpoint = v0 + d*base;
+    const Vec3f midpoint = v0 + d*base;
     return apex - midpoint;
 }   // end calcDirectionVectorFromBase
 
 
-int FaceTools::growOut( const ObjModel& model, const cv::Vec3f& growVec, int vi)
+int FaceTools::growOut( const Mesh& model, const Vec3f& growVec, int vi)
 {
-    double growth, maxGrowth;
+    float growth, maxGrowth;
     int ni = vi;
     do
     {
         vi = ni;
         maxGrowth = 0;
         // Find the connected vertex that maximises the distance along the growth vector from bv.
-        const cv::Vec3f& bv = model.vtx(vi);
+        const Vec3f& bv = model.vtx(vi);
         const IntSet& conns = model.cvtxs(vi);
         for ( int ci : conns)
         {
-            const cv::Vec3f& cv = model.vtx(ci);
+            const Vec3f& cv = model.vtx(ci);
             growth = (cv - bv).dot(growVec);
             if ( growth >= maxGrowth)
             {

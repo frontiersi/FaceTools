@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,25 +40,24 @@ ActionGetFaceManifold::ActionGetFaceManifold( const QString& dn, const QIcon& ic
 bool ActionGetFaceManifold::removeNonFaceManifolds( FM* fm)
 {
     assert(fm);
-    RFeatures::ObjModel::Ptr mobj;
+    r3d::Mesh::Ptr mobj;
     fm->lockForWrite();
     const int mid = fm->faceManifoldId();
     if ( mid >= 0)
     {
-        RFeatures::ObjModelCopier copier(fm->model());
-        const IntSet& fids = fm->manifolds().manifold(mid)->polygons();
+        r3d::Copier copier(fm->mesh());
+        const IntSet& fids = fm->manifolds()[mid].faces();
         for ( int fid : fids)
             copier.add(fid);
-        mobj = copier.copiedModel();
+        mobj = copier.copiedMesh();
     }   // end if
-    fm->update( mobj);
-    fm->moveLandmarksToSurface();
+    fm->update( mobj, true, true);
     fm->unlock();
     return mid >= 0;
 }   // end removeNonFaceManifolds
 
 
-bool ActionGetFaceManifold::checkEnable( Event)
+bool ActionGetFaceManifold::isAllowed( Event)
 {
     const FM* fm = MS::selectedModel();
     if ( !fm)
@@ -68,7 +67,7 @@ bool ActionGetFaceManifold::checkEnable( Event)
     const bool rval = !lmks.empty() && fm->manifolds().count() > 1;
     fm->unlock();
     return rval;
-}   // end checkEnabled
+}   // end isAllowedd
 
 
 bool ActionGetFaceManifold::doBeforeAction( Event)
@@ -77,26 +76,26 @@ bool ActionGetFaceManifold::doBeforeAction( Event)
     fm->lockForRead();
     const int mid = fm->faceManifoldId();
     const size_t numManRemove = fm->manifolds().count() - 1;
-    const size_t numFaceRemove = size_t(fm->model().numPolys()) - fm->manifolds().manifold(mid)->polygons().size();
+    const size_t numFaceRemove = size_t(fm->mesh().numFaces()) - fm->manifolds()[mid].faces().size();
     fm->unlock();
 
     return QMessageBox::question( qobject_cast<QWidget*>(parent()),
                                   tr("Removing Non-Face Manifolds"),
-                                  QString("%1 polygons from %2 manifolds will be removed. Continue?").arg(numFaceRemove).arg(numManRemove),
+                                  QString("%1 triangles from %2 manifolds will be removed. Continue?").arg(numFaceRemove).arg(numManRemove),
                                   QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes;
 }   // end doBeforeAction
 
 
 void ActionGetFaceManifold::doAction( Event)
 {
-    storeUndo(this, {Event::GEOMETRY_CHANGE, Event::CONNECTIVITY_CHANGE, Event::LANDMARKS_CHANGE});
+    storeUndo(this, Event::MESH_CHANGE | Event::CONNECTIVITY_CHANGE | Event::LANDMARKS_CHANGE);
     removeNonFaceManifolds( MS::selectedModel());
 }   // end doAction
 
 
-void ActionGetFaceManifold::doAfterAction( Event)
+Event ActionGetFaceManifold::doAfterAction( Event)
 {
     MS::showStatus("Finished removing non-face manifolds.", 5000);
-    emit onEvent( {Event::GEOMETRY_CHANGE, Event::CONNECTIVITY_CHANGE, Event::LANDMARKS_CHANGE});
+    return Event::MESH_CHANGE | Event::CONNECTIVITY_CHANGE | Event::LANDMARKS_CHANGE;
 }   // end doAfterAction
 

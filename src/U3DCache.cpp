@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 
 #include <U3DCache.h>
 #include <FaceModel.h>
-#include <U3DExporter.h>
+#include <r3dio/U3DExporter.h>
 #include <QTemporaryFile>
 #include <cassert>
 using FaceTools::U3DCache;
@@ -43,7 +43,7 @@ bool U3DCache::isAvailable()
     bool avail = false;
     if ( _cacheLock.tryLockForRead())
     {
-        avail = RModelIO::U3DExporter::isAvailable();
+        avail = r3dio::U3DExporter::isAvailable();
         _cacheLock.unlock();
     }   // end if
     return avail;
@@ -52,37 +52,31 @@ bool U3DCache::isAvailable()
 
 void U3DCache::refresh( const FM* fm, bool med9)
 {
-    // Copy out model and ensure in standard position:
+    // Copy out model
     fm->lockForRead();
-    RFeatures::ObjModel::Ptr model = fm->model().deepCopy( true);    // Share materials
-    const cv::Vec3f centre = fm->centre();
-    const RFeatures::Orientation on = fm->orientation();
+    r3d::Mesh::Ptr mesh = fm->mesh().deepCopy();
     fm->unlock();
 
-    model->setTransformMatrix( on.asMatrix(centre).inv());
-    model->fixTransformMatrix();
-    RModelIO::U3DExporter xptr( true, med9);
+    _cacheLock.lockForWrite();
     QTemporaryFile tfile( QDir::tempPath() + "/XXXXXX.u3d");
     if ( tfile.open())
     {
-        std::cerr << QString( "Exporting U3D model to '%1'").arg( tfile.fileName()).toStdString() << std::endl;
-        if ( xptr.save( *model, tfile.fileName().toStdString()))
+        r3dio::U3DExporter xptr( true, med9);
+        //std::cerr << QString( "Exporting U3D model to '%1'").arg( tfile.fileName()).toStdString() << std::endl;
+        if ( xptr.save( *mesh, tfile.fileName().toStdString()))
         {
             // Copy U3D model exported to the temporary location to the cache location
             const QString cacheFileName = makeFilePath(fm);
-            std::cerr << QString("Copying U3D model to cache location at '%1'").arg(cacheFileName).toStdString() << std::endl;
-            _cacheLock.lockForWrite();
             QFile::copy( tfile.fileName(), cacheFileName);
             _cache.insert(fm);
-            _cacheLock.unlock();
-            std::cerr << "Finished updating U3D cache" << std::endl;
             QFile::remove( tfile.fileName());
         }   // end if
         else
-            std::cerr << "Unable to save to U3D format!" << std::endl;
+            std::cerr << "[ERROR] FaceTools::U3DCache::refresh: Unable to save to U3D format!" << std::endl;
     }   // end if
     else
-        std::cerr << "Couldn't open temporary file for exporting U3D model!" << std::endl;
+        std::cerr << "[ERROR] FaceTools::U3DCache::refresh: Couldn't open temporary file for exporting U3D!" << std::endl;
+    _cacheLock.unlock();
 }   // end refresh
 
 

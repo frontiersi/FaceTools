@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,54 +17,53 @@
 
 #include <Action/ActionSetParallelProjection.h>
 #include <FileIO/FaceModelManager.h>
-#include <vtkRenderer.h>
-#include <vtkCamera.h>
-#include <algorithm>
 using FaceTools::Action::ActionSetParallelProjection;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
 using FaceTools::ModelViewer;
+using FMM = FaceTools::FileIO::FaceModelManager;
 using MS = FaceTools::Action::ModelSelector;
 
 
 ActionSetParallelProjection::ActionSetParallelProjection( const QString& dn, const QIcon& ico, const QKeySequence& ks)
-    : FaceAction( dn, ico, ks)
+    : FaceAction( dn, ico, ks), _ev(Event::NONE)
 {
     setCheckable(true,false);
-    addTriggerEvent(Event::CLOSED_MODEL);
+    addTriggerEvent( Event::CLOSED_MODEL);
 }   // end ctor
 
 
-bool ActionSetParallelProjection::checkState( Event)
+bool ActionSetParallelProjection::checkState( Event e)
 {
-    if ( FileIO::FMM::numOpen() == 0)
-        return false;
-    return isChecked();
-}   // end checkChecked
+    return MS::defaultViewer()->parallelProjection() && !has( e, Event::LOADED_MODEL);
+}   // end checkState
 
 
-bool ActionSetParallelProjection::checkEnable( Event)
-{
-    return FileIO::FMM::numOpen() > 0;
-}   // end checkEnabled
+bool ActionSetParallelProjection::isAllowed( Event e) { return has( e, Event::CLOSED_MODEL) || FMM::numOpen() > 0;}
 
 
 void ActionSetParallelProjection::doAction( Event)
 {
-    for ( FMV* fmv : MS::viewers())
-    {
-        vtkCamera* cam = const_cast<vtkRenderer*>(fmv->getRenderer())->GetActiveCamera();
-        if ( isChecked())
-        {
-            cam->ParallelProjectionOn();
-            RFeatures::CameraParams cp = fmv->camera();
-            const double pflen = fmv->getHeight() / tan(cp.fovRads()/2); // The pixel focal length
-            const double ratio = fmv->getHeight() / pflen;
-            const double D = fmv->cameraDistance(); // Distance to focal point (world coords)
-            cam->SetParallelScale( D*ratio);
-        }   // end if
-        else
-            cam->ParallelProjectionOff();
-    }   // end for
+    _ev = Event::NONE;
+    if ( setParallelProjection( isChecked() && FMM::numOpen() > 0))
+        _ev = Event::CAMERA_CHANGE;
 }   // end doAction
+
+
+bool ActionSetParallelProjection::setParallelProjection( bool enable)
+{
+    bool changed = false;
+    for ( FMV *fmv : MS::viewers())
+    {
+        if ( fmv->parallelProjection() != enable)
+        {
+            fmv->setParallelProjection( enable);
+            changed = true;
+        }   // end if
+    }   // end for
+    return changed;
+}   // end setParallelProjection
+
+
+Event ActionSetParallelProjection::doAfterAction( Event) { return _ev;}

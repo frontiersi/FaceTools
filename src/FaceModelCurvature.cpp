@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,44 +20,42 @@
 #include <cassert>
 using FaceTools::FaceModelCurvature;
 using FaceTools::FM;
-using OMCM = RFeatures::ObjModelCurvatureMap;
 
-
-std::unordered_map<const FM*, OMCM::Ptr> FaceModelCurvature::_metrics;
+std::unordered_map<const FM*, r3d::Curvature::Ptr> FaceModelCurvature::_metrics;
 QReadWriteLock FaceModelCurvature::_lock;
 
 
-FaceModelCurvature::RPtr FaceModelCurvature::rmetrics( const FM* fm)
+FaceModelCurvature::RPtr FaceModelCurvature::rmetrics( const FM *fm)
 {
     _lock.lockForRead();
 
-    const OMCM* cm = _metrics.count(fm) > 0 ?  _metrics.at(fm).get() : nullptr;
+    const r3d::Curvature *cm = _metrics.count(fm) > 0 ?  _metrics.at(fm).get() : nullptr;
     if ( !cm)
     {
         _lock.unlock();
         return nullptr;
     }   // end if
 
-    return RPtr( cm, []( const OMCM*){ _lock.unlock(); });
+    return RPtr( cm, []( const r3d::Curvature*){ _lock.unlock();});
 }   // end rmetrics
 
 
-FaceModelCurvature::WPtr FaceModelCurvature::wmetrics( const FM* fm)
+FaceModelCurvature::WPtr FaceModelCurvature::wmetrics( const FM *fm)
 {
     _lock.lockForWrite();
 
-    OMCM* cm = _metrics.count(fm) > 0 ?  _metrics.at(fm).get() : nullptr;
+    r3d::Curvature *cm = _metrics.count(fm) > 0 ?  _metrics.at(fm).get() : nullptr;
     if ( !cm)
     {
         _lock.unlock();
         return nullptr;
     }   // end if
 
-    return WPtr( cm, []( OMCM*){ _lock.unlock(); });
+    return WPtr( cm, []( r3d::Curvature*){ _lock.unlock(); });
 }   // end wmetrics
 
 
-void FaceModelCurvature::purge( const FM* fm)
+void FaceModelCurvature::purge( const FM *fm)
 {
     _lock.lockForWrite();
     _metrics.erase(fm);
@@ -65,11 +63,10 @@ void FaceModelCurvature::purge( const FM* fm)
 }   // end purge
 
 
-void FaceModelCurvature::add( const FM* fm)
+void FaceModelCurvature::add( FM *fm)
 {
     assert( _metrics.count(fm) == 0);
-    OMCM::Ptr omcm = OMCM::create( fm->model(), fm->manifolds());  // Blocks
     _lock.lockForWrite();
-    _metrics[fm] = omcm;
+    _metrics[fm] = r3d::Curvature::create( fm->mesh());  // Blocks
     _lock.unlock();
 }   // end add

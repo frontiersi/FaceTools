@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  ************************************************************************/
 
 #include <Action/ActionToggleScalarLegend.h>
-#include <Vis/SurfaceMetricsMapper.h>
+#include <Vis/ScalarVisualisation.h>
 #include <FaceModelViewer.h>
 #include <FaceTools.h>
 #include <vtkTextProperty.h>
@@ -25,9 +25,8 @@
 using FaceTools::Action::ActionToggleScalarLegend;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
-using FaceTools::Vis::SurfaceMetricsMapper;
+using FaceTools::Vis::ScalarVisualisation;
 using FaceTools::Vis::FV;
-using FaceTools::FMVS;
 using FaceTools::FMV;
 using MS = FaceTools::Action::ModelSelector;
 
@@ -37,7 +36,7 @@ ActionToggleScalarLegend::ActionToggleScalarLegend( const QString& dn)
 {
     setCheckable(true,true);
     for ( FMV* fmv : MS::viewers())
-        _legends[fmv] = new RVTK::ScalarLegend( fmv->getRenderWindow()->GetInteractor());
+        _legends[fmv] = new r3dvis::ScalarLegend( fmv->getRenderWindow()->GetInteractor());
 }   // end ctor
 
 
@@ -78,47 +77,49 @@ bool ActionToggleScalarLegend::checkState( Event)
 {
     for ( const auto& p : _legends)
     {
-        RVTK::ScalarLegend* legend = p.second;
+        const FMV *fmv = p.first;
+        r3dvis::ScalarLegend* legend = p.second;
         bool showLegend = false;
+        legend->setTitle( "NO TITLE");
 
         if ( isChecked())
         {
-            SurfaceMetricsMapper *smm = nullptr;
-            for ( FV *fv : p.first->attached())
-            {
-                if ( (smm = fv->activeSurface()))
+            // Scalar visualisations are exclusive so get the first view with one
+            // and create and set the lookup table.
+            ScalarVisualisation *svis = nullptr;
+            for ( FV *fv : fmv->attached())
+                if ( (svis = fv->activeScalars()))
                     break;
-            }   // end for
 
-            if ( smm && smm->isScalarMapping())
+            if ( svis)
             {
                 // Set the legend title and colours lookup table for the scalar legend.
-                legend->setTitle( smm->label());
-                legend->setLookupTable( smm->scalarLookupTable());
+                legend->setLookupTable( svis->lookupTable( fmv->getRenderer()));
+                legend->setTitle( svis->label().toStdString());
+                legend->setNumLabels( int(svis->numColours()) + 1);
                 showLegend = true;
             }   // end if
         }   // end if
 
+        legend->setVisible( showLegend);
+
+        const QColor bg = fmv->backgroundColour();
+        const QColor fg = chooseContrasting( bg);
         updateTitleProperties( legend->titleProperty());
         updateLabelProperties( legend->labelProperty());
-
-        const QColor bg = p.first->backgroundColour();
-        const QColor fg = chooseContrasting( bg);
         setTextColours( legend->titleProperty(), bg, fg);
         setTextColours( legend->labelProperty(), bg, fg);
-
-        legend->setVisible( showLegend);
     }   // end for
 
     return isChecked();
 }   // end checkChecked
 
 
-bool ActionToggleScalarLegend::checkEnable( Event)
+bool ActionToggleScalarLegend::isAllowed( Event)
 {
     for ( const auto& p : _legends)
         for ( const FV *fv : p.first->attached())
-            if ( fv->activeSurface() && fv->activeSurface()->isScalarMapping())
+            if ( fv->activeScalars())
                 return true;
     return false;
-}   // end checkEnabled
+}   // end isAllowedd

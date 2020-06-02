@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,6 +29,8 @@ using MS = FaceTools::Action::ModelSelector;
 ActionShowScanInfo::ActionShowScanInfo( const QString& dname, const QIcon& icon, const QKeySequence& ks)
     : FaceAction( dname, icon, ks), _tupdater(nullptr), _dialog(nullptr)
 {
+    setCheckable( true, false);
+    addTriggerEvent( Event::MASK_CHANGE);
 }   // end ctor
 
 
@@ -36,16 +38,9 @@ void ActionShowScanInfo::postInit()
 {
     QWidget* p = static_cast<QWidget*>(parent());
     _dialog = new ScanInfoDialog(p);
-    connect( _dialog, &ScanInfoDialog::onUpdated, [this](){ emit onEvent(Event::METADATA_CHANGE);});
     connect( _dialog, &ScanInfoDialog::onAssessmentChanged, [this](){ emit onEvent(Event::ASSESSMENT_CHANGE);});
-    connect( _dialog, &ScanInfoDialog::onCopiedLandmarks, [this](){ emit onEvent(Event::LANDMARKS_CHANGE);});
+    connect( _dialog, &ScanInfoDialog::finished, [this](){ setChecked(false);});
 }   // end postInit
-
-
-ActionShowScanInfo::~ActionShowScanInfo()
-{
-    delete _dialog;
-}   // end dtor
 
 
 void ActionShowScanInfo::setThumbnailUpdater( ActionUpdateThumbnail* act)
@@ -59,39 +54,35 @@ void ActionShowScanInfo::setThumbnailUpdater( ActionUpdateThumbnail* act)
 
 bool ActionShowScanInfo::checkState( Event e)
 {
-    if ( EventGroup(e).has(Event::CLOSED_MODEL) && !MS::selectedModel())
+    FM *fm = MS::selectedModel();
+    if ( !fm || has( e, Event::CLOSED_MODEL))
         _dialog->hide();
-    return !_dialog->isHidden();
+    if ( _dialog->isVisible() && has( e, Event::METRICS_CHANGE | Event::MODEL_SELECT))
+        _dialog->refresh();
+    return _dialog->isVisible() || (has( e, Event::MASK_CHANGE) && fm->hasLandmarks() && fm->dateOfBirth() == QDate::currentDate());
 }   // end checkState
 
 
-bool ActionShowScanInfo::checkEnable( Event)
-{
-    FM* fm = ModelSelector::selectedModel();
-    _dialog->set(fm);
-    if ( fm && _tupdater)
-        doOnUpdatedThumbnail( fm, _tupdater->thumbnail(fm));
-    return fm;
-}   // end checkEnable
+bool ActionShowScanInfo::isAllowed( Event) { return MS::isViewSelected();}
 
 
-void ActionShowScanInfo::doOnUpdatedThumbnail( const FM* fm, const cv::Mat& img)
-{
-    if ( _dialog->get() == fm)
-        _dialog->setThumbnail(img);
-}   // end doOnUpdatedThumbnail
+void ActionShowScanInfo::doOnUpdatedThumbnail( const FM* fm, const cv::Mat& img) { _dialog->setThumbnail(img);}
 
 
 void ActionShowScanInfo::doAction( Event)
 {
-    _dialog->refresh();
-    _dialog->show();
-    _dialog->raise();
-    _dialog->activateWindow();
+    if ( isChecked())
+    {
+        FM *fm = MS::selectedModel();
+        assert(fm);
+        _dialog->refresh();
+        if ( _tupdater)
+            _dialog->setThumbnail( _tupdater->thumbnail(fm));
+        _dialog->show();
+        _dialog->raise();
+        _dialog->activateWindow();
+    }   // end if
 }   // end doAction
 
 
-void ActionShowScanInfo::doAfterAction( Event)
-{
-    MS::showStatus( "Showing Assessment Information", 5000);
-}   // end doAfterAction
+Event ActionShowScanInfo::doAfterAction( Event) { return Event::NONE;}

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,50 +17,52 @@
 
 #include <Action/ActionResetDetection.h>
 #include <FaceModel.h>
-#include <FaceTools.h>
 #include <QMessageBox>
-#include <cassert>
 using FaceTools::Action::ActionResetDetection;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
-using FaceTools::Vis::FV;
-using FaceTools::FVS;
-using FaceTools::FMS;
-using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
+using QMB = QMessageBox;
 
 
-ActionResetDetection::ActionResetDetection( const QString& dn, const QIcon& icon) : FaceAction(dn, icon) {}
+ActionResetDetection::ActionResetDetection( const QString& dn, const QIcon& icon)
+    : FaceAction(dn, icon) {}
 
 
-bool ActionResetDetection::checkEnable( Event)
+bool ActionResetDetection::isAllowed( Event)
 {
-    const FV* fv = ModelSelector::selectedView();
-    return fv && !fv->data()->currentAssessment()->landmarks().empty();
-}   // end checkEnabled
+    const FM *fm = MS::selectedModel();
+    return fm && fm->hasLandmarks();
+}   // end isAllowedd
 
 
 bool ActionResetDetection::doBeforeAction( Event)
 {
     QWidget* prnt = static_cast<QWidget*>(parent());
-    static const QString msg = tr("This will also erase existing measurements; continue?");
-    bool go = QMessageBox::Yes == QMessageBox::question( prnt, displayName(), msg,
-                                  QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
-    return go;
+    static const QString msg = tr("Really remove the correspondence mask and landmarks? This will affect all assessments!");
+    return QMB::Yes == QMB::question( prnt, displayName(), msg, QMB::Yes | QMB::No, QMB::No);
 }   // end doBeforeAction
 
 
 void ActionResetDetection::doAction( Event)
 {
-    storeUndo(this, {Event::LANDMARKS_CHANGE, Event::ORIENTATION_CHANGE, Event::METRICS_CHANGE});
+    storeUndo( this, Event::MASK_CHANGE | Event::LANDMARKS_CHANGE);
 
-    FM* fm = ModelSelector::selectedModel();
+    FM* fm = MS::selectedModel();
     fm->lockForWrite();
-    fm->setLandmarks( Landmark::LandmarkSet::create());
-    fm->currentAssessment()->clearMetrics();
-    fm->fixTransformMatrix();
+    fm->setMask( nullptr);
+    static const Landmark::LandmarkSet emptyLmks;
+    const IntSet aids = fm->assessmentIds();
+    for ( int aid : aids)
+        fm->assessment(aid)->setLandmarks( emptyLmks);
+    fm->remakeBounds();
     fm->unlock();
-
-    emit onEvent( {Event::LANDMARKS_CHANGE, Event::ORIENTATION_CHANGE, Event::METRICS_CHANGE});
 }   // end doAction
+
+
+Event ActionResetDetection::doAfterAction( Event)
+{
+    MS::showStatus("Correspondence mask and landmarks removed!", 5000);
+    return Event::MASK_CHANGE | Event::LANDMARKS_CHANGE | Event::VIEW_CHANGE;
+}   // end doAfterAction
 

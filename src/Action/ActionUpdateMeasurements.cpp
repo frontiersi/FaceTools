@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,66 +16,61 @@
  ************************************************************************/
 
 #include <Action/ActionUpdateMeasurements.h>
-#include <Metric/MetricCalculatorManager.h>
-#include <Vis/FaceView.h>
+#include <Metric/MetricManager.h>
 #include <FaceModel.h>
-#include <QDebug>
-#include <algorithm>
 using FaceTools::Action::ActionUpdateMeasurements;
-using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
-using MCM = FaceTools::Metric::MetricCalculatorManager;
-using FaceTools::Metric::MC;
+using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
 
 
 ActionUpdateMeasurements::ActionUpdateMeasurements()
+    : FaceAction("Update Measurements"), _ev(Event::NONE)
 {
-    setAsync( true);
-    addTriggerEvent( Event::LANDMARKS_CHANGE);
-    addTriggerEvent( Event::SURFACE_DATA_CHANGE);
+    addTriggerEvent( Event::MESH_CHANGE
+                   | Event::AFFINE_CHANGE   // needed for rescaling!
+                   | Event::STATS_CHANGE);
 }   // end ctor
 
 
-// Ready if at least one metric can be calculated
-bool ActionUpdateMeasurements::checkEnable( Event)
+bool ActionUpdateMeasurements::updateAllMeasurements( FM *fm)
 {
-    const FM* fm = MS::selectedModel();
+    bool updated = false;
     if ( fm)
-    {
-        for ( MC::Ptr mc : MCM::metrics())
-        {
-            fm->lockForRead();
-            const bool cando = mc->canMeasure(fm);
-            fm->unlock();
-            if ( cando)
-                return true;
-        }   // end for
-    }   // end if
-    return false;
-}   // end checkEnabled
+        for ( Metric::MC::Ptr mc : Metric::MetricManager::metrics())
+            if ( mc->canMeasure(fm) && mc->measure(fm))
+                updated = true;
+    return updated;
+}   // end updateAllMeasurements
 
 
-void ActionUpdateMeasurements::doAction( Event)
+bool ActionUpdateMeasurements::updateMeasurementsForLandmark( FM *fm, int lmid)
+{
+    bool updated = false;
+    const Metric::MCSet &mset = Metric::MetricManager::metricsForLandmark( lmid);
+    for ( const auto &m : mset)
+        if ( m->canMeasure( fm) && m->measure(fm))
+            updated = true;
+    return updated;
+}   // end updateMeasurementsForLandmark
+
+
+bool ActionUpdateMeasurements::updateMeasurementsForLandmarks( FM *fm, const IntSet &lmids)
+{
+    bool updated = false;
+    for ( int lmid : lmids)
+        updated |= updateMeasurementsForLandmark( fm, lmid);
+    return updated;
+}   // end updateMeasurementsForLandmarks
+
+
+void ActionUpdateMeasurements::doAction( Event e)
 {
     FM *fm = MS::selectedModel();
-    fm->lockForWrite();
-
-    //std::cerr << "ActionUpdateMeasurements triggered by " << EventGroup(e).name() << std::endl;
-    for ( MC::Ptr mc : MCM::metrics())
+    _ev = Event::NONE;
+    if ( isTriggerEvent(e) && fm)
     {
-        if ( mc->canMeasure(fm))
-        {
-            //std::cerr << "Measuring " << mc->name().toStdString() << std::endl;
-            mc->measure(fm);
-        }   // end if
-    }   // end for
-
-    fm->unlock();
+        updateAllMeasurements( fm);
+        _ev = Event::METRICS_CHANGE;
+    }   // end if
 }   // end doAction
-
-
-void ActionUpdateMeasurements::doAfterAction( Event)
-{
-    emit onEvent( Event::METRICS_CHANGE);
-}   // end doAfterAction

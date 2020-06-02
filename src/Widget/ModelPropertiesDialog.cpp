@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 #include <ui_ModelPropertiesDialog.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
-#include <QImageTools.h>
+#include <QTools/QImageTools.h>
 #include <QPushButton>
 #include <QSpinBox>
 #include <cmath>
@@ -69,17 +69,17 @@ void ModelPropertiesDialog::reset()
     if ( _model)
     {
         _model->lockForRead();
-        const RFeatures::ObjModelManifolds& manfs = _model->manifolds();
-        const RFeatures::ObjModel& cmodel = _model->model();
+        const r3d::Manifolds& manfs = _model->manifolds();
+        const r3d::Mesh& cmodel = _model->mesh();
         nm = int(manfs.count());  // Number of manifolds
 
         _ui->textureMappedLabel->setText( cmodel.materialIds().empty() ? "No Texture Mapping!" : "");
 
-        _ui->modelPolygonsLabel->setText( QString("%1").arg(cmodel.numPolys()));
+        _ui->modelPolygonsLabel->setText( QString("%1").arg(cmodel.numFaces()));
         _ui->modelVerticesLabel->setText( QString("%1").arg(cmodel.numVtxs()));
         size_t nb = 0;  // Count up the total number of boundaries
         for ( int i = 0; i < nm; ++i)
-            nb += manfs.manifold(i)->boundaries(cmodel).count();
+            nb += manfs[i].boundaries().count();
         _ui->modelBoundariesLabel->setText( QString("%1").arg(nb));
         _model->unlock();
     }   // end if
@@ -106,20 +106,19 @@ void ModelPropertiesDialog::doOnManifoldIndexChanged( int i)
     if ( _model)
     {
         _model->lockForRead();
-        const RFeatures::ObjModel& cmodel = _model->model();
-        const RFeatures::ObjModelManifolds& manfs = _model->manifolds();
+        const r3d::Manifolds& manfs = _model->manifolds();
         assert( i > 0 && i <= int(manfs.count()));
         const int realIdx = int(i-1);
 
-        const RFeatures::ObjManifold& manf = *manfs.manifold(realIdx);
-        const size_t p = manf.polygons().size();
-        const size_t v = manf.vertices(cmodel).size();
-        const size_t b = manf.boundaries(cmodel).count();
+        const r3d::Manifold& manf = manfs[realIdx];
+        const size_t p = manf.faces().size();
+        const size_t v = manf.vertices().size();
+        const size_t b = manf.boundaries().count();
         _ui->manifoldPolygonsLabel->setText( QString("%1").arg(p));
         _ui->manifoldVerticesLabel->setText( QString("%1").arg(v));
         _ui->manifoldBoundariesLabel->setText( QString("%1").arg(b));
 
-        const RFeatures::ObjModelBounds& bnds = *_model->bounds().at(size_t(i));
+        const r3d::Bounds& bnds = *_model->bounds().at(size_t(i));
         const double x = bnds.xlen();
         const double y = bnds.ylen();
         const double z = bnds.zlen();

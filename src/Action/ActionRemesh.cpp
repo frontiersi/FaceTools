@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 #include <Action/ActionRemesh.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <ObjModelVertexAdder.h>   // RFeatures
+#include <VertexAdder.h>   // r3d
 #include <cassert>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionRemesh;
@@ -36,10 +36,10 @@ ActionRemesh::ActionRemesh( const QString& dn, const QIcon& ico)
 }   // end ctor
 
 
-bool ActionRemesh::checkEnable( Event)
+bool ActionRemesh::isAllowed( Event)
 {
     return MS::isViewSelected();
-}   // end checkEnabled
+}   // end isAllowedd
 
 
 bool ActionRemesh::doBeforeAction( Event)
@@ -52,8 +52,8 @@ void ActionRemesh::doAction( Event)
 {
     FM* fm = MS::selectedModel();
     fm->lockForWrite();
-    RFeatures::ObjModel::Ptr model = fm->model()->deepCopy(true);
-    RFeatures::ObjModelVertexAdder vadder( model);
+    r3d::Mesh::Ptr model = fm->mesh()->deepCopy(true);
+    r3d::VertexAdder vadder( model);
     vadder.subdivideAndMerge( maxTriangleArea());
     //vadder.addVerticesToMaxTriangleArea( maxTriangleArea());
     fm->update(model);
@@ -62,8 +62,8 @@ void ActionRemesh::doAction( Event)
 }   // end doAction
 
 
-void ActionRemesh::doAfterAction()
+Event ActionRemesh::doAfterAction()
 {
     MS::showStatus( "Finished remeshing model.", 5000);
-    emit onEvent( Event::GEOMETRY_CHANGE);
+    return Event::MESH_CHANGE;
 }   // end doAfterAction

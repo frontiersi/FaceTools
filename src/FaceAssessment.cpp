@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,28 +16,23 @@
  ************************************************************************/
 
 #include <FaceAssessment.h>
-#include <cassert>
 using FaceTools::FaceAssessment;
 using FaceTools::Landmark::LandmarkSet;
 using FaceTools::PathSet;
 using FaceTools::FM;
+using FaceTools::Vec3f;
+using FaceTools::Mat4f;
+
+namespace {
+const QString UNKNOWN_NAME = "Unknown";
+}   // end namespace
 
 
 // static
-FaceAssessment::Ptr FaceAssessment::create( int id, const QString& aname)
+FaceAssessment::Ptr FaceAssessment::create( int id)
 {
-    return Ptr( new FaceAssessment( id, aname), [](FaceAssessment* x){ delete x;});
+    return Ptr( new FaceAssessment( id), [](FaceAssessment* x){ delete x;});
 }   // end create
-
-
-FaceAssessment::Ptr FaceAssessment::createClone( int id, const QString& aname)
-{
-    FaceAssessment* fa = new FaceAssessment( *this); // Deep copy landmarks, paths, metrics
-    fa->_id = id;
-    fa->setAssessor(aname);
-    fa->_notes = "";
-    return Ptr( fa, [](FaceAssessment* x){ delete x;});
-}   // end createClone
 
 
 FaceAssessment::Ptr FaceAssessment::deepCopy() const
@@ -46,12 +41,18 @@ FaceAssessment::Ptr FaceAssessment::deepCopy() const
 }   // end deepCopy
 
 
+// private
+FaceAssessment::FaceAssessment( int id) : _id(id), _assessor(UNKNOWN_NAME), _notes("") {}
+
+
 bool FaceAssessment::setAssessor( const QString &aname)
 {
     bool setok = false;
     if ( _assessor != aname)
     {
         _assessor = aname;
+        if ( _assessor.isEmpty())
+            _assessor = UNKNOWN_NAME;
         setok = true;
     }   // end if
     return setok;
@@ -70,10 +71,10 @@ bool FaceAssessment::setNotes( const QString& notes)
 }   // end setNotes
 
 
-bool FaceAssessment::setLandmarks( const LandmarkSet::Ptr lmks)
+bool FaceAssessment::setLandmarks( const LandmarkSet &lmks)
 {
     bool setok = false;
-    if ( !_landmarks->empty() || !lmks->empty())
+    if ( !_landmarks.empty() || !lmks.empty())
     {
         _landmarks = lmks;
         setok = true;
@@ -82,95 +83,30 @@ bool FaceAssessment::setLandmarks( const LandmarkSet::Ptr lmks)
 }   // end setLandmarks
 
 
-void FaceAssessment::setLandmarkPosition( int lid, FaceTools::FaceLateral flat, const cv::Vec3f& pos)
+void FaceAssessment::transform( const Mat4f &T)
 {
-    const bool okay = _landmarks->set( lid, pos, flat); // Adds if not already present
-    assert(okay);
-}   // end setLandmarkPosition
+    _paths.transform(T);    // Transform paths first because parameter transform matrix may be from the landmarks!
+    _landmarks.transform(T);
+}   // end transform
 
 
-bool FaceAssessment::swapLandmarkLaterals()
+void FaceAssessment::moveToSurface( const FM* fm)
 {
-    bool setok = false;
-    if ( !_landmarks->empty())
-    {
-        _landmarks->swapLaterals();
-        setok = true;
-    }   // end if
-    return setok;
-}   // end swapLandmarkLaterals
+    _landmarks.moveToSurface( fm);
+    _paths.update(fm);
+}   // end moveToSurface
 
 
-bool FaceAssessment::addTransformMatrix( const cv::Matx44d &T)
+bool FaceAssessment::setPaths( const PathSet &pths)
 {
     bool setok = false;
-    if ( !_landmarks->empty())
-    {
-        _landmarks->addTransformMatrix(T);
-        setok = true;
-    }   // end if
-
-    if ( !_paths->empty())
-    {
-        _paths->transform(T);   // Paths are transformed directly
-        setok = true;
-    }   // end if
-
-    return setok;
-}   // end addTransformMatrix
-
-
-void FaceAssessment::fixTransformMatrix()
-{
-    _landmarks->fixTransformMatrix();
-    // Note here that path vertices are never passed through a transform.
-}   // end fixTransformMatrix
-
-
-bool FaceAssessment::moveLandmarksToSurface( const FM* fm)
-{
-    bool setok = false;
-    if ( !_landmarks->empty())
-    {
-        _landmarks->moveToSurface( fm);
-        setok = true;
-    }   // end if
-    return setok;
-}   // end moveLandmarksToSurface
-
-
-bool FaceAssessment::setPaths( PathSet::Ptr pths)
-{
-    bool setok = false;
-    if ( !_paths->empty() || !pths->empty())
+    if ( !_paths.empty() || !pths.empty())
     {
         _paths = pths;
         setok = true;
     }   // end if
     return setok;
 }   // end setPaths
-
-
-int FaceAssessment::addPath( const cv::Vec3f& pos) { return _paths->addPath(pos);}
-
-bool FaceAssessment::removePath( int pid) { return _paths->has(pid) ? _paths->removePath(pid) : false;}
-bool FaceAssessment::renamePath( int pid, const QString &nm) { return _paths->has(pid) ? _paths->renamePath(pid, nm.toStdString()) : false;}
-
-bool FaceAssessment::setPathPosition( const FM *fm, int pid, int h, const cv::Vec3f& pos)
-{
-    Path* path = _paths->path(pid);
-    if ( !path)
-        return false;
-    if ( h == 0)
-        *path->vtxs.begin() = pos;
-    else
-        *path->vtxs.rbegin() = pos;
-    path->recalculate( fm);
-    return true;
-}   // end setPathPosition
-
-
-void FaceAssessment::recalculatePaths(const FM *fm) { _paths->recalculate(fm);}
 
 
 bool FaceAssessment::hasMetric( int mid) const
@@ -189,35 +125,6 @@ void FaceAssessment::clearMetrics()
 
 bool FaceAssessment::hasContent() const
 {
-    return !_assessor.isEmpty() || !_notes.isEmpty()
-        || !_landmarks->empty() || !_paths->empty();
+    return (!_assessor.isEmpty() && _assessor != UNKNOWN_NAME) || !_notes.isEmpty()
+        || !_landmarks.empty() || !_paths.empty();
 }   // end hasContent
-
-
-// private
-FaceAssessment::FaceAssessment( int id, const QString& aname)
-    : _id(id), _assessor(aname), _notes(""),
-      _landmarks( LandmarkSet::create()), _paths(PathSet::create())
-{
-}   // end ctor
-
-
-FaceAssessment::~FaceAssessment(){}
-
-
-// private
-FaceAssessment::FaceAssessment( const FaceAssessment& fa) { *this = fa;}
-
-// private
-FaceAssessment& FaceAssessment::operator=( const FaceAssessment &fa)
-{
-    _id = fa._id;
-    _assessor = fa._assessor;
-    _notes = fa._notes;
-    _landmarks = fa._landmarks->deepCopy();
-    _paths = fa._paths->deepCopy();
-    _metrics = fa._metrics;
-    _metricsL = fa._metricsL;
-    _metricsR = fa._metricsR;
-    return *this;
-}   // end operator=

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,15 +16,16 @@
  ************************************************************************/
 
 #include <Action/ActionChangeSurfaceMappingRange.h>
-#include <Vis/SurfaceMetricsMapper.h>
+#include <Vis/ScalarVisualisation.h>
 #include <Vis/FaceView.h>
-#include <cmath>
+#include <QSignalBlocker>
 #include <cassert>
 using FaceTools::Action::ActionChangeSurfaceMappingRange;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
-using FaceTools::Vis::SurfaceMetricsMapper;
+using FaceTools::Vis::ScalarVisualisation;
 using FaceTools::Vis::FV;
+using MS = FaceTools::Action::ModelSelector;
 
 
 ActionChangeSurfaceMappingRange::ActionChangeSurfaceMappingRange( const QString& dname)
@@ -35,58 +36,59 @@ void ActionChangeSurfaceMappingRange::postInit()
 {
     QWidget* p = static_cast<QWidget*>(parent());
     _widget = new QTools::RangeMinMax(p);
+    _widget->setMinHidden(true);
     _widget->setRange( 0, 1);
     _widget->setMin( 0);
     _widget->setMax( 1);
-    _widget->setNumDecimals(2);
+    _widget->setNumDecimals(1);
     _widget->setEnabled(false);
-    _widget->setMinimumWidth(140);
+    _widget->setMinimumWidth(50);   // Double if min spin box visible
+    connect( _widget, &QTools::RangeMinMax::valueChanged, this, &ActionChangeSurfaceMappingRange::_doOnWidgetValueChanged);
 }   // end postInit
 
 
-bool ActionChangeSurfaceMappingRange::checkEnable( Event)
+bool ActionChangeSurfaceMappingRange::isAllowed( Event)
 {
-    _widget->disconnect(this);
-    _widget->setEnabled(false);
+    const FV* fv = MS::selectedView();
+    return fv && fv->activeScalars();
+}   // end isAllowed
 
-    const FV* fv = ModelSelector::selectedView();
-    const bool isEnabled = fv && fv->activeSurface() != nullptr;
 
+bool ActionChangeSurfaceMappingRange::checkState( Event)
+{
+    QSignalBlocker block(_widget);
+    const FV* fv = MS::selectedView();
+    const ScalarVisualisation* svis = fv ? fv->activeScalars() : nullptr;
+    const bool isEnabled = svis != nullptr;
     if ( isEnabled)
     {
-        _widget->setEnabled(true);
-        SurfaceMetricsMapper* smm = fv->activeSurface();
-
-        const float rmin = smm->minRange();
-        const float rmax = smm->maxRange();
+        const float rmin = svis->minRange();
+        const float rmax = svis->maxRange();
         _widget->setRange( rmin, rmax);
+        //std::cout << "Vis: " << svis->name() << " range set to " << rmin << ", " << rmax << std::endl;
 
-        const float vmin = smm->minVisible();
-        const float vmax = smm->maxVisible();
-
+        const float vmin = svis->minVisible();
+        const float vmax = svis->maxVisible();
         assert( vmin <= vmax);
         _widget->setMin( vmin);
         _widget->setMax( vmax);
+        //std::cout << "\t\t min, max as " << vmin << ", " << vmax << std::endl;
 
-        const float ss = (rmax - rmin) / 40;
+        const float ss = svis->stepSize();
         _widget->setSingleStepSize( ss);
-
-        connect( _widget, &QTools::RangeMinMax::rangeChanged, this, &ActionChangeSurfaceMappingRange::doOnWidgetRangeChanged);
     }   // end if
-
+    _widget->setEnabled( isEnabled);
     return isEnabled;
-}   // end checkEnabled
+}   // end checkState
 
 
-void ActionChangeSurfaceMappingRange::doOnWidgetRangeChanged( float minv, float maxv)
+void ActionChangeSurfaceMappingRange::_doOnWidgetValueChanged( float minv, float maxv)
 {
     assert( isEnabled());
-    const FV* fv = ModelSelector::selectedView();
-    SurfaceMetricsMapper *smm = fv->activeSurface();
-    assert(smm);
-    // Update fv's scalar colour mapper from the widget. Note that the scalar colour mapper
-    // object is shared between all FaceViews that have this visualisation set, so this will
-    // have the effect of updating the surfaces of all those FaceViews' actors.
-    smm->setVisibleRange( minv, maxv);
-    smm->rebuild();
-}   // end doOnWidgetRangeChanged
+    FV* fv = MS::selectedView();
+    ScalarVisualisation *svis = fv->activeScalars();
+    assert(svis);
+    svis->setVisibleRange( minv, maxv);
+    svis->rebuild();
+    fv->setActiveScalars( svis);
+}   // end _doOnWidgetRangeChanged

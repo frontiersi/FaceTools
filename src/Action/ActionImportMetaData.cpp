@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,8 +22,6 @@
 #include <QFileDialog>
 #include <QFile>
 #include <QMessageBox>
-#include <VtkTools.h>
-#include <FileIO.h> // rlib
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/filesystem.hpp>
@@ -50,7 +48,7 @@ void ActionImportMetaData::postInit()
     _fdialog->setMimeTypeFilters( _mimefilters);
     _fdialog->setDefaultSuffix( _mimefilters.front());
     _fdialog->setAcceptMode( QFileDialog::AcceptOpen);
-    _fdialog->setOption( QFileDialog::DontUseNativeDialog);
+    //_fdialog->setOption( QFileDialog::DontUseNativeDialog);
 }   // end postInit
 
 
@@ -60,7 +58,7 @@ QString ActionImportMetaData::toolTip() const
 }   // end toolTip
 
 
-bool ActionImportMetaData::checkEnable( Event) { return MS::isViewSelected();}
+bool ActionImportMetaData::isAllowed( Event) { return MS::isViewSelected();}
 
 
 QString ActionImportMetaData::_getFileName( const FM* fm)
@@ -118,7 +116,7 @@ bool ActionImportMetaData::doBeforeAction( Event)
 
 void ActionImportMetaData::doAction( Event)
 {
-    storeUndo(this, {Event::METADATA_CHANGE, Event::LANDMARKS_CHANGE, Event::PATHS_CHANGE});
+    storeUndo( this, Event::ASSESSMENT_CHANGE | Event::LANDMARKS_CHANGE | Event::PATHS_CHANGE);
 
     QMimeType mtype = _mimeDB.mimeTypeForFile(QFileInfo(_filename));
     assert(mtype.isValid());
@@ -141,18 +139,19 @@ void ActionImportMetaData::doAction( Event)
     FM* fm = MS::selectedModel();
     fm->lockForWrite();
 
-    std::string objfilename;    // Not used
-    FileIO::FaceModelXMLFileHandler::importMetaData( fm, tree, objfilename);
-    fm->moveLandmarksToSurface();
+    std::string unused;
+    double fversion;
+    FileIO::importMetaData( *fm, tree, fversion, unused);
+    fm->moveToSurface();
     fm->unlock();
 
     _ifs.close();
 }   // end doAction
 
 
-void ActionImportMetaData::doAfterAction( Event)
+Event ActionImportMetaData::doAfterAction( Event)
 {
     MS::showStatus( QString("Imported meta data from '%1'.").arg(_filename), 5000);
-    emit onEvent( {Event::METADATA_CHANGE, Event::LANDMARKS_CHANGE, Event::PATHS_CHANGE});
+    return Event::ASSESSMENT_CHANGE | Event::LANDMARKS_CHANGE | Event::PATHS_CHANGE;
 }   // end doAfterAction
 

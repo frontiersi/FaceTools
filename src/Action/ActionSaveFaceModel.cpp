@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,21 +23,16 @@
 using FaceTools::Action::ActionSaveFaceModel;
 using FaceTools::Action::Event;
 using FaceTools::Action::FaceAction;
-using FaceTools::FileIO::FMM;
-using FaceTools::FVS;
-using FaceTools::Vis::FV;
-using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
 
 
 ActionSaveFaceModel::ActionSaveFaceModel( const QString& dn, const QIcon& ico, const QKeySequence& ks)
     : FaceAction( dn, ico, ks), _saveAs( nullptr)
 {
-    setAsync(true);
 }   // end ctor
 
 
-bool ActionSaveFaceModel::checkEnable( Event)
+bool ActionSaveFaceModel::isAllowed( Event)
 {
     if ( !MS::isViewSelected())
         return false;
@@ -45,7 +40,7 @@ bool ActionSaveFaceModel::checkEnable( Event)
     fm->lockForRead();
     bool isrdy = !fm->isSaved();
     if ( !_saveAs)
-        isrdy = !fm->isSaved() && ( FMM::hasPreferredFileFormat(fm) || !fm->hasMetaData());
+        isrdy = !fm->isSaved() && ( FileIO::FMM::hasPreferredFileFormat(fm) || !fm->hasMetaData());
     fm->unlock();
     return isrdy;
 }   // end testReady
@@ -55,7 +50,7 @@ bool ActionSaveFaceModel::doBeforeAction( Event e)
 {
     bool isNormalSave = true;
     const FM *fm = MS::selectedModel();
-    if ( FMM::hasPreferredFileFormat(fm) || !fm->hasMetaData())
+    if ( FileIO::FMM::hasPreferredFileFormat(fm) || !fm->hasMetaData())
         MS::showStatus("Saving...");
     else if ( _saveAs)
     {
@@ -72,31 +67,34 @@ void ActionSaveFaceModel::doAction( Event)
     assert(_fails.empty());
     FM *fm = MS::selectedModel();
     fm->lockForWrite();
-    fm->fixTransformMatrix();
-    _egrp.add(Event::ORIENTATION_CHANGE);
-    fm->unlock();
-    fm->lockForRead();
+    if ( !fm->hasMask())
+    {
+        _egrp |= Event::MESH_CHANGE;
+        fm->fixTransformMatrix();
+    }   // end if
     std::string filepath;   // Will be the last saved filepath
-    const bool wokay = FMM::write( fm, &filepath);  // Save using current filepath for the model
+    const bool wokay = FileIO::FMM::write( fm, &filepath);  // Save using current filepath for the model
     fm->unlock();
     if ( wokay)
     {
-        _egrp.add(Event::SAVED_MODEL);
+        _egrp |= Event::SAVED_MODEL;
         UndoStates::clear(fm);
     }   // end if
     else
-        _fails[FMM::error()] << filepath.c_str();
+    {
+        _fails[FileIO::FMM::error()] << filepath.c_str();
+        _egrp |= Event::ERR;
+    }   // end else
 }   // end doAction
 
 
-void ActionSaveFaceModel::doAfterAction( Event)
+Event ActionSaveFaceModel::doAfterAction( Event)
 {
     if ( _fails.empty())
     {
         MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-        const QString fpath = FMM::filepath( MS::selectedModel()).c_str();
+        const QString fpath = FileIO::FMM::filepath( MS::selectedModel()).c_str();
         MS::showStatus( QString("Saved to '%1'").arg(fpath), 5000);
-        emit onEvent( _egrp);
     }   // end if
     else
     {
@@ -109,4 +107,5 @@ void ActionSaveFaceModel::doAfterAction( Event)
         }   // end for
         _fails.clear(); // Ensure the fail set is cleared
     }   // end else
+    return _egrp;
 }   // end doAfterAction

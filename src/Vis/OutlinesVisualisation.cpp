@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,83 +18,75 @@
 #include <Vis/OutlinesVisualisation.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <Random.h> // rlib
-#include <cassert>
+#include <rlib/Random.h>
 using FaceTools::Vis::OutlinesVisualisation;
 using FaceTools::Vis::LoopView;
 using FaceTools::Vis::FV;
-using FaceTools::FM;
-using FaceTools::Action::Event;
 
 
-OutlinesVisualisation::~OutlinesVisualisation()
+bool OutlinesVisualisation::isVisible( const FV* fv) const
 {
-    while (!_views.empty())
-        purge( const_cast<FV*>(_views.begin()->first), Event::NONE);
-}   // end dtor
+    return _views.count(fv) > 0 && _views.at(fv).at(0)->isVisible();
+}   // end isVisible
 
 
-void OutlinesVisualisation::apply( FV* fv, const QPoint*)
+void OutlinesVisualisation::syncWithViewTransform( const FV* fv)
 {
-    if ( _views.count(fv) == 0)
+    assert( _views.count(fv) > 0);
+    for ( LoopView *lv : _views.at(fv))
+        lv->pokeTransform( fv->transformMatrix());
+}   // end syncWithViewTransform
+
+
+void OutlinesVisualisation::apply( const FV *fv, const QPoint*)
+{
+    assert( _views.count(fv) == 0);
+    std::vector<LoopView*>& views = _views[fv];
+    const FM* fm = fv->data();
+    const r3d::Mesh& mesh = fm->mesh();
+    const r3d::Manifolds& manifolds = fm->manifolds();
+
+    rlib::Random rng( 5); // Randomize based on model
+
+    for ( size_t i = 0; i < manifolds.count(); ++i)
     {
-        const FM* fm = fv->data();
-        const RFeatures::ObjModel& model = fm->model();
-        const RFeatures::ObjModelManifolds& manifolds = fm->manifolds();
+        // Define a different colour for the boundaries of each manifold
+        const double r = 0.2 + 0.8 * rng.getRandom();
+        const double g = 0.2 + 0.8 * rng.getRandom();
+        const double b = 0.2 + 0.8 * rng.getRandom();
 
-        rlib::Random rng(5);
-        LoopView* loops = _views[fv] = new LoopView( model, 4.0f);
-
-        const int nm = static_cast<int>(manifolds.count());
-        for ( int i = 0; i < nm; ++i)
+        // Get the boundaries for manifold i
+        const r3d::Boundaries& bnds = manifolds[int(i)].boundaries();
+        for ( size_t j = 0; j < bnds.count(); ++j)
         {
-            // Define a different colour for the boundaries of each manifold
-            const double r = 0.2 + 0.8 * rng.getRandom();
-            const double g = 0.2 + 0.8 * rng.getRandom();
-            const double b = 0.2 + 0.8 * rng.getRandom();
+            LoopView *lv = new LoopView;
+            lv->setColour( r, g, b);
+            lv->setLineWidth( 3.0);
+            views.push_back(lv);
 
-            // Get the boundaries for manifold i
-            const RFeatures::ObjModelManifoldBoundaries& bnds = manifolds.manifold(i)->boundaries(model);
-            const int nb = static_cast<int>(bnds.count());
-            for ( int j = 0; j < nb; ++j)
-                loops->add( bnds.boundary(j), r, g, b, 0.99); // vertex positions for boundary j
+            const std::list<int> &blist = bnds.boundary(int(j));
+            std::vector<const Vec3f*> vtxs( blist.size());
+            int k = 0;
+            for ( int vidx : blist)
+                vtxs[k++] = &mesh.uvtx(vidx);
+            lv->update( vtxs);
         }   // end for
-    }   // end if
-    assert( fv->viewer());
-    _views.at(fv)->setVisible( true, fv->viewer());
+    }   // end for
 }   // end apply
 
 
-bool OutlinesVisualisation::purge( FV* fv, Event)
+void OutlinesVisualisation::purge( const FV* fv)
 {
-    if (_views.count(fv) > 0)
-    {
-        _views.at(fv)->setVisible( false, fv->viewer());
-        delete _views.at(fv);
-        _views.erase(fv);
-    }   // end if
-    return true;
+    assert(_views.count(fv) > 0);
+    for ( LoopView *lv : _views.at(fv))
+        delete lv;
+    _views.erase(fv);
 }   // end purge
 
 
 void OutlinesVisualisation::setVisible( FV* fv, bool v)
 {
-    if (_views.count(fv) > 0)
-        _views.at(fv)->setVisible( v, fv->viewer());
+    assert( _views.count(fv) > 0);
+    for ( LoopView *lv : _views.at(fv))
+        lv->setVisible( v, fv->viewer());
 }   // end setVisible
-
-
-bool OutlinesVisualisation::isVisible( const FV* fv) const
-{
-    bool vis = false;
-    if (_views.count(fv) > 0)
-        vis = _views.at(fv)->visible();
-    return vis;
-}   // end isVisible
-
-
-void OutlinesVisualisation::syncToViewTransform( const FV* fv, const vtkMatrix4x4* d)
-{
-    if ( _views.count(fv) > 0)
-        _views.at(fv)->pokeTransform(d);
-}   // end syncToViewTransform

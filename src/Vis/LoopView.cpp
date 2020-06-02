@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,27 +16,40 @@
  ************************************************************************/
 
 #include <Vis/LoopView.h>
-#include <VtkActorCreator.h>    // RVTK
 #include <vtkProperty.h>
 using FaceTools::Vis::LoopView;
-using FaceTools::ModelViewer;
+using FaceTools::Vec3f;
 
 
-LoopView::LoopView( const RFeatures::ObjModel& model, double lw) : _model(model), _lw(lw) {}
-
-
-void LoopView::add( const std::list<int>& vidxs, double r, double g, double b, double a)
+LoopView::LoopView() : SimpleView()
 {
-    // The returned actor has the model's current transform matrix poked to it.
-    vtkSmartPointer<vtkActor> actor = RVTK::VtkActorCreator::generateLineActor( _model, vidxs, true);
+    vtkProperty *prop = addActor( _loop)->GetProperty();
+    prop->SetRepresentationToWireframe();
+    prop->SetRenderLinesAsTubes(false);
+    _loop->SetClosed(true);
+    _loop->SetPoints( _points);
+}   // end ctor
 
-    vtkProperty* property = actor->GetProperty();
-    property->SetRepresentationToWireframe();
-    property->SetRenderLinesAsTubes(false);
-    property->SetLineWidth( _lw);
-    actor->SetPickable(false);
-    property->SetColor( r, g, b);
-    property->SetOpacity( a);
-    initActor( actor);
-}   // end add
 
+void LoopView::update( const std::vector<const Vec3f*> &vds)
+{
+    if ( vds.size() > 2)
+    {
+        _points->SetNumberOfPoints( vds.size());
+        for ( size_t i = 0; i < vds.size(); ++i)
+            _points->SetPoint( i, &(*vds[i])[0]);
+        _points->Modified();
+    }   // end if
+}   // end update
+
+
+void LoopView::update( const std::vector<Vec3f> &vds)
+{
+    if ( vds.size() > 2)
+    {
+        _points->SetNumberOfPoints( vds.size());
+        for ( size_t i = 0; i < vds.size(); ++i)
+            _points->SetPoint( i, &vds[i][0]);
+        _points->Modified();
+    }   // end if
+}   // end update

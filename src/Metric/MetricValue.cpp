@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,50 +16,50 @@
  ************************************************************************/
 
 #include <Metric/MetricValue.h>
-#include <Metric/MetricCalculatorManager.h>
+#include <Metric/MetricManager.h>
 #include <Ethnicities.h>
-#include <Round.h>  // rlib
+#include <rlib/Round.h>
 #include <cassert>
 using FaceTools::Metric::MetricValue;
-using MCM = FaceTools::Metric::MetricCalculatorManager;
+using MM = FaceTools::Metric::MetricManager;
 
 
 MetricValue::MetricValue( int id) : _id(id) {}
 
 
-double MetricValue::zscore( double age, size_t i) const
+float MetricValue::zscore( float age, size_t i) const
 {
-    double zs = 0;
-    GrowthData::CPtr gd = MCM::metric(_id)->currentGrowthData();
+    float zs = 0;
+    const GrowthData *gd = MM::metric(_id)->growthData().current();
     if ( gd)
     {
         rlib::RSD::CPtr rsd = gd->rsd(i);
         assert(rsd);
         const double t = std::max<double>( rsd->tmin(), std::min<double>( age, int(rsd->tmax() + 0.5)));
-        zs = rsd->zscore( t, _values.at(i));
+        zs = float(rsd->zscore( t, _values.at(i)));
     }   // end if
     return zs;
 }   // end zscore
 
 
-double MetricValue::mean( double age, size_t i) const
+float MetricValue::mean( float age, size_t i) const
 {
-    double mn = 0;
-    GrowthData::CPtr gd = MCM::metric(_id)->currentGrowthData();
+    float mn = 0;
+    const GrowthData *gd = MM::metric(_id)->growthData().current();
     if ( gd)
     {
         rlib::RSD::CPtr rsd = gd->rsd(i);
         assert(rsd);
         const double t = std::max<double>( rsd->tmin(), std::min<double>( age, int(rsd->tmax() + 0.5)));
-        mn = rsd->mval( t);
+        mn = float(rsd->mval( t));
     }   // end if
     return mn;
 }   // end mean
 
 
-void MetricValue::write( PTree& pnode, double age) const
+void MetricValue::write( PTree& pnode, float age) const
 {
-    MC::Ptr mc = MCM::metric( _id);
+    MC::Ptr mc = MM::metric( _id);
     assert(mc);
 
     PTree& mnode = pnode.add("MetricValue","");
@@ -71,7 +71,7 @@ void MetricValue::write( PTree& pnode, double age) const
     const size_t dims = mc->dims();
     mnode.put( "ndims", dims);
 
-    GrowthData::CPtr gd = mc->currentGrowthData();
+    const GrowthData *gd = mc->growthData().current();
 
     // Output the statistics for the metric
     PTree& snode = mnode.put( "stats", "");
@@ -101,3 +101,12 @@ void MetricValue::write( PTree& pnode, double age) const
             node.put( "zscore", rlib::dps( zscore( age, i), ndps));
     }   // end for
 }   // end write
+
+
+bool FaceTools::Metric::operator==( const MetricValue &mv0, const MetricValue &mv1)
+{
+    return mv0.id() == mv1.id() && mv0.ndims() == mv1.ndims() && mv0.values() == mv1.values();
+}   // end operator==
+
+
+bool FaceTools::Metric::operator!=( const MetricValue &mv0, const MetricValue &mv1) { return !(mv0 == mv1);}

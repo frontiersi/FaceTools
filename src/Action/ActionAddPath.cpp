@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,61 +16,42 @@
  ************************************************************************/
 
 #include <Action/ActionAddPath.h>
-#include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <Vis/FaceView.h>
-#include <FaceTools.h>
-#include <cassert>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Action::ActionAddPath;
 using FaceTools::Interactor::PathsHandler;
 using FaceTools::Vis::FV;
-using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
 
 
 ActionAddPath::ActionAddPath( const QString& dn, const QIcon& ico, PathsHandler::Ptr handler)
     : FaceAction( dn, ico), _handler(handler)
 {
-    connect( &*_handler, &PathsHandler::onLeavePath, this, &ActionAddPath::doOnLeavePath);
-    connect( &*_handler, &PathsHandler::onEnterPath, this, &ActionAddPath::doOnEnterPath);
 }   // end ctor
 
 
-bool ActionAddPath::checkEnable( Event)
+bool ActionAddPath::isAllowed( Event)
 {
     const FV* fv = MS::selectedView();
-    if ( MS::interactionMode() == IMode::ACTOR_INTERACTION || !fv)
-        return false;
-    return fv->isPointOnFace( primedMousePos()) && _handler->hoverPath() == nullptr;
-}   // end checkEnabled
+    return fv && MS::interactionMode() != IMode::ACTOR_INTERACTION
+              && fv->isPointOnFace( primedMousePos())
+              && _handler->hoverPath() == nullptr;
+}   // end isAllowed
 
 
 void ActionAddPath::doAction( Event)
 {
     storeUndo( this, Event::PATHS_CHANGE);
-
-    FV* fv = MS::selectedView();
-    cv::Vec3f hpos;
-    if ( fv->projectToSurface( primedMousePos(), hpos))
-    {
-        _handler->setEnabled(true);
-        _handler->addPath( fv, hpos);
-        emit onEvent( Event::PATHS_CHANGE);
-    }   // end if
+    const FV *fv = MS::selectedView();
+    Vec3f pos = Vec3f::Zero();
+    fv->projectToSurface( primedMousePos(), pos);
+    FM* fm = fv->data();
+    fm->lockForWrite();
+    const int pid = fm->addPath( pos);
+    fm->unlock();
+    _handler->addPath( fv, pid);
 }   // end doAction
 
 
-void ActionAddPath::doOnLeavePath()
-{
-    setLocked(false);
-    refreshState();
-}   // end doOnLeavePath
-
-
-void ActionAddPath::doOnEnterPath()
-{
-    setLocked(true);
-    refreshState();
-}   // end doOnEnterPath
+Event ActionAddPath::doAfterAction( Event) { return Event::PATHS_CHANGE | Event::VIEW_CHANGE;}

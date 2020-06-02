@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 #include <Action/ModelSelector.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
+#include <r3dvis/VtkTools.h>
 using FaceTools::Interactor::ActorMoveNotifier;
 using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
@@ -27,28 +28,13 @@ using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
 
 
-namespace {
-
-void updateFaceViewMatrices( const FM* fm, vtkMatrix4x4* vt)
-{
-    for ( FV* fv : fm->fvs())
-    {
-        fv->actor()->PokeMatrix( vt);
-        fv->syncVisualisationsToViewTransform();
-        fv->viewer()->updateRender();
-    }   // end for
-}   // end updateFaceViewMatrices
-
-}   // end namespace
-
-
 void ActorMoveNotifier::actorStart( const vtkProp3D* prop)
 {
     FV* fv = viewFromActor( prop);
     if ( fv)
     {
-        MS::showStatus( "Moving model...");
         emit onActorStart(fv);
+        _cam = fv->viewer()->camera();
     }   // end if
 }   // end actorStart
 
@@ -57,7 +43,25 @@ void ActorMoveNotifier::actorMove( const vtkProp3D* prop)
 {
     FV* fv = viewFromActor( prop);
     if ( fv) // Propogate the matrix of the affected actor to all associated FaceView actors.
-        updateFaceViewMatrices( fv->data(), fv->actor()->GetMatrix());
+    {
+        const vtkMatrix4x4 *vt = fv->transformMatrix();
+        for ( FV* f : fv->data()->fvs())
+            f->pokeTransform( vt);
+
+        /*
+        // Also transform the camera focus and position with respect to the model.
+        // This is also important for ensuring that scaling actors resize correctly.
+        const Mat4f& cmat = fv->data()->mesh().transformMatrix();
+        const Mat4f T = r3dvis::toEigen( vt) * cmat.inverse();
+        const r3d::CameraParams cam(  r3d::transform( T, _cam.pos()),
+                                      r3d::transform( T, _cam.focus()),
+                                      T.block<3,3>(0,0) * _cam.up(),
+                                      _cam.fov());
+        fv->viewer()->setCamera( cam);
+        */
+
+        MS::updateRender();
+    }   // end if
 }   // end actorMove
 
 
@@ -67,12 +71,16 @@ void ActorMoveNotifier::actorStop( const vtkProp3D* prop)
     if ( fv)
     {
         // Catch up the data transform to the actor's.
+        const vtkMatrix4x4 *vt = fv->transformMatrix();
         FM* fm = fv->data();
         fm->lockForWrite();
-        const cv::Matx44d& cmat = fm->model().transformMatrix();
-        vtkMatrix4x4 *vt = fv->actor()->GetMatrix();
-        fm->addTransformMatrix( RVTK::toCV( vt) * cmat.inv());
+        const Mat4f& imat = fm->inverseTransformMatrix();
+        const Mat4f t = r3dvis::toEigen( vt);
+        fm->addTransformMatrix( t * imat);
         fm->unlock();
         emit onActorStop(fv);
     }   // end if
 }   // end actorStop
+
+
+void ActorMoveNotifier::cameraStop() { emit onCameraStop();}

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,87 +17,98 @@
 
 #include <Widget/PhenotypesDialog.h>
 #include <ui_PhenotypesDialog.h>
-#include <Widget/IntTableWidgetItem.h>
-#include <Metric/MetricCalculatorManager.h>
+#include <Metric/MetricManager.h>
 #include <Metric/SyndromeManager.h>
 #include <Metric/PhenotypeManager.h>
-#include <FileIO.h>
+#include <rlib/FileIO.h>
 #include <algorithm>
+#include <QCloseEvent>
 #include <QHeaderView>
 #include <QDoubleSpinBox>
+#include <QHBoxLayout>
+#include <QVBoxLayout>
 #include <QComboBox>
-using FaceTools::Widget::IntTableWidgetItem;
+#include <QSplitter>
 using FaceTools::Widget::PhenotypesDialog;
 using HPOMan = FaceTools::Metric::PhenotypeManager;
 using FaceTools::Metric::Phenotype;
 using SynMan = FaceTools::Metric::SyndromeManager;
-using MCM = FaceTools::Metric::MetricCalculatorManager;
+using MM = FaceTools::Metric::MetricManager;
 
 namespace {
 enum ColIndex
 {
     ID_COL = 0,      // ID of phenotype
     NAME_COL = 1,    //
-    REGION_COL = 2,  // Region on body
-    METRICS_COL = 3, // Names of associated metrics
+    METRICS_COL = 2, // Names of associated metrics
 };  // end enum
 }   // end namespace
 
 
-PhenotypesDialog::PhenotypesDialog(QWidget *parent) :
+PhenotypesDialog::PhenotypesDialog( QWidget *parent) :
     QDialog(parent), _ui(new Ui::PhenotypesDialog), _chid(-1)
 {
     _ui->setupUi(this);
-    setWindowTitle( parent->windowTitle() + " | Human Phenotype Ontology (HPO) Terms");
+    _ui->splitter_2->setStretchFactor( 0,2);
+    _ui->splitter_2->setStretchFactor( 1,1);
 
-    _ui->table->setColumnCount(4);
-    _ui->table->setHorizontalHeaderLabels( QStringList( {"ID", "Common Name", "Anatomical Region", "Related Metrics"}));
+    setWindowTitle( parent->windowTitle() + " | Human Phenotype Ontology (HPO) Browser");
+
+    _ui->table->setColumnCount(3);
+    _ui->table->setHorizontalHeaderLabels( QStringList( {"Term Id", "Term Name", "Related Measurements"}));
 
     QHeaderView* header = _ui->table->horizontalHeader();
-    connect( header, &QHeaderView::sectionClicked, this, &PhenotypesDialog::sortOnColumn);
+    connect( header, &QHeaderView::sectionClicked, this, &PhenotypesDialog::_sortOnColumn);
+    header->setSortIndicatorShown(false);
+    header->setStretchLastSection(true);   // Resize width of final column
 
     _ui->table->setShowGrid(false);
     _ui->table->setFocusPolicy( Qt::StrongFocus);
     _ui->table->setEditTriggers( QAbstractItemView::NoEditTriggers);
     _ui->table->setSortingEnabled(true);
-    header->setSortIndicatorShown(false);
 
-    connect( _ui->syndromesComboBox, QOverload<int>::of(&QComboBox::activated), this, &PhenotypesDialog::doOnUserSelectedSyndrome);
-    header->setStretchLastSection(true);   // Resize width of final column
+    _populateTable();
+    _populateSyndromes();
+    _populateAnatomicalRegions();
 
-    connect( _ui->table, &QTableWidget::cellClicked, this, &PhenotypesDialog::highlightRow);
-    connect( _ui->table, &QTableWidget::currentItemChanged, [this]( QTableWidgetItem* item){ highlightRow(item->row());});
-
-    _ui->table->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-
-    // Initial populate
-    _dhids = HPOMan::ids();
-    for ( int hid : _dhids)
-        appendRow( hid);
-
-    populateSyndromes( SynMan::ids());
-    sortOnColumn( NAME_COL);
+    _ui->table->verticalHeader()->setSectionResizeMode( QHeaderView::ResizeToContents);
+    _ui->table->setFocus();
+    _ui->table->scrollToTop();
+    _sortOnColumn( NAME_COL);
     _ui->table->setCurrentCell(0,0);
     _ui->table->resizeColumnsToContents();
     _ui->table->resizeRowsToContents();
-    _ui->table->setFocus();
-    _ui->table->scrollToTop();
+
+    connect( _ui->table, &QTableWidget::currentItemChanged,
+            [this]( QTableWidgetItem* item){ assert(item); _highlightRow( item->row());});
+    connect( _ui->syndromesComboBox, QOverload<int>::of(&QComboBox::activated),
+            this, &PhenotypesDialog::_doOnUserSelectedSyndrome);
+    connect( _ui->anatomicalRegionsComboBox, QOverload<int>::of(&QComboBox::activated),
+            this, &PhenotypesDialog::_doOnUserSelectedAnatomicalRegion);
+
+    _highlightRow(0);
 }   // end ctor
 
 
 PhenotypesDialog::~PhenotypesDialog() { delete _ui;}
 
 
-// private
-void PhenotypesDialog::setSelectedPhenotype( int pid)
+void PhenotypesDialog::show()
 {
-    const int rowid = pid >= 0 ? _idRows.at(pid) : -1;
-    highlightRow(rowid);
-}   // end setSelectedPhenotype
+    QDialog::show();
+    raise();
+    activateWindow();
+}   // end show
 
 
-// private
-void PhenotypesDialog::sortOnColumn( int cidx)
+void PhenotypesDialog::closeEvent( QCloseEvent *e)
+{
+    e->accept();
+    accept();
+}   // end closeEvent
+
+
+void PhenotypesDialog::_sortOnColumn( int cidx)
 {
     _ui->table->sortItems(cidx);    // Sort into ascending order
     bool ok;
@@ -105,15 +116,14 @@ void PhenotypesDialog::sortOnColumn( int cidx)
     const int nrows = _ui->table->rowCount();
     for ( int i = 0; i < nrows; ++i)
     {
-        int pid = _ui->table->item( i, ID_COL)->text().toInt( &ok);
+        int pid = _ui->table->item( i, ID_COL)->data(Qt::UserRole).toInt( &ok);
         assert(ok);
         _idRows[pid] = i;
     }   // end for
-}   // end sortOnColumn
+}   // end _sortOnColumn
 
 
-// private
-void PhenotypesDialog::highlightRow( int rowid)
+void PhenotypesDialog::_highlightRow( int rowid)
 {
     // Clear the previous row
     if ( _chid >= 0)
@@ -122,61 +132,155 @@ void PhenotypesDialog::highlightRow( int rowid)
         int orid = _idRows.at(_chid);
         _ui->table->item(orid, ID_COL)->setBackgroundColor( Qt::white);
         _ui->table->item(orid, NAME_COL)->setBackgroundColor( Qt::white);
-        _ui->table->item(orid, REGION_COL)->setBackgroundColor( Qt::white);
         _ui->table->item(orid, METRICS_COL)->setBackgroundColor( Qt::white);
     }   // end if
 
     _chid = -1;
-    _ui->remarksTextEdit->clear();
-    _ui->criteriaTextEdit->clear();
-
     if ( rowid >= 0)
     {
-        _chid = _ui->table->item(rowid, ID_COL)->text().toInt();
-
         static const QColor bg(200,235,255);
         _ui->table->item(rowid, ID_COL)->setBackgroundColor( bg);
         _ui->table->item(rowid, NAME_COL)->setBackgroundColor( bg);
-        _ui->table->item(rowid, REGION_COL)->setBackgroundColor( bg);
         _ui->table->item(rowid, METRICS_COL)->setBackgroundColor( bg);
+        _chid = _ui->table->item(rowid, ID_COL)->data(Qt::UserRole).toInt();
+    }   // end if
 
+    QSignalBlocker blocker( _ui->table);
+    _ui->table->setCurrentCell( rowid, ID_COL);
+
+    _updateSelectedInfo();
+}   // end _highlightRow
+
+
+void PhenotypesDialog::_updateSelectedInfo()
+{
+    _ui->remarksTextBrowser->clear();
+    _ui->criteriaTextBrowser->clear();
+    if ( _chid >= 0)
+    {
         Phenotype::Ptr hpo = HPOMan::phenotype( _chid);
-        _ui->criteriaTextEdit->setPlainText( hpo->criteria());
+        QString criteria;
+        if ( !hpo->objectiveCriteria().isEmpty())
+            criteria += "<h4>Objective</h4><p>" + hpo->objectiveCriteria() + "</p>";
+        if ( !hpo->subjectiveCriteria().isEmpty())
+            criteria += "<h4>Subjective</h4><p>" + hpo->subjectiveCriteria() + "</p>";
+        _ui->criteriaTextBrowser->setHtml( criteria);
 
         QString remarks;
         if ( !hpo->remarks().isEmpty())
-            remarks = hpo->remarks() + "\n\n";
-        remarks += "Synonyms: " + hpo->synonyms().join("; ");
-        _ui->remarksTextEdit->setPlainText( remarks);
+            remarks += "<p>" + hpo->remarks() + "</p>";
+        if ( !hpo->synonyms().isEmpty())
+            remarks += "<h4>Synonyms</h4><p>" + hpo->synonyms().join("; ") + "</p>";
+        if ( !hpo->refs().isEmpty())
+            remarks += "<h4>References</h4><p>" + hpo->refs().join("<br>") + "</p>";
+        _ui->remarksTextBrowser->setHtml( remarks);
     }   // end if
-}   // end highlightRow
+}   // end _updateSelectedInfo
 
 
-// private
-void PhenotypesDialog::populateSyndromes( const IntSet& sids)
+void PhenotypesDialog::_populateSyndromes()
 {
     _ui->syndromesComboBox->clear();
-    _ui->syndromesComboBox->addItem( "-- Any --", -1);
+    _ui->syndromesComboBox->addItem( "-- Any --");
+    _ui->syndromesComboBox->addItems( SynMan::names());
+    //_ui->syndromesComboBox->setEnabled( SynMan::size() > 0);
+    _ui->syndromesComboBox->setEnabled( false); // ENABLE LATER
+}   // end _populateSyndromes
 
-    std::unordered_map<QString, int> nids;
-    QStringList slst;
-    for ( int sid : sids)
+
+void PhenotypesDialog::_populateAnatomicalRegions()
+{
+    _ui->anatomicalRegionsComboBox->clear();
+    _ui->anatomicalRegionsComboBox->addItem( "-- Any --");
+    _ui->anatomicalRegionsComboBox->addItems( HPOMan::regions());
+    _ui->anatomicalRegionsComboBox->setEnabled( HPOMan::size() > 0);
+}   // end _populateAnatomicalRegions
+
+
+void PhenotypesDialog::_doOnUserSelectedSyndrome()
+{
+    _setFilteredHPOs();
+    _refresh();
+}   // end _doOnUserSelectedSyndrome
+
+
+void PhenotypesDialog::_doOnUserSelectedAnatomicalRegion()
+{
+    _setFilteredHPOs();
+    _refresh();
+}   // end _doOnUserSelectedAnatomicalRegion
+
+
+void PhenotypesDialog::_setFilteredHPOs()
+{
+    _fhpos.clear();
+    const int sidx = _ui->syndromesComboBox->currentIndex();
+    const IntSet& hids = sidx > 0 ? SynMan::syndrome( _ui->syndromesComboBox->currentText())->hpos() : HPOMan::ids();
+    for ( int hid : hids)
+        if ( _allhpos.count(hid) > 0)
+            _fhpos.insert(hid);
+
+    // Use only the HPOs that match the selected anatomical region
+    if ( _ui->anatomicalRegionsComboBox->currentIndex() > 0)
     {
-        QString nm = SynMan::syndrome(sid)->name();
-        slst.append(nm);
-        nids[nm] = sid;
+        const IntSet &rhids = HPOMan::byRegion( _ui->anatomicalRegionsComboBox->currentText());
+        IntSet mhids;
+        for ( int hid : _fhpos)
+            if ( rhids.count(hid) > 0)
+                mhids.insert(hid);
+        _fhpos = mhids;
+    }   // end if
+}   // end _setFilteredHPOs
+
+
+void PhenotypesDialog::showPhenotypes( const IntSet& hids)
+{
+    QSignalBlocker blockerA( _ui->syndromesComboBox);
+    QSignalBlocker blockerB( _ui->anatomicalRegionsComboBox);
+    _ui->syndromesComboBox->setCurrentIndex( 0);
+    _ui->anatomicalRegionsComboBox->setCurrentIndex( 0);
+    _allhpos = _fhpos = hids;
+    _refresh();
+}   // end showPhenotypes
+
+
+void PhenotypesDialog::_refresh()
+{
+    int shid = -1;
+    int rowCount = _ui->table->rowCount();
+    for ( int i = 0; i < rowCount; ++i)
+    {
+        const int hid = _ui->table->item(i, ID_COL)->data(Qt::UserRole).toInt();
+        if ( _fhpos.count(hid) > 0)
+        {
+            _ui->table->showRow( i);
+            if ( shid < 0 || hid == _chid)
+                shid = hid;
+        }   // end if
+        else
+            _ui->table->hideRow( i);
     }   // end for
 
-    slst.sort();
-    for ( const QString& nm : slst)
-        _ui->syndromesComboBox->addItem( nm, nids.at(nm));
-
-    _ui->syndromesComboBox->setEnabled( _ui->syndromesComboBox->count() > 1);
-}   // end populateSyndromes
+    _highlightRow( shid >= 0 ? _idRows.at(shid) : -1);
+}   // end _refresh
 
 
-// private
-void PhenotypesDialog::appendRow( int hid)
+void PhenotypesDialog::selectHPO( int shid)
+{
+    if ( shid >= 0)
+        _highlightRow( _idRows.at(shid));
+}   // end selectHPO
+
+
+void PhenotypesDialog::_populateTable()
+{
+    _allhpos = _fhpos = HPOMan::ids();
+    for ( int hid : _allhpos)
+        _appendRow( hid);
+}   // end _populateTable
+
+
+void PhenotypesDialog::_appendRow( int hid)
 {
     Phenotype::Ptr mc = HPOMan::phenotype( hid);
 
@@ -184,26 +288,23 @@ void PhenotypesDialog::appendRow( int hid)
     _ui->table->insertRow(rowid);
 
     // Id
-    QTableWidgetItem* iitem = new IntTableWidgetItem( hid, 5);
+    const QString iname = QString("HP:%1").arg(hid, int(7), int(10), QChar('0'));
+    QTableWidgetItem* iitem = new QTableWidgetItem( iname, 0);
+    iitem->setData( Qt::UserRole, hid);
     iitem->setFlags( Qt::ItemIsEnabled);
     _ui->table->setItem( rowid, ID_COL, iitem);
 
     // Name
     QTableWidgetItem* nitem = new QTableWidgetItem( mc->name());
-    nitem->setFlags( Qt::ItemIsEnabled);// | Qt::ItemIsEditable);
+    nitem->setFlags( Qt::ItemIsEnabled);
     _ui->table->setItem( rowid, NAME_COL, nitem);
 
-    // Region
-    QTableWidgetItem* citem = new QTableWidgetItem( mc->region());
-    citem->setFlags( Qt::ItemIsEnabled);
-    _ui->table->setItem( rowid, REGION_COL, citem);
-
-    // Associated metrics
+    // Related metrics
     QStringList mnames;
     for ( int mid : mc->metrics())
     {
-        if ( MCM::metric(mid))
-            mnames.append( MCM::metric(mid)->name());
+        if ( MM::metric(mid))
+            mnames.append( MM::metric(mid)->name());
         else
             mnames.append( QString("[%1]").arg(mid));   // Just display the number for currently missing metrics
     }   // end for
@@ -212,60 +313,4 @@ void PhenotypesDialog::appendRow( int hid)
     _ui->table->setItem( rowid, METRICS_COL, mitem);
 
     _ui->table->selectRow( rowid);
-}   // end appendRow
-
-
-// private slot
-void PhenotypesDialog::doOnUserSelectedSyndrome()
-{
-    const IntSet *hset = &HPOMan::ids();
-    const int sid = _ui->syndromesComboBox->currentData().toInt();
-    if ( sid >= 0)
-        hset = &SynMan::syndrome(sid)->hpos();
-
-    // Show/hide HPO term table rows according to if the name of the term is in the set for the selected syndrome.
-    int shid = -1;
-    int rowCount = _ui->table->rowCount();
-    for ( int i = 0; i < rowCount; ++i)
-    {
-        int hid = _ui->table->item(i, ID_COL)->text().toInt();
-        if ( (hset->count(hid) > 0) && (_dhids.count(hid) > 0))
-        {
-            _ui->table->showRow( i);
-            if ( shid < 0 || hid == _chid)
-                shid = hid;
-        }   // end if
-        else
-            _ui->table->hideRow( i);
-    }   // end for
-
-    setSelectedPhenotype(shid);
-}   // end doOnUserSelectedSyndrome
-
-
-void PhenotypesDialog::doOnShowPhenotypes( const IntSet& hids)
-{
-    int shid = -1;
-    IntSet sids;
-    int rowCount = _ui->table->rowCount();
-    for ( int i = 0; i < rowCount; ++i)
-    {
-        int hid = _ui->table->item(i, ID_COL)->text().toInt();
-
-        if ( hids.count(hid) > 0)
-        {
-            _ui->table->showRow( i);
-            const IntSet& hsids = SynMan::hpoSyndromes(hid);
-            sids.insert( hsids.begin(), hsids.end());
-            if ( shid < 0 || hid == _chid)
-                shid = hid;
-        }   // end if
-        else
-            _ui->table->hideRow( i);
-    }   // end for
-
-    _dhids = hids;
-    populateSyndromes(sids);
-
-    setSelectedPhenotype(shid);
-}   // end doOnShowPhenotypes
+}   // end _appendRow

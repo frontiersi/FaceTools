@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,38 +31,34 @@ using MS = FaceTools::Action::ModelSelector;
 
 
 ActionToggleCameraActorInteraction::ActionToggleCameraActorInteraction( const QString& dn, const QIcon& ico, const QKeySequence& ks)
-    : FaceAction( dn, ico, ks), _dblClickDrag(false)
+    : FaceAction( dn, ico, ks)
 {
-    const Interactor::SelectNotifier *sn = MS::selector();
-    connect( sn, &Interactor::SelectNotifier::onDoubleClickedSelected, this, &ActionToggleCameraActorInteraction::_doDoubleClicked);
-    connect( sn, &Interactor::SelectNotifier::onLeftButtonUp, this, &ActionToggleCameraActorInteraction::_doLeftButtonUp);
-
-    _moveNotifier = std::shared_ptr<ActorMoveNotifier>( new ActorMoveNotifier);
-    connect( &*_moveNotifier, &ActorMoveNotifier::onActorStart, this, &ActionToggleCameraActorInteraction::_doOnActorStart);
-    connect( &*_moveNotifier, &ActorMoveNotifier::onActorStop, this, &ActionToggleCameraActorInteraction::_doOnActorStop);
-
+    connect( &_moveNotifier, &ActorMoveNotifier::onActorStart,
+            this, &ActionToggleCameraActorInteraction::_doOnActorStart);
+    connect( &_moveNotifier, &ActorMoveNotifier::onActorStop,
+            this, &ActionToggleCameraActorInteraction::_doOnActorStop);
+    connect( &_moveNotifier, &ActorMoveNotifier::onCameraStop,
+            this, &ActionToggleCameraActorInteraction::_doOnCameraStop);
     setCheckable( true, false);
 }   // end ctor
 
 
 QString ActionToggleCameraActorInteraction::toolTip() const
 {
-    return "When on, click and drag the selected model to change its position or orientation.";
+    return "Toggle on to move models by clicking and dragging on them.";
 }   // end toolTip
 
 
 QString ActionToggleCameraActorInteraction::whatsThis() const
 {
-    QStringList htext;
-    htext << "With this option toggled off, mouse clicking and dragging causes the camera to move around.";
-    htext << "When this option is toggled on, clicking and dragging on a model will reposition or reorient it in space.";
-    htext << "Click and drag with the left mouse button to rotate the model in place.";
-    htext << "Click and drag with the right mouse button (or hold down the SHIFT key while left clicking and dragging)";
-    htext << "to shift the model laterally. Click and drag with the middle mouse button (or hold down the CTRL key while";
-    htext << "left or right clicking and dragging) to move the model towards or away from you.";
-    htext << "Note that clicking and dragging off the model's surface will still move the camera around, but that this also";
-    htext << "toggles this option off (any camera action from the menu/toolbar will also toggle this option off).";
-    return tr( htext.join(" ").toStdString().c_str());
+    QStringList ht;
+    ht << "If toggled on, clicking and dragging on a model moves it around.";
+    ht << "Click and drag with the left mouse button to rotate the model in place.";
+    ht << "Click and drag with the right mouse button (or hold SHIFT while left clicking and dragging)";
+    ht << "to shift the model laterally. Click and drag with the middle mouse button (or hold CTRL while";
+    ht << "left or right clicking and dragging) to move the model towards or away from you.";
+    ht << "Clicking and dragging outside a model switches back to camera interaction mode.";
+    return tr( ht.join(" ").toStdString().c_str());
 }   // end whatsThis
 
 
@@ -72,11 +68,11 @@ bool ActionToggleCameraActorInteraction::checkState( Event)
 }   // end checkState
 
 
-bool ActionToggleCameraActorInteraction::checkEnable( Event)
+bool ActionToggleCameraActorInteraction::isAllowed( Event)
 {
     const FM* fm = MS::selectedModel();
     return fm || isChecked();
-}   // end checkEnabled
+}   // end isAllowedd
 
 
 void ActionToggleCameraActorInteraction::doAction( Event)
@@ -94,33 +90,25 @@ void ActionToggleCameraActorInteraction::doAction( Event)
 }   // end doAction
 
 
+Event ActionToggleCameraActorInteraction::doAfterAction( Event)
+{
+    return Event::NONE;
+}   // end doAfterAction
+
+
 void ActionToggleCameraActorInteraction::_doOnActorStart()
 {
-    storeUndo( this, Event::AFFINE_CHANGE);
+    storeUndo( this, Event::AFFINE_CHANGE | Event::CAMERA_CHANGE);
 }   // end _doOnActorStart
 
 
 void ActionToggleCameraActorInteraction::_doOnActorStop()
 {
-    emit onEvent( Event::AFFINE_CHANGE);
+    emit onEvent( Event::AFFINE_CHANGE | Event::CAMERA_CHANGE);
 }   // end _doOnActorStop
 
 
-// Called only when user double clicks on an already selected model.
-void ActionToggleCameraActorInteraction::_doDoubleClicked()
+void ActionToggleCameraActorInteraction::_doOnCameraStop()
 {
-    _dblClickDrag = true;
-    setChecked( true);
-    execute( Event::USER);
-}   // end _doDoubleClicked
-
-
-void ActionToggleCameraActorInteraction::_doLeftButtonUp()
-{
-    if ( _dblClickDrag)
-    {
-        _dblClickDrag = false;
-        setChecked( false);
-        execute( Event::USER);
-    }   // end if
-}   // end _doLeftButtonUp
+    setChecked(false);
+}   // end _doOnCameraStop

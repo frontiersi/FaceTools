@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,16 +16,15 @@
  ************************************************************************/
 
 #include <Action/ActionSetMinScalarColour.h>
-#include <Vis/SurfaceMetricsMapper.h>
+#include <Vis/ScalarVisualisation.h>
 #include <Vis/FaceView.h>
 #include <QColorDialog>
-#include <algorithm>
 using FaceTools::Action::ActionSetMinScalarColour;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
-using SMM = FaceTools::Vis::SurfaceMetricsMapper;
+using FaceTools::Vis::ScalarVisualisation;
 using MS = FaceTools::Action::ModelSelector;
 
 
@@ -36,19 +35,21 @@ ActionSetMinScalarColour::ActionSetMinScalarColour( const QString& dname)
 }   // end ctor
 
 
-bool ActionSetMinScalarColour::checkEnable( Event)
+bool ActionSetMinScalarColour::isAllowed( Event)
 {
     const FV* fv = MS::selectedView();
-    const SMM* smm = fv ? fv->activeSurface() : nullptr;
-    if ( smm)
-        setIconColour( smm->minColour());
-    return smm && smm->isScalarMapping();
-}   // end checkEnabled
+    const ScalarVisualisation* smapper = fv ? fv->activeScalars() : nullptr;
+    if ( smapper)
+        setIconColour( smapper->minColour());
+    return smapper != nullptr;
+}   // end isAllowedd
 
 
 bool ActionSetMinScalarColour::doBeforeAction( Event)
 {
-    QColor c = QColorDialog::getColor( _curColour, static_cast<QWidget*>(parent()), "Choose new minimum surface mapping colour");
+    QColorDialog::ColorDialogOptions options;
+    QColor c = QColorDialog::getColor( _curColour, static_cast<QWidget*>(parent()),
+                    tr("Choose new minimum surface mapping colour"), options);
     if ( c.isValid())
         setIconColour( c);
     return c.isValid();
@@ -57,11 +58,12 @@ bool ActionSetMinScalarColour::doBeforeAction( Event)
 
 void ActionSetMinScalarColour::doAction( Event)
 {
-    SMM* smm = MS::selectedView()->activeSurface();
-    assert(smm);
-    smm->setMinColour( _curColour);
-    smm->rebuild();
-    emit onEvent( Event::VIEW_CHANGE);
+    FV *fv = MS::selectedView();
+    ScalarVisualisation* smapper = fv->activeScalars();
+    assert(smapper);
+    smapper->setMinColour( _curColour);
+    smapper->rebuild();
+    fv->setActiveScalars( smapper); // Ensure forwards through
 }   // end doAction
 
 

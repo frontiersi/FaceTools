@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,18 +47,18 @@ ActionShowModelProperties::~ActionShowModelProperties()
 
 bool ActionShowModelProperties::checkState( Event e)
 {
-    if ( EventGroup(e).has(Event::CLOSED_MODEL) && !MS::selectedModel())
+    if ( has( e, Event::CLOSED_MODEL) && !MS::selectedModel())
         _dialog->hide();
     return !_dialog->isHidden();
 }   // end checkState
 
 
-bool ActionShowModelProperties::checkEnable( Event)
+bool ActionShowModelProperties::isAllowed( Event)
 {
     const FM* fm = MS::selectedModel();
     _dialog->set( fm);
     return fm != nullptr;
-}   // end checkEnable
+}   // end isAllowed
 
 
 void ActionShowModelProperties::doAction( Event)
@@ -69,7 +69,8 @@ void ActionShowModelProperties::doAction( Event)
 }   // end doAction
 
 
-void ActionShowModelProperties::doAfterAction( Event)
+Event ActionShowModelProperties::doAfterAction( Event)
 {
     MS::showStatus( "Showing Model Properties", 5000);
+    return Event::NONE;
 }   // end doAfterAction

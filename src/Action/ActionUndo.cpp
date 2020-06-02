@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@ ActionUndo::ActionUndo( const QString &dn, const QIcon& ico, const QKeySequence&
 }   // end ctor
 
 
-bool ActionUndo::checkEnable( Event)
+bool ActionUndo::isAllowed( Event)
 {
     const bool cando = UndoStates::canUndo();
     QString dname = _dname; // "Undo"
@@ -42,13 +42,13 @@ bool ActionUndo::checkEnable( Event)
     setDisplayName( dname);
     setToolTip( ttip);
     return cando;
-}   // end checkEnable
+}   // end isAllowed
 
 
 bool ActionUndo::doBeforeAction( Event)
 {
     // Need to save the name of the action being undone here since upon actually doing
-    // the undo, signal onUpdated is emitted which causes checkEnable to execute which
+    // the undo, signal onUpdated is emitted which causes isAllowed to execute which
     // will update the name of the undo action that would otherwise be shown in the
     // status bar by the default implementation of doAfterAction.
     _rname = UndoStates::undoActionName();
@@ -59,11 +59,12 @@ bool ActionUndo::doBeforeAction( Event)
 
 void ActionUndo::doAction( Event)
 {
-    UndoStates::undo();
+    _e = UndoStates::undo();
 }   // end doAction
 
 
-void ActionUndo::doAfterAction( Event)
+Event ActionUndo::doAfterAction( Event)
 {
     MS::showStatus( QString("Finished undoing '%1'").arg(_rname), 3000);
+    return _e;
 }   // end doAfterAction

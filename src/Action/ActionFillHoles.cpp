@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,14 +18,12 @@
 #include <Action/ActionFillHoles.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <ObjModelHoleFiller.h>
+#include <r3d/HoleFiller.h>
 #include <algorithm>
 using FaceTools::Action::ActionFillHoles;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
-using FaceTools::FVS;
 using FaceTools::Vis::FV;
-using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
 
 
@@ -36,9 +34,9 @@ ActionFillHoles::ActionFillHoles( const QString& dn, const QIcon& ico)
 }   // end ctor
 
 
-bool ActionFillHoles::checkEnable( Event)
+bool ActionFillHoles::isAllowed( Event)
 {
-    const FM* fm = MS::selectedModel();
+    const FM *fm = MS::selectedModel();
     if ( !fm)
         return false;
 
@@ -48,7 +46,7 @@ bool ActionFillHoles::checkEnable( Event)
     const int nc = static_cast<int>(fm->manifolds().count());
     for ( int c = 0; c < nc; ++c)
     {
-        if ( fm->manifolds().manifold(c)->boundaries( fm->model()).count() > 1)
+        if ( fm->manifolds()[c].boundaries().count() > 1)
         {
             rval = true;
             break;
@@ -56,26 +54,27 @@ bool ActionFillHoles::checkEnable( Event)
     }   // end for
     fm->unlock();
     return rval;
-}   // end testReady
+}   // end isAllowed
 
 
 bool ActionFillHoles::doBeforeAction( Event)
 {
     MS::showStatus( "Filling model holes...");
+    storeUndo( this, Event::MESH_CHANGE | Event::CONNECTIVITY_CHANGE);
     return true;
 }   // end doBeforeAction
 
 
 namespace {
-size_t getNumHoles( const RFeatures::ObjModel& model, const RFeatures::ObjModelManifolds& manf)
+size_t getNumHoles( const r3d::Manifolds& manf)
 {
     int nholes = 0;
-    using namespace RFeatures;
+    using namespace r3d;
     const size_t nm = manf.count();
     for ( size_t i = 0; i < nm; ++i)
     {
-        const ObjManifold& man = *manf.manifold(int(i));
-        const ObjModelManifoldBoundaries& bnds = man.boundaries(model);
+        const r3d::Manifold& man = manf[int(i)];
+        const r3d::Boundaries& bnds = man.boundaries();
         const int nbs = static_cast<int>(bnds.count()); // Can be zero
         nholes += std::max( 0, nbs - 1);
     }   // end for
@@ -87,30 +86,28 @@ size_t getNumHoles( const RFeatures::ObjModel& model, const RFeatures::ObjModelM
 
 void ActionFillHoles::doAction( Event)
 {
-    storeUndo( this, {Event::GEOMETRY_CHANGE, Event::CONNECTIVITY_CHANGE});
-
-    using namespace RFeatures;
+    using namespace r3d;
 
     FM* fm = MS::selectedModel();
     fm->lockForWrite();
-    const ObjModelManifolds* manfs = &fm->manifolds();
+    const Manifolds* manfs = &fm->manifolds();
     const size_t nm = manfs->count();
-    ObjModel::Ptr model = fm->wmodel();
-    ObjModelManifolds::Ptr nmanfs;
+    Mesh::Ptr mesh = fm->mesh().deepCopy();
+    Manifolds::Ptr nmanfs;
 
     while ( true)
     {
-        ObjModelHoleFiller hfiller( model);
+        HoleFiller hfiller( mesh);
         std::vector<int> mholes(nm);    // Record the number of holes per manifold
 
         int sumPolysAdded = 0;    // Total polygons added
         for ( size_t i = 0; i < nm; ++i)
         {
-            const ObjManifold* man = manfs->manifold(int(i));
-            const IntSet& mpolys = man->polygons();
+            const r3d::Manifold& man = manfs->at(int(i));
+            const IntSet& mpolys = man.faces();
             assert( !mpolys.empty());
 
-            const ObjModelManifoldBoundaries& bnds = man->boundaries(*model);
+            const Boundaries& bnds = man.boundaries();
             const int nbs = static_cast<int>(bnds.count()); // Can be zero
             mholes[i] = std::max(0, nbs-1);
 
@@ -134,24 +131,23 @@ void ActionFillHoles::doAction( Event)
         if ( sumPolysAdded == 0)
             break;
 
-        nmanfs = ObjModelManifolds::create( *model);
+        nmanfs = Manifolds::create( *mesh);
         for ( size_t i = 0; i < nm; ++i)
-            nmanfs->manifold(int(i))->boundaries( *model);  // Causes boundary edges to be calculated
+            nmanfs->at(int(i)).boundaries();  // Causes boundary edges to be calculated
         manfs = nmanfs.get();
     }   // end while
 
-    fm->update( model);
-    fm->moveLandmarksToSurface();
+    fm->update( mesh, true, true);
     fm->unlock();
 }   // end doAction
 
 
-void ActionFillHoles::doAfterAction( Event)
+Event ActionFillHoles::doAfterAction( Event)
 {
     const FM* fm = MS::selectedModel();
 
-    const size_t nh = getNumHoles( fm->model(), fm->manifolds());
+    const size_t nh = getNumHoles( fm->manifolds());
     MS::showStatus( QString("Finished hole filling; %1 hole%2 remain%3.").arg(nh == 0 ? "no" : QString("%1").arg(nh)).arg( nh != 1 ? "s" : "").arg( nh == 1 ? "s" : ""), 5000);
-    emit onEvent( {Event::GEOMETRY_CHANGE, Event::CONNECTIVITY_CHANGE});
+    return Event::MESH_CHANGE | Event::CONNECTIVITY_CHANGE;
 }   // end doAfterAction
 

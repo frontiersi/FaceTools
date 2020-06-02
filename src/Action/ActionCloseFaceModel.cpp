@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
 #include <FileIO/FaceModelManager.h>
 #include <QMessageBox>
 #include <boost/filesystem.hpp>
-#include <algorithm>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionCloseFaceModel;
 using FaceTools::Action::Event;
@@ -33,12 +32,13 @@ using MS = FaceTools::Action::ModelSelector;
 ActionCloseFaceModel::ActionCloseFaceModel( const QString& dname, const QIcon& ico, const QKeySequence& ks)
     : FaceAction( dname, ico, ks) {}
 
-bool ActionCloseFaceModel::checkEnable( Event) { return MS::selectedView();}
+bool ActionCloseFaceModel::isAllowed( Event) { return MS::isViewSelected();}
 
 
 bool ActionCloseFaceModel::doBeforeAction( Event)
 {
     const FM* fm = MS::selectedModel();
+    assert(fm);
     fm->lockForRead();
     bool inPreferredFormat = FMM::hasPreferredFileFormat(fm);
 
@@ -49,11 +49,10 @@ bool ActionCloseFaceModel::doBeforeAction( Event)
     else
     {
         const std::string fname = boost::filesystem::path( FMM::filepath(fm)).filename().string();
-        QString msg = tr( ("Model '" + fname + "' has unsaved changes! Close anyway?").c_str());
+        QString msg = tr( ("Model '" + fname + "' is unsaved! Really close?").c_str());
         if ( fm->hasMetaData() && !inPreferredFormat)
-            msg = tr("Not saved in .3df file format; landmark and other meta-data will be lost! Close anyway?");
-
-        doclose = QMessageBox::Yes == QMessageBox::warning( static_cast<QWidget*>(parent()), tr("Unsaved changes!"), msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+            msg = tr("Not saved as 3DF; data will be lost! Really close?");
+        doclose = QMessageBox::Yes == QMessageBox::warning( static_cast<QWidget*>(parent()), tr("Unsaved Data!"), msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     }   // end if
     fm->unlock();
 
@@ -63,15 +62,14 @@ bool ActionCloseFaceModel::doBeforeAction( Event)
 
 void ActionCloseFaceModel::doAction( Event)
 {
-    UndoStates::clear( MS::selectedModel());
-    FAM::close( MS::selectedModel());
+    const FM *fm = MS::selectedModel();
+    UndoStates::clear( fm);
+    FAM::close( fm);
 }   // end doAction
 
 
-void ActionCloseFaceModel::doAfterAction( Event)
+Event ActionCloseFaceModel::doAfterAction( Event)
 {
     MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-    emit onEvent( {Event::CLOSED_MODEL, Event::VIEWER_CHANGE});
-
-    // Now need to select 
+    return Event::CLOSED_MODEL | Event::VIEWER_CHANGE | Event::ALL_VIEWERS;
 }   // end doAfterAction

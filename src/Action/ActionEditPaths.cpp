@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,6 @@
 #include <Action/ActionEditPaths.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
-#include <VtkTools.h>
 using FaceTools::Action::ActionEditPaths;
 using FaceTools::Action::Event;
 using FaceTools::Action::UndoState;
@@ -29,55 +28,50 @@ using FaceTools::Vis::FV;
 using FaceTools::Vis::PathView;
 using MS = FaceTools::Action::ModelSelector;
 
-Q_DECLARE_METATYPE( FaceTools::PathSet::Ptr)
+Q_DECLARE_METATYPE( FaceTools::Path)
 
 
 ActionEditPaths::ActionEditPaths( const QString& dn, const QIcon& ic, PathsHandler::Ptr handler, const QKeySequence& ks)
-    : ActionVisualise( dn, ic, handler->visualisation(), ks), _handler( handler)
+    : ActionVisualise( dn, ic, &handler->visualisation(), ks), _handler( handler)
 {
-    connect( &*_handler, &PathsHandler::onStartedDrag, [this](){ storeUndo(this);});
+    connect( &*_handler, &PathsHandler::onStartedDrag, this, &ActionEditPaths::_doOnStartedDrag);
     connect( &*_handler, &PathsHandler::onFinishedDrag, [this](){ emit onEvent( Event::PATHS_CHANGE);});
-    addTriggerEvent( Event::PATHS_CHANGE);
 }   // end ctor
 
 
 bool ActionEditPaths::checkState( Event e)
 {
-    bool chk = ActionVisualise::checkState(e);    // true if _vis->isVisible true
-    _handler->setEnabled(chk);
-    return chk;
+    _handler->refreshState();
+    return ActionVisualise::checkState(e);
 }   // end checkState
 
 
-void ActionEditPaths::doAction( Event e)
+Event ActionEditPaths::doAfterAction( Event e)
 {
-    ActionVisualise::doAction(e);
+    MS::clearStatus();
     if ( isChecked())
-    {
-        MS::setInteractionMode( IMode::CAMERA_INTERACTION);
         MS::showStatus( "Move path handles by left-clicking and dragging; right click to rename/delete.");
-        if ( _handler->hoverPath())  // Ensure captions of hovered over path is up-to-date.
-            _handler->setCaption( MS::selectedView(), _handler->hoverPath()->pathId());
-    }   // end if
-    else
-        MS::clearStatus();
-}   // end doAction
+    return ActionVisualise::doAfterAction( e);
+}   // end doAfterAction
 
 
-UndoState::Ptr ActionEditPaths::makeUndoState() const
+void ActionEditPaths::saveState( UndoState &us) const
 {
-    UndoState::Ptr us = UndoState::create( this, Event::PATHS_CHANGE);
-    us->setName( "Move Path Handle");
-    PathSet::Ptr paths = us->model()->currentAssessment()->paths().deepCopy();
-    us->setUserData( "Paths", QVariant::fromValue(paths));
-    return us;
-}   // end makeUndoState
+    const Path &path = us.model()->currentPaths().path(_pid);
+    us.setName( "Move Path");
+    us.setUserData( "Path", QVariant::fromValue( path));
+}   // end saveState
 
 
-void ActionEditPaths::restoreState( const UndoState* us)
+void ActionEditPaths::restoreState( const UndoState& us)
 {
-    PathSet::Ptr paths = us->userData("Paths").value<PathSet::Ptr>();
-    FM* fm = us->model();
-    fm->setPaths(paths);
-    _handler->visualisation()->syncPaths(fm);
+    const Path &path = us.userData("Path").value<Path>();
+    us.model()->currentAssessment()->paths().path(path.id()) = path;
 }   // end restoreState
+
+
+void ActionEditPaths::_doOnStartedDrag( PathView::Handle *h)
+{
+    _pid = h->pathId();
+    storeUndo( this, Event::PATHS_CHANGE, false);
+}   // end _doOnStartedDrag

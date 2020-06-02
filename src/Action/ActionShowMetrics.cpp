@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,13 +16,16 @@
  ************************************************************************/
 
 #include <Action/ActionShowMetrics.h>
-#include <Metric/MetricCalculatorManager.h>
+#include <Action/ActionSetParallelProjection.h>
+#include <Metric/MetricManager.h>
+#include <FileIO/FaceModelManager.h>
 #include <Vis/MetricVisualiser.h>
 #include <Ethnicities.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <algorithm>
 #include <QDebug>
+#include <vtkTextProperty.h>
 using FaceTools::Action::ActionShowMetrics;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
@@ -30,43 +33,73 @@ using FaceTools::Metric::MetricSet;
 using FaceTools::Metric::MCSet;
 using FaceTools::Metric::MC;
 using FaceTools::Vis::FV;
-using FaceTools::FVS;
 using FaceTools::FMV;
 using FaceTools::FM;
-using MCM = FaceTools::Metric::MetricCalculatorManager;
-using FaceTools::Widget::MetricsDialog;
+using FaceTools::FileIO::FMM;
 using FaceTools::Metric::MetricValue;
+using MM = FaceTools::Metric::MetricManager;
 using MS = FaceTools::Action::ModelSelector;
 
+// static
+bool ActionShowMetrics::s_showParallelProjection(false);
 
-double ActionShowMetrics::s_opacity(1.0);
-
-void ActionShowMetrics::setOpacityOnShow( double v) { s_opacity = std::min( 1.0, std::max( 0.1, v));}
+void ActionShowMetrics::setParallelProjectionOnShow( bool v) { s_showParallelProjection = v;}
 
 
 ActionShowMetrics::ActionShowMetrics( const QString& dn, const QIcon& ico, const QKeySequence& ks)
-    : FaceAction( dn, ico, ks), _mdialog(nullptr), _nowShowing(false)
+    : FaceAction( dn, ico, ks), _mdialog(nullptr), _cdialog(nullptr), _pmid(-1)
 {
-    setCheckable( true, _nowShowing);
-    addTriggerEvent( Event::METRICS_CHANGE);
-    addTriggerEvent( Event::METADATA_CHANGE);
-    addTriggerEvent( Event::ASSESSMENT_CHANGE);
-    addTriggerEvent( Event::CLOSED_MODEL);
-    addTriggerEvent( Event::MODEL_SELECT);
+    setCheckable( true, false);
+    addTriggerEvent( Event::METRICS_CHANGE | Event::CLOSED_MODEL | Event::RESTORE_CHANGE | Event::VIEWER_CHANGE);
 }   // end ctor
 
 
 void ActionShowMetrics::postInit()
 {
     QWidget* p = static_cast<QWidget*>(parent());
-    _mdialog = new MetricsDialog( p);
-    connect( _mdialog, &MetricsDialog::accepted, [this](){ setChecked(false); this->execute( Event::USER);});
-    connect( _mdialog, &MetricsDialog::onSelectedMetric, this, &ActionShowMetrics::_doOnSelectedMetric);
-    connect( _mdialog, &MetricsDialog::onSetMetricGrowthData, this, &ActionShowMetrics::_doOnSetMetricGrowthData);
-    connect( _mdialog, &MetricsDialog::onChangedMetricVisibility, this, &ActionShowMetrics::_doOnChangedMetric);
+    _mdialog = new Widget::MetricsDialog( p);
+    _cdialog = new Widget::ChartDialog( p);
+    connect( _mdialog, &Widget::MetricsDialog::onShowChart, this, &ActionShowMetrics::_doOnShowChart);
+    connect( _mdialog, &Widget::MetricsDialog::accepted, this, &ActionShowMetrics::_closeDialog);
+    // Emitting STATS_CHANGE will always result in Event::METRICS_CHANGE being emitted from ActionUpdateMeasurements
+    connect( _mdialog, &Widget::MetricsDialog::onStatsChanged, [this](){ emit onEvent( Event::STATS_CHANGE);});
+    connect( _mdialog, &Widget::MetricsDialog::onRefreshAllMetrics, this, &ActionShowMetrics::_refreshGraphics);
     for ( FMV* fmv : MS::viewers())
         _addViewer(fmv);
 }   // end postInit
+
+
+void ActionShowMetrics::_doOnShowChart()
+{
+    _cdialog->show();
+    _cdialog->raise();
+    _cdialog->activateWindow();
+}   // end _doOnShowChart
+
+
+bool ActionShowMetrics::checkState( Event e)
+{
+    const FV *fv = MS::selectedView();
+    const bool showing = _mdialog->isVisible() && fv && fv->data()->hasLandmarks();
+    if ( isTriggerEvent(e))
+    {
+        _refreshGraphics();
+        _mdialog->reflectCurrentMetricStats();
+        _mdialog->reflectAtypical();
+        _cdialog->refresh();
+    }   // end if
+
+    if ( !showing)
+        _closeDialog();
+    return showing;
+}   // end checkState
+
+
+bool ActionShowMetrics::isAllowed( Event)
+{
+    const FV *fv = MS::selectedView();
+    return fv && fv->data()->hasLandmarks();
+}   // end isAllowed
 
 
 void ActionShowMetrics::_addViewer( FMV* fmv)
@@ -84,175 +117,129 @@ void ActionShowMetrics::_addViewer( FMV* fmv)
 }   // end _addViewer
 
 
-void ActionShowMetrics::setShowScanInfoAction( QAction* a) { _mdialog->setShowScanInfoAction(a);}
-
-
-void ActionShowMetrics::_doOnSetMetricGrowthData()
+void ActionShowMetrics::_setMetricHighlighted( int mid, bool v)
 {
-    _doOnSelectedMetric( MCM::currentMetric()->id());
-    emit onEvent( Event::METRICS_CHANGE);
-}   // end _doOnSetMetricGrowthData
-
-
-void ActionShowMetrics::_doOnSelectedMetric( int mid)
-{
-    MC::Ptr pmc = MCM::previousMetric();  // Previous active metric
-    for ( const FV* fv : pmc->visualiser()->applied())
-        pmc->visualiser()->setHighlighted( fv, false);
-    _mdialog->highlightRow( mid);
-    _doOnChangedMetric( mid);
-}   // end _doOnSelectedMetric
-
-
-void ActionShowMetrics::_doOnChangedMetric( int mid)
-{
-    MC::Ptr mc = MCM::metric(mid);
-    Vis::MetricVisualiser* mvis = mc->visualiser();
-    const bool isCurrentMetric = MCM::currentMetric()->id() == mid;
-    const bool isVisible = mc->isVisible() && isChecked();
-
-    // For visualisable metrics, refresh their visibility/highlight state for the attached views.
-    if ( mvis)
+    if ( _pmid >= 0)    // Previous metric
     {
-        for ( FV* fv : mvis->applied())
-        {
-            mvis->setVisible( fv, isVisible);
-            mvis->setHighlighted( fv, isCurrentMetric);
-            mvis->checkState( fv);
-        }   // end for
+        const MC::Ptr mc = MM::metric( _pmid);
+        Vis::MetricVisualiser *mvis = mc->visualiser();
+        for ( const FV *fv : mvis->applied())
+            mvis->setHighlighted( fv, false);
     }   // end if
 
-    if ( isCurrentMetric)
-        _updateMetricText( mid);
-    MS::updateRender();
-}   // end _doOnChangedMetric
+    const MC::Ptr mc = MM::metric(mid);
+    if ( mc && mc->visualiser())
+    {
+        Vis::MetricVisualiser *mvis = mc->visualiser();
+        for ( const FV *fv : mvis->applied())
+            mvis->setHighlighted( fv, v);
+        _pmid = mid;
+    }   // end if
+}   // end _setMetricHighlighted
 
 
-bool ActionShowMetrics::doBeforeAction( Event)
+void ActionShowMetrics::_refreshGraphics()
 {
-    return true;
-}   // end doBeforeAction
+    const bool isShowing = _mdialog->isVisible();
+    for ( MC::Ptr mc : MM::visMetrics())
+    {
+        if ( isShowing && mc->isVisible())
+        {
+            for ( const FM *fm : FMM::opened())
+                for ( FV* fv : fm->fvs())
+                    fv->apply( mc->visualiser());
+        }   // end if
+        else
+        {
+            for ( const FM *fm : FMM::opened())
+                for ( FV* fv : fm->fvs())
+                    mc->visualiser()->setVisible( fv, false);
+        }   // end else
+    }   // end for
 
-
-bool ActionShowMetrics::checkState( Event)
-{
-    // Ensure color of text complements viewer background
+    // Refresh current
+    int mid = -1;
+    if ( MM::currentMetric())
+        mid = MM::currentMetric()->id();
+    const bool showCurrent = isShowing && mid >= 0 && MM::currentMetric()->isVisible();
     for ( auto& p : _texts)
     {
-        QColor bg = p.first->backgroundColour();
-        QColor fg = chooseContrasting( bg);
-        vtkTextProperty* tp = p.second->GetTextProperty();
-        tp->SetBackgroundColor( bg.redF(), bg.greenF(), bg.blueF());
-        tp->SetColor( fg.redF(), fg.greenF(), fg.blueF());
+        const FMV *fmv = p.first;
+        const bool showTextOnViewer = showCurrent && fmv->attached().size() == 1 && _updateText( fmv->attached().first(), mid);
+        p.second->SetVisibility( showTextOnViewer);
     }   // end for
 
-    // Also update colours of visualisation actors to complement background.
-    for ( const MC::Ptr& mc : MCM::vmetrics())
-    {
-        Vis::MetricVisualiser* mvis = mc->visualiser();
-        for ( FV* fv : mvis->applied())
-            mvis->checkState( fv);
-    }   // end for
+    _setMetricHighlighted( mid, true);
 
-    _updateMetricText( MCM::currentMetric()->id());
-    return !_mdialog->isHidden();
-}   // end checkState
-
-
-bool ActionShowMetrics::checkEnable( Event) { return true;}
+    MS::updateRender();
+}   // end _refreshGraphics
 
 
 void ActionShowMetrics::doAction( Event)
 {
-    // Was previously shown?
-    const bool wasShowing = _nowShowing;
-
-    const MCSet& mcs = MCM::vmetrics();
-    const FM* fm = MS::selectedModel();
-
-    if ( !isChecked())
+    if ( isChecked())
     {
-        // Hide all the metric visualisations
-        for ( MC::Ptr mc : mcs)
+        if ( !_mdialog->isVisible())
         {
-            Vis::MetricVisualiser* mvis = mc->visualiser();
-            for ( FV* fv : mvis->applied())
-            {
-                mvis->setVisible( fv, false);
-                fv->setOpacity( 1.0);
-            }   // end for
-        }   // end for
-
-        _nowShowing = false;
-        emit onEvent( Event::VIEW_CHANGE);
-        _mdialog->hide();
+            _mdialog->show();   // Will cause onStatsChanged to be emitted
+            _refreshGraphics(); // Has to happen here as well as checkState
+            _setParallelProjection(true);
+        }   // end if
     }   // end if
-    else if ( fm && isChecked())
-    {
-        for ( MC::Ptr mc : mcs)
-        {
-            Vis::MetricVisualiser* mvis = mc->visualiser();
-
-            if ( fm->currentAssessment()->hasMetric(mc->id()))
-            {
-                for ( FV* fv : fm->fvs())
-                {
-                    fv->apply( mvis);
-                    if ( !_nowShowing)
-                        fv->setOpacity( std::min( fv->opacity(), s_opacity));
-                }   // end for
-            }   // end if
-        }   // end for
-        _nowShowing = true;
-    }   // end if
-
-    // Note that _nowShowing is only set true if there's a model selected.
-    if ( isChecked() && !wasShowing)
-        _mdialog->show();
-
-    // Refreshing here also refreshes the ChartDialog which refreshes the options
-    // available for the currently selected metric's growth curve data and also
-    // sets the current growth curve data for the metric to use.
-    _mdialog->refresh();
+    else if ( _mdialog->isVisible())
+        _closeDialog();
 }   // end doAction
 
 
-void ActionShowMetrics::purge( const FM* fm, Event e)
+void ActionShowMetrics::_closeDialog()
 {
-    for ( MC::Ptr mc : MCM::vmetrics())
-    {
-        Vis::MetricVisualiser* mvis = mc->visualiser();
-        for ( FV* fv : fm->fvs())
-            fv->purge( mvis, e);  // Calls mvis->purge(fv, e)
-    }   // end for
-}   // end purge
+    _mdialog->hide();
+    _cdialog->hide();
+    setChecked(false);
+    _hideGraphics();
+    _setParallelProjection(false);
+}   // end _closeDialog
 
 
-void ActionShowMetrics::_updateMetricText( int mid)
+void ActionShowMetrics::_hideGraphics()
 {
-    // Hide all the text actors
-    for ( const auto& p : _texts)
-        p.second->SetVisibility(false);
+    for ( MC::Ptr mc : MM::visMetrics())
+        for ( const FM *fm : FMM::opened())
+            for ( FV *fv : fm->fvs())
+                mc->visualiser()->setVisible( fv, false);
+    for ( auto& p : _texts)
+        p.second->SetVisibility( false);
+}   // end _hideGraphics
 
-    const FM* fm = MS::selectedModel();
-    if ( !fm)
-        return;
+
+void ActionShowMetrics::_setParallelProjection( bool v)
+{
+    Event e = Event::VIEW_CHANGE | Event::ALL_VIEWS | Event::ALL_VIEWERS;
+    if ( s_showParallelProjection && ActionSetParallelProjection::setParallelProjection( v))
+        e |= Event::CAMERA_CHANGE;
+    emit onEvent( e);
+}   // end _setParallelProjection
+
+
+bool ActionShowMetrics::_updateText( const FV *fv, int mid)
+{
+    assert(fv);
+    const FM* fm = fv->data();
+    FaceAssessment::CPtr ass = fm->currentAssessment();
+    if ( !ass->hasMetric( mid))
+        return false;
+
+    MC::Ptr mc = MM::metric(mid);
 
     // Get the correct metric value based on laterality
     const MetricValue* mv = nullptr;
-    const MetricValue* mvl = nullptr;
     const MetricValue* mvr = nullptr;
+    const MetricValue* mvl = nullptr;
 
-    FaceAssessment::CPtr ass = fm->currentAssessment();
-    //std::cerr << "Switched to assessment " << ass->assessor().toStdString() << std::endl;
-
-    MC::Ptr mc = MCM::metric( mid);
     if ( !mc->isBilateral())
     {
         if ( ass->cmetrics().has( mid))
             mv = &ass->cmetrics().metric(mid);
-        if ( !mv)
-            return;
     }   // end if
     else
     {
@@ -260,13 +247,29 @@ void ActionShowMetrics::_updateMetricText( int mid)
             mvl = &ass->cmetricsL().metric( mid);
         if ( ass->cmetricsR().has(mid))
             mvr = &ass->cmetricsR().metric( mid);
-        if ( !mvl || !mvr)
-            return;
     }   // end else
 
-    const int nds = int(mc->numDecimals());
+    std::string units;
+    if ( !mc->units().isEmpty())
+        units = " [" + mc->units().toStdString() + "]";
+    std::string bilat;
+    if ( mc->isBilateral())
+        bilat = " (R;L;Mean)";
+
+    const Metric::GrowthData *gd = mc->growthData().current();
+
+    std::string inplane;
+    if ( !mc->fixedInPlane())
+    {
+        if ( gd && mc->inPlane() != gd->inPlane())
+            inplane = " [IN-PLANE STATS MISMATCH]";
+        else if ( mc->inPlane())
+            inplane = " [IN-PLANE]";
+    }   // end if
+
+    const size_t nds = mc->numDecimals();
     std::ostringstream oss;
-    oss << mc->name().toStdString() << (mc->isBilateral() ? " (L;R;Mean)" : "") << "\n";
+    oss << mc->name().toStdString() << units << bilat << inplane << "\n";
     oss << std::fixed << std::setprecision(nds);
 
     oss << "Measure";
@@ -296,65 +299,76 @@ void ActionShowMetrics::_updateMetricText( int mid)
 
     oss << "\nZ-score" << (dims > 1 ? "s: " : ": ");    // Z-scores on line below
 
-    Metric::GrowthData::CPtr gd = mc->currentGrowthData();
-
     if ( !gd)
-        oss << " [No growth curve data available]";
+        oss << " [Statistics N/A]";
     else
     {
+        const float age = fm->age();
         for ( size_t i = 0; i < dims; ++i)
         {
             const int fw = fws[i];
             if ( mv)
             {
                 oss << std::right << std::setw(fw);
-                oss << mv->zscore( fm->age(), i);
+                if ( age > 0.0f)
+                    oss << mv->zscore( age, i);
+                else
+                    oss << "----";
             }   // end if
             else
             {
-                const double zsl = mvl->zscore( fm->age(), i);
-                const double zsr = mvr->zscore( fm->age(), i);
-                const double zsm = 0.5 * (zsl + zsr);
-                oss << std::right << std::setw(fw) << zsl << "; "
-                                  << std::setw(fw) << zsr << "; "
-                                  << std::setw(fw) << zsm;
+                if ( age > 0.0f)
+                {
+                    const double zsl = mvl->zscore( age, i);
+                    const double zsr = mvr->zscore( age, i);
+                    const double zsm = 0.5 * (zsl + zsr);
+                    oss << std::right << std::setw(fw) << zsr << "; "
+                                      << std::setw(fw) << zsl << "; "
+                                      << std::setw(fw) << zsm;
+                }   // end if
+                else
+                {
+                    oss << std::right << std::setw(fw) << "----" << "; "
+                                      << std::setw(fw) << "----" << "; "
+                                      << std::setw(fw) << "----";
+                }   // end else
             }   // end if
         }   // end for
 
-        // Get warnings
-        QStringList dwarns;
-
-        if (( gd->sex() != (FEMALE_SEX | MALE_SEX)) && gd->sex() != fm->sex())
-            dwarns << "Sex";
-
-        QStringList epars;
-        if ( !Ethnicities::belongs( gd->ethnicity(), fm->maternalEthnicity()))
-            epars << "Maternal";
-        if ( !Ethnicities::belongs( gd->ethnicity(), fm->paternalEthnicity()))
-            epars << "Paternal";
-        if ( epars.size() == 2)
-        {
-            if ( fm->maternalEthnicity() != fm->paternalEthnicity())
-                dwarns << "Ethnicities";
-            else
-                dwarns << "Ethnicity";
-        }   // end if
-        else if ( epars.size() == 1)
-            dwarns << QString( "%1 Ethnicity").arg( epars.first());
-
-        if ( !dwarns.empty())
-            oss << QString( " [Incompatible %1]").arg( dwarns.join(" & ")).toStdString();
-
-        // Show that the subject's age is outside bounds only if the more severe mismatches aren't shown
-        if ( !gd->isWithinAgeRange(fm->age()) && dwarns.empty())
+        if ( age == 0.0f)
+            oss << " [DOB unset]";
+        else if ( !gd->isWithinAgeRange(age))
             oss << " [Age Outside Bounds]";
+        else
+        {
+            QStringList dwarns;
+            if ( gd->sex() != UNKNOWN_SEX && gd->sex() != fm->sex())
+                dwarns << tr("Sex");
+
+            QStringList epars;
+            if ( !Ethnicities::belongs( gd->ethnicity(), fm->maternalEthnicity()))
+                epars << tr("Maternal");
+            if ( !Ethnicities::belongs( gd->ethnicity(), fm->paternalEthnicity()))
+                epars << tr("Paternal");
+            if ( epars.size() == 2)
+                dwarns << tr("Ethnic");
+            else if ( epars.size() == 1)
+                dwarns << tr("%1 Ethnic").arg( epars.first());
+
+            if ( !dwarns.empty())
+                oss << tr(" [%1 Mismatch]").arg( dwarns.join(" & ")).toStdString();
+        }   // end else
     }   // end else
 
-    const bool showText = _mdialog->isVisible() && MS::isViewSelected();
     const std::string ostr = oss.str();
-    for ( const auto& p : _texts)
-    {
-        p.second->SetInput( ostr.c_str());
-        p.second->SetVisibility( showText);
-    }   // end for
-}   // end _updateMetricText
+    const FMV *fmv = fv->viewer();
+    _texts[fmv]->SetInput( ostr.c_str());
+
+    // Set colours
+    QColor bg = fmv->backgroundColour();
+    QColor fg = chooseContrasting( bg);
+    vtkTextProperty* tp = _texts[fmv]->GetTextProperty();
+    tp->SetBackgroundColor( bg.redF(), bg.greenF(), bg.blueF());
+    tp->SetColor( fg.redF(), fg.greenF(), fg.blueF());
+    return true;
+}   // end _updateText

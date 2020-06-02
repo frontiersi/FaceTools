@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,20 +50,14 @@ bool manifoldIdInRange( int mid)
 }   // end namespace
 
 
-bool ActionRemoveManifolds::checkEnable( Event)
+bool ActionRemoveManifolds::isAllowed( Event)
 {
-    bool enabled = false;
-    if ( MS::isViewSelected() && MS::interactionMode() == IMode::CAMERA_INTERACTION)
-    {
-        // Ready if more than one manifold and the point is on the face.
-        const FV* fv = MS::selectedView();
-        const FM* fm = fv->data();
-        fm->lockForRead();
-        enabled = (fm->manifolds().count() > 1) && (manifoldIdInRange(_mid) || fv->isPointOnFace( primedMousePos()));
-        fm->unlock();
-    }   // end if
-    return enabled;
-}   // end testEnabled
+    const FV* fv = MS::selectedView();
+    // Ready if more than one manifold and the point is on the face.
+    return fv && MS::interactionMode() == IMode::CAMERA_INTERACTION
+              && (fv->data()->manifolds().count() > 1)
+              && (manifoldIdInRange(_mid) || fv->isPointOnFace( primedMousePos()));
+}   // end isAllowed
 
 
 bool ActionRemoveManifolds::doBeforeAction( Event)
@@ -72,24 +66,24 @@ bool ActionRemoveManifolds::doBeforeAction( Event)
     const FM* fm = fv->data();
     fm->lockForRead();
 
-    cv::Vec3f cpos;
+    Vec3f cpos;
     if ( fv->projectToSurface( primedMousePos(), cpos))
     {
         const int svidx = fm->findVertex( cpos);
-        const int fx = *fm->model().faces(svidx).begin(); // Get an attached polygon
-        _mid = fm->manifolds().manifoldId(fx); // Manifold ID
+        const int fx = *fm->mesh().faces(svidx).begin(); // Get an attached face 
+        _mid = fm->manifolds().fromFaceId(fx); // Manifold ID
         assert( _mid >= 0);
     }   // end if
 
     const size_t numManRemove = fm->manifolds().count() - 1;
-    const size_t numFaceRemove = manifoldIdInRange(_mid) ? size_t(fm->model().numPolys()) - fm->manifolds().manifold(_mid)->polygons().size() : 0;
+    const size_t numFaceRemove = manifoldIdInRange(_mid) ? size_t(fm->mesh().numFaces()) - fm->manifolds()[_mid].faces().size() : 0;
     fm->unlock();
 
     if ( numFaceRemove > 0)
     {
         const int rv = QMessageBox::question( qobject_cast<QWidget*>(parent()),
                               tr("Removing Other Manifolds"),
-                              QString("%1 polygons from %2 manifolds will be removed. Continue?").arg(numFaceRemove).arg(numManRemove),
+                              QString("%1 triangles from %2 manifolds will be removed. Continue?").arg(numFaceRemove).arg(numManRemove),
                               QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
         if ( rv == QMessageBox::No)
             _mid = -1;
@@ -97,33 +91,32 @@ bool ActionRemoveManifolds::doBeforeAction( Event)
 
     if ( _mid >= 0)
         MS::showStatus("Removing manifolds from selected model...");
+
+    storeUndo(this, Event::MESH_CHANGE | Event::CONNECTIVITY_CHANGE | Event::LANDMARKS_CHANGE);
     return _mid >= 0;
 }   // end doBeforeAction
 
 
 void ActionRemoveManifolds::doAction( Event)
 {
-    storeUndo(this, {Event::GEOMETRY_CHANGE, Event::CONNECTIVITY_CHANGE, Event::LANDMARKS_CHANGE});
-
     FM* fm = MS::selectedModel();
     fm->lockForWrite();
 
-    RFeatures::ObjModelCopier copier( fm->model());
-    const IntSet& fids = fm->manifolds().manifold(_mid)->polygons();
+    r3d::Copier copier( fm->mesh());
+    const IntSet& fids = fm->manifolds()[_mid].faces();
     for ( int fid : fids)
         copier.add(fid);
-    RFeatures::ObjModel::Ptr mobj = copier.copiedModel();
+    r3d::Mesh::Ptr mobj = copier.copiedMesh();
 
     _mid = -1;
-    fm->update( mobj);
-    fm->moveLandmarksToSurface();
+    fm->update( mobj, true, true);
     fm->unlock();
 }   // end doAction
 
 
-void ActionRemoveManifolds::doAfterAction( Event)
+Event ActionRemoveManifolds::doAfterAction( Event)
 {
     MS::showStatus("Finished removing manifolds.", 5000);
-    emit onEvent( {Event::GEOMETRY_CHANGE, Event::CONNECTIVITY_CHANGE, Event::LANDMARKS_CHANGE});
+    return Event::MESH_CHANGE | Event::CONNECTIVITY_CHANGE | Event::LANDMARKS_CHANGE;
 }   // end doAfterAction
 

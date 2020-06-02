@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 Spatial Information Systems Research Limited
+ * Copyright (C) 2018 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ using FaceTools::FileIO::FaceModelAssImpFileHandler;
 
 
 // static definition
-RModelIO::AssetImporter FaceModelAssImpFileHandlerFactory::assimp( true/*load textures*/, false/*don't fail on non triangles*/);
+r3dio::AssetImporter FaceModelAssImpFileHandlerFactory::assimp( true/*load textures*/, false/*don't fail on non triangles*/);
 
 
 // public

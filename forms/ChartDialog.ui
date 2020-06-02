@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>642</width>
-    <height>577</height>
+    <width>560</width>
+    <height>540</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,7 +16,7 @@
   <property name="sizeGripEnabled">
    <bool>true</bool>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="1,0,0">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="1,0">
    <item>
     <widget class="QFrame" name="frame">
      <property name="frameShape">
@@ -45,114 +45,37 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,3,0,5">
+    <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <widget class="QLabel" name="label_2">
-       <property name="minimumSize">
-        <size>
-         <width>50</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="text">
-        <string>Sex</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="sexComboBox">
+      <widget class="QToolButton" name="saveButton">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
          <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
-       <property name="minimumSize">
-        <size>
-         <width>100</width>
-         <height>0</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label">
-       <property name="minimumSize">
-        <size>
-         <width>50</width>
-         <height>0</height>
-        </size>
+       <property name="styleSheet">
+        <string notr="true">QToolButton{
+	border: none;
+}
+QToolButton:hover{
+    border: 1px inset gray;
+	border-radius: 4px;
+}
+</string>
        </property>
        <property name="text">
-        <string>Ethnicity</string>
+        <string>...</string>
        </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       <property name="icon">
+        <iconset resource="../FaceTools_res.qrc">
+         <normaloff>:/icons/SAVE_AS</normaloff>:/icons/SAVE_AS</iconset>
        </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="ethnicityComboBox">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="minimumSize">
+       <property name="iconSize">
         <size>
-         <width>170</width>
-         <height>0</height>
+         <width>27</width>
+         <height>27</height>
         </size>
-       </property>
-       <property name="toolTip">
-        <string/>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,1,0,0,0,0">
-     <item>
-      <widget class="QLabel" name="label_3">
-       <property name="minimumSize">
-        <size>
-         <width>50</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="text">
-        <string>Source</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="sourceComboBox">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="toolTip">
-        <string>Select the data source for this metric.</string>
-       </property>
-       <property name="whatsThis">
-        <string>Growth curve norms have been established by different researchers over the years for different demographic cohorts. Choose the source of the data here. If the source also provides a breakdown of the data by ethnic group and/or sex, these can be selected below.</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="Line" name="line">
-       <property name="orientation">
-        <enum>Qt::Vertical</enum>
        </property>
       </widget>
      </item>
@@ -172,38 +95,6 @@
        </property>
        <property name="minimum">
         <number>1</number>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QToolButton" name="saveImageButton">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>23</width>
-         <height>23</height>
-        </size>
-       </property>
-       <property name="toolTip">
-        <string>Save the displayed chart as an image.</string>
-       </property>
-       <property name="text">
-        <string>...</string>
-       </property>
-       <property name="icon">
-        <iconset resource="../FaceTools_res.qrc">
-         <normaloff>:/icons/SAVE_AS</normaloff>:/icons/SAVE_AS</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>27</width>
-         <height>27</height>
-        </size>
        </property>
       </widget>
      </item>

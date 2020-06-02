@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,6 @@ using FaceTools::Action::CameraWorker;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::FaceModelViewer;
-using FaceTools::FVS;
 using CW = FaceTools::Action::CameraWorker;
 using MS = FaceTools::Action::ModelSelector;
 
@@ -33,10 +32,8 @@ ActionMarquee::ActionMarquee( const QString& dn, const QIcon& ico)
     : FaceAction( dn, ico)
 {
     setCheckable(true, false);
-    addTriggerEvent( Event::CAMERA_CHANGE);
-    addTriggerEvent( Event::ACTOR_MOVE);
-    for ( FMV* fmv : ModelSelector::viewers())
-        _workers.insert( new CameraWorker( fmv));
+    for ( FMV* fmv : MS::viewers())
+        _workers.push_back( new CameraWorker( fmv));
 }   // end ctor
 
 
@@ -48,17 +45,40 @@ ActionMarquee::~ActionMarquee()
 
 bool ActionMarquee::checkState( Event e)
 {
-    return isTriggerEvent(e) ? false : isChecked();
-}   // end checkChecked
+    if ( isChecked() && has(e, Event::CAMERA_CHANGE))
+    {
+        _stopCameras();
+        return false;
+    }   // end if
+    return isChecked();
+}   // end checkState
 
 
-void ActionMarquee::doAction( Event)
+bool ActionMarquee::isAllowed( Event e)
+{
+    return MS::isViewSelected() && (has(e, Event::USER) || (isTriggerEvent(e) && _workers[0]->isStarted()));
+}   // end isAllowed
+
+
+void ActionMarquee::doAction( Event e)
 {
     if ( isChecked())
-    {
-        std::for_each( std::begin(_workers), std::end(_workers), [](CW* cw){cw->start();});
-        emit onEvent( Event::CAMERA_CHANGE);
-    }   // end if
+        _startCameras();
     else
-        std::for_each( std::begin(_workers), std::end(_workers), [](CW* cw){cw->stop();});
+        _stopCameras();
 }   // end doAction
+
+
+void ActionMarquee::_startCameras()
+{
+    std::for_each( std::begin(_workers), std::end(_workers), [](CW* cw){cw->start();});
+}   // end _startCameras
+
+
+void ActionMarquee::_stopCameras()
+{
+    std::for_each( std::begin(_workers), std::end(_workers), [](CW* cw){cw->stop();});
+}   // end _stopCameras
+
+
+Event ActionMarquee::doAfterAction( Event) { return Event::CAMERA_CHANGE;}

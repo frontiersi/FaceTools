@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 Spatial Information Systems Research Limited
+ * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,20 +48,25 @@ void ContextMenu::addSeparator()
 bool ContextMenu::rightButtonDown()
 {
     _rDownTime = 0;
-    const vtkProp* prop = MS::mouseViewer()->getPointedAt( MS::mousePos());
+    const QPoint mpos = MS::mousePos(); // Relative to viewer
+    const vtkProp* prop = MS::mouseViewer()->getPointedAt( mpos);
     if ( prop && const_cast<vtkProp*>(prop)->GetPickable())
+    {
         _rDownTime = QTime::currentTime().msecsSinceStartOfDay();
+        _mDownPos = mpos;
+    }   // end if
     return false;
 }   // end rightButtonDown
 
 
 bool ContextMenu::rightButtonUp()
 {
+    const QPoint mpos = MS::mousePos(); // Relative to viewer
     const int tnow = QTime::currentTime().msecsSinceStartOfDay();
+
     // Use double-click interval for acceptable right button down time
-    if (( tnow - _rDownTime) < 0.5*QApplication::doubleClickInterval())
+    if (( tnow - _rDownTime) < QApplication::doubleClickInterval() && (mpos == _mDownPos))
     {
-        const QPoint mpos = MS::mousePos(); // Relative to viewer
         for ( FaceAction* a : _actions)
             a->primeMousePos( mpos);
 
@@ -72,8 +77,12 @@ bool ContextMenu::rightButtonUp()
         // since only a specific action *may* have been triggered.
         for ( FaceAction* a : _actions)
             a->primeMousePos();
+
+        //MS::testMouse();
     }   // end if
+
     _rDownTime = 0;
+    _mDownPos = QPoint(-1,-1);
     return false;
 }   // end rightButtonUp
 
