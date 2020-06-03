@@ -160,7 +160,7 @@ void Path::_updateMeasures()
         const float denom = dh0.norm() * dh1.norm();
         assert( denom > 0.0f);
         _angle = acosf( dh0.dot(dh1)/denom) * DEG_CONST;
-        if ( isnan(_angle))
+        if ( std::isnan(_angle))
             _angle = 180.0f;
     }   // end if
 }   // end _updateMeasures
