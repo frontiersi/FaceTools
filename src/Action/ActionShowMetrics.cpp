@@ -60,10 +60,10 @@ void ActionShowMetrics::postInit()
     _mdialog = new Widget::MetricsDialog( p);
     _cdialog = new Widget::ChartDialog( p);
     connect( _mdialog, &Widget::MetricsDialog::onShowChart, this, &ActionShowMetrics::_doOnShowChart);
-    connect( _mdialog, &Widget::MetricsDialog::accepted, this, &ActionShowMetrics::_closeDialog);
+    connect( _mdialog, &Widget::MetricsDialog::accepted, [this](){ _closeDialog( Event::USER);});
     // Emitting STATS_CHANGE will always result in Event::METRICS_CHANGE being emitted from ActionUpdateMeasurements
     connect( _mdialog, &Widget::MetricsDialog::onStatsChanged, [this](){ emit onEvent( Event::STATS_CHANGE);});
-    connect( _mdialog, &Widget::MetricsDialog::onRefreshAllMetrics, this, &ActionShowMetrics::_refreshGraphics);
+    connect( _mdialog, &Widget::MetricsDialog::onRefreshAllMetrics, this, &ActionShowMetrics::_doRefreshGraphics);
     for ( FMV* fmv : MS::viewers())
         _addViewer(fmv);
 }   // end postInit
@@ -83,14 +83,14 @@ bool ActionShowMetrics::checkState( Event e)
     const bool showing = _mdialog->isVisible() && fv && fv->data()->hasLandmarks();
     if ( isTriggerEvent(e))
     {
-        _refreshGraphics();
+        _doRefreshGraphics();
         _mdialog->reflectCurrentMetricStats();
         _mdialog->reflectAtypical();
         _cdialog->refresh();
     }   // end if
 
     if ( !showing)
-        _closeDialog();
+        _closeDialog( e);
     return showing;
 }   // end checkState
 
@@ -138,7 +138,7 @@ void ActionShowMetrics::_setMetricHighlighted( int mid, bool v)
 }   // end _setMetricHighlighted
 
 
-void ActionShowMetrics::_refreshGraphics()
+void ActionShowMetrics::_doRefreshGraphics()
 {
     const bool isShowing = _mdialog->isVisible();
     for ( MC::Ptr mc : MM::visMetrics())
@@ -172,33 +172,43 @@ void ActionShowMetrics::_refreshGraphics()
     _setMetricHighlighted( mid, true);
 
     MS::updateRender();
-}   // end _refreshGraphics
+}   // end _doRefreshGraphics
 
 
-void ActionShowMetrics::doAction( Event)
+void ActionShowMetrics::doAction( Event e)
 {
     if ( isChecked())
     {
         if ( !_mdialog->isVisible())
         {
             _mdialog->show();   // Will cause onStatsChanged to be emitted
-            _refreshGraphics(); // Has to happen here as well as checkState
+            _doRefreshGraphics(); // Has to happen here as well as checkState
             _setParallelProjection(true);
         }   // end if
     }   // end if
     else if ( _mdialog->isVisible())
-        _closeDialog();
+        _closeDialog( e);
 }   // end doAction
 
 
-void ActionShowMetrics::_closeDialog()
+void ActionShowMetrics::_closeDialog( Event e)
 {
     _mdialog->hide();
     _cdialog->hide();
+    _setParallelProjection(false);
     setChecked(false);
     _hideGraphics();
-    _setParallelProjection(false);
+    doAfterAction( e);
 }   // end _closeDialog
+
+
+Event ActionShowMetrics::doAfterAction( Event)
+{
+    Event e = Event::VIEW_CHANGE | Event::ALL_VIEWS | Event::ALL_VIEWERS;
+    if ( s_showParallelProjection)
+        e |= Event::CAMERA_CHANGE;
+    return e;
+}   // end doAfterAction
 
 
 void ActionShowMetrics::_hideGraphics()
@@ -214,10 +224,8 @@ void ActionShowMetrics::_hideGraphics()
 
 void ActionShowMetrics::_setParallelProjection( bool v)
 {
-    Event e = Event::VIEW_CHANGE | Event::ALL_VIEWS | Event::ALL_VIEWERS;
-    if ( s_showParallelProjection && ActionSetParallelProjection::setParallelProjection( v))
-        e |= Event::CAMERA_CHANGE;
-    emit onEvent( e);
+    if ( s_showParallelProjection && isChecked())
+        ActionSetParallelProjection::setParallelProjection( v);
 }   // end _setParallelProjection
 
 

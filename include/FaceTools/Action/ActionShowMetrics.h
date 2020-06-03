@@ -41,11 +41,11 @@ protected:
     bool checkState( Event) override;
     bool isAllowed( Event) override;
     void doAction( Event) override;
+    Event doAfterAction( Event) override;
 
 private slots:
     void _doOnShowChart();
-    void _closeDialog();
-    void _refreshGraphics();
+    void _doRefreshGraphics();
 
 private:
     static bool s_showParallelProjection;
@@ -57,6 +57,7 @@ private:
     void _addViewer( FMV*);
     void _setMetricHighlighted( int, bool);
     void _setParallelProjection( bool);
+    void _closeDialog( Event);
     void _hideGraphics();
 };  // end class
 
