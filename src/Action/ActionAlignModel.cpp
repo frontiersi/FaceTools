@@ -82,18 +82,17 @@ MatX3f getNormFeatures( const FM *fm, Vec3f &pos, float sqRad)
     fm->kdtree().findr( pos, sqRad, vidxs);
     const size_t N = vidxs.size();
 
-    // Just want the rotation matrix for transforming the vertex normals
-    Mat4f R = Mat4f::Identity();
-    R.block<3,3>(0,0) = fm->mesh().transformMatrix().block<3,3>(0,0);
-
+    const Mat4f T = fm->mesh().transformMatrix();   // Need to transform vertex normals
     FMC::RPtr curv = FMC::rmetrics( fm);
+    assert( curv);
     const MatX3f &vnrms = curv->vertexNormals();    // Untransformed
     MatX3f frows( N, 3);
     pos = Vec3f::Zero();
     for ( size_t i = 0; i < N; ++i)
     {
-        pos += fm->mesh().vtx( int(vidxs[i].first));
-        frows.block<1,3>(i,0) = r3d::transform( R, vnrms.row( vidxs[i].first));
+        const int vidx = int(vidxs[i].first);
+        pos += fm->mesh().vtx( vidx);   // Transformed position returned
+        frows.block<1,3>(i,0) = r3d::transform( T, vnrms.row(vidx));
     }   // end for
     pos /= N;   // New mean position
 
@@ -158,24 +157,9 @@ void ActionAlignModel::alignUsingMaskLandmarksProcrustes( FM *fm)
 }   // end alignUsingMaskLandmarksProcrustes
 */
 
-Mat4f ActionAlignModel::calcAlignmentTransform( const FM *fm, bool useMask)
+
+void ActionAlignModel::align( FM *fm)
 {
-    Mat4f ffT = Mat4f::Zero();
-    if ( fm->hasMask() && useMask)
-        ffT = fm->transformMatrix();
-    else if ( fm->hasTexture())
-        ffT = Detect::FaceAlignmentFinder( fm->kdtree(), 650.0f).find( fm->bounds()[0]->centre());
-    if ( ffT.isZero())
-        ffT = _calcGeometricAlignment( fm, 80);
-    return ffT;
-}   // end calcAlignmentTransform
-
-
-void ActionAlignModel::doAction( Event)
-{
-    FM *fm = MS::selectedModel();
-    fm->lockForWrite();
-
     if ( fm->hasMask()) // If model has mask, then simply restore alignment defined by it.
     {
         const Mat4f iT = fm->inverseTransformMatrix();
@@ -183,29 +167,43 @@ void ActionAlignModel::doAction( Event)
     }   // end if
     else
     {
-        const Vec3f centre = fm->bounds()[0]->centre();
+        assert( FMC::rmetrics( fm) != nullptr);
+
         Mat4f T = Mat4f::Zero();
-        bool failedTexture = false;
+
+        // Texture aligning may fail or model may not have a texture returning zero matrix
         if ( fm->hasTexture())
-            T = Detect::FaceAlignmentFinder( fm->kdtree(), 650.0f).find( centre);
-        if ( T.isZero()) // Texture aligning may fail or model may not have a texture
+            T = Detect::FaceAlignmentFinder( fm->kdtree(), 600.0f).find( fm->bounds()[0]->centre());
+        else
         {
             T = _calcGeometricAlignment( fm, 80);
-            failedTexture = fm->hasTexture();
-        }   // end if
-        fm->addTransformMatrix( T.inverse());
+            assert( !T.isZero());
+        }   // end else
 
         // If previous texture alignment failed (due to being unable to detect the eyes), it's possible that the
         // new initial alignment derived from just looking at the central features will place the model in a
         // better orientation so that texture alignment works this time.
-        if ( failedTexture)
+        size_t tries = 0;
+        while ( T.isZero() && tries < 5)
         {
-            T = Detect::FaceAlignmentFinder( fm->kdtree(), 650.0f).find( centre);
-            if ( !T.isZero())
-                fm->addTransformMatrix( T.inverse());
+            tries++;
+            T = _calcGeometricAlignment( fm, 80);
+            assert( !T.isZero());
+            fm->addTransformMatrix( T.inverse());
+            T = Detect::FaceAlignmentFinder( fm->kdtree(), 600.0f).find( fm->bounds()[0]->centre());    // May return zero matrix
         }   // end if
-    }   // end else
 
+        if ( !T.isZero())
+            fm->addTransformMatrix( T.inverse());
+    }   // end else
+}   // end align
+
+
+void ActionAlignModel::doAction( Event)
+{
+    FM *fm = MS::selectedModel();
+    fm->lockForWrite();
+    align( fm);
     fm->fixTransformMatrix();
     fm->unlock();
 }   // end doAction

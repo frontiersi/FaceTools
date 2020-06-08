@@ -38,7 +38,8 @@ FaceActionWorker::FaceActionWorker( FaceAction* worker, Event e)
             MS::setCursor( Qt::CursorShape::BusyCursor);
             _timer = new QTimer(this);
             _timer->setTimerType( Qt::VeryCoarseTimer);
-            connect( _timer, &QTimer::timeout, [](){ MS::showStatus( MS::currentStatus() + ".");});
+            _status = MS::currentStatus();
+            connect( _timer, &QTimer::timeout, [this](){ _status += "."; MS::showStatus( _status);});
             _timer->start( 1000);   // Once per second
         }   // end if
     }   // end if

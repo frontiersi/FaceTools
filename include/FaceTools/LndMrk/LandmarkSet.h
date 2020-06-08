@@ -82,8 +82,11 @@ public:
     // transform and inverse transform matrices.
     r3d::Bounds::Ptr makeBounds( const Mat4f &T, const Mat4f &iT) const;
 
-    // Returns squared radius from _medialMean() to the most distant landmark from it.
+    // Returns squared radius from medialMean() to the most distant landmark from it.
     float sqRadius() const;
+
+    // Returns the mean of the landmarks in the designated medial set.
+    Vec3f medialMean() const;
 
     // Swap the left and right laterals.
     void swapLaterals();
@@ -128,7 +131,6 @@ private:
     Vec3f _quarter1() const;
     Vec3f _quarter2() const;
     Vec3f _quarter3() const;
-    Vec3f _medialMean() const;
 
     /*
     mutable Mat4f _algn;    // Alignment matrix calculated as needed

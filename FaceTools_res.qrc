@@ -40,5 +40,8 @@
     <file alias="RESTORE">res/icons/icons8-restore-50.png</file>
     <file alias="ISSUE">res/icons/icons8-medium-risk-40.png</file>
 </qresource>
+<qresource prefix="/imgs">
+    <file alias="HOT_PINK">res/imgs/hotpink.png</file>
+</qresource>
 </RCC>
 

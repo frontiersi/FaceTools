@@ -45,11 +45,12 @@ void MaskView::refresh( const FV *fv)
     prop->SetAmbient( 0.0);
     prop->SetDiffuse( 1.0);
     prop->SetSpecular( 0.0);
+    prop->SetOpacity( 0.999);
 
     const QColor col = fv->colour();
     prop->SetColor( col.blueF(), col.redF(), col.greenF()); // Swap red and blue for contrast
-
-    prop->SetInterpolationToFlat();
     if ( FV::smoothLighting())
         prop->SetInterpolationToPhong();
+    else
+        prop->SetInterpolationToFlat();
 }   // end refresh

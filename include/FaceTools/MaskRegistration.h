@@ -93,8 +93,8 @@ public:
     static void setParams( const Params&);
 
     // Register the currently set mask against the given face model and return it.
-    // If initT is given, it is first added to the mask before rigid registration.
-    static r3d::Mesh::Ptr registerMask( const FM*, const Mat4f& initT=Mat4f::Identity());
+    // The model must have first been brought into reasonable rigid alignment with the mask.
+    static r3d::Mesh::Ptr registerMask( const FM*);
 
 private:
     static MaskData s_mask;

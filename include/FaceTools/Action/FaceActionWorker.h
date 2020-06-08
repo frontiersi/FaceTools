@@ -45,6 +45,7 @@ private:
     FaceAction* _worker;
     Event _event;
     QTimer *_timer;
+    QString _status;
 
     // Number of asynchronous workers alive from user events
     static size_t _workerCount;

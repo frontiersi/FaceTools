@@ -256,7 +256,7 @@ std::shared_ptr<const MaskRegistration::MaskData> MaskRegistration::maskData()
 void MaskRegistration::setParams( const MaskRegistration::Params &prms) { s_params = prms;}
 
 
-r3d::Mesh::Ptr MaskRegistration::registerMask( const FM *fm, const r3d::Mat4f& initT)
+r3d::Mesh::Ptr MaskRegistration::registerMask( const FM *fm)
 {
     assert( maskLoaded());
     if ( !maskLoaded())
@@ -269,8 +269,6 @@ r3d::Mesh::Ptr MaskRegistration::registerMask( const FM *fm, const r3d::Mat4f& i
     s_lock.lockForRead();
     r3d::Mesh::Ptr mask = s_mask.mask->mesh().deepCopy();
     s_lock.unlock();
-
-    mask->addTransformMatrix( initT);   // Add the provided initial transform
 
     std::cout << "Calculating affine alignment (rigid + scaling) of mask to target face..." << std::endl;
 

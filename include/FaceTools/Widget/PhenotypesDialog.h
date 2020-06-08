@@ -32,6 +32,9 @@ public:
     explicit PhenotypesDialog( QWidget *parent = nullptr);
     ~PhenotypesDialog() override;
 
+signals:
+    void onSelectedHPOTerm( int);
+
 public slots:
     void show();
     void showPhenotypes( const IntSet&);

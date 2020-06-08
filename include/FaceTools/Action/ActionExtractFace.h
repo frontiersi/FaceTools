@@ -35,12 +35,9 @@ public:
     static void setCropRadius( float d);
     static float cropRadius();
 
-    // Extract the facial region as all points within d units of the identified position
-    // and on return set out parameter T (if not null) to the identified transform of the
-    // face (add inverse of this to transform to standard position).
-    static r3d::Mesh::Ptr extractFacialRegion( const FM*, float d, Mat4f* T=nullptr);
-
-    static r3d::Mesh::Ptr cropRegion( const FM*, const IntSet &fids);
+    // Extract the facial region as all points within cropRadius of the discovered front.
+    // This function will also align the given model into standard position.
+    static r3d::Mesh::Ptr extract( FM*);
 
 protected:
     bool isAllowed( Event) override;
@@ -50,7 +47,7 @@ protected:
 
 private:
     const Interactor::RadialSelectHandler &_handler;
-    r3d::Mesh::Ptr _nmod;
+    Event _ev;
     static float s_cropRadius;
 };  // end class
 

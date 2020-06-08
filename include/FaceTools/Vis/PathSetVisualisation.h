@@ -35,8 +35,8 @@ public:
 
     bool isAvailable( const FV*, const QPoint*) const override;
 
-    float minAllowedOpacity() const override { return 0.10f;}
-    float maxAllowedOpacity() const override { return 0.99f;}
+    float minAllowedOpacity() const override { return 0.1f;}
+    float maxAllowedOpacity() const override { return 1.0f;}
 
     bool belongs( const vtkProp*, const FV*) const override;
 

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,20 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_SYNCHRONISE_CAMERA_MOVEMENT_H
-#define FACE_TOOLS_ACTION_SYNCHRONISE_CAMERA_MOVEMENT_H
+#ifndef FACE_TOOLS_ACTION_SYNCHRONISE_CAMERAS_H
+#define FACE_TOOLS_ACTION_SYNCHRONISE_CAMERAS_H
 
 #include "FaceAction.h"
 
 namespace FaceTools { namespace Action {
 
-class FaceTools_EXPORT ActionSynchroniseCameraMovement : public FaceAction
+class FaceTools_EXPORT ActionSynchroniseCameras : public FaceAction
 { Q_OBJECT
 public:
-    ActionSynchroniseCameraMovement( const QString&, const QIcon&);
-    ~ActionSynchroniseCameraMovement() override;
+    ActionSynchroniseCameras( const QString&, const QIcon&);
+    ~ActionSynchroniseCameras() override;
 
-    QString toolTip() const override { return "Synchronise camera actions on one viewer across the others.";}
+    QString toolTip() const override { return "Synchronise camera movements across all viewers.";}
 
 protected:
     bool isAllowed( Event) override;

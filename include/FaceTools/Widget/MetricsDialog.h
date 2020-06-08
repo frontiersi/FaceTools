@@ -40,6 +40,9 @@ public:
     void setShowScanInfoAction( QAction*);
     void setShowPhenotypesAction( QAction*);
 
+    // Returns true iff the atypical warning triangle is checked.
+    bool isShowingAtypical() const;
+
 signals:
     void onShowChart();
     void onStatsChanged();
@@ -51,6 +54,7 @@ public slots:
     void show();
     void reflectCurrentMetricStats();
     void reflectAtypical();
+    void selectHPO( int);
 
 protected:
     void closeEvent( QCloseEvent*) override;

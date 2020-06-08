@@ -180,7 +180,7 @@ FaceModelState::FaceModelState( FM* fm, Event egrp)
     if ( has( egrp, Event::MESH_CHANGE | Event::MASK_CHANGE))
         _saveBounds();
 
-    if ( has( egrp, Event::AFFINE_CHANGE) && !has( egrp, Event::MASK_CHANGE))
+    if ( has( egrp, Event::AFFINE_CHANGE))
         _tmat = _fm->mesh().transformMatrix();
 
     if ( has( egrp, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE | Event::CONNECTIVITY_CHANGE | Event::ASSESSMENT_CHANGE | Event::PATHS_CHANGE))
@@ -204,7 +204,7 @@ void FaceModelState::restore( const Event &egrp) const
     if ( has( egrp, Event::MESH_CHANGE | Event::MASK_CHANGE))
         _restoreBounds();
 
-    if ( has( egrp, Event::AFFINE_CHANGE) && !has( egrp, Event::MASK_CHANGE))
+    if ( has( egrp, Event::AFFINE_CHANGE))
         _fm->addTransformMatrix( _tmat * _fm->mesh().inverseTransformMatrix());
     
     if ( has( egrp, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE | Event::CONNECTIVITY_CHANGE | Event::ASSESSMENT_CHANGE | Event::PATHS_CHANGE))

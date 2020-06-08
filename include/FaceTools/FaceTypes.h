@@ -190,8 +190,8 @@ class ContextMenu;
 }   // end namespace (FaceTools)
 
 
-Q_DECLARE_METATYPE( FaceTools::FaceLateral)
 Q_DECLARE_METATYPE( FaceTools::Vec3f)
+Q_DECLARE_METATYPE( FaceTools::FaceLateral)
 
 /**********************************************************************/
 

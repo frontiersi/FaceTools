@@ -19,6 +19,7 @@
 #include <FaceModel.h>
 #include <r3dio/U3DExporter.h>
 #include <QTemporaryFile>
+#include <QTools/QImageTools.h>
 #include <cassert>
 using FaceTools::U3DCache;
 using FaceTools::FM;
@@ -56,6 +57,16 @@ void U3DCache::refresh( const FM* fm, bool med9)
     fm->lockForRead();
     r3d::Mesh::Ptr mesh = fm->mesh().deepCopy();
     fm->unlock();
+
+    // Add a texture if none present
+    if ( !mesh->hasMaterials())
+    {
+        const cv::Mat mat = QTools::copyQImage2OpenCV( QImage(":/imgs/HOT_PINK"));
+        mesh->addMaterial( mat);
+        static const Vec2f uvs[3] = {Vec2f(1,0), Vec2f(1,1), Vec2f(0,0)};
+        for ( int fid : mesh->faces())
+            mesh->setOrderedFaceUVs( 0, fid, uvs);
+    }   // end if
 
     _cacheLock.lockForWrite();
     QTemporaryFile tfile( QDir::tempPath() + "/XXXXXX.u3d");

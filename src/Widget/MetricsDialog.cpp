@@ -653,6 +653,9 @@ void MetricsDialog::reflectAtypical()
 }   // end reflectAtypical
 
 
+bool MetricsDialog::isShowingAtypical() const { return _ui->matchAtypicalToolButton->isChecked();}
+
+
 const GD* MetricsDialog::_updateSourcesDropdown( int8_t sex, int eth)
 {
     // Update sources for the given sex, ethnicity combo.
@@ -724,12 +727,17 @@ void MetricsDialog::_doOnClickedForceInPlane()
 }   // end _doOnClickedForceInPlane
 
 
+void MetricsDialog::selectHPO( int hid)
+{
+    _ui->hpoComboBox->setCurrentIndex( _ui->hpoComboBox->findData( hid));
+    _setCurrentMetric( _refreshDisplayedRows( _getModelMatchedMetrics( hid)));
+}   // end selectHPO
+
+
 void MetricsDialog::_doOnClickedPhenotype()
 {
     const int hid = _ui->hpoComboBox->currentData().toInt();
-    const IntSet mids = _getModelMatchedMetrics( hid);
-    const int nmid = _refreshDisplayedRows( mids);
-    _setCurrentMetric( nmid);
+    _setCurrentMetric( _refreshDisplayedRows( _getModelMatchedMetrics( hid)));
     if ( hid != -1)
         emit onSelectedHPOTerm( hid);
 }   // end _doOnClickedPhenotype

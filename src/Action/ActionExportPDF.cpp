@@ -138,8 +138,7 @@ Event ActionExportPDF::doAfterAction( Event)
 // static
 bool ActionExportPDF::saveGeneratedReport( const QString& tmpfile, QFileDialog *fdialog)
 {
-    assert( fileDialog);
-
+    assert( fdialog);
     const FM* fm = MS::selectedModel();
     boost::filesystem::path outpath( FileIO::FMM::filepath(fm));
 

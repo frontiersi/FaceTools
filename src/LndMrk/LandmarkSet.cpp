@@ -277,7 +277,7 @@ Vec3f getMeanOfSet( const IntSet &ms, const std::unordered_map<int, Vec3f> &lmks
 }   // end namespace
 
 
-Vec3f LandmarkSet::_medialMean() const { return getMeanOfSet( LMAN::medialAlignmentSet(), _lmksM);}
+Vec3f LandmarkSet::medialMean() const { return getMeanOfSet( LMAN::medialAlignmentSet(), _lmksM);}
 
 /*
 Vec3f LandmarkSet::_quarter0() const { return getMeanOfSet( LMAN::topAlignmentSet(), _lmksR);}
@@ -293,7 +293,7 @@ Mat4f LandmarkSet::alignment() const
 
     if ( _algn.isZero())
     {
-        const Vec3f mmean = _medialMean();
+        const Vec3f mmean = medialMean();
 
         const Vec3f q0 = _quarter0() - mmean;
         const Vec3f q1 = _quarter1() - mmean;
@@ -380,7 +380,7 @@ r3d::Bounds::Ptr LandmarkSet::makeBounds( const Mat4f &T, const Mat4f &iT) const
     for ( const auto& p : _lmksR)
         testSetExtreme( minc, maxc, r3d::transform( iT, p.second));
 
-    const Vec3f cen = r3d::transform( iT, _medialMean());
+    const Vec3f cen = r3d::transform( iT, medialMean());
 
     static const float X_FACTOR = 1.0f;
     static const float Yt_FACTOR = 1.0f;
@@ -401,7 +401,7 @@ r3d::Bounds::Ptr LandmarkSet::makeBounds( const Mat4f &T, const Mat4f &iT) const
 float LandmarkSet::sqRadius() const
 {
     float sqDist = 0.0f;
-    const Vec3f mean = _medialMean();
+    const Vec3f mean = medialMean();
     for ( const auto& p : _lmksL)
         sqDist = std::max( (p.second - mean).squaredNorm(), sqDist);
     for ( const auto& p : _lmksM)

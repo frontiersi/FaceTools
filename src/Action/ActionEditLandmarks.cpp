@@ -36,7 +36,7 @@ ActionEditLandmarks::ActionEditLandmarks( const QString& dn, const QIcon& ico, c
     : FaceAction( dn, ico, ks), _handler( LandmarksHandler::create()),
         _dialog(nullptr),
         _actShow(nullptr), _actAlign(nullptr), _actRestore(nullptr), _actShowLabels(nullptr),
-        _lmid(-1), _lat(FACE_LATERAL_MEDIAL)
+        _lmid(-1), _lat(FACE_LATERAL_MEDIAL), _egrp( Event::NONE)
 {
     setCheckable( true, false);
     addTriggerEvent( Event::MASK_CHANGE | Event::CLOSED_MODEL);
@@ -83,7 +83,6 @@ void ActionEditLandmarks::doAction( Event e)
             msg = tr("Review and confirm landmark placement in the main viewer");
         _dialog->setMessage( msg);
 
-        _egrp = Event::NONE;
         _lmid = -1;
         _lat = FACE_LATERAL_MEDIAL;
         for ( int id : LMAN::ids())
@@ -106,14 +105,11 @@ void ActionEditLandmarks::_doOnClosedDialog()
     const FV *fv = MS::selectedView();
     if ( fv)
     {
-        // If landmarks were changed and the model is out of alignment, realign.
-        _egrp |= Event::CAMERA_CHANGE;
         ActionOrientCameraToFace::orientToFace( fv, 1);
         MS::setLockSelected(false);
         MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-        emit onEvent( _egrp);
+        emit onEvent( Event::CAMERA_CHANGE);
     }   // end if
-    _egrp = Event::NONE;
 }   // end _doOnClosedDialog
 
 
@@ -153,4 +149,5 @@ void ActionEditLandmarks::_doOnDoingDrag( int lmid, FaceLateral)
     // Update measurements related to the moved landmark
     ActionUpdateMeasurements::updateMeasurementsForLandmark( MS::selectedModel(), lmid);
     emit onEvent( _egrp);
+    _egrp = Event::NONE;
 }   // end _doOnDoingDrag

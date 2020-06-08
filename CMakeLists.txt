@@ -111,7 +111,7 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionShowScanInfo.h"
     "${INCLUDE_ACTION_DIR}/ActionSlice.h"
     "${INCLUDE_ACTION_DIR}/ActionSmooth.h"
-    "${INCLUDE_ACTION_DIR}/ActionSynchroniseCameraMovement.h"
+    "${INCLUDE_ACTION_DIR}/ActionSynchroniseCameras.h"
     "${INCLUDE_ACTION_DIR}/ActionToggleAxes.h"
     "${INCLUDE_ACTION_DIR}/ActionToggleCameraActorInteraction.h"
     "${INCLUDE_ACTION_DIR}/ActionToggleMask.h"
@@ -337,7 +337,7 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/ActionShowScanInfo
     ${SRC_ACTION_DIR}/ActionSlice
     ${SRC_ACTION_DIR}/ActionSmooth
-    ${SRC_ACTION_DIR}/ActionSynchroniseCameraMovement
+    ${SRC_ACTION_DIR}/ActionSynchroniseCameras
     ${SRC_ACTION_DIR}/ActionToggleAxes
     ${SRC_ACTION_DIR}/ActionToggleCameraActorInteraction
     ${SRC_ACTION_DIR}/ActionToggleMask

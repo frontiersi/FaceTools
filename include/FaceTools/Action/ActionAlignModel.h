@@ -31,13 +31,7 @@ public:
 
     QString whatsThis() const override;
 
-    // Calculate and return the matrix such that its inverse when applied
-    // to the given model will cause it to be aligned in standard position.
-    // If useMask is true, the returned alignment transform will be the
-    // inverse of the mask's current transform matrix (if it exists)
-    // otherwise a new alignment matrix will be calculated based on
-    // texture (if available) or geometry.
-    static Mat4f calcAlignmentTransform( const FM*, bool useMask=true);
+    static void align( FM*);
 
 protected:
     bool isAllowed( Event) override;

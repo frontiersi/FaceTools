@@ -80,7 +80,11 @@ PhenotypesDialog::PhenotypesDialog( QWidget *parent) :
     _ui->table->resizeRowsToContents();
 
     connect( _ui->table, &QTableWidget::currentItemChanged,
-            [this]( QTableWidgetItem* item){ assert(item); _highlightRow( item->row());});
+            [this]( QTableWidgetItem* item){
+                assert(item);
+                _highlightRow( item->row());
+                emit onSelectedHPOTerm( _chid);
+                });
     connect( _ui->syndromesComboBox, QOverload<int>::of(&QComboBox::activated),
             this, &PhenotypesDialog::_doOnUserSelectedSyndrome);
     connect( _ui->anatomicalRegionsComboBox, QOverload<int>::of(&QComboBox::activated),

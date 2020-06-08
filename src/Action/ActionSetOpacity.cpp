@@ -101,6 +101,8 @@ bool ActionSetOpacity::checkState( Event e)
                 _updateOpacities( fv->viewer());
         }   // end else
     }   // end if
+    else
+        _opacitySpinBox->setValue(1.0);
     return true;
 }   // end checkState
 

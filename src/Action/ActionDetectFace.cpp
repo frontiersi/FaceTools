@@ -75,18 +75,24 @@ bool ActionDetectFace::doBeforeAction( Event)
         goDetect = false;
 
     if ( goDetect)
+    {
         MS::showStatus("Detecting face - please wait ...");
+        storeUndo( this, Event::LANDMARKS_CHANGE
+                       | Event::MESH_CHANGE
+                       | Event::MASK_CHANGE
+                       | Event::AFFINE_CHANGE);
+    }   // end if
+
     return goDetect;
 }   // end doBeforeAction
 
 
 void ActionDetectFace::doAction( Event)
 {
-    storeUndo( this, Event::LANDMARKS_CHANGE
-                   | Event::MESH_CHANGE
-                   | Event::MASK_CHANGE
-                   | Event::AFFINE_CHANGE);
-    _err = detectLandmarks( MS::selectedModel(), _ulmks);
+    FM *fm = MS::selectedModel();
+    fm->lockForWrite();
+    _err = detectLandmarks( fm, _ulmks);
+    fm->unlock();
 }   // end doAction
 
 
@@ -135,26 +141,22 @@ std::string ActionDetectFace::detectLandmarks( FM* fm, const IntSet &ulmks)
     if ( ulmks.empty())
         return "Empty landmark update set specified!";
 
-    // Clone the existing set for update
-    fm->lockForWrite();
-    fm->fixTransformMatrix(); // Ensure any existing transform is fixed in place first
+    std::cout << "Doing initial alignment of model..." << std::endl;
+    ActionAlignModel::align( fm);
+    fm->fixTransformMatrix();
+    std::cout << "Registering mask against target face..." << std::endl;
+    r3d::Mesh::Ptr mask = MaskRegistration::registerMask( fm);
 
-    std::cout << "Calculating initial alignment of mask to target face..." << std::endl;
-    const Mat4f T1 = ActionAlignModel::calcAlignmentTransform( fm, false); // Apply for initial rigid alignment (no scaling).
-    r3d::Mesh::Ptr mask = MaskRegistration::registerMask( fm, T1);
-
-    std::cout << "Updating target face correspondences and transferring landmarks..." << std::endl;
+    std::cout << "Setting mask and transferring landmarks..." << std::endl;
     setMask( mask, fm);
     ActionRestoreLandmarks::restoreLandmarks( fm, ulmks);
 
-    std::cout << "Aligning face from mask..." << std::endl;
-
+    std::cout << "Doing Procrustes alignment of the coregistered mask with the original..." << std::endl;
     const Mat4f align = calcMaskAlignment( *mask);
     const Mat4f ialign = align.inverse();
+
     fm->addTransformMatrix( ialign);
     fm->fixTransformMatrix();
-    fm->unlock();
-
     return "";
 }   // end detectLandmarks
 

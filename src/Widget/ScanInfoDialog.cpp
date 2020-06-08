@@ -405,18 +405,24 @@ void ScanInfoDialog::_doOnChangedPaternalEthnicity()
 
 void ScanInfoDialog::_doOnDOBChanged()
 {
-    const FM *fm = MS::selectedModel();
-    if ( fm && _ui->dobDateEdit->date() > QDate::currentDate())   // Can't have dates beyond current date!
-        _ui->dobDateEdit->setDate( fm->dateOfBirth());
+    if ( MS::isViewSelected() && _ui->dobDateEdit->date() > QDate::currentDate())   // Can't have dates beyond current date!
+        _ui->dobDateEdit->setDate( QDate::currentDate());
     _checkEnableApply();
 }   // end _doOnDOBChanged
 
 
 void ScanInfoDialog::_doOnCaptureDateChanged()
 {
-    const FM *fm = MS::selectedModel();
-    if ( fm && _ui->captureDateEdit->date() > QDate::currentDate())   // Can't have dates beyond current date!
-        _ui->captureDateEdit->setDate( fm->captureDate());
+    // Can't have capture date later than current date or before date of birth
+    if ( MS::isViewSelected())
+    {
+        QDate capDate = _ui->captureDateEdit->date();
+        QDate dobDate = _ui->dobDateEdit->date();
+        if ( capDate > QDate::currentDate())
+            _ui->captureDateEdit->setDate( QDate::currentDate());
+        else if ( capDate < dobDate)
+            _ui->captureDateEdit->setDate( dobDate);
+    }   // end if
     _checkEnableApply();
 }   // end _doOnCaptureDateChanged
 
