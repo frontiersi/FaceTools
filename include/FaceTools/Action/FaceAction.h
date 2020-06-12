@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 
 #include "UndoStates.h"
 #include "ModelSelector.h"
+#include "FaceActionWorker.h"
 #include <QTools/PluginInterface.h>
 #include <QAction>
 
@@ -75,8 +76,8 @@ public:
      */
     virtual QString helpFile( const QString& helpToken) { return "";}
 
-    void setCheckable( bool b, bool initialCheckState);
-    void setChecked( bool b) { _action.setChecked(b);}
+    void setCheckable( bool, bool initialCheckState);
+    void setChecked( bool);
     bool isChecked() const { return _action.isChecked();}
 
     bool isEnabled() const { return _action.isEnabled();}
@@ -89,6 +90,14 @@ public:
      */
     bool isUnlocked() const { return _unlocked;}
     void setLocked( bool);
+
+    /**
+     * Returns true if this action is currently within the doAction() function
+     * (which may be called from a separate thread). FaceActionManager uses this
+     * to determine which actions can be set ready. Running actions refresh themselves
+     * immediately after doAfterAction() returns and before the final onEvent is emitted.
+     */
+    bool isWorking() const { return _isWorking;}
 
     /**
      * Some actions may need the mouse position at the time they are actioned. This may be
@@ -138,6 +147,12 @@ public slots:
      */
     bool execute( Event e=Event::NONE);
 
+    /**
+     * For asynchronous actions, this function is called if the action times out.
+     * The action should stop what it's doing and finish immediately.
+     */
+    virtual void endNow();
+
 protected:
     /**
      * Called on self at the end of _init(). Override to manually adjust details of action/icon assignment here.
@@ -147,13 +162,9 @@ protected:
     /**
      * Set asynchronous execution or not on the next call to execute().
      * Default is synchronous (blocking calls) in the GUI thread.
-     * Normally, an asynchronous running action is not reentrant.
-     * Set reentrant to true if async is also true to allow this action to
-     * be triggered again even while executing inside its doAction function.
      */
-    void setAsync( bool async, bool reentrant=false);
+    void setAsync( bool async);
     bool isAsync() const { return _doasync;}
-    bool isReentrant() const { return _reentrant;}
 
     /**
      * Returns the client set mouse position. Returns (-1,-1) if not set.
@@ -239,7 +250,7 @@ protected:
     virtual void restoreState( const UndoState&);   // Has default ERROR implementation!
 
 private slots:
-    void endExecute( Event);
+    void _endExecute( Event);
 
 private:
     QAction _action;
@@ -248,8 +259,8 @@ private:
     const QIcon _icon;
     const QKeySequence _keys;
     bool _doasync;
-    bool _reentrant;
-    int _runCount;
+    bool _isWorking;
+    FaceActionWorker *_worker;
     bool _unlocked; // If true, this action is enabled (true by default)
     Event _pevents; // Purge events
     Event _tevents; // Trigger events
@@ -264,14 +275,6 @@ private:
      * postInit() which is called at the end of _init().
      */
     void _init( QWidget* parent=nullptr);
-
-    /**
-     * Returns true if this action is currently within the doAction() function
-     * (which may be called from a separate thread). FaceActionManager uses this
-     * to determine which actions can be set ready. Running actions refresh themselves
-     * immediately after doAfterAction() returns and before the final onEvent is emitted.
-     */
-    bool _isRunning() const { return _runCount > 0;}
 
     friend class FaceActionWorker;
     friend class FaceActionManager;

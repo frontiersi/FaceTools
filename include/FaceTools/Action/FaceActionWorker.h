@@ -21,6 +21,7 @@
 #include <FaceTools/FaceTypes.h>
 #include <QTimer>
 #include <QThread>
+#include <QMutex>
 
 namespace FaceTools { namespace Action {
 
@@ -32,23 +33,29 @@ public:
     FaceActionWorker( FaceAction*, Event);
     virtual ~FaceActionWorker();
 
-    // Number of user event workers alive.
-    static size_t numWorkers() { return _workerCount;}
+    // True if at least one user instigated worker is active
+    static bool isUserWorking() { return _s_userWorkCount > 0;}
 
 signals:
-    void workerFinished( Event);
+    void onWorkFinished( Event);
 
 protected:
     void run() override;
+
+private slots:
+    void _doOnTimerInterval();
 
 private:
     FaceAction* _worker;
     Event _event;
     QTimer *_timer;
+    int _tcount;
     QString _status;
 
-    // Number of asynchronous workers alive from user events
-    static size_t _workerCount;
+    static int _s_userWorkCount;
+    static QMutex _s_mutex;
+
+    void _deleteTimer();
 };  // end class
 
 }}   // end namespace

@@ -106,10 +106,12 @@ void ActionVisualise::doAction( Event)
 }   // end doAction
 
 
-Event ActionVisualise::doAfterAction( Event)
+Event ActionVisualise::doAfterAction( Event e)
 {
     if ( isChecked())
         MS::setInteractionMode( IMode::CAMERA_INTERACTION);
+    if ( e == Event::USER && !isTriggerEvent(e))
+        MS::showStatus( displayName() + (isChecked() ? " ON" : " OFF"), 5000);
     return _evg;
 }   // end doAfterAction
 

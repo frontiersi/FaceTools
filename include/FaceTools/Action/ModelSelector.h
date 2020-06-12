@@ -36,7 +36,7 @@ public:
 
     // Optionally set a statically accessible status bar for convenient access.
     static void setStatusBar( QStatusBar*);
-    static void showStatus( const QString&, int timeOutMilliSecs=0);    // No effect if status bar not set.
+    static void showStatus( const QString&, int timeOutMilliSecs=0, bool repaintNow=false);    // No effect if status bar not set.
     static QString currentStatus();
     static void clearStatus();
 

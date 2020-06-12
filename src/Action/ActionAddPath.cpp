@@ -50,6 +50,7 @@ void ActionAddPath::doAction( Event)
     fm->lockForWrite();
     const int pid = fm->addPath( pos);
     fm->unlock();
+    MS::updateRender();
     _handler->addPath( fv, pid);
 }   // end doAction
 

@@ -35,10 +35,10 @@ public:
     Interactor::LandmarksHandler::Ptr handler() { return _handler;}
 
     // Set these before registering with the FaceActionManager
-    void setShowLandmarksAction( QAction *act) { _actShow = act;}
-    void setAlignLandmarksAction( QAction *act) { _actAlign = act;}
-    void setRestoreLandmarksAction( QAction *act) { _actRestore = act;}
-    void setShowLandmarkLabelsAction( QAction *act) { _actShowLabels = act;}
+    void setShowLandmarksAction( FaceAction *act) { _actShow = act;}
+    void setAlignLandmarksAction( FaceAction *act) { _actAlign = act;}
+    void setRestoreLandmarksAction( FaceAction *act) { _actRestore = act;}
+    void setShowLandmarkLabelsAction( FaceAction *act) { _actShowLabels = act;}
 
 signals:
     void onShowLandmarkLabels( bool);
@@ -61,10 +61,10 @@ private slots:
 private:
     Interactor::LandmarksHandler::Ptr _handler;
     Widget::LandmarksDialog *_dialog;
-    QAction *_actShow;
-    QAction *_actAlign;
-    QAction *_actRestore;
-    QAction *_actShowLabels;
+    FaceAction *_actShow;
+    FaceAction *_actAlign;
+    FaceAction *_actRestore;
+    FaceAction *_actShowLabels;
     int _lmid;
     FaceLateral _lat;
     Event _egrp;

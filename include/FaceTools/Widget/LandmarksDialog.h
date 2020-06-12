@@ -19,6 +19,7 @@
 #define FACETOOLS_WIDGET_LANDMARKS_DIALOG_H
 
 #include <FaceTools/FaceTypes.h>
+#include <FaceTools/Action/FaceAction.h>
 #include <QTableWidgetItem>
 #include <QDialog>
 
@@ -32,10 +33,10 @@ public:
     explicit LandmarksDialog( QWidget *parent = nullptr);
     ~LandmarksDialog() override;
 
-    void setShowAction( QAction*);
-    void setAlignAction( QAction*);
-    void setLabelsAction( QAction*);
-    void setRestoreAction( QAction*);
+    void setShowAction( Action::FaceAction*);
+    void setAlignAction( Action::FaceAction*);
+    void setLabelsAction( Action::FaceAction*);
+    void setRestoreAction( Action::FaceAction*);
 
     void setMessage( const QString&);
 

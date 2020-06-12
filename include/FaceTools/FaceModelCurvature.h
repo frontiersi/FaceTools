@@ -42,7 +42,7 @@ public:
     static void purge( const FM*);
 
     // Create and add curvature data for the given model.
-    static void add( FM*);
+    static void add( const FM*);
 
 private:
     static std::unordered_map<const FM*, r3d::Curvature::Ptr> _metrics;

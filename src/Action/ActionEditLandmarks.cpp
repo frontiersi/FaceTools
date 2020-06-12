@@ -77,10 +77,18 @@ void ActionEditLandmarks::doAction( Event e)
     if ( isChecked() && !_dialog->isVisible())
     {
         QString msg;
-        const FM *fm = MS::selectedModel();
-        MS::setLockSelected(true);
-        if ( fm && has( e, Event::MASK_CHANGE) && fm->hasMask())
-            msg = tr("Review and confirm landmark placement in the main viewer");
+        const FV *fv = MS::selectedView();
+
+        if ( fv)
+        {
+            MS::setLockSelected(true);
+            ActionOrientCameraToFace::orientToFace( fv, 1);
+            MS::setInteractionMode( IMode::CAMERA_INTERACTION);
+            emit onEvent( Event::CAMERA_CHANGE);
+            if ( has( e, Event::MASK_CHANGE) && fv->data()->hasMask())
+                msg = tr("Review and confirm landmark placement in the main viewer");
+        }   // end if
+
         _dialog->setMessage( msg);
 
         _lmid = -1;
@@ -90,7 +98,7 @@ void ActionEditLandmarks::doAction( Event e)
 
         _dialog->show();
     }   // end if
-    else if ( _dialog->isVisible())
+    else if ( !isChecked())
         _doOnClosedDialog();
 }   // end doAction
 
@@ -101,15 +109,7 @@ void ActionEditLandmarks::_doOnClosedDialog()
     _dialog->hide();
     for ( int id : LMAN::ids())
         LMAN::landmark(id)->setLocked( true);
-
-    const FV *fv = MS::selectedView();
-    if ( fv)
-    {
-        ActionOrientCameraToFace::orientToFace( fv, 1);
-        MS::setLockSelected(false);
-        MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-        emit onEvent( Event::CAMERA_CHANGE);
-    }   // end if
+    MS::setLockSelected(false);
 }   // end _doOnClosedDialog
 
 
@@ -149,5 +149,4 @@ void ActionEditLandmarks::_doOnDoingDrag( int lmid, FaceLateral)
     // Update measurements related to the moved landmark
     ActionUpdateMeasurements::updateMeasurementsForLandmark( MS::selectedModel(), lmid);
     emit onEvent( _egrp);
-    _egrp = Event::NONE;
 }   // end _doOnDoingDrag

@@ -16,7 +16,6 @@
  ************************************************************************/
 
 #include <Action/FaceAction.h>
-#include <Action/FaceActionWorker.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <QSignalBlocker>
@@ -45,8 +44,9 @@ FaceAction::FaceAction( const QString& dn, const QIcon& ico, const QKeySequence&
 
 void FaceAction::_pinit()
 {
-    _doasync = _reentrant = false;
-    _runCount = 0;
+    _doasync = false;
+    _isWorking = false;
+    _worker = nullptr;
     _unlocked = true;
     _pevents = _tevents = Event::NONE;
     if ( _dname.isEmpty())
@@ -79,6 +79,20 @@ void FaceAction::setCheckable( bool b, bool ival)
     _action.setCheckable(b);
     _action.setChecked(ival);
 }   // end setCheckable
+
+
+void FaceAction::setChecked( bool b)
+{
+    _action.setChecked(b);
+    /*
+    if ( _action.isCheckable() && _action.isChecked() != b)
+    {
+        const QSignalBlocker blocker( _action);
+        _action.setChecked(b);
+        execute( Event::NONE);
+    }   // end if
+    */
+}   // end setChecked
 
 
 void FaceAction::refreshState( Event e)
@@ -114,11 +128,7 @@ bool FaceAction::isTriggerEvent( Event e) const { return (_tevents & e) != Event
 
 
 // protected
-void FaceAction::setAsync( bool async, bool reentrant)
-{
-    _doasync = async;
-    _reentrant = async && reentrant;
-}   // end setAsync
+void FaceAction::setAsync( bool async) { _doasync = async;}
 
 
 void FaceAction::_init( QWidget* parent) // Called by FaceActionManager after constructor finished
@@ -165,19 +175,9 @@ void FaceAction::_init( QWidget* parent) // Called by FaceActionManager after co
 
 bool FaceAction::execute( Event e)
 {
-#ifndef NDEBUG
-    if ( e != Event::USER && !isTriggerEvent(e))
-        std::cerr << "[ERROR] FaceTools::Action::FaceAction::execute: Starting from non-user or non-trigger event!" << std::endl;
-    assert( e == Event::USER || isTriggerEvent(e));
-#endif
-
     if ( !isAllowed(e))
         return false;
 
-    _runCount++;
-#ifndef NDEBUG
-    assert( _runCount <= 1);
-#endif
     _action.setEnabled(false);
     bool enteredDoAction = false;
 
@@ -186,16 +186,17 @@ bool FaceAction::execute( Event e)
 #ifndef NDEBUG
         std::cerr << "Cancelled: " << debugName() << std::endl;
 #endif
-        _runCount--;
         refreshState();
         emit onEvent( Event::CANCELLED);
     }   // end if
     else
     {
+        _isWorking = true;
+        enteredDoAction = true;
+
 #ifndef NDEBUG
         std::cerr << "  Started: " << debugName() << "  by event(s) " << e;
 #endif
-        enteredDoAction = true;
         if ( isAsync())
         {
 #ifndef NDEBUG
@@ -203,10 +204,9 @@ bool FaceAction::execute( Event e)
 #endif
             if ( e == Event::USER)
                 MS::setLockSelected(true);
-            FaceActionWorker *worker = new FaceActionWorker( this, e);
-            connect( worker, &FaceActionWorker::workerFinished, this, &FaceAction::endExecute);
-            connect( worker, &FaceActionWorker::finished, worker, &FaceActionWorker::deleteLater);
-            worker->start();   // Asynchronous start
+            _worker = new FaceActionWorker( this, e);
+            connect( _worker, &FaceActionWorker::onWorkFinished, this, &FaceAction::_endExecute);
+            _worker->start();   // Asynchronous start
         }   // end else
         else
         {
@@ -214,7 +214,7 @@ bool FaceAction::execute( Event e)
             std::cerr << std::endl;
 #endif
             doAction(e);  // Blocks
-            endExecute(e);
+            _endExecute(e);
         }   // end else
     }   // end else
 
@@ -224,38 +224,37 @@ bool FaceAction::execute( Event e)
 
 Event FaceAction::doAfterAction( Event e)
 {
-    Event egrp = Event::NONE;
-    // Don't display anything in the status bar for actions that weren't triggered explicitly by the user.
-    if ( e == Event::USER)
-    {
-        QString dname = displayName();
-        if ( _action.isCheckable())
-            dname += (isChecked() ? " ON" : " OFF");
-        int msecs = 2000;
-        if ( isAsync())
-        {
-            dname = "Finished " + displayName();
-            msecs = 5000;
-        }   // end if
-        MS::showStatus( dname, msecs);
-    }   // end if
-    return egrp;
+    if ( e == Event::USER && _action.isCheckable() && !isAsync())
+        MS::showStatus( displayName() + (isChecked() ? " ON" : " OFF"), 5000);
+    return Event::NONE;
 }   // end doAfterAction
 
 
-// private slot
-void FaceAction::endExecute( Event e)   // Always in GUI thread
+void FaceAction::endNow()
 {
+    std::cerr << "ENDING NOW" << std::endl;
+}   // end endNow
+
+
+// private slot
+void FaceAction::_endExecute( Event e)   // Always in GUI thread
+{
+    _isWorking = false;
+    if ( _worker)
+    {
+        delete _worker;
+        _worker = nullptr;
+    }   // end if
+
     MS::setLockSelected(false);
     Event fev = doAfterAction( e);
     _mpos = QPoint(-1,-1);
 #ifndef NDEBUG
     std::cerr << " Finished: " << debugName() << " did event(s) " << fev << std::endl;
 #endif
-    _runCount--;
     refreshState();
     emit onEvent( fev);
-}   // end endExecute
+}   // end _endExecute
 
 
 void FaceAction::saveState( UndoState&) const

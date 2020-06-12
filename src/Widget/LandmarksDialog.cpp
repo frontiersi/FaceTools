@@ -24,6 +24,7 @@
 #include <LndMrk/LandmarkSet.h>
 #include <Action/ModelSelector.h>
 #include <FaceModel.h>
+using FaceTools::Action::FaceAction;
 using MS = FaceTools::Action::ModelSelector;
 
 #include <QHeaderView>
@@ -95,10 +96,10 @@ LandmarksDialog::LandmarksDialog( QWidget *parent) :
 LandmarksDialog::~LandmarksDialog() { delete _ui;}
 
 
-void LandmarksDialog::setShowAction( QAction *act)
+void LandmarksDialog::setShowAction( FaceAction *act)
 {
     _ui->showButton->setVisible(false);
-    _ui->showButton->setDefaultAction( act);
+    _ui->showButton->setDefaultAction( act->qaction());
 }   // end setShowAction
 
 
@@ -106,13 +107,8 @@ void LandmarksDialog::_triggerShow( bool c)
 {
     for ( QAction *act : _ui->showButton->actions())
     {
-        if ( c == act->isChecked()) // Refresh
-        {
-            act->trigger();
-            act->trigger();
-        }   // end else
-        else
-            act->setChecked(c);
+        FaceAction *fact = qobject_cast<FaceAction*>( act->parent());
+        fact->setChecked(true);
     }   // end for
 }   // end _triggerShow
 
@@ -131,13 +127,9 @@ void LandmarksDialog::_doOnRefreshTable()
 }   // end _doOnRefreshTable
 
 
-void LandmarksDialog::setAlignAction( QAction *act) { _ui->alignButton->setDefaultAction( act);}
-
-
-void LandmarksDialog::setLabelsAction( QAction *act) { _ui->labelsButton->setDefaultAction( act);}
-
-
-void LandmarksDialog::setRestoreAction( QAction *act) { _ui->restoreButton->setDefaultAction( act);}
+void LandmarksDialog::setAlignAction( FaceAction *act) { _ui->alignButton->setDefaultAction( act->qaction());}
+void LandmarksDialog::setLabelsAction( FaceAction *act) { _ui->labelsButton->setDefaultAction( act->qaction());}
+void LandmarksDialog::setRestoreAction( FaceAction *act) { _ui->restoreButton->setDefaultAction( act->qaction());}
 
 
 void LandmarksDialog::setMessage( const QString &msg)

@@ -71,14 +71,15 @@ bool ContextMenu::rightButtonUp()
             a->primeMousePos( mpos);
 
         if ( _testEnabledActions() > 0)
+        {
+            MS::updateRender();
             _cmenu.exec( QCursor::pos());
+        }   // end if
 
         // Need to deprime mouse position on all actions afterwards
         // since only a specific action *may* have been triggered.
         for ( FaceAction* a : _actions)
             a->primeMousePos();
-
-        //MS::testMouse();
     }   // end if
 
     _rDownTime = 0;
@@ -92,9 +93,7 @@ size_t ContextMenu::_testEnabledActions() const
     size_t nenabled = 0;
     for ( FaceAction* a : _actions)
     {
-        // Need to call on ALL actions since we need to recheck their enabled states
-        a->refreshState();  // Fix flicker on right click
-        MS::updateRender();
+        a->refreshState();  // Call on ALL actions since must recheck their enabled states at click
         if ( a->isEnabled())
             nenabled++;
     }   // end for

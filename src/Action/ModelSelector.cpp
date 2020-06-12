@@ -23,6 +23,7 @@
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <vtkCamera.h>
+#include <QTimer>
 #include <cassert>
 using FaceTools::Action::ModelSelector;
 using FaceTools::Interactor::SelectNotifier;
@@ -48,10 +49,15 @@ void ModelSelector::addViewer( FMV* fmv, bool setDefault)
 void ModelSelector::setStatusBar( QStatusBar* sb) { me()->_sbar = sb;}
 
 
-void ModelSelector::showStatus( const QString& msg, int timeOut)
+void ModelSelector::showStatus( const QString& msg, int timeOut, bool repaintNow)
 {
-    if ( me()->_sbar)
-        me()->_sbar->showMessage( QObject::tr( msg.toStdString().c_str()), timeOut);
+    QStatusBar *sbar = me()->_sbar;
+    if ( sbar)
+    {
+        sbar->showMessage( QObject::tr( msg.toStdString().c_str()), timeOut);
+        if ( repaintNow)
+            sbar->repaint( sbar->rect());
+    }   // end if
 }   // end showStatus
 
 
@@ -77,7 +83,7 @@ void ModelSelector::setCursor( Qt::CursorShape cs)
 
 void ModelSelector::restoreCursor()
 {
-    if ( FaceActionWorker::numWorkers() > 0)
+    if ( FaceActionWorker::isUserWorking())
         setCursor( Qt::CursorShape::BusyCursor);
     else if ( defaultViewer()->interactionMode() == IMode::ACTOR_INTERACTION)
         setCursor( Qt::CursorShape::DragMoveCursor);
@@ -189,13 +195,10 @@ void ModelSelector::setShowBoundingBoxesOnSelected( bool v)
 void ModelSelector::updateAllViews( const std::function<void(FV*)>& fn, bool doUpdateRender)
 {
     for ( FMV* fmv : me()->_viewers)
-    {
         for ( FV *fv : fmv->attached())
             fn(fv);
-        if ( doUpdateRender)
-            fmv->updateRender();
-    }   // end for
-
+    if ( doUpdateRender)
+        updateRender();
 }   // end updateAllViews
 
 
@@ -203,6 +206,13 @@ void ModelSelector::updateRender()
 {
     for ( FMV* fmv : me()->_viewers)
         fmv->updateRender();
+    QWidget *pw = defaultViewer();
+    if ( pw)
+    {
+        while ( pw->parentWidget())
+            pw = pw->parentWidget();
+        pw->repaint( pw->rect());
+    }   // end if
 }   // end updateRender
 
 

@@ -29,7 +29,7 @@ ActionUpdateU3D::ActionUpdateU3D() : FaceAction( "U3D Updater")
 {
     addPurgeEvent( Event::MASK_CHANGE);
     addTriggerEvent( Event::MASK_CHANGE | Event::LOADED_MODEL);
-    setAsync( true, true);  // Reentrant!
+    setAsync( true);
 }   // end ctor
 
 

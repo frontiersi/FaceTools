@@ -31,8 +31,8 @@ public:
     QString toolTip() const override { return "Register correspondence mask and place facial landmarks.";}
 
     // Returns an empty string on success, otherwise the nature of the error.
-    // Set ulmks specifies the ids of the landmarks to update.
-    static std::string detectLandmarks( FM*, const IntSet& ulmks);
+    // Set ulmks specifies the ids of the landmarks to update (if any).
+    static std::string detect( FM*, const IntSet& ulmks=IntSet());
 
 protected:
     void postInit() override;
@@ -45,6 +45,7 @@ private:
     Widget::LandmarksCheckDialog *_cdialog;
     std::string _err;
     IntSet _ulmks;
+    Event _ev;
 };  // end class
 
 }}   // end namespace

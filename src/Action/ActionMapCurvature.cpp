@@ -41,8 +41,8 @@ bool ActionMapCurvature::isAllowed( Event) { return MS::selectedModel();}
 
 void ActionMapCurvature::doAction( Event e)
 {
-    FM* fm = MS::selectedModel();
-    fm->lockForWrite();
+    const FM* fm = MS::selectedModel();
+    fm->lockForRead();
     FMC::purge(fm);
     FMC::add(fm);
     fm->unlock();

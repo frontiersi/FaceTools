@@ -162,7 +162,7 @@ int ActionFixNormals::fixNormals( FM *fm)
         fm->update( mesh, false, false);
     }   // end if
 
-    return twisted ? -1 * efids.size() : efids.size();
+    return twisted ? -1 * int(efids.size()) : int(efids.size());
 }   // end fixNormals
 
 

@@ -50,13 +50,13 @@ bool ActionSaveFaceModel::doBeforeAction( Event e)
 {
     bool isNormalSave = true;
     const FM *fm = MS::selectedModel();
-    if ( FileIO::FMM::hasPreferredFileFormat(fm) || !fm->hasMetaData())
-        MS::showStatus("Saving...");
-    else if ( _saveAs)
+    if ( _saveAs && !FileIO::FMM::hasPreferredFileFormat(fm) && fm->hasMetaData())
     {
-        _saveAs->execute(e);
         isNormalSave = false;   // Will cause this action to cancel and allow the SaveAs action to complete.
-    }   // end else
+        _saveAs->execute(e);
+    }   // end if
+    else
+        MS::showStatus( "Saving...", 0, true);
     return isNormalSave;
 }   // end doBeforeAction
 

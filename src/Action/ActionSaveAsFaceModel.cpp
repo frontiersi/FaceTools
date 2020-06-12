@@ -136,7 +136,7 @@ bool ActionSaveAsFaceModel::doBeforeAction( Event)
     }   // end while
 
     if ( !_filename.empty())
-        MS::showStatus( QString( "Saving model to '%1'...").arg(_filename.c_str()));
+        MS::showStatus( QString( "Saving model to '%1'...").arg(_filename.c_str()), 0, true);
 
     return !_filename.empty();
 }   // end doBeforeAction

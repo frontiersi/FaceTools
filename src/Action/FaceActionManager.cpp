@@ -194,13 +194,15 @@ void FaceActionManager::doEvent( const Event &E)
             applyFnToModels( E, fm, MS::syncBoundingVisualisation);
     }   // end if
 
+    MS::updateRender();
+
     // Have actions recheck their own state and whether or not they're enabled, then see
     // if the received event triggers them.
     for ( FaceAction* act : _actions)
     {
         // Sending actions should not be able to trigger themselves, and
         // actions are not reentrant generally speaking so running actions are also ignored.
-        if ( act == sact || (act->_isRunning() && !act->isReentrant()))
+        if ( act == sact || act->isWorking())
             continue;
 
         // In refreshing state, actions decide whether to enable themselves and check themselves.

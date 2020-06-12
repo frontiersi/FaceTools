@@ -36,9 +36,9 @@ FM* FaceModelOBJFileHandler::read( const QString& qfname)
 {
     _err = "";
     FM* fm = nullptr;
-    r3d::Mesh::Ptr model = _importer.load(qfname.toStdString());
-    if ( model)
-        fm = new FM(model);
+    r3d::Mesh::Ptr mesh = _importer.load(qfname.toStdString());
+    if ( mesh)
+        fm = new FM(mesh);
     else
         _err = _importer.err().c_str();
     return fm;

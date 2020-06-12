@@ -48,10 +48,12 @@ void LandmarksHandler::doEnterProp( FV *fv, const vtkProp *p)
 {
     if ( fv == MS::selectedView())
     {
-        const int hid = _vis.landmarkId( fv, p, _lat);    // Sets _lat as an out parameter
+        FaceLateral lat;
+        const int hid = _vis.landmarkId( fv, p, lat);    // Sets _lat as an out parameter
         if ( _dragId < 0 && hid >= 0) // Ignore other landmarks if dragging one already
         {
             _hoverId = hid;
+            _lat = lat;
             _vis.setLabelVisible( fv, hid, _lat, true);
             _vis.setLandmarkHighlighted( fv, hid, _lat, true);
             const Vec3f& pos = fv->data()->currentLandmarks().pos( hid, _lat);
@@ -65,22 +67,19 @@ void LandmarksHandler::doEnterProp( FV *fv, const vtkProp *p)
 
 void LandmarksHandler::doLeaveProp( FV* fv, const vtkProp* p)
 {
-    if ( _dragId < 0)
-    {
-        FaceLateral lat;
-        const int hid = _vis.landmarkId( fv, p, lat);
-        if ( lat == _lat && hid == _hoverId)
-            _leaveLandmark();
-    }   // end if
+    FaceLateral lat;
+    const int hid = _vis.landmarkId( fv, p, lat);
+    if ( _dragId < 0 && hid == _hoverId && lat == _lat)
+        _leaveLandmark();
 }   // end doLeaveProp
 
 
 void LandmarksHandler::_leaveLandmark()
 {
+    MS::restoreCursor();
     const FV *fv = MS::selectedView();
     _vis.setLabelVisible( fv, _hoverId, _lat, false);
     _vis.setLandmarkHighlighted( fv, _hoverId, _lat, false);
-    MS::restoreCursor();
     emit onLeaveLandmark( _hoverId, _lat); 
     _hoverId = -1;
     _lat = FACE_LATERAL_MEDIAL;
@@ -106,6 +105,12 @@ bool LandmarksHandler::leftButtonUp()
     if ( _dragId >= 0)
     {
         emit onFinishedDrag( _dragId, _lat);
+        // Deal with the case where mouse button is released with cursor off the landmark
+        // (because landmark was restricted in movement).
+        FaceLateral lat;
+        const int lmid = _vis.landmarkId( MS::selectedView(), MS::cursorProp(), lat);
+        if ( lmid < 0 && _hoverId >= 0)
+            _leaveLandmark();
         _dragId = -1;
         swallowed = true;
     }   // end if

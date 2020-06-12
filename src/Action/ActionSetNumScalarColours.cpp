@@ -61,7 +61,7 @@ bool ActionSetNumScalarColours::checkState( Event)
     _spinBox->setEnabled( enabled);
     QSignalBlocker blocker( _spinBox);
     _spinBox->setValue( enabled ? static_cast<int>(svis->numColours()) : 0);
-    _spinBox->setSingleStep( enabled ? svis->numStepSize() : 1);
+    _spinBox->setSingleStep( enabled ? static_cast<int>(svis->numStepSize()) : 1);
     return enabled;
 }   // end checkState
 

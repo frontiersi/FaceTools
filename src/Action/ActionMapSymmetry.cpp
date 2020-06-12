@@ -44,8 +44,8 @@ bool ActionMapSymmetry::isAllowed( Event)
 
 void ActionMapSymmetry::doAction( Event)
 {
-    FM* fm = MS::selectedModel();
-    fm->lockForWrite();
+    const FM* fm = MS::selectedModel();
+    fm->lockForRead();
     FaceModelSymmetry::purge( fm);
     FaceModelSymmetry::add( fm);
     fm->unlock();

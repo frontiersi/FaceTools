@@ -39,7 +39,7 @@ using MS = FaceTools::Action::ModelSelector;
 
 
 ActionDetectFace::ActionDetectFace( const QString& dn, const QIcon& icon)
-    : FaceAction(dn, icon), _cdialog(nullptr)
+    : FaceAction(dn, icon), _cdialog(nullptr), _ev(Event::NONE)
 {
     setAsync( true);
 }   // end ctor
@@ -65,6 +65,7 @@ bool ActionDetectFace::doBeforeAction( Event)
     FM* fm = MS::selectedModel();
     _ulmks.clear();
     _err = "";
+    _ev = Event::NONE;
     bool goDetect = true;
 
     if ( fm->currentLandmarks().empty())
@@ -77,10 +78,10 @@ bool ActionDetectFace::doBeforeAction( Event)
     if ( goDetect)
     {
         MS::showStatus("Detecting face - please wait ...");
-        storeUndo( this, Event::LANDMARKS_CHANGE
-                       | Event::MESH_CHANGE
-                       | Event::MASK_CHANGE
-                       | Event::AFFINE_CHANGE);
+        _ev = Event::MESH_CHANGE | Event::MASK_CHANGE | Event::AFFINE_CHANGE;
+        if ( !_ulmks.empty())
+            _ev |= Event::LANDMARKS_CHANGE;
+        storeUndo( this, _ev);
     }   // end if
 
     return goDetect;
@@ -91,7 +92,7 @@ void ActionDetectFace::doAction( Event)
 {
     FM *fm = MS::selectedModel();
     fm->lockForWrite();
-    _err = detectLandmarks( fm, _ulmks);
+    _err = detect( fm, _ulmks);
     fm->unlock();
 }   // end doAction
 
@@ -135,21 +136,21 @@ r3d::Mat4f calcMaskAlignment( const r3d::Mesh &mask)
 
 
 // public static
-std::string ActionDetectFace::detectLandmarks( FM* fm, const IntSet &ulmks)
+std::string ActionDetectFace::detect( FM* fm, const IntSet &ulmks)
 {
-    // If the caller provides a set of landmark IDs to update, it should not be empty!
-    if ( ulmks.empty())
-        return "Empty landmark update set specified!";
-
     std::cout << "Doing initial alignment of model..." << std::endl;
     ActionAlignModel::align( fm);
     fm->fixTransformMatrix();
     std::cout << "Registering mask against target face..." << std::endl;
     r3d::Mesh::Ptr mask = MaskRegistration::registerMask( fm);
 
-    std::cout << "Setting mask and transferring landmarks..." << std::endl;
+    std::cout << "Setting mask..." << std::endl;
     setMask( mask, fm);
-    ActionRestoreLandmarks::restoreLandmarks( fm, ulmks);
+    if ( !ulmks.empty())
+    {
+        std::cout << "Transferring landmarks..." << std::endl;
+        ActionRestoreLandmarks::restoreLandmarks( fm, ulmks);
+    }   // end if
 
     std::cout << "Doing Procrustes alignment of the coregistered mask with the original..." << std::endl;
     const Mat4f align = calcMaskAlignment( *mask);
@@ -158,17 +159,15 @@ std::string ActionDetectFace::detectLandmarks( FM* fm, const IntSet &ulmks)
     fm->addTransformMatrix( ialign);
     fm->fixTransformMatrix();
     return "";
-}   // end detectLandmarks
+}   // end detect
 
 
 Event ActionDetectFace::doAfterAction( Event)
 {
-    Event e = Event::NONE;
     if ( _err.empty())
     {
         MS::clearStatus();
         MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-        e |= Event::LANDMARKS_CHANGE | Event::MESH_CHANGE | Event::MASK_CHANGE | Event::AFFINE_CHANGE;
         MS::showStatus( "Detected face and placed landmarks.", 5000);
     }   // end if
     else
@@ -176,5 +175,5 @@ Event ActionDetectFace::doAfterAction( Event)
         QMessageBox::warning( static_cast<QWidget*>(parent()), tr("Face Detection Failed!"), tr( _err.c_str()));
         MS::showStatus("Face Detection Failed!", 10000);
     }   // end else
-    return e;
+    return _ev;
 }   // end doAfterAction

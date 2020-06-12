@@ -64,10 +64,12 @@ void FaceModel::update( r3d::Mesh::Ptr mesh, bool updateConnectivity, bool settl
 
     if ( updateConnectivity)
     {
+        /*
         static const std::string imsg = "[INFO] FaceTools::FaceModel::update: ";
         const size_t rverts = mesh->removeDisconnectedVertices();
         if ( rverts > 0)
             std::cerr << imsg << "Removed " << rverts << " disconnected vertices" << std::endl;
+        */
 
         // Ensure that vertices are in sequential order.
         if ( !mesh->hasSequentialIds())
@@ -82,7 +84,7 @@ void FaceModel::update( r3d::Mesh::Ptr mesh, bool updateConnectivity, bool settl
         r3d::Manifolds::Ptr manf = r3d::Manifolds::create( *mesh);
         if ( int(manf->count()) > maxManifolds)
         {
-            std::cerr << imsg << "Reducing from " << manf->count() << " to " << maxManifolds << " manifolds..." << std::endl;
+            //std::cerr << imsg << "Reducing from " << manf->count() << " to " << maxManifolds << " manifolds..." << std::endl;
             mesh = manf->reduceManifolds( maxManifolds);
             manf = r3d::Manifolds::create( *mesh);
         }   // end if
@@ -92,7 +94,7 @@ void FaceModel::update( r3d::Mesh::Ptr mesh, bool updateConnectivity, bool settl
         for ( int i = 0; i < nm; ++i)
         {
             const auto& bnds = manf->at(i).boundaries();  // Causes boundary edges to be calculated
-            std::cerr << " - Manifold " << i << " has " << bnds.count() << " boundary edges" << std::endl;
+            //std::cerr << " - Manifold " << i << " has " << bnds.count() << " boundary edges" << std::endl;
         }   // end for
 
         _manifolds = manf;

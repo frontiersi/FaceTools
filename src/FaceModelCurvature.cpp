@@ -63,10 +63,11 @@ void FaceModelCurvature::purge( const FM *fm)
 }   // end purge
 
 
-void FaceModelCurvature::add( FM *fm)
+void FaceModelCurvature::add( const FM *fm)
 {
-    assert( _metrics.count(fm) == 0);
+    r3d::Curvature::Ptr cmap = r3d::Curvature::create( fm->mesh());  // Blocks
     _lock.lockForWrite();
-    _metrics[fm] = r3d::Curvature::create( fm->mesh());  // Blocks
+    assert( _metrics.count(fm) == 0);
+    _metrics[fm] = cmap;
     _lock.unlock();
 }   // end add
