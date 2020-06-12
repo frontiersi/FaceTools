@@ -76,7 +76,6 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionGetFaceManifold.h"
     "${INCLUDE_ACTION_DIR}/ActionImportMetaData.h"
     "${INCLUDE_ACTION_DIR}/ActionInvertNormals.h"
-    "${INCLUDE_ACTION_DIR}/ActionLoadDirFaceModels.h"
     "${INCLUDE_ACTION_DIR}/ActionLoadFaceModels.h"
     "${INCLUDE_ACTION_DIR}/ActionMakeHalfFace.h"
     "${INCLUDE_ACTION_DIR}/ActionMapCurvature.h"
@@ -302,7 +301,6 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/ActionGetFaceManifold
     ${SRC_ACTION_DIR}/ActionImportMetaData
     ${SRC_ACTION_DIR}/ActionInvertNormals
-    ${SRC_ACTION_DIR}/ActionLoadDirFaceModels
     ${SRC_ACTION_DIR}/ActionLoadFaceModels
     ${SRC_ACTION_DIR}/ActionMakeHalfFace
     ${SRC_ACTION_DIR}/ActionMapCurvature

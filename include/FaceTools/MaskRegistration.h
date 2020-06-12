@@ -96,6 +96,10 @@ public:
     // The model must have first been brought into reasonable rigid alignment with the mask.
     static r3d::Mesh::Ptr registerMask( const FM*);
 
+    // Given a deformed version of the loaded mask, run procrustes superimposition
+    // on it and return its transform from the currently loaded mask.
+    static Mat4f calcMaskAlignment( const r3d::Mesh&);
+
 private:
     static MaskData s_mask;
     static QReadWriteLock s_lock;

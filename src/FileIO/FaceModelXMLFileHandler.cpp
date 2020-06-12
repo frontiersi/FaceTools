@@ -17,6 +17,7 @@
 
 #include <FileIO/FaceModelXMLFileHandler.h>
 #include <Metric/PhenotypeManager.h>
+#include <MaskRegistration.h>
 #include <FaceTools.h>
 #include <FaceModel.h>
 #include <Ethnicities.h>
@@ -496,12 +497,12 @@ std::string FaceTools::FileIO::loadData( FM &fm, const QTemporaryDir &tdir, cons
     {
         const std::string objfile = tdir.filePath( objfilename.c_str()).toStdString();
         //std::cout << "Importing main mesh from " << objfile << std::endl;
-        r3d::Mesh::Ptr model = r3dio::loadMesh( objfile);   // Raw model - no post process undertaken!
+        r3d::Mesh::Ptr mesh = r3dio::loadMesh( objfile);   // Raw model - no post process undertaken!
 
-        if ( model)
+        if ( mesh)
         {
-            fm.update( model, true, false/*don't resettle landmarks (or update paths) just read in*/);
-            for ( int aid : fm.assessmentIds()) // Do want to update paths over the model though
+            fm.update( mesh, true, false/*don't resettle landmarks (or update paths) just read in*/);
+            for ( int aid : fm.assessmentIds()) // Do want to update paths over the mesh though
                 fm.assessment(aid)->paths().update( &fm);
         }   // end if
         else
@@ -516,7 +517,13 @@ std::string FaceTools::FileIO::loadData( FM &fm, const QTemporaryDir &tdir, cons
             r3d::Mesh::Ptr mask = r3dio::loadMesh( maskfile);
 
             if ( mask)
+            {
                 fm.setMask( mask);
+                // Always ensure that the model is loaded aligned if mask available (fixed for 5.0.2).
+                r3d::Mat4f T = MaskRegistration::calcMaskAlignment( *mask);
+                fm.addTransformMatrix( T.inverse());
+                fm.fixTransformMatrix();
+            }   // end if
             else
             {
                 //std::cout << "Mask not loaded - setting null!" << std::endl;

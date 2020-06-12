@@ -24,6 +24,7 @@
 #include <QMessageBox>
 #include <QFileInfo>
 #include <QThread>
+#include <r3d/ProcrustesSuperimposition.h>
 #include <boost/filesystem/path.hpp>
 #include <boost/functional/hash.hpp>
 //#include <thread>
@@ -304,3 +305,25 @@ r3d::Mesh::Ptr MaskRegistration::registerMask( const FM *fm)
     return cmask;
 }   // end registerMask
 
+
+r3d::Mat4f MaskRegistration::calcMaskAlignment( const r3d::Mesh &mask)
+{
+    const MaskPtr mdata = maskData();
+
+    const IntSet &vidxs = mdata->mask->mesh().vtxIds();
+    r3d::MatX3f tgtVtxRows( vidxs.size(), 3);
+    r3d::MatX3f mvtxs( vidxs.size(), 3);
+    int i = 0;
+    for ( int vidx : vidxs)
+    {
+        tgtVtxRows.row(i) = mdata->mask->mesh().vtx(vidx);
+        mvtxs.row(i) = mask.vtx(vidx);
+        i++;
+    }   // end for
+
+    r3d::VecXf weights = r3d::VecXf::Ones( vidxs.size());
+    r3d::ProcrustesSuperimposition psupp( tgtVtxRows, weights);
+    r3d::Mat4f T = psupp( mvtxs);
+
+    return T;
+}   // end calcMaskAlignment

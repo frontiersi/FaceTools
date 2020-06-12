@@ -20,8 +20,6 @@
 #include <Action/ActionRestoreLandmarks.h>
 #include <Detect/FaceAlignmentFinder.h>
 #include <LndMrk/LandmarksManager.h>
-#include <r3d/VectorPCFinder.h>
-#include <r3d/ProcrustesSuperimposition.h>
 #include <boost/filesystem/path.hpp>
 #include <MaskRegistration.h>
 #include <FaceModelViewer.h>
@@ -109,29 +107,6 @@ void setMask( r3d::Mesh::Ptr msk, FM *fm)
     fm->setMaskHash( MaskRegistration::maskHash());
 }   // end setMask
 
-
-r3d::Mat4f calcMaskAlignment( const r3d::Mesh &mask)
-{
-    const FaceTools::MaskRegistration::MaskPtr mdata = FaceTools::MaskRegistration::maskData();
-
-    const IntSet &vidxs = mdata->mask->mesh().vtxIds();
-    r3d::MatX3f tgtVtxRows( vidxs.size(), 3);
-    r3d::MatX3f mvtxs( vidxs.size(), 3);
-    int i = 0;
-    for ( int vidx : vidxs)
-    {
-        tgtVtxRows.row(i) = mdata->mask->mesh().vtx(vidx);
-        mvtxs.row(i) = mask.vtx(vidx);
-        i++;
-    }   // end for
-
-    r3d::VecXf weights = r3d::VecXf::Ones( vidxs.size());
-    r3d::ProcrustesSuperimposition psupp( tgtVtxRows, weights);
-    r3d::Mat4f T = psupp( mvtxs);
-
-    return T;
-}   // end calcMaskAlignment
-
 }   // end namespace
 
 
@@ -153,7 +128,7 @@ std::string ActionDetectFace::detect( FM* fm, const IntSet &ulmks)
     }   // end if
 
     std::cout << "Doing Procrustes alignment of the coregistered mask with the original..." << std::endl;
-    const Mat4f align = calcMaskAlignment( *mask);
+    const Mat4f align = MaskRegistration::calcMaskAlignment( *mask);
     const Mat4f ialign = align.inverse();
 
     fm->addTransformMatrix( ialign);
