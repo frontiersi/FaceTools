@@ -20,13 +20,15 @@
 #include <FileIO/FaceModelManager.h>
 #include <QMessageBox>
 #include <algorithm>
-using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionCloseAllFaceModels;
+using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
-using FaceTools::FileIO::FMM;
 using FaceTools::Action::FAM;
 using FaceTools::FMS;
 using FaceTools::FM;
+using FMM = FaceTools::FileIO::FaceModelManager;
+using MS = FaceTools::Action::ModelSelector;
+using QMB = QMessageBox;
 
 
 ActionCloseAllFaceModels::ActionCloseAllFaceModels( const QString& dname, const QIcon& icon, const QKeySequence& ks)
@@ -52,7 +54,7 @@ bool ActionCloseAllFaceModels::doBeforeAction( Event)
     if ( doshowmsg)
     {
         static const QString msg = tr("Model(s) are unsaved! Really close?");
-        doclose = QMessageBox::Yes == QMessageBox::warning( static_cast<QWidget*>(parent()), tr("Unsaved changes!"), msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        doclose = QMB::Yes == QMB::warning( static_cast<QWidget*>(parent()), tr("Unsaved changes!"), msg, QMB::Yes | QMB::No, QMB::No);
     }   // end if
 
     return doclose;
@@ -70,6 +72,6 @@ void ActionCloseAllFaceModels::doAction( Event)
 
 Event ActionCloseAllFaceModels::doAfterAction( Event)
 {
-    ModelSelector::setInteractionMode(IMode::CAMERA_INTERACTION);
+    MS::setInteractionMode(IMode::CAMERA_INTERACTION);
     return Event::CLOSED_MODEL | Event::ALL_VIEWERS | Event::ALL_VIEWS | Event::VIEWER_CHANGE;
 }   // end doAfterAction

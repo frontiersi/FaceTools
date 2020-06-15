@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,8 @@ using FaceTools::MultiFaceModelViewer;
 using FaceTools::FaceModelViewer;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
+using FMM = FaceTools::FileIO::FaceModelManager;
+using MS = FaceTools::Action::ModelSelector;
 
 namespace {
 
@@ -49,7 +51,7 @@ QToolButton* makeButton()
 
 QString currentModelName( const FM* fm)
 {
-    QString cname = FaceTools::FileIO::FMM::filepath(fm).c_str();
+    QString cname = FMM::filepath(fm);
     if ( !fm->isSaved())
         cname += " (*)";
     return cname;
@@ -210,12 +212,12 @@ void MultiFaceModelViewer::doOnUpdateModelLists( const FM* fm)
 
 void MultiFaceModelViewer::_doOnComboBoxChanged( size_t i, const QString &txt)
 {
-    const std::string fname = txt.split( " (*)")[0].toStdString(); // Strip "(*)" if present
-    FM* fm = FaceTools::FileIO::FMM::model( fname);
+    const QString fname = txt.split( " (*)")[0]; // Strip "(*)" if present
+    FM* fm = FMM::model( fname);
     assert(fm);
     FV* fv = _fmvs[i]->get(fm);
     assert(fv);
-    FaceTools::Action::ModelSelector::setSelected(fv);
+    MS::setSelected(fv);
 }   // end _doOnComboBoxChanged
 
 

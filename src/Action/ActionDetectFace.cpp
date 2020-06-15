@@ -95,21 +95,6 @@ void ActionDetectFace::doAction( Event)
 }   // end doAction
 
 
-namespace {
-
-void setMask( r3d::Mesh::Ptr msk, FM *fm)
-{
-    fm->setMask( msk);
-    using FaceTools::MaskRegistration;
-    // Don't set the full path - just the filename.
-    const std::string maskfile = boost::filesystem::path( MaskRegistration::maskPath().toStdString()).filename().string();
-    fm->setMaskFilename( QString::fromStdString( maskfile));
-    fm->setMaskHash( MaskRegistration::maskHash());
-}   // end setMask
-
-}   // end namespace
-
-
 // public static
 std::string ActionDetectFace::detect( FM* fm, const IntSet &ulmks)
 {
@@ -120,7 +105,9 @@ std::string ActionDetectFace::detect( FM* fm, const IntSet &ulmks)
     r3d::Mesh::Ptr mask = MaskRegistration::registerMask( fm);
 
     std::cout << "Setting mask..." << std::endl;
-    setMask( mask, fm);
+    fm->setMask( mask);
+    fm->setMaskHash( MaskRegistration::maskHash());
+
     if ( !ulmks.empty())
     {
         std::cout << "Transferring landmarks..." << std::endl;

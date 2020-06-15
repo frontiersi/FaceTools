@@ -53,7 +53,6 @@ private:
 
     r3d::Mesh::Ptr _mask;
     r3d::KDTree::Ptr _mkdtree;
-    QString _maskFilename;
     size_t _maskHash;
 
     QMap<int, FaceAssessment::Ptr> _ass;

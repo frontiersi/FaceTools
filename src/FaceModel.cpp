@@ -90,13 +90,12 @@ void FaceModel::update( r3d::Mesh::Ptr mesh, bool updateConnectivity, bool settl
         }   // end if
 
         const int nm = static_cast<int>( manf->count());
-
         for ( int i = 0; i < nm; ++i)
         {
-            const auto& bnds = manf->at(i).boundaries();  // Causes boundary edges to be calculated
+            manf->at(i).boundaries();  // Causes boundary edges to be calculated
+            //const auto& bnds = manf->at(i).boundaries();  // Causes boundary edges to be calculated
             //std::cerr << " - Manifold " << i << " has " << bnds.count() << " boundary edges" << std::endl;
         }   // end for
-
         _manifolds = manf;
     }   // end updateConnectivity
 
@@ -332,14 +331,6 @@ float FaceModel::toSurface( Vec3f& pos) const
 }   // end toSurface
 
 
-void FaceModel::setMaskFilename( const QString &fname)
-{
-    if ( fname != _maskFilename)
-        setMetaSaved(false);
-    _maskFilename = fname;
-}   // end setMaskFilename
-
-
 void FaceModel::setMaskHash( size_t h)
 {
     if ( _maskHash != h)
@@ -357,7 +348,6 @@ void FaceModel::setMask( r3d::Mesh::Ptr mask, bool copyTexture)
     if ( !_mask)
     {
         _mkdtree = nullptr;
-        _maskFilename = "";
         _maskHash = 0;
         return;
     }   // end if

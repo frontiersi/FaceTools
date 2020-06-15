@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,8 +18,8 @@
 #include <FileIO/FaceModelFileHandlerMap.h>
 #include <MiscFunctions.h>
 #include <FaceTools.h>
-#include <rlib/FileIO.h>
 #include <algorithm>
+#include <QFileInfo>
 #include <QStringList>
 #include <QRegularExpression>
 using FaceTools::FileIO::FaceModelFileHandlerMap;
@@ -185,20 +185,20 @@ QString FaceModelFileHandlerMap::extensionForFilter( const QString& filter) cons
 }   // end extensionForFilter
 
 
-FaceModelFileHandler* FaceModelFileHandlerMap::readInterface( const std::string& fname) const
+FaceModelFileHandler* FaceModelFileHandlerMap::readInterface( const QString& fname) const
 {
     FaceModelFileHandler* fileio = nullptr;
-    QString fext = rlib::getExtension(fname).c_str();
+    const QString fext = QFileInfo( fname).suffix().toLower();
     if ( _importExtDescMap.count(fext) == 1 && _fileInterfaces.count(fext) == 1)
         fileio = _fileInterfaces.at(fext);
     return fileio;
 }   // end readInterface
 
 
-FaceModelFileHandler* FaceModelFileHandlerMap::writeInterface( const std::string& fname) const
+FaceModelFileHandler* FaceModelFileHandlerMap::writeInterface( const QString& fname) const
 {
     FaceModelFileHandler* fileio = nullptr;
-    QString fext = rlib::getExtension(fname).c_str();
+    const QString fext = QFileInfo( fname).suffix().toLower();
     if ( _exportExtDescMap.count(fext) == 1 && _fileInterfaces.count(fext) == 1)
         fileio = _fileInterfaces.at(fext);
     return fileio;

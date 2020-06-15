@@ -17,22 +17,20 @@
 
 #include <Action/ActionExportMask.h>
 #include <FileIO/FaceModelManager.h>
-#include <boost/filesystem.hpp>
 #include <r3dio/IOHelpers.h>
 #include <QMessageBox>
+#include <QFileInfo>
 #include <FaceModel.h>
 #include <FaceTools.h>
-#include <rlib/FileIO.h>
 #include <cassert>
 using FaceTools::Action::ActionExportMask;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::UndoState;
 using FaceTools::Action::Event;
-using FaceTools::FileIO::FMM;
 using FaceTools::FM;
+using FMM = FaceTools::FileIO::FaceModelManager;
 using MS = FaceTools::Action::ModelSelector;
 using QMB = QMessageBox;
-namespace BFS = boost::filesystem;
 
 
 ActionExportMask::ActionExportMask( const QString& dn, const QIcon& ico, const QKeySequence &ks)
@@ -74,27 +72,27 @@ bool ActionExportMask::doBeforeAction( Event)
     exts.erase( FMM::fileFormats().preferredExt());
     _fdialog->setNameFilters( FMM::fileFormats().createExportFilters( exts));
 
-    const BFS::path origfile( FMM::filepath(MS::selectedModel()));
-    BFS::path outpath = origfile.parent_path() / (origfile.stem().string() + "_am_corr.ply");
+    const QFileInfo origfile( FMM::filepath(MS::selectedModel()));
+    const QString outpath = origfile.path() + "/" + origfile.baseName() + "_am_corr.ply";
 
-    _fdialog->setDirectory( outpath.parent_path().string().c_str());
-    _fdialog->selectFile( outpath.string().c_str());
+    _fdialog->setDirectory( origfile.path());
+    _fdialog->selectFile( outpath);
 
     QWidget *prnt = static_cast<QWidget*>(parent());
-    while ( _filename.empty())
+    while ( _filename.isEmpty())
     {
         QStringList fnames;
         if ( _fdialog->exec())
             fnames = _fdialog->selectedFiles();
 
-        _filename = fnames.empty() ? "" : fnames.first().trimmed().toStdString();
-        if ( _filename.empty())
+        _filename = fnames.empty() ? "" : fnames.first().trimmed();
+        if ( _filename.isEmpty())
             break;
 
-        BFS::path fpath(_filename);
-        if ( fpath.has_extension())
+        const QFileInfo fpath(_filename);
+        const QString ext = fpath.suffix();
+        if ( !ext.isEmpty())
         {
-            const QString ext = rlib::getExtension( _filename).c_str();
             if ( exts.count(ext) == 0)
             {
                 static const QString msg = tr("Invalid format for mesh export; choose from one of those listed.");
@@ -106,7 +104,7 @@ bool ActionExportMask::doBeforeAction( Event)
         else
         {
             const QString cext = FMM::fileFormats().extensionForFilter( _fdialog->selectedNameFilter());
-            _filename = fpath.replace_extension( cext.toStdString()).string();
+            _filename = fpath.path() + "/" + fpath.baseName() + "." + cext;
         }   // end else
 
         /*
@@ -120,20 +118,20 @@ bool ActionExportMask::doBeforeAction( Event)
         */
     }   // end while
 
-    if ( !_filename.empty())
-        MS::showStatus( QString( "Saving mask to '%1'...").arg(_filename.c_str()));
+    if ( !_filename.isEmpty())
+        MS::showStatus( QString( "Saving mask to '%1'...").arg(_filename));
 
     _savedOkay = false;
-    return !_filename.empty();
+    return !_filename.isEmpty();
 }   // end doBeforeAction
 
 
 void ActionExportMask::doAction( Event)
 {
     const FM *fm = MS::selectedModel();
-    assert( !_filename.empty());
+    assert( !_filename.isEmpty());
     fm->lockForRead();
-    _savedOkay = r3dio::saveMesh( fm->mask(), _filename);
+    _savedOkay = r3dio::saveMesh( fm->mask(), _filename.toLocal8Bit().toStdString());
     fm->unlock();
 }   // end doAction
 
@@ -141,10 +139,10 @@ void ActionExportMask::doAction( Event)
 Event ActionExportMask::doAfterAction( Event)
 {
     if ( _savedOkay)
-        MS::showStatus( QString("Saved mask to '%1'").arg(_filename.c_str()), 5000);
+        MS::showStatus( QString("Saved mask to '%1'").arg(_filename), 5000);
     else
     {
-        const QString msg = tr("Failed saving mask to '%1'!").arg(_filename.c_str());
+        const QString msg = tr("Failed saving mask to '%1'!").arg(_filename);
         MS::showStatus( msg, 10000);
         QMB::critical( static_cast<QWidget*>(parent()), tr("Failed to save mesh!"), msg);
     }   // end else

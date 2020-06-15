@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ FM* FaceModelOBJFileHandler::read( const QString& qfname)
 {
     _err = "";
     FM* fm = nullptr;
-    r3d::Mesh::Ptr mesh = _importer.load(qfname.toStdString());
+    r3d::Mesh::Ptr mesh = _importer.load(qfname.toLocal8Bit().toStdString());
     if ( mesh)
         fm = new FM(mesh);
     else
@@ -48,9 +48,8 @@ FM* FaceModelOBJFileHandler::read( const QString& qfname)
 bool FaceModelOBJFileHandler::write( const FM* fm, const QString& qfname)
 {
     _err = "";
-    const std::string fname = qfname.toStdString();
+    const std::string fname = qfname.toLocal8Bit().toStdString();
     const r3d::Mesh& model = fm->mesh();
-    std::cerr << QString("Saving to '%1'").arg(qfname).toStdString() << std::endl;
     if ( !_exporter.save( model, fname))
     {
         _err = _exporter.err().c_str();

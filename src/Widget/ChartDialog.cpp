@@ -138,7 +138,7 @@ void ChartDialog::_doOnSaveImage()
 
             QPixmap pixmap( _cview->size());
             static_cast<QWidget*>(_cview)->render( &pixmap);
-            savedOkay = pixmap.save(imgpath);
+            savedOkay = pixmap.save( imgpath);
         }   // end else
 
         if ( !savedOkay)

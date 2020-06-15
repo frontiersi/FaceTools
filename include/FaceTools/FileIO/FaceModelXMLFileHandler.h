@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,15 +23,15 @@
 
 namespace FaceTools { namespace FileIO {
 
-static const std::string XML_VERSION = "5.0";
-static const std::string XML_FILE_EXTENSION = "3df";
-static const std::string XML_FILE_DESCRIPTION = "3D Face Image and Metadata";
+static const QString XML_VERSION = "5.0";
+static const QString XML_FILE_EXTENSION = "3df";
+static const QString XML_FILE_DESCRIPTION = "3D Face Image and Metadata";
 
 class FaceTools_EXPORT FaceModelXMLFileHandler : public FaceModelFileHandler
 {
 public:
-    FaceModelXMLFileHandler() { _exts.insert( XML_FILE_EXTENSION.c_str());}
-    QString getFileDescription() const override { return XML_FILE_DESCRIPTION.c_str();}
+    FaceModelXMLFileHandler() { _exts.insert( XML_FILE_EXTENSION);}
+    QString getFileDescription() const override { return XML_FILE_DESCRIPTION;}
     const QStringSet& getFileExtensions() const override { return _exts;}
 
     bool canRead() const override { return true;}
@@ -53,19 +53,22 @@ private:
 
 // Read meta data from a 3DF file into the given property tree.
 // Returns a non-empty string on error which contains the nature of the error.
-std::string readMeta( const std::string &filename, QTemporaryDir &extractDir, PTree &tree);
+QString readMeta( const QString &fname, QTemporaryDir &extractDir, PTree &tree);
 
 // Import metadata from a property tree for the given model, setting file
-// version and the object filename and returning true iff successful.
-bool importMetaData( FM&, const PTree&, double &fversion, std::string& objfilename);
+// version and the mesh and mask filenames and returning true iff successful.
+bool importMetaData( FM&, const PTree&, double &fversion, QString &meshfname, QString &maskfname);
+
+// Same as above but without worrying about returing the mesh or mask filepaths in the out parameter.
+bool importMetaData( FM&, const PTree&, double &fversion);
 
 // Load the mesh data into the given FaceModel. Returns an empty string on success.
-std::string loadData( FM&, const QTemporaryDir&, const std::string &objfilename);
+QString loadData( FM&, const QTemporaryDir&, const QString &meshfname, const QString &maskfname);
 
 // Export metadata about the given model into a property tree ready for writing.
 // Note that because the data are being written out into a property tree, different
 // export formats are available (not just XML).
-void exportMetaData( const FM*, const std::string& objfilename, bool withExtras, PTree&);
+void exportMetaData( const FM*, bool withExtras, PTree&);
 
 }}   // end namespaces
 

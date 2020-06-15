@@ -19,14 +19,15 @@
 #include <Action/FaceActionManager.h>
 #include <FileIO/FaceModelManager.h>
 #include <QMessageBox>
-#include <boost/filesystem.hpp>
-using FaceTools::Action::FaceAction;
+#include <QFileInfo>
 using FaceTools::Action::ActionCloseFaceModel;
+using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Action::FAM;
 using FaceTools::FM;
-using FaceTools::FileIO::FMM;
+using FMM = FaceTools::FileIO::FaceModelManager;
 using MS = FaceTools::Action::ModelSelector;
+using QMB = QMessageBox;
 
 
 ActionCloseFaceModel::ActionCloseFaceModel( const QString& dname, const QIcon& ico, const QKeySequence& ks)
@@ -48,11 +49,11 @@ bool ActionCloseFaceModel::doBeforeAction( Event)
         doclose = true;
     else
     {
-        const std::string fname = boost::filesystem::path( FMM::filepath(fm)).filename().string();
-        QString msg = tr( ("Model '" + fname + "' is unsaved! Really close?").c_str());
+        const QString fname = QFileInfo( FMM::filepath(fm)).fileName();
+        QString msg = tr( ("Model '" + fname.toLocal8Bit().toStdString() + "' is unsaved! Really close?").c_str());
         if ( fm->hasMetaData() && !inPreferredFormat)
             msg = tr("Not saved as 3DF; data will be lost! Really close?");
-        doclose = QMessageBox::Yes == QMessageBox::warning( static_cast<QWidget*>(parent()), tr("Unsaved Data!"), msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        doclose = QMB::Yes == QMB::warning( static_cast<QWidget*>(parent()), tr("Unsaved Data!"), msg, QMB::Yes | QMB::No, QMB::No);
     }   // end if
     fm->unlock();
 

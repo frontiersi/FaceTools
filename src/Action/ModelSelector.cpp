@@ -115,10 +115,7 @@ FMV* ModelSelector::mouseViewer() { return static_cast<FMV*>(sn().mouseViewer())
 FMV* ModelSelector::defaultViewer()
 {
     if ( me()->_defv < 0)
-    {
-        assert(false);
         return nullptr;
-    }   // end if
     return me()->_viewers.at(size_t(me()->_defv));
 }   // end defaultViewer
 

@@ -35,6 +35,7 @@
 using FaceTools::Widget::ScanInfoDialog;
 using FaceTools::Metric::PhenotypeManager;
 using FaceTools::FM;
+using FMM = FaceTools::FileIO::FaceModelManager;
 using MS = FaceTools::Action::ModelSelector;
 
 /*
@@ -223,7 +224,7 @@ void ScanInfoDialog::refresh()
     const FM *fm = MS::selectedModel();
     if (fm)
     {
-        const QString fpath = FileIO::FMM::filepath(fm).c_str();
+        const QString fpath = FMM::filepath(fm);
         setWindowTitle( _dialogRootTitle + " | " + fpath);
 
         _ui->dobDateEdit->setDate( fm->dateOfBirth());

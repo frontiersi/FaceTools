@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,6 @@
 #include <QProcess>
 #include <QFile>
 
-#include <boost/filesystem.hpp>
 #include <fstream>
 #include <cassert>
 using FaceTools::Action::ActionExportPDF;
@@ -38,6 +37,7 @@ using FaceTools::Widget::ReportChooserDialog;
 using FaceTools::U3DCache;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
+using FMM = FaceTools::FileIO::FaceModelManager;
 using MS = FaceTools::Action::ModelSelector;
 
 // static members
@@ -140,10 +140,10 @@ bool ActionExportPDF::saveGeneratedReport( const QString& tmpfile, QFileDialog *
 {
     assert( fdialog);
     const FM* fm = MS::selectedModel();
-    boost::filesystem::path outpath( FileIO::FMM::filepath(fm));
+    const QFileInfo outpath( FMM::filepath(fm));
 
-    fdialog->setDirectory( QString::fromStdString( outpath.parent_path().string()));
-    QString outfile = outpath.filename().replace_extension( "pdf").string().c_str();
+    fdialog->setDirectory( outpath.path());
+    QString outfile = outpath.path() + "/" + outpath.baseName() + ".pdf";
     fdialog->selectFile( outfile);
 
     bool docopy = false;

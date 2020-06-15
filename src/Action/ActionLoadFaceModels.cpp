@@ -24,7 +24,7 @@ using FaceTools::Action::FaceAction;
 using FaceTools::FileIO::LoadFaceModelsHelper;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
-using FaceTools::FileIO::FMM;
+using FMM = FaceTools::FileIO::FaceModelManager;
 using MS = FaceTools::Action::ModelSelector;
 
 

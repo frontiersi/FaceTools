@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 #include <QMessageBox>
 #include <QFile>
 using FaceTools::FileIO::LoadFaceModelsHelper;
+using FMM = FaceTools::FileIO::FaceModelManager;
 
 
 LoadFaceModelsHelper::LoadFaceModelsHelper( QWidget* parent) : _parent(parent) {}
@@ -37,9 +38,9 @@ int LoadFaceModelsHelper::setFilteredFilenames( const QStringList& fnames)
     {
         if ( !QFile::exists( qfname))
             notpres << qfname;
-        else if ( !FMM::canRead( qfname.toStdString()))
+        else if ( !FMM::canRead( qfname))
             notsupp << qfname;
-        else if ( FMM::isOpen( qfname.toStdString()))
+        else if ( FMM::isOpen( qfname))
             areopen << qfname;
         else
             _filenames << qfname;
@@ -85,11 +86,11 @@ size_t LoadFaceModelsHelper::loadModels()
     _failnames.clear();
     for ( const QString& fname : _filenames)
     {
-        FM* fm = FMM::read( fname.toStdString());   // Blocks
+        FM* fm = FMM::read( fname);   // Blocks
         if ( fm)
             _loaded.insert( fm);
         else
-            _failnames[FMM::error().c_str()] << fname;
+            _failnames[FMM::error()] << fname;
     }   // end for
     _filenames.clear();
     return _loaded.size();

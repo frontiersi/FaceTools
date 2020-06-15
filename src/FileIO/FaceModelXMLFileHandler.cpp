@@ -27,20 +27,18 @@
 #include <quazip5/JlCompress.h>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/filesystem.hpp>
 #include <sstream>
 #include <ctime>
 using FaceTools::FileIO::FaceModelXMLFileHandler;
 using FaceTools::Metric::PhenotypeManager;
 using FaceTools::Metric::Phenotype;
 using FaceTools::FM;
-namespace BFS = boost::filesystem;
 
-void FaceTools::FileIO::exportMetaData( const FM* fm, const std::string& objfname, bool withExtras, PTree& tnode)
+
+void FaceTools::FileIO::exportMetaData( const FM* fm, bool withExtras, PTree& tnode)
 {
     PTree& rnode = tnode.add("FaceModel","");
 
-    rnode.put( "ObjFilename", objfname);
     rnode.put( "Source", fm->source().toStdString());
     rnode.put( "StudyId", fm->studyId().toStdString());
     rnode.put( "DateOfBirth", fm->dateOfBirth().toString().toStdString());
@@ -51,7 +49,6 @@ void FaceTools::FileIO::exportMetaData( const FM* fm, const std::string& objfnam
     if ( fm->hasMask())
     {
         PTree &maskNode = rnode.put( "Mask", "");
-        maskNode.put( "Filename", fm->maskFilename().toStdString());
         maskNode.put( "Hash", fm->maskHash());
     }   // end if
 
@@ -64,7 +61,7 @@ void FaceTools::FileIO::exportMetaData( const FM* fm, const std::string& objfnam
         FaceAssessment::CPtr ass = fm->assessment( id);
 
         PTree& anode = anodes.add("Assessment", "");
-        anode.put("AssessmentId", id);
+        anode.put( "AssessmentId", id);
         anode.put( "Assessor", ass->assessor().toStdString());
         anode.put( "Notes", ass->notes().toStdString());
         ass->landmarks().write( anode.put("Landmarks", ""));
@@ -104,9 +101,9 @@ namespace {
 PTree& exportXMLHeader( PTree& tree)
 {
     PTree& topNode = tree.put( "faces","");
-    topNode.put( "<xmlattr>.version", FaceTools::FileIO::XML_VERSION);
+    topNode.put( "<xmlattr>.version", FaceTools::FileIO::XML_VERSION.toStdString());
     std::ostringstream desc;
-    desc << FaceTools::FileIO::XML_FILE_DESCRIPTION << ";" << time(nullptr);
+    desc << FaceTools::FileIO::XML_FILE_DESCRIPTION.toStdString() << ";" << time(nullptr);
     topNode.put( "description", desc.str());
 
     PTree& records = topNode.put( "FaceModels","");    // Only a single record
@@ -117,80 +114,60 @@ PTree& exportXMLHeader( PTree& tree)
 
 
 // public
-bool FaceModelXMLFileHandler::write( const FM* fm, const QString& sfname)
+bool FaceModelXMLFileHandler::write( const FM* fm, const QString& fname)
 {
     assert(fm);
     _err = "";
 
     try
     {
-        const BFS::path fpath( sfname.toStdString()); // e.g. /home/rich/Desktop/13040011.3df
-        QTemporaryDir tdir( QDir::tempPath() + "/" + QString::fromStdString( fpath.stem().string()));
+        QTemporaryDir tdir( QDir::tempPath() + "/" + QFileInfo( fname).baseName());
         if ( !tdir.isValid())
         {
             _err = "Unable to create temporary directory for writing to!";
             return false;
         }   // end if
 
-        //std::cout << "Writing to temporary directory at: " << tdir.path().toStdString() << std::endl;
-
-        std::string xmlfile = fpath.filename().replace_extension( "xml").string();   // e.g. 13040011.xml
-        xmlfile = tdir.filePath( xmlfile.c_str()).toStdString();
-
         std::ofstream ofs;
-        ofs.open( xmlfile);
+        ofs.open( tdir.filePath( "meta.xml").toLocal8Bit().toStdString());
         if ( !ofs.is_open())
         {
-            _err = ("Unable to open \"" + xmlfile + "\" for writing!").c_str();
+            _err = "Cannot open output file stream for writing metadata!";
             return false;
         }   // end if
 
-        // Write out the model geometry itself into .obj format.
-        const std::string modfile = BFS::path(xmlfile).replace_extension( "obj").string();
-        const r3d::Mesh& model = fm->mesh();
-        //std::cout << "Exporting main mesh to " << modfile << std::endl;
-        if ( !r3dio::saveAsOBJ( model, modfile))
-        {
-            _err = "Failed to write main OBJ!";
-            std::cerr << "[WARNING] FaceTools::FileIO::FaceModelXMLFileHandler::write: Failed! " << _err.toStdString() << std::endl;
-            return false;
-        }   // end if
-
-        if ( fm->hasMask())
-        {
-            std::string maskfile = BFS::path( fm->maskFilename().toStdString()).replace_extension( "obj").string();
-            maskfile = tdir.filePath( maskfile.c_str()).toStdString();
-            //std::cout << "Exporting mask mesh to " << maskfile << std::endl;
-            if ( !r3dio::saveAsOBJ( fm->mask(), maskfile))
-            {
-                _err = "Failed to write mask OBJ!";
-                std::cerr << "[WARNING] FaceTools::FileIO::FaceModelXMLFileHandler::write: Failed! " << _err.toStdString() << std::endl;
-                return false;
-            }   // end if
-        }   // end if
-
-        // Export jpeg thumbnail of model.
-        const std::string thumbfile = BFS::path(xmlfile).replace_extension( "jpg").string();
-        cv::Mat img = FaceTools::makeThumbnail( fm, cv::Size(256,256), 500);   // Generate thumbnail
-        cv::imwrite( thumbfile, img);
-
+        // Export metadata
         PTree tree;
         PTree& rnode = exportXMLHeader( tree);
-        const std::string relfname = BFS::path( modfile).filename().string(); // Relative filepath
-        exportMetaData( fm, relfname, false/*no extra data*/, rnode);
+        exportMetaData( fm, false/*no extra data*/, rnode);
         boost::property_tree::write_xml( ofs, tree);
         ofs.close();
 
-        //std::cout << "[INFO] FaceTools::FileIO::FaceModelXMLFileHandler::write: Exported meta-data to " << xmlfile << std::endl;
+        // Write out the model geometry itself into .obj format.
+        if ( !r3dio::saveAsOBJ( fm->mesh(), tdir.filePath( "mesh.obj").toLocal8Bit().toStdString()))
+        {
+            _err = "Failed to write mesh!";
+            return false;
+        }   // end if
 
-        // Finally, zip up the contents of the directory into sfname.
-        if ( !JlCompress::compressDir( sfname, tdir.path(), true/*recursively pack subdirs*/))
+        // Write out the mask if set
+        if ( fm->hasMask() && !r3dio::saveAsPLY( fm->mask(), tdir.filePath( "mask.ply").toLocal8Bit().toStdString()))
+        {
+            _err = "Failed to write mask!";
+            return false;
+        }   // end if
+
+        // Export jpeg thumbnail of model.
+        const cv::Mat img = makeThumbnail( fm, cv::Size(256,256), 500);   // Generate thumbnail
+        cv::imwrite( tdir.filePath("thumb.jpg").toLocal8Bit().toStdString(), img);
+
+        // Finally, zip up the contents of the directory into fname.
+        if ( !JlCompress::compressDir( fname, tdir.path(), true/*recursively pack subdirs*/))
             _err = "Unable to compress saved data into archive format!";
     }   // end try
     catch ( const std::exception& e)
     {
-        std::cerr << "[EXCEPTION] FaceTools::FileIO::FaceModelXMLFileHandler::write: Failed to write to "
-            << sfname.toStdString() << std::endl;
+        std::cerr << "[EXCEPTION] FaceTools::FileIO::FaceModelXMLFileHandler::write: Failed to write to " << fname.toStdString() << std::endl;
         _err = e.what();
     }   // end catch
 
@@ -200,12 +177,13 @@ bool FaceModelXMLFileHandler::write( const FM* fm, const QString& sfname)
 
 namespace {
 
-void importModelRecord( FM &fm, const PTree& rnode, std::string& objfilename)
+void importModelRecord( FM &fm, const PTree& rnode, QString &meshfname, QString &maskfname)
 {
+    meshfname = "mesh.obj";
     if ( rnode.count("objfilename") > 0)
-        objfilename = rnode.get<std::string>( "objfilename");  // Without path info
+        meshfname = QString::fromStdString( rnode.get<std::string>( "objfilename"));
     else if ( rnode.count("ObjFilename") > 0)
-        objfilename = rnode.get<std::string>( "ObjFilename");  // Without path info
+        meshfname = QString::fromStdString( rnode.get<std::string>( "ObjFilename"));
 
     QString src;
     if ( rnode.count("source") > 0)
@@ -276,9 +254,15 @@ void importModelRecord( FM &fm, const PTree& rnode, std::string& objfilename)
 
     if ( rnode.count("Mask") > 0)
     {
+        maskfname = "mask.ply";
         const PTree &maskNode = rnode.get_child("Mask");
         if ( maskNode.count("Filename") > 0)
-            fm.setMaskFilename( QString::fromStdString( maskNode.get<std::string>("Filename")));
+        {
+            maskfname = QString::fromStdString( maskNode.get<std::string>("Filename")); // Will end in 3DF - needs to end with OBJ
+            const QFileInfo finfo( maskfname);
+            if ( finfo.suffix() == "3df")
+                maskfname = finfo.baseName() + ".obj";
+        }   // end if
         if ( maskNode.count("Hash") > 0)
             fm.setMaskHash( maskNode.get<size_t>("Hash"));
     }   // end if
@@ -373,7 +357,14 @@ void importModelRecord( FM &fm, const PTree& rnode, std::string& objfilename)
 }   // end namespace
 
 
-bool FaceTools::FileIO::importMetaData( FM &fm, const PTree& tree, double &fvers, std::string& objfilename)
+bool FaceTools::FileIO::importMetaData( FM &fm, const PTree& tree, double &fvers)
+{
+    QString notused0, notused1;
+    return importMetaData( fm, tree, fvers, notused0, notused1);
+}   // end importMetaData
+
+
+bool FaceTools::FileIO::importMetaData( FM &fm, const PTree& tree, double &fvers, QString& meshfname, QString& maskfname)
 {
     static const std::string msghd( " FaceTools::FileIO::importMetaData: ");
 
@@ -420,13 +411,13 @@ bool FaceTools::FileIO::importMetaData( FM &fm, const PTree& tree, double &fvers
         return false;
     }   // end else
 
-    static const double VERSION = QString::fromStdString( XML_VERSION).toDouble();
+    static const double VERSION = XML_VERSION.toDouble();
 
     fvers = VERSION;
     if ( vstr)
     {
         fvers = QString::fromStdString(*vstr).toDouble();
-        std::cerr << "Read in XML data from version " << *vstr << " file" << std::endl;
+        //std::cerr << "Read in XML data from version " << *vstr << " file" << std::endl;
     }   // end if
 
     // If the file version is lower than this library version then print a warning (should be backwards compatible).
@@ -436,40 +427,36 @@ bool FaceTools::FileIO::importMetaData( FM &fm, const PTree& tree, double &fvers
     else if ( fvers > VERSION)
         std::cerr << "[WARNING]" << msghd << "Higher version " << fvers << " of XML file being read into version " << VERSION << " library!" << std::endl;
 
-    importModelRecord( fm, *fnode, objfilename);
+    importModelRecord( fm, *fnode, meshfname, maskfname);
     return true;
 }   // end importMetaData
 
 
-std::string FaceTools::FileIO::readMeta( const std::string &fname, QTemporaryDir& tdir, PTree &tree)
+QString FaceTools::FileIO::readMeta( const QString &fname, QTemporaryDir &tdir, PTree &tree)
 {
-    std::string err;
+    QString err;
 
     try
     {
         if ( !tdir.isValid())
             return "Unable to open temporary directory for reading from!";
 
-        QStringList fnames = JlCompress::extractDir( QString::fromStdString(fname), tdir.path());
+        QStringList fnames = JlCompress::extractDir( fname, tdir.path());
         if ( fnames.isEmpty())
             return "Unable to extract files from archive!";
 
         QStringList xmlList = QDir( tdir.path()).entryList( {"*.xml"});
-        std::string xmlfile;
+        QString xmlfile;
         if ( xmlList.size() == 1)
-            xmlfile = tdir.filePath( xmlList.first()).toStdString();
+            xmlfile = tdir.filePath( xmlList.first());
 
-        if ( xmlfile.empty() || !BFS::is_regular_file( xmlfile))
-            return "Cannot find XML meta-data in archive!";
+        if ( xmlfile.isEmpty() || !QFileInfo(xmlfile).isFile())
+            return "Cannot find metadata in archive!";
 
         std::ifstream ifs;
-        ifs.open( xmlfile);
+        ifs.open( xmlfile.toLocal8Bit().toStdString());
         if ( !ifs.is_open())
-        {
-            std::ostringstream serr;
-            serr << "Unable to open \"" << xmlfile << "\" for reading!";
-            return serr.str();
-        }   // end if
+            return "Cannot open metadata file for reading!";
 
         boost::property_tree::read_xml( ifs, tree);
     }   // end try
@@ -490,15 +477,13 @@ std::string FaceTools::FileIO::readMeta( const std::string &fname, QTemporaryDir
 }   // end readMeta
 
 
-std::string FaceTools::FileIO::loadData( FM &fm, const QTemporaryDir &tdir, const std::string &objfilename)
+QString FaceTools::FileIO::loadData( FM &fm, const QTemporaryDir &tdir, const QString &meshfname, const QString &maskfname)
 {
-    std::string err;
+    QString err;
     try
     {
-        const std::string objfile = tdir.filePath( objfilename.c_str()).toStdString();
-        //std::cout << "Importing main mesh from " << objfile << std::endl;
-        r3d::Mesh::Ptr mesh = r3dio::loadMesh( objfile);   // Raw model - no post process undertaken!
-
+        // Raw model - no post process undertaken!
+        r3d::Mesh::Ptr mesh = r3dio::loadMesh( tdir.filePath( meshfname).toLocal8Bit().toStdString());
         if ( mesh)
         {
             fm.update( mesh, true, false/*don't resettle landmarks (or update paths) just read in*/);
@@ -506,30 +491,23 @@ std::string FaceTools::FileIO::loadData( FM &fm, const QTemporaryDir &tdir, cons
                 fm.assessment(aid)->paths().update( &fm);
         }   // end if
         else
-            return QString("Couldn't load main mesh from '%1'").arg( objfile.c_str()).toStdString();
+            return QString("Couldn't load main mesh from '%1'").arg( meshfname);
 
         // Also load the mask if present
-        if ( !fm.maskFilename().isEmpty())
+        if ( !maskfname.isEmpty())
         {
-            std::string maskfile = BFS::path( fm.maskFilename().toStdString()).replace_extension( "obj").string();
-            maskfile = tdir.filePath( maskfile.c_str()).toStdString();
-            //std::cout << "Trying to import mask from " << maskfile << std::endl;
-            r3d::Mesh::Ptr mask = r3dio::loadMesh( maskfile);
-
+            r3d::Mesh::Ptr mask = r3dio::loadMesh( tdir.filePath( maskfname).toLocal8Bit().toStdString());
             if ( mask)
             {
-                fm.setMask( mask);
+                assert( fm.maskHash() != 0);
                 // Always ensure that the model is loaded aligned if mask available (fixed for 5.0.2).
                 r3d::Mat4f T = MaskRegistration::calcMaskAlignment( *mask);
                 fm.addTransformMatrix( T.inverse());
                 fm.fixTransformMatrix();
             }   // end if
             else
-            {
-                //std::cout << "Mask not loaded - setting null!" << std::endl;
-                fm.setMaskFilename( "");
-                fm.setMaskHash(0);
-            }   // end else
+                std::cout << "Mask not loaded - setting null!" << std::endl;
+            fm.setMask( mask);
         }   // end if
     }   // end try
     catch ( const std::exception& e)
@@ -542,11 +520,9 @@ std::string FaceTools::FileIO::loadData( FM &fm, const QTemporaryDir &tdir, cons
 }   // end loadData
 
 
-// public
-FM* FaceModelXMLFileHandler::read( const QString& sfname)
+FM* FaceModelXMLFileHandler::read( const QString& fname)
 {
     _err = "";
-    FM *fm = nullptr;
 
     QTemporaryDir tdir;
     if ( !tdir.isValid())
@@ -555,28 +531,23 @@ FM* FaceModelXMLFileHandler::read( const QString& sfname)
         return nullptr;
     }   // end if
 
+    FM *fm = new FM;
     PTree tree;
-    _err = QString::fromStdString( readMeta( sfname.toStdString(), tdir, tree));
+    _err = readMeta( fname, tdir, tree);
     if ( _err.isEmpty())
     {
-        fm = new FM;
         _fversion = 0.0;
-        std::string objfilename;
-        if ( !importMetaData( *fm, tree, _fversion, objfilename))
-        {
+        QString meshfname, maskfname;
+        if ( !importMetaData( *fm, tree, _fversion, meshfname, maskfname))
             _err = "No FaceModel objects recorded in file!";
-            delete fm;
-            fm = nullptr;
-        }   // end if
         else
-        {
-            _err = QString::fromStdString( loadData( *fm, tdir, objfilename));
-            if ( !_err.isEmpty())
-            {
-                delete fm;
-                fm = nullptr;
-            }   // end if
-        }   // end else
+            _err = loadData( *fm, tdir, meshfname, maskfname);
+    }   // end if
+
+    if ( !_err.isEmpty())
+    {
+        delete fm;
+        fm = nullptr;
     }   // end if
 
     return fm;

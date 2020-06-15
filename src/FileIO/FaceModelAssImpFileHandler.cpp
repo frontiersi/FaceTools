@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ FM* FaceModelAssImpFileHandler::read( const QString& qfname)
 {
     _err = "";
     FM* fm = nullptr;
-    const std::string fname = qfname.toStdString();
+    const std::string fname = qfname.toLocal8Bit().toStdString();
     r3d::Mesh::Ptr model = _assimp->load(fname);
     if ( model)
         fm = new FM(model);

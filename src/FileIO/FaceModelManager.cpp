@@ -19,11 +19,8 @@
 #include <MiscFunctions.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
-#include <rlib/FileIO.h>
 #include <QFileInfo>
 #include <QDebug>
-#include <boost/algorithm/string.hpp>
-#include <boost/filesystem.hpp>
 #include <cassert>
 using FaceTools::FileIO::FaceModelManager;
 using FaceTools::FileIO::FaceModelFileHandler;
@@ -35,9 +32,9 @@ using FaceTools::FM;
 size_t FaceModelManager::_loadLimit(0);
 FaceModelFileHandlerMap FaceModelManager::_fhmap;
 FMS FaceModelManager::_models;
-std::unordered_map<FM*, std::string> FaceModelManager::_mdata;
-std::unordered_map<std::string, FM*> FaceModelManager::_mfiles;    // Lookup models by current filepath
-std::string FaceModelManager::_err;
+std::unordered_map<FM*, QString> FaceModelManager::_mdata;
+std::unordered_map<QString, FM*> FaceModelManager::_mfiles;    // Lookup models by current filepath
+QString FaceModelManager::_err;
 
 
 void FaceModelManager::setLoadLimit( size_t llimit) { _loadLimit = llimit;}
@@ -54,15 +51,15 @@ bool FaceModelManager::hasPreferredFileFormat( const FM* fm)
 }   // end hasPreferredFileFormat
 
 
-bool FaceModelManager::isPreferredFileFormat( const std::string& fname)
+bool FaceModelManager::isPreferredFileFormat( const QString& fname)
 {
-    const QString& pext = _fhmap.preferredExt();
-    const std::string cext = rlib::getExtension( fname);
-    return cext == pext.toLower().toStdString();
+    const QString pext = _fhmap.preferredExt().toLower();
+    const QString cext = QFileInfo( fname).suffix().toLower();
+    return cext == pext;
 }   // end isPreferredFileFormat
 
 
-void FaceModelManager::_setModelFilepath( const FM* cfm, const std::string& fname)
+void FaceModelManager::_setModelFilepath( const FM* cfm, const QString& fname)
 {
     FM* fm = const_cast<FM*>(cfm);
     _models.insert(fm);
@@ -71,15 +68,15 @@ void FaceModelManager::_setModelFilepath( const FM* cfm, const std::string& fnam
 }   // end _setModelFilepath
 
 
-bool FaceModelManager::write( const FM* cfm, std::string* fpath)
+bool FaceModelManager::write( const FM* cfm, QString *fpath)
 {
     FM* fm = const_cast<FM*>(cfm);
     assert( _models.count(fm) > 0);
-    std::string savefilepath = _mdata.at(fm);
-    std::string delfilepath;    // Will not be empty if replacing filename
+    QString savefilepath = _mdata.at(fm);
+    QString delfilepath;    // Will not be empty if replacing filename
     if ( fpath)
     {
-        if ( fpath->empty())
+        if ( fpath->isEmpty())
             *fpath = savefilepath;
         else    // New filepath specified
         {
@@ -93,9 +90,9 @@ bool FaceModelManager::write( const FM* cfm, std::string* fpath)
     if ( !fileio)
         _err = "File \"" + savefilepath + "\" is not an allowed file type!";
     else if ( !fileio->canWrite())
-        _err = "Cannot write to " + fileio->getFileDescription().toStdString() + " files!";
-    else if ( !fileio->write( fm, QString(savefilepath.c_str())))
-        _err = fileio->error().toStdString();
+        _err = "Cannot write to " + fileio->getFileDescription() + " files!";
+    else if ( !fileio->write( fm, savefilepath))
+        _err = fileio->error();
     else    // Successful write
     {
         _mfiles.erase(delfilepath);
@@ -104,60 +101,52 @@ bool FaceModelManager::write( const FM* cfm, std::string* fpath)
         fm->setMetaSaved( isPreferredFileFormat(savefilepath) || !fm->hasMetaData());
     }   // end else
 
-    return _err.empty();
+    return _err.isEmpty();
 }   // end write
 
 
-bool FaceModelManager::canWrite( const std::string& fn)
+bool FaceModelManager::canWrite( const QString& fn)
 {
-    const QFileInfo finfo(fn.c_str());
-    const std::string fpath = finfo.filePath().toStdString();
-    FaceModelFileHandler* fileio = _fhmap.writeInterface( fpath);
-    if ( fileio && fileio->canWrite())
-        return true;
-    return false;
+    const QFileInfo finfo(fn);
+    FaceModelFileHandler* fileio = _fhmap.writeInterface( finfo.filePath());
+    return fileio && fileio->canWrite();
 }   // end canWrite
 
 
-bool FaceModelManager::canRead( const std::string& fn)
+bool FaceModelManager::canRead( const QString& fn)
 {
-    const QFileInfo finfo(fn.c_str());
-    const std::string fname = finfo.filePath().toStdString();
-    if ( !boost::filesystem::exists( fname))
-       return false;
-    FaceModelFileHandler* fileio = _fhmap.readInterface( fname);
+    FaceModelFileHandler* fileio = nullptr;
+    const QFileInfo finfo(fn);
+    if ( finfo.exists())
+        fileio = _fhmap.readInterface( finfo.filePath());
     return fileio && fileio->canRead();
 }   // end canRead
 
 
-bool FaceModelManager::hasFileHandler( const std::string &fpath)
+bool FaceModelManager::hasFileHandler( const QString &fpath)
 {
     return _fhmap.readInterface( fpath) != nullptr || _fhmap.writeInterface( fpath) != nullptr;
 }   // end hasFileHandler
 
 
-bool FaceModelManager::canSaveTextures( const std::string &fpath)
+bool FaceModelManager::canSaveTextures( const QString &fpath)
 {
     FaceModelFileHandler* fileio = _fhmap.writeInterface( fpath);
-    if ( fileio && fileio->canWriteTextures())
-        return true;
-    return false;
+    return fileio && fileio->canWriteTextures();
 }   // end canSaveTextures
 
 
-bool FaceModelManager::isOpen( const std::string& fn)
+bool FaceModelManager::isOpen( const QString& fn)
 {
-    const QFileInfo finfo(fn.c_str());
-    const std::string fname = finfo.filePath().toStdString();
-    return _mfiles.count(fname) > 0;
+    const QFileInfo finfo(fn);
+    return _mfiles.count( finfo.filePath()) > 0;
 }   // end isOpen
 
 
-FM* FaceModelManager::read( const std::string& fn)
+FM* FaceModelManager::read( const QString& fn)
 {
-    assert( !fn.empty());
-    const QFileInfo finfo(fn.c_str());
-    const std::string fname = finfo.filePath().toStdString();
+    const QFileInfo finfo(fn);
+    const QString fname = finfo.filePath();
 
     _err = "";
     if ( _mfiles.count(fname) > 0)
@@ -169,26 +158,26 @@ FM* FaceModelManager::read( const std::string& fn)
 
     FaceModelFileHandler* fileio = nullptr;
     FM* fm = nullptr;
-    if ( !boost::filesystem::exists( fname))
+    if ( !finfo.exists())
         _err = "File \"" + fname + "\" does not exist!";
     else if ( (fileio = _fhmap.readInterface(fname)) == nullptr)
         _err = "File \"" + fname + "\" is not an allowed file type!";
     else if ( !fileio->canRead())
-        _err = "Cannot read from " + fileio->getFileDescription().toStdString() + " files!";
-    else if ( (fm = fileio->read( QString( fname.c_str()))) == nullptr)
-        _err = fileio->error().toStdString();
+        _err = "Cannot read from " + fileio->getFileDescription() + " files!";
+    else if ( (fm = fileio->read( fname)) == nullptr)
+        _err = fileio->error();
     else
     {
         _setModelFilepath( fm, fname);
-        fm->setModelSaved(true);
-        fm->setMetaSaved(true);
+        fm->setModelSaved( true);
+        fm->setMetaSaved( true);
     }   // end else
 
     return fm;
 }   // end read
 
 
-const std::string& FaceModelManager::filepath( const FM* fm)
+const QString& FaceModelManager::filepath( const FM* fm)
 {
     assert( fm);
     assert( _models.count(const_cast<FM*>(fm)) > 0);
@@ -196,7 +185,7 @@ const std::string& FaceModelManager::filepath( const FM* fm)
 }   // end filepath
 
 
-FM* FaceModelManager::model( const std::string& fname)
+FM* FaceModelManager::model( const QString& fname)
 {
     FM* fm = nullptr;
     if ( _mfiles.count(fname) > 0)

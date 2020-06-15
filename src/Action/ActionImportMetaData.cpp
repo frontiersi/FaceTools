@@ -20,21 +20,23 @@
 #include <FileIO/FaceModelXMLFileHandler.h>
 #include <FaceModel.h>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QFile>
 #include <QMessageBox>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <boost/filesystem.hpp>
 #include <cassert>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionImportMetaData;
 using FaceTools::Action::Event;
-using FaceTools::FileIO::FMM;
 using FaceTools::FM;
+using FMM = FaceTools::FileIO::FaceModelManager;
 using MS = FaceTools::Action::ModelSelector;
+using QMB = QMessageBox;
 
 
-ActionImportMetaData::ActionImportMetaData( const QString& dn, const QIcon& ico) : FaceAction(dn, ico), _fdialog(nullptr)
+ActionImportMetaData::ActionImportMetaData( const QString& dn, const QIcon& ico)
+    : FaceAction(dn, ico), _fdialog(nullptr), _err(false)
 {
     _mimefilters << "text/xml" << "application/json";
 }   // end ctor
@@ -61,25 +63,24 @@ QString ActionImportMetaData::toolTip() const
 bool ActionImportMetaData::isAllowed( Event) { return MS::isViewSelected();}
 
 
-QString ActionImportMetaData::_getFileName( const FM* fm)
+QString ActionImportMetaData::_getFilePath( const FM* fm)
 {
-    std::string filename = FMM::filepath( fm);
-    boost::filesystem::path inpath( filename);
-    filename = inpath.replace_extension( _mimeDB.mimeTypeForName( _fdialog->selectedMimeTypeFilter()).preferredSuffix().toStdString()).string();
+    const auto &filter = _fdialog->selectedMimeTypeFilter();
+    const QFileInfo fpath( FMM::filepath(fm));
+    QString fp = fpath.path() + "/" + fpath.baseName() + "." + _mimeDB.mimeTypeForName( filter).preferredSuffix();
+    if ( QFile::exists( fp))
+        _fdialog->selectFile( fp);
 
-    if ( QFile::exists( filename.c_str()))
-        _fdialog->selectFile( filename.c_str());
-
-    QString fname;
+    fp = "";
     if ( _fdialog->exec())
     {
         QStringList fnames = _fdialog->selectedFiles();
         if ( !fnames.empty())
-            fname = fnames.first();
+            fp = fnames.first();
     }   // end if
 
-    return fname;
-}   // end _getFileName
+    return fp;
+}   // end _getFilePath
 
 
 bool ActionImportMetaData::doBeforeAction( Event)
@@ -90,26 +91,27 @@ bool ActionImportMetaData::doBeforeAction( Event)
     const FM* fm = MS::selectedModel();
     if ( fm->hasMetaData())
     {
-        const std::string fname = boost::filesystem::path( FMM::filepath(fm)).filename().string();
-        QString msg = tr( ("Model \"" + fname + "\" already has meta data! Overwrite all?").c_str());
-        bool doImport = QMessageBox::Yes == QMessageBox::question( prnt, tr("Overwrite existing data?"), msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        const QString fname = QFileInfo( FMM::filepath(fm)).fileName();
+        const QString msg = tr( ("Model \"" + fname.toLocal8Bit().toStdString() + "\" already has meta data! Overwrite all?").c_str());
+        bool doImport = QMB::Yes == QMB::question( prnt, tr("Overwrite existing data?"), msg, QMB::Yes | QMB::No, QMB::No);
         if ( !doImport)
             return false;
     }   // end if
 
-    QString fname = _getFileName( fm);
-    if ( fname.isEmpty())
+    const QString fp = _getFilePath( fm);
+    if ( fp.isEmpty())
         return false;
 
-    _ifs.open( fname.toStdString());
+    _ifs.open( fp.toLocal8Bit().toStdString());
     if ( !_ifs.is_open())
     {
-        const QString msg( "Unable to open \'" + fname + "' for reading!");
-        QMessageBox::critical( prnt, tr("Import write error!"), msg);
+        const QString msg = tr( ("Unable to open \'" + fp.toLocal8Bit().toStdString() + "' for reading!").c_str());
+        QMB::critical( prnt, tr("Import write error!"), msg);
         return false;
     }   // end if
 
-    _filename = fname;
+    _err = false;
+    _filepath = fp;
     return true;
 }   // end doBeforeAction
 
@@ -118,7 +120,7 @@ void ActionImportMetaData::doAction( Event)
 {
     storeUndo( this, Event::ASSESSMENT_CHANGE | Event::LANDMARKS_CHANGE | Event::PATHS_CHANGE);
 
-    QMimeType mtype = _mimeDB.mimeTypeForFile(QFileInfo(_filename));
+    QMimeType mtype = _mimeDB.mimeTypeForFile(QFileInfo(_filepath));
     assert(mtype.isValid());
 
     PTree tree;
@@ -139,11 +141,18 @@ void ActionImportMetaData::doAction( Event)
     FM* fm = MS::selectedModel();
     fm->lockForWrite();
 
-    std::string unused;
+    _err = false;
     double fversion;
-    FileIO::importMetaData( *fm, tree, fversion, unused);
-    fm->moveToSurface();
-    fm->unlock();
+    if ( FileIO::importMetaData( *fm, tree, fversion))
+    {
+        fm->moveToSurface();
+        fm->unlock();
+    }   // end if
+    else
+    {
+        _err = true;
+        scrapLastUndo( fm);
+    }   // end else
 
     _ifs.close();
 }   // end doAction
@@ -151,7 +160,14 @@ void ActionImportMetaData::doAction( Event)
 
 Event ActionImportMetaData::doAfterAction( Event)
 {
-    MS::showStatus( QString("Imported meta data from '%1'.").arg(_filename), 5000);
-    return Event::ASSESSMENT_CHANGE | Event::LANDMARKS_CHANGE | Event::PATHS_CHANGE;
+    Event ev = Event::NONE;
+    if ( _err)
+        MS::showStatus( QString("Unable to import data from '%1'!").arg(_filepath), 10000);
+    else
+    {
+        MS::showStatus( QString("Imported meta data from '%1'.").arg(_filepath), 5000);
+        ev = Event::ASSESSMENT_CHANGE | Event::LANDMARKS_CHANGE | Event::PATHS_CHANGE;
+    }   // end else
+    return ev;
 }   // end doAfterAction
 

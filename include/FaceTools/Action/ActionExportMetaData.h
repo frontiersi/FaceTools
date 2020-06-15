@@ -40,11 +40,11 @@ protected:
 
 private:
     QFileDialog *_fdialog;
-    QString _filename;
+    QString _filepath;
     std::ofstream _ofs;
     QMimeDatabase _mimeDB;
     QStringList _mimefilters;
-    QString _getFileName( const FM*);
+    QString _getFilePath( const FM*);
 };  // end class
 
 }}   // end namespace

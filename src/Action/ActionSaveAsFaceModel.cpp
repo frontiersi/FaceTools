@@ -17,17 +17,17 @@
 
 #include <Action/ActionSaveAsFaceModel.h>
 #include <FileIO/FaceModelManager.h>
+#include <QFileInfo>
 #include <QMessageBox>
-#include <boost/filesystem.hpp>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionSaveAsFaceModel;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::FM;
+using FMM = FaceTools::FileIO::FaceModelManager;
 using MS = FaceTools::Action::ModelSelector;
 using QMB = QMessageBox;
-namespace BFS = boost::filesystem;
 
 
 ActionSaveAsFaceModel::ActionSaveAsFaceModel( const QString& dn, const QIcon& ico, const QKeySequence& ks)
@@ -52,7 +52,7 @@ QString ActionSaveAsFaceModel::whatsThis() const
     QStringList htext;
     htext << "Save the selected model to a specific file format. Note that data";
     htext << "such as landmarks and measurements can only be saved in";
-    htext << QString("%1 format.").arg(FileIO::FMM::fileFormats().preferredExt());
+    htext << QString("%1 format.").arg(FMM::fileFormats().preferredExt());
     return htext.join(" ");
 }   // end whatsThis
 
@@ -62,42 +62,37 @@ bool ActionSaveAsFaceModel::isAllowed( Event) { return MS::isViewSelected();}
 
 bool ActionSaveAsFaceModel::doBeforeAction( Event)
 {
-    _fdialog->setNameFilters( FileIO::FMM::fileFormats().createExportFilters());
+    _fdialog->setNameFilters( FMM::fileFormats().createExportFilters());
 
     const FM* fm = MS::selectedModel();
-    BFS::path outpath( FileIO::FMM::filepath(fm));
-
-    // Default save directory is last save location for model
-    const QString parentPath = QString::fromStdString( outpath.parent_path().string());
-    _fdialog->setDirectory( parentPath);
-
-    // Make default save filename have the preferred extension
-    const std::string filename = outpath.replace_extension( FileIO::FMM::fileFormats().preferredExt().toStdString()).string();
-    _fdialog->selectFile( QString::fromStdString(filename));
+    const QFileInfo filepath( FMM::filepath(fm));
+    const QString filename = filepath.path() + "/" + filepath.baseName() + "." + FMM::fileFormats().preferredExt(); // Default save filename has preferred extension
+    _fdialog->setDirectory( filepath.canonicalPath()); // Default save directory is last save location for model
+    _fdialog->selectFile( filename);
 
     QWidget* prnt = static_cast<QWidget*>(parent());
-    while ( _filename.empty())
+    while ( _filename.isEmpty())
     {
         QStringList fnames;
         if ( _fdialog->exec())
             fnames = _fdialog->selectedFiles();
 
         _discardTexture = false;
-        _filename = fnames.empty() ? "" : fnames.first().trimmed().toStdString();
-        if ( _filename.empty())
+        _filename = fnames.empty() ? "" : fnames.first().trimmed();
+        if ( _filename.isEmpty())
             break;
 
         // If _filename does not have an extension, use the currently selected one.
-        BFS::path fpath(_filename);
-        if ( !fpath.has_extension())
+        QFileInfo fpath(_filename);
+        if ( fpath.suffix().isEmpty())
         {
-            const QString cext = FileIO::FMM::fileFormats().extensionForFilter( _fdialog->selectedNameFilter());
-            _filename = fpath.replace_extension( cext.toStdString()).string();
+            const QString cext = FMM::fileFormats().extensionForFilter( _fdialog->selectedNameFilter());
+            _filename = fpath.path() + "/" + fpath.baseName() + "." + cext;
         }   // end if
 
-        if ( !FileIO::FMM::canWrite( _filename))
+        if ( !FMM::canWrite( _filename))
         {
-            std::cerr << "Can't write to " << _filename << "; invalid file format" << std::endl;
+            std::cerr << "Can't write to " << _filename.toStdString() << "; invalid file format" << std::endl;
             static const QString msg = tr("Not a valid file format; please choose one of the listed formats.");
             QMB::information( prnt, tr("Invalid File Format"), msg);
             _filename = "";
@@ -105,8 +100,8 @@ bool ActionSaveAsFaceModel::doBeforeAction( Event)
         }   // end if
 
         // Warn if model has meta-data or texture and the selected file type cannot save those things.
-        const bool mayLoseMetaData = fm->hasMetaData() && !FileIO::FMM::isPreferredFileFormat( _filename);
-        const bool mayLoseTexture = fm->hasTexture() && !FileIO::FMM::canSaveTextures( _filename);
+        const bool mayLoseMetaData = fm->hasMetaData() && !FMM::isPreferredFileFormat( _filename);
+        const bool mayLoseTexture = fm->hasTexture() && !FMM::canSaveTextures( _filename);
         if ( mayLoseMetaData || mayLoseTexture)
         {
             static const QString tit0 = tr("Discard Metadata?!");
@@ -135,17 +130,17 @@ bool ActionSaveAsFaceModel::doBeforeAction( Event)
         }   // end if
     }   // end while
 
-    if ( !_filename.empty())
-        MS::showStatus( QString( "Saving model to '%1'...").arg(_filename.c_str()), 0, true);
+    if ( !_filename.isEmpty())
+        MS::showStatus( QString( "Saving model to '%1'...").arg(_filename), 0, true);
 
-    return !_filename.empty();
+    return !_filename.isEmpty();
 }   // end doBeforeAction
 
 
 void ActionSaveAsFaceModel::doAction( Event)
 {
     _egrp = Event::NONE;
-    assert( !_filename.empty());
+    assert( !_filename.isEmpty());
     FM* fm = MS::selectedModel();
     fm->lockForWrite();
     if ( !fm->hasMask())
@@ -155,7 +150,7 @@ void ActionSaveAsFaceModel::doAction( Event)
     }   // end if
     //if ( _discardTexture) // Will also need to rebuild the model so don't bother to actually discard the texture
     //  fm->wmesh()->removeAllMaterials();
-    const bool wokay = FileIO::FMM::write( fm, &_filename); // Save by specifying new filename
+    const bool wokay = FMM::write( fm, &_filename); // Save by specifying new filename
     fm->unlock();
     if ( wokay)
     {
@@ -172,14 +167,14 @@ Event ActionSaveAsFaceModel::doAfterAction( Event)
     if ( has( _egrp, Event::SAVED_MODEL))
     {
         MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-        MS::showStatus( QString("Saved to '%1'").arg(_filename.c_str()), 5000);
+        MS::showStatus( QString("Saved to '%1'").arg(_filename), 5000);
     }   // end if
     else
     {
-        QString msg( ("Failed saving to '" + _filename + "'!").c_str());
+        QString msg = tr( ("Failed saving to '" + _filename.toLocal8Bit().toStdString() + "'!").c_str());
         MS::showStatus( msg, 10000);
-        msg.append( ("\n" + FileIO::FMM::error()).c_str());
-        QMB::critical( static_cast<QWidget*>(parent()), tr("Failed to save file!"), tr(msg.toStdString().c_str()));
+        msg.append( "\n" + FMM::error());
+        QMB::critical( static_cast<QWidget*>(parent()), tr("Failed to save file!"), msg);
     }   // end else
 
     _filename = "";

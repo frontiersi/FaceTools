@@ -41,7 +41,7 @@ protected:
 
 private:
     QFileDialog *_fdialog;
-    std::string _filename;
+    QString _filename;
     bool _savedOkay;
 };  // end class
 

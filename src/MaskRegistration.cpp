@@ -30,8 +30,9 @@
 //#include <thread>
 using FaceTools::MaskRegistration;
 using FaceTools::Vis::FV;
-using FaceTools::FVS;
 using FaceTools::FM;
+using FMM = FaceTools::FileIO::FaceModelManager;
+
 
 MaskRegistration::MaskData MaskRegistration::s_mask;
 QReadWriteLock MaskRegistration::s_lock;
@@ -123,19 +124,18 @@ bool MaskRegistration::setMask( const QString &mpath)
 
     unsetMask();
 
-    const std::string spath = mpath.toStdString();
-    if ( !FileIO::FMM::canRead( spath) || !FileIO::FMM::isPreferredFileFormat( spath))
+    if ( !FMM::canRead( mpath) || !FMM::isPreferredFileFormat( mpath))
         return false;
 
     // Load meta data - fail if no landmarks present.
     PTree ptree;
     QTemporaryDir *tdir = new QTemporaryDir;
-    FileIO::readMeta( spath, *tdir, ptree);
+    FileIO::readMeta( mpath, *tdir, ptree);
 
     FM *fm = new FM;
     double fversion;
-    std::string objfilename;
-    if ( !FileIO::importMetaData( *fm, ptree, fversion, objfilename))
+    QString meshfname, unused;
+    if ( !FileIO::importMetaData( *fm, ptree, fversion, meshfname, unused))
     {
         std::cout << "[WARNING] FaceTools::Action::MaskRegistration::setMask: Invalid metadata!" << std::endl;
         delete fm;
@@ -151,10 +151,11 @@ bool MaskRegistration::setMask( const QString &mpath)
 
     std::cout << "Loading anthropomorphic mask for surface registration..." << std::endl;
     QThread *thread = QThread::create(
-        [abspath, objfilename, tdir, fm]()
+        [abspath, meshfname, tdir, fm]()
         {
-            const std::string err = FileIO::loadData( *fm, *tdir, objfilename);
-            if ( err.empty())
+            QString unused;
+            const QString err = FileIO::loadData( *fm, *tdir, meshfname, unused);
+            if ( err.isEmpty())
             {
                 s_lock.lockForWrite();
                 s_mask.mask = fm;

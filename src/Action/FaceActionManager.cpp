@@ -28,10 +28,10 @@
 using FaceTools::Action::FaceActionManager;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
-using FaceTools::FileIO::FMM;
-using FaceTools::FM;
+using FMM = FaceTools::FileIO::FaceModelManager;
 using MS = FaceTools::Action::ModelSelector;
 using MM = FaceTools::Metric::MetricManager;
+using FaceTools::FM;
 
 
 namespace {
@@ -118,13 +118,13 @@ void FaceActionManager::close( const FM* fm)
     fm->unlock();
     MS::remove(fm); // Removes views
     MM::purge(fm);  // Removes cached metric calculation data
-    FileIO::FMM::close(fm);
+    FMM::close(fm);
 
     bool movedView = false;
     Vis::FV *nextfv = nullptr;
 
     // If there are other FaceModels loaded, select one with a preference for models from the default viewer.
-    if ( FileIO::FMM::numOpen() > 0)
+    if ( FMM::numOpen() > 0)
     {
         if ( !MS::defaultViewer()->attached().empty())
             nextfv = MS::defaultViewer()->attached().first();

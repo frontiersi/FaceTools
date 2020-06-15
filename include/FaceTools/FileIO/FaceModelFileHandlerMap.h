@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,8 +40,8 @@ public:
     const QString& preferredExt() const { return _primaryExt;}   // First added
 
     // Get the read/write interface appropriate for given filename (its extension is checked for type).
-    FaceModelFileHandler* readInterface( const std::string&) const;
-    FaceModelFileHandler* writeInterface( const std::string&) const;
+    FaceModelFileHandler* readInterface( const QString&) const;
+    FaceModelFileHandler* writeInterface( const QString&) const;
 
     QString createAllImportFilter() const;  // Consider using "Any file (*.*)" instead if long.
     QString createAllExportFilter() const;  // Consider using "Any file (*.*)" instead if long.

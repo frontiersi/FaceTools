@@ -38,7 +38,7 @@ protected:
     Event doAfterAction( Event) override;
 
 private:
-    std::unordered_map<std::string, QStringList> _fails;    // Error messages --> filenames
+    std::unordered_map<QString, QStringList> _fails;    // Error messages --> filenames
     Event _egrp;
     ActionSaveAsFaceModel *_saveAs;
 };  // end class

@@ -110,12 +110,10 @@ void ActionReflect::doAction( Event)
     // For efficiency we just unset the mask and deal with it later.
 
     r3d::Mesh::Ptr mask;
-    QString mfilename;
     size_t mhash = 0;
     if ( fm->hasMask())
     {
         mask = fm->mask().deepCopy();
-        mfilename = fm->maskFilename();
         mhash = fm->maskHash();
         fm->setMask( nullptr);
     }   // end if
@@ -136,7 +134,6 @@ void ActionReflect::doAction( Event)
         mask->fixTransformMatrix();
         fm->setMask( mask);
         fm->setMaskHash( mhash);
-        fm->setMaskFilename( mfilename);
     }   // end if
 
     fm->addTransformMatrix(T);  // Revert back to original position

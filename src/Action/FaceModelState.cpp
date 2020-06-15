@@ -66,7 +66,6 @@ void FaceModelState::_saveMask()
 {
     _mask = _fm->_mask;
     _mkdtree = _fm->_mkdtree;
-    _maskFilename = _fm->_maskFilename;
     _maskHash = _fm->_maskHash;
 }   // end _saveMask
 
@@ -75,7 +74,6 @@ void FaceModelState::_restoreMask() const
 {
     _fm->_mask = _mask;
     _fm->_mkdtree = _mkdtree;
-    _fm->_maskFilename = _maskFilename;
     _fm->_maskHash = _maskHash;
 }   // end _restoreMask
 

@@ -28,7 +28,7 @@ class FaceTools_EXPORT AsyncModelLoader : public QThread
 public:
     // Provide absolute filepath to model to load.
     // Can be any format currently being accepted by the FaceModelManager.
-    explicit AsyncModelLoader( const std::string& fpath);
+    explicit AsyncModelLoader( const QString& fpath);
 
 signals:
     void loadedModel( FM*);
@@ -37,7 +37,7 @@ protected:
     void run() override;
 
 private:
-    const std::string _fpath;
+    const QString _fpath;
 };  // end class
 
 }}   // end namespace

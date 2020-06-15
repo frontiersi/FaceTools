@@ -23,6 +23,7 @@
 using FaceTools::Action::ActionSaveFaceModel;
 using FaceTools::Action::Event;
 using FaceTools::Action::FaceAction;
+using FMM = FaceTools::FileIO::FaceModelManager;
 using MS = FaceTools::Action::ModelSelector;
 
 
@@ -40,7 +41,7 @@ bool ActionSaveFaceModel::isAllowed( Event)
     fm->lockForRead();
     bool isrdy = !fm->isSaved();
     if ( !_saveAs)
-        isrdy = !fm->isSaved() && ( FileIO::FMM::hasPreferredFileFormat(fm) || !fm->hasMetaData());
+        isrdy = !fm->isSaved() && ( FMM::hasPreferredFileFormat(fm) || !fm->hasMetaData());
     fm->unlock();
     return isrdy;
 }   // end testReady
@@ -50,7 +51,7 @@ bool ActionSaveFaceModel::doBeforeAction( Event e)
 {
     bool isNormalSave = true;
     const FM *fm = MS::selectedModel();
-    if ( _saveAs && !FileIO::FMM::hasPreferredFileFormat(fm) && fm->hasMetaData())
+    if ( _saveAs && !FMM::hasPreferredFileFormat(fm) && fm->hasMetaData())
     {
         isNormalSave = false;   // Will cause this action to cancel and allow the SaveAs action to complete.
         _saveAs->execute(e);
@@ -72,8 +73,8 @@ void ActionSaveFaceModel::doAction( Event)
         _egrp |= Event::MESH_CHANGE;
         fm->fixTransformMatrix();
     }   // end if
-    std::string filepath;   // Will be the last saved filepath
-    const bool wokay = FileIO::FMM::write( fm, &filepath);  // Save using current filepath for the model
+    QString filepath;   // Will be the last saved filepath
+    const bool wokay = FMM::write( fm, &filepath);  // Save using current filepath for the model
     fm->unlock();
     if ( wokay)
     {
@@ -82,7 +83,7 @@ void ActionSaveFaceModel::doAction( Event)
     }   // end if
     else
     {
-        _fails[FileIO::FMM::error()] << filepath.c_str();
+        _fails[FMM::error()] << filepath;
         _egrp |= Event::ERR;
     }   // end else
 }   // end doAction
@@ -93,7 +94,7 @@ Event ActionSaveFaceModel::doAfterAction( Event)
     if ( _fails.empty())
     {
         MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-        const QString fpath = FileIO::FMM::filepath( MS::selectedModel()).c_str();
+        const QString fpath = FMM::filepath( MS::selectedModel());
         MS::showStatus( QString("Saved to '%1'").arg(fpath), 5000);
     }   // end if
     else
@@ -101,9 +102,9 @@ Event ActionSaveFaceModel::doAfterAction( Event)
         for ( auto f : _fails)  // Display a critical error for each type of error message received
         {
             MS::showStatus( "Failed to save model!", 10000);
-            QString msg( (f.first + "\nUnable to save the following:\n").c_str());
+            QString msg = tr( (f.first.toStdString() + "\nUnable to save the following:\n").c_str());
             msg.append( f.second.join("\n"));
-            QMessageBox::critical( static_cast<QWidget*>(parent()), tr("Unable to save file(s)!"), tr(msg.toStdString().c_str()));
+            QMessageBox::critical( static_cast<QWidget*>(parent()), tr("Unable to save file(s)!"), msg);
         }   // end for
         _fails.clear(); // Ensure the fail set is cleared
     }   // end else

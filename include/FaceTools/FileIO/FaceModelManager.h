@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ public:
     static bool hasPreferredFileFormat( const FM*);
 
     // Does the given filename have the extension of the preferred file format?
-    static bool isPreferredFileFormat( const std::string&);
+    static bool isPreferredFileFormat( const QString&);
 
     // Return the file formats map for creating import/export filters etc.
     static const FaceModelFileHandlerMap& fileFormats() { return _fhmap;}
@@ -46,35 +46,35 @@ public:
     // If fpath not null but empty, try to save using the currently stored file path, and copy into fpath on return.
     // If fpath points to a non-empty string, try to save to this new location and update the model's stored file path.
     // Generates and stores the model hash upon success.
-    static bool write( const FM*, std::string* fpath=nullptr);
+    static bool write( const FM*, QString* fpath=nullptr);
 
     // Returns true iff the file at given path can be read in.
-    static bool canRead( const std::string&);
+    static bool canRead( const QString&);
 
     // Returns true iff the given filepath can be written to using an available file format handler.
-    static bool canWrite( const std::string&);
+    static bool canWrite( const QString&);
 
     // Returns true iff the given filepath can save textures (looks at the extension).
-    static bool canSaveTextures( const std::string&);
+    static bool canSaveTextures( const QString&);
 
     // Returns true iff there is a file hander for the given file (looks at the extension).
     // (Ignores whether the file exists or not).
-    static bool hasFileHandler( const std::string&);
+    static bool hasFileHandler( const QString&);
 
     // Returns true iff the file matching the given filepath is already open.
-    static bool isOpen( const std::string&);
+    static bool isOpen( const QString&);
 
     // Load in a model (returning null on fail). Also returns null if model already open.
-    static FM* read( const std::string&);
+    static FM* read( const QString&);
 
     // Get the nature of the error if read returns null or write returns false.
-    static const std::string& error() { return _err;}
+    static const QString& error() { return _err;}
 
     // Return the filepath for the model.
-    static const std::string& filepath( const FM*);
+    static const QString& filepath( const FM*);
 
     // Return the open model for the given filepath or null if not open.
-    static FM* model( const std::string&);
+    static FM* model( const QString&);
 
     // Close given model and release memory (client must check if saved!).
     static void close( const FM*);
@@ -92,13 +92,11 @@ private:
     static size_t _loadLimit;
     static FaceModelFileHandlerMap _fhmap;
     static FMS _models;
-    static std::unordered_map<FM*, std::string> _mdata;
-    static std::unordered_map<std::string, FM*> _mfiles;    // Lookup models by current filepath
-    static std::string _err;
-    static void _setModelFilepath( const FM*, const std::string&);
+    static std::unordered_map<FM*, QString> _mdata;
+    static std::unordered_map<QString, FM*> _mfiles;    // Lookup models by current filepath
+    static QString _err;
+    static void _setModelFilepath( const FM*, const QString&);
 };  // end class
-
-using FMM = FaceModelManager;
 
 }}   // end namespaces
 

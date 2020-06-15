@@ -35,8 +35,8 @@ using FaceTools::Metric::MC;
 using FaceTools::Vis::FV;
 using FaceTools::FMV;
 using FaceTools::FM;
-using FaceTools::FileIO::FMM;
 using FaceTools::Metric::MetricValue;
+using FMM = FaceTools::FileIO::FaceModelManager;
 using MM = FaceTools::Metric::MetricManager;
 using MS = FaceTools::Action::ModelSelector;
 

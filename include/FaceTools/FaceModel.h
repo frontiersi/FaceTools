@@ -113,8 +113,6 @@ public:
     /**
      * Set/get the filename and hash associated with the mask.
      */
-    void setMaskFilename( const QString &fname);
-    const QString &maskFilename() const { return _maskFilename;}
     void setMaskHash( size_t);
     size_t maskHash() const { return _maskHash;}
 
@@ -301,7 +299,6 @@ private:
 
     r3d::Mesh::Ptr _mask;
     r3d::KDTree::Ptr _mkdtree;
-    QString _maskFilename;
     size_t _maskHash;
 
     QMap<int, FaceAssessment::Ptr> _ass;    // Assessments keyed by id
