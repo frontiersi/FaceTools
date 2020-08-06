@@ -17,7 +17,7 @@
 
 #include <Action/ActionExportMetaData.h>
 #include <FileIO/FaceModelManager.h>
-#include <FileIO/FaceModelXMLFileHandler.h>
+#include <FileIO/FaceModelFileData.h>
 #include <FaceModel.h>
 #include <QMessageBox>
 #include <QSet>
@@ -35,7 +35,7 @@ using MS = FaceTools::Action::ModelSelector;
 ActionExportMetaData::ActionExportMetaData( const QString& dn, const QIcon& ico)
     : FaceAction(dn, ico), _fdialog(nullptr)
 {
-    _mimefilters << "text/xml" << "application/json";
+    _mimefilters << "text/csv" << "application/json" << "text/xml";
 }   // end ctor
 
 
@@ -45,25 +45,41 @@ void ActionExportMetaData::postInit()
     _fdialog->setWindowTitle( QObject::tr("Export metadata to..."));
     _fdialog->setFileMode( QFileDialog::AnyFile);
     _fdialog->setAcceptMode( QFileDialog::AcceptSave);
+    _fdialog->setMimeTypeFilters( _mimefilters);
     //_fdialog->setOption( QFileDialog::DontUseNativeDialog);
 }   // end postInit
 
 
 QString ActionExportMetaData::toolTip() const
 {
-    return "Export metadata about the selected model to JSON or XML file format.";
+    return "Export metadata about the selected model to CSV, JSON, or XML format.";
 }   // end toolTip
 
 
 bool ActionExportMetaData::isAllowed( Event) { return MS::isViewSelected();}
 
 
+QString ActionExportMetaData::_createFilePath( const QString &fname) const
+{
+    QFileInfo fpath( fname);
+    fpath.makeAbsolute();
+    const QString filter = _fdialog->selectedMimeTypeFilter();
+    QString suffix = _mimeDB.mimeTypeForName( filter).preferredSuffix().trimmed();
+    if ( suffix.isEmpty())  // For some reason, on Windows this is empty on the first call!
+        suffix = "csv";
+    return fpath.absolutePath() + "/" + fpath.completeBaseName() + "." + suffix;
+}   // end _createFilePath
+
+
+QString ActionExportMetaData::_createFilePath( const FM *fm) const
+{
+    return _createFilePath( FMM::filepath( fm));
+}   // end _createFilePath
+
+
 QString ActionExportMetaData::_getFilePath( const FM* fm)
 {
-    _fdialog->setMimeTypeFilters( _mimefilters);
-    const auto &filter = _fdialog->selectedMimeTypeFilter();
-    const QFileInfo fpath( FMM::filepath( fm));
-    const QString fp = fpath.path() + "/" + fpath.baseName() + "." + _mimeDB.mimeTypeForName( filter).preferredSuffix();
+    QString fp = _createFilePath(fm);
 
     QString fname;
     while ( fname.isEmpty())
@@ -93,8 +109,8 @@ QString ActionExportMetaData::_getFilePath( const FM* fm)
 
         if ( !isValidMime)
         {
-            const auto &filter = _fdialog->selectedMimeTypeFilter();
-            fname = finfo.path() + "/" + finfo.baseName() + "." + _mimeDB.mimeTypeForName( filter).preferredSuffix();
+            fname = "";
+            fp = _createFilePath( finfo.filePath());
         }   // end if
     }   // end while
 
@@ -137,7 +153,9 @@ void ActionExportMetaData::doAction( Event)
     {
         if ( mtype.inherits( nm))
         {
-            if ( nm == "text/xml")
+            if ( nm == "text/csv")
+                FileIO::FaceModelFileData( *fm).toCSV( _ofs);
+            else if ( nm == "text/xml")
                 boost::property_tree::write_xml( _ofs, tree);
             else if ( nm == "application/json")
                 boost::property_tree::write_json( _ofs, tree);
@@ -153,6 +171,6 @@ void ActionExportMetaData::doAction( Event)
 
 Event ActionExportMetaData::doAfterAction( Event)
 {
-    MS::showStatus( QString("Exported meta data to '%1'.").arg(_filepath), 5000);
+    MS::showStatus( QString("Exported metadata to '%1'.").arg(_filepath), 5000);
     return Event::NONE;
 }   // end doAfterAction

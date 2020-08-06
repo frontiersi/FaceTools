@@ -52,13 +52,18 @@ int StatisticsManager::load( const QString& dname)
     for ( const QString &nm : MetricManager::names())
     {
         MC::Ptr mc = MetricManager::metricForName(nm);
-        std::cout << QString("Metric %1 \"%2\": ").arg( mc->id(), int(4), int(10), QChar('0')).arg(mc->name()).toStdString();
-
-        // Warn if the metric has no growth data
+#ifndef NDEBUG
+        std::cerr << QString("Metric %1 \"%2\": ").arg( mc->id(), int(4), int(10), QChar('0')).arg(mc->name()).toStdString();
+#endif
         if ( !mc->growthData().empty())
         {
             mc->growthData().combineSexes();       // Combine single sex growth curve datasets
             mc->growthData().combineEthnicities(); // Make ethnic pairs for same sexes
+        }   // end if
+#ifndef NDEBUG
+        // Warn if the metric has no growth data
+        if ( !mc->growthData().empty())
+        {
             size_t nInPlane = 0;
             const GrowthDataSources& allgd = mc->growthData().all();
 
@@ -66,19 +71,20 @@ int StatisticsManager::load( const QString& dname)
                 if ( gd->inPlane())
                     nInPlane++;
             const size_t nGD = allgd.size();
-            std::cout << nGD << " growth data";
+            std::cerr << nGD << " growth data";
             if ( !mc->fixedInPlane())
             {
-                std::cout << " (" << nInPlane << " in-plane)";
+                std::cerr << " (" << nInPlane << " in-plane)";
                 if ( nInPlane == nGD)
-                    std::cout << " ZERO out-of-plane!";
+                    std::cerr << " ZERO out-of-plane!";
                 else if (nInPlane == 0)
-                    std::cout << " ZERO in-plane!";
+                    std::cerr << " ZERO in-plane!";
             }   // end if
         }   // end if
         else
-            std::cout << "stats N/A";
-        std::cout << std::endl;
+            std::cerr << "stats N/A";
+        std::cerr << std::endl;
+#endif
     }   // end for
 
     return nloaded;

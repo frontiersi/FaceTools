@@ -68,22 +68,19 @@ void FaceModelManager::_setModelFilepath( const FM* cfm, const QString& fname)
 }   // end _setModelFilepath
 
 
-bool FaceModelManager::write( const FM* cfm, QString *fpath)
+bool FaceModelManager::write( const FM* cfm, QString &fpath)
 {
     FM* fm = const_cast<FM*>(cfm);
     assert( _models.count(fm) > 0);
     QString savefilepath = _mdata.at(fm);
     QString delfilepath;    // Will not be empty if replacing filename
-    if ( fpath)
+    if ( fpath.isEmpty())
+        fpath = savefilepath;
+    else    // New filepath specified
     {
-        if ( fpath->isEmpty())
-            *fpath = savefilepath;
-        else    // New filepath specified
-        {
-            delfilepath = savefilepath;
-            savefilepath = *fpath;
-        }   // end else
-    }   // end if
+        delfilepath = savefilepath;
+        savefilepath = fpath;
+    }   // end else
 
     _err = "";  // Reset the error
     FaceModelFileHandler* fileio = _fhmap.writeInterface( savefilepath);

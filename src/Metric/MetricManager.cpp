@@ -29,6 +29,7 @@ using FaceTools::FM;
 
 // Static definitions
 IntSet MetricManager::_ids;
+IntSet MetricManager::_bids;
 std::unordered_map<int, MC::Ptr> MetricManager::_metrics;
 std::unordered_map<int, MCSet> MetricManager::_lmMetrics;
 std::unordered_map<QString, int> MetricManager::_nMetrics;
@@ -41,6 +42,7 @@ int MetricManager::_cmid(-1);
 int MetricManager::load( const QString& dname)
 {
     _ids.clear();
+    _bids.clear();
     _metrics.clear();
     _lmMetrics.clear();
     _nMetrics.clear();
@@ -75,6 +77,8 @@ int MetricManager::load( const QString& dname)
         }   // end else
 
         _ids.insert(mc->id());
+        if ( mc->isBilateral())
+            _bids.insert(mc->id());
         _metrics[mc->id()] = mc;
         _nMetrics[mc->name().toLower()] = mc->id();
         _mset.insert(mc);

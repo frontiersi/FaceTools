@@ -35,7 +35,7 @@ bool MaskVisualisation::isAvailable( const FV *fv, const QPoint*) const { return
 void MaskVisualisation::apply( const FV* fv, const QPoint*)
 {
     if ( _views.count(fv) == 0)
-        _views[fv] = new MaskView( fv->data()->mask());
+        _views[fv] = new MaskView( *fv->data()->mask());
 }   // end apply
 
 

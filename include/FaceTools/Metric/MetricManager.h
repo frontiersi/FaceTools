@@ -41,6 +41,7 @@ public:
 
     static const MCSet& metrics() { return _mset;}
     static const IntSet& ids() { return _ids;}
+    static const IntSet& bilateralIds() { return _bids;}
 
     // Returns all metrics only for the given landmark (may return empty set).
     static const MCSet& metricsForLandmark( int lmid);
@@ -67,6 +68,7 @@ public:
 
 private:
     static IntSet _ids;
+    static IntSet _bids;
     static std::unordered_map<int, MC::Ptr> _metrics;
     static std::unordered_map<int, MCSet> _lmMetrics;   // Metrics keyed by landmark
     static std::unordered_map<QString, int> _nMetrics;  // Metric IDs keyed by name

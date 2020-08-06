@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,6 +45,8 @@ private:
     QMimeDatabase _mimeDB;
     QStringList _mimefilters;
     QString _getFilePath( const FM*);
+    QString _createFilePath( const FM*) const;
+    QString _createFilePath( const QString&) const;
 };  // end class
 
 }}   // end namespace

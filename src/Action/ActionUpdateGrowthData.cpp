@@ -35,11 +35,9 @@ ActionUpdateGrowthData::ActionUpdateGrowthData()
 }   // end ctor
 
 
-bool ActionUpdateGrowthData::setAutoStats( bool v)
+bool ActionUpdateGrowthData::setStatsToModel( const FM* fm)
 {
-    s_autoStats = v;
     bool changedGrowthData = false;
-    const FM *fm = s_autoStats ? MS::selectedModel() : nullptr;
     for ( Metric::MC::Ptr mc : MM::metrics())
     {
         Metric::GrowthDataRanker& gdRanker = mc->growthData();
@@ -55,6 +53,14 @@ bool ActionUpdateGrowthData::setAutoStats( bool v)
         }   // end if
     }   // end for
     return changedGrowthData;
+}   // end setAutoStats
+
+
+bool ActionUpdateGrowthData::setAutoStats( bool v)
+{
+    s_autoStats = v;
+    const FM *fm = s_autoStats ? MS::selectedModel() : nullptr;
+    return setStatsToModel( fm);
 }   // end setAutoStats
 
 

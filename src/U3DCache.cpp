@@ -59,9 +59,11 @@ void U3DCache::refresh( const FM* fm, bool med9)
     fm->unlock();
 
     // Add a texture if none present
+    float ambv = 1.0f;
     if ( !mesh->hasMaterials())
     {
-        const cv::Mat mat = QTools::copyQImage2OpenCV( QImage(":/imgs/HOT_PINK"));
+        ambv = 0.3f;    // Allow flat textured models to show up with less ambient light reflected by their material
+        const cv::Mat mat = QTools::copyQImage2OpenCV( QImage(":/imgs/BASE_BLUE"));
         mesh->addMaterial( mat);
         static const Vec2f uvs[3] = {Vec2f(1,0), Vec2f(1,1), Vec2f(0,0)};
         for ( int fid : mesh->faces())
@@ -72,7 +74,7 @@ void U3DCache::refresh( const FM* fm, bool med9)
     QTemporaryFile tfile( QDir::tempPath() + "/XXXXXX.u3d");
     if ( tfile.open())
     {
-        r3dio::U3DExporter xptr( true, med9);
+        r3dio::U3DExporter xptr( true, med9, ambv);
         //std::cerr << QString( "Exporting U3D model to '%1'").arg( tfile.fileName()).toStdString() << std::endl;
         if ( xptr.save( *mesh, tfile.fileName().toStdString()))
         {

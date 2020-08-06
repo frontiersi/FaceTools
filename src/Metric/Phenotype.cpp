@@ -178,6 +178,18 @@ bool Phenotype::isPresent( const FM* fm, int aid) const
 }   // end isPresent
 
 
+QString Phenotype::metricsList() const
+{
+    const IntSet &mids = metrics();
+    std::list<int> lst( mids.begin(), mids.end());
+    lst.sort();
+    QStringList smids;
+    for ( int mid : lst)
+        smids << QString("%1").arg(mid);
+    return smids.join(",");
+}   // end metricsList
+
+
 bool Phenotype::isSexMatch( int8_t sex) const
 {
     if ( sex == UNKNOWN_SEX)

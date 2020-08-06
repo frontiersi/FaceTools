@@ -23,7 +23,7 @@
 
 namespace FaceTools { namespace FileIO {
 
-static const QString XML_VERSION = "5.0";
+static const QString XML_VERSION = "5.1";
 static const QString XML_FILE_EXTENSION = "3df";
 static const QString XML_FILE_DESCRIPTION = "3D Face Image and Metadata";
 
@@ -53,22 +53,22 @@ private:
 
 // Read meta data from a 3DF file into the given property tree.
 // Returns a non-empty string on error which contains the nature of the error.
-QString readMeta( const QString &fname, QTemporaryDir &extractDir, PTree &tree);
+FaceTools_EXPORT QString readMeta( const QString &fname, QTemporaryDir &extractDir, PTree &tree);
 
 // Import metadata from a property tree for the given model, setting file
 // version and the mesh and mask filenames and returning true iff successful.
-bool importMetaData( FM&, const PTree&, double &fversion, QString &meshfname, QString &maskfname);
+FaceTools_EXPORT bool importMetaData( FM&, const PTree&, double &fversion, QString &meshfname, QString &maskfname);
 
 // Same as above but without worrying about returing the mesh or mask filepaths in the out parameter.
-bool importMetaData( FM&, const PTree&, double &fversion);
+FaceTools_EXPORT bool importMetaData( FM&, const PTree&, double &fversion);
 
 // Load the mesh data into the given FaceModel. Returns an empty string on success.
-QString loadData( FM&, const QTemporaryDir&, const QString &meshfname, const QString &maskfname);
+FaceTools_EXPORT QString loadData( FM&, const QTemporaryDir&, const QString &meshfname, const QString &maskfname);
 
 // Export metadata about the given model into a property tree ready for writing.
 // Note that because the data are being written out into a property tree, different
 // export formats are available (not just XML).
-void exportMetaData( const FM*, bool withExtras, PTree&);
+FaceTools_EXPORT void exportMetaData( const FM*, bool withExtras, PTree&);
 
 }}   // end namespaces
 

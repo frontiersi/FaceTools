@@ -471,7 +471,7 @@ bool LandmarkSet::_readLateral( const PTree& lats, FaceLateral lat)
 
     if ( lats.count(tag) == 0)
     {
-        std::cerr << "[ERROR FaceTools::Landmark::LandmarkSet::_readLateral: Didn't find landmark lateral tag!" << std::endl;
+        std::cerr << "[ERROR] FaceTools::Landmark::LandmarkSet::_readLateral: Didn't find landmark lateral tag!" << std::endl;
         return false;
     }   // end if
 
@@ -481,8 +481,10 @@ bool LandmarkSet::_readLateral( const PTree& lats, FaceLateral lat)
         Landmark* lmk = LMAN::landmark( lmcode);
         if ( !lmk)
         {
+#ifndef NDEBUG
             std::cerr << "[WARNING] FaceTools::Landmark::LandmarkSet::_readLateral: Unable to read landmark '"
                       << lmcode.toStdString() << "'; not present in LMAN!" << std::endl;
+#endif
             return false;
         }   // end if
         set( lmk->id(), r3d::getVertex(lval.second), lat);

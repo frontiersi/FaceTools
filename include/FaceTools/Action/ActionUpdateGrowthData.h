@@ -27,6 +27,7 @@ class FaceTools_EXPORT ActionUpdateGrowthData : public FaceAction
 public:
     ActionUpdateGrowthData();
 
+    static bool setStatsToModel( const FM*);
     static bool setAutoStats( bool v);
     static bool autoStats() { return s_autoStats;}
 

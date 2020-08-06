@@ -41,12 +41,11 @@ public:
     // Return the file formats map for creating import/export filters etc.
     static const FaceModelFileHandlerMap& fileFormats() { return _fhmap;}
 
-    // Save model to filepath (returns true on success).
-    // If fpath null try to save over the current file path associated with the model.
-    // If fpath not null but empty, try to save using the currently stored file path, and copy into fpath on return.
-    // If fpath points to a non-empty string, try to save to this new location and update the model's stored file path.
+    // Save model to fpath returning true on success.
+    // If fpath empty, try to save using the currently stored file path, and copy into fpath on return.
+    // If fpath non-empty, try to save to this new location and update the model's stored file path.
     // Generates and stores the model hash upon success.
-    static bool write( const FM*, QString* fpath=nullptr);
+    static bool write( const FM*, QString &fpath);
 
     // Returns true iff the file at given path can be read in.
     static bool canRead( const QString&);

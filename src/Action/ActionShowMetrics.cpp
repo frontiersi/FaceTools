@@ -330,8 +330,8 @@ bool ActionShowMetrics::_updateText( const FV *fv, int mid)
                     const double zsl = mvl->zscore( age, i);
                     const double zsr = mvr->zscore( age, i);
                     const double zsm = 0.5 * (zsl + zsr);
-                    oss << std::right << std::setw(fw) << zsr << "; "
-                                      << std::setw(fw) << zsl << "; "
+                    oss << std::right << std::setw(fw) << zsl << "; "
+                                      << std::setw(fw) << zsr << "; "
                                       << std::setw(fw) << zsm;
                 }   // end if
                 else

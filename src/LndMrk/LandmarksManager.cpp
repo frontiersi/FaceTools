@@ -28,6 +28,7 @@ using FaceTools::Landmark::Landmark;
 
 // Static definitions
 IntSet LandmarksManager::_ids;
+IntSet LandmarksManager::_mids;
 QStringList LandmarksManager::_codes;
 std::unordered_map<int, Landmark> LandmarksManager::_lmks;
 std::unordered_map<QString, int> LandmarksManager::_clmks;
@@ -110,6 +111,7 @@ int LandmarksManager::load( const QString& fname)
         return 0;
 
     _ids.clear();
+    _mids.clear();
     _codes.clear();
     _names.clear();
     _lmks.clear();
@@ -145,6 +147,9 @@ int LandmarksManager::load( const QString& fname)
         lmk.setVisible(true);
 
         _ids.insert(id);
+        if ( lmk.isMedial())
+            _mids.insert(id);
+
         _codes.append( code);
         _names[name.toLower()] = name;
         _clmks[code] = id;

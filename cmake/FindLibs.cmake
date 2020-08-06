@@ -26,31 +26,6 @@ endif()
 set( CMAKE_DEBUG_POSTFIX ${_dsuffix})
 
 
-macro( get_msvc_version _ver)
-    set( ${_ver} "")
-    if(MSVC)
-        if( MSVC70 OR MSVC71 )
-            set(_msvcv "7")
-        elseif( MSVC80 )
-            set(_msvcv "8")
-        elseif( MSVC90 )
-            set(_msvcv "9")
-        elseif( MSVC10 )
-            set(_msvcv "10")
-        elseif( MSVC11 )
-            set(_msvcv "11")
-        elseif( MSVC12 )
-            set(_msvcv "12")
-        elseif( MSVC14 )
-            set(_msvcv "14")
-        else()
-            set(_msvcv "15")
-        endif()
-        set( ${_ver} "${_msvcv}")
-    endif(MSVC)
-endmacro( get_msvc_version)
-
-
 # Add definitions for Windows 7 build target (SDK 8.1 support Win 7 and up)
 if(WIN32)
     add_definitions( -DWINVER=0x0601)
@@ -253,13 +228,13 @@ endif()
 
 
 if(WITH_ASSIMP)     # AssImp
-    set( ASSIMP_DIR "${LIB_PRE_REQS}/AssImp/lib/cmake/assimp-4.1" CACHE PATH "Location of assimp-config.cmake")
+    set( ASSIMP_DIR "${LIB_PRE_REQS}/AssImp/lib/cmake/assimp-5.0" CACHE PATH "Location of assimp-config.cmake")
     find_package( ASSIMP REQUIRED)
     include_directories( ${ASSIMP_INCLUDE_DIRS})
     link_directories( ${ASSIMP_LIBRARY_DIRS})
-    if (WIN32)
-        set(WITH_ZLIB TRUE)
-    endif()
+    #if (WIN32)
+    #    set(WITH_ZLIB TRUE)
+    #endif()
     message( STATUS "AssImp      ${ASSIMP_LIBRARY_DIRS}/${ASSIMP_LIBRARIES}")
     set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${ASSIMP_LIBRARY_DIRS})
 endif()
@@ -344,19 +319,8 @@ endif()
 
 
 if(WITH_VTK)    # VTK
-    set( VTK_VER 8.1)
-
-    if( ${VTK_VER} EQUAL "8.1")
-        set( VTK_BASE "${LIB_PRE_REQS}/VTK-8.1.1")
-    elseif( ${VTK_VER} EQUAL "8.2")
-        set( VTK_BASE "${LIB_PRE_REQS}/VTK-8.2.0")
-    endif()
-
-    set( VTK_DIR "${VTK_BASE}/${CMAKE_BUILD_TYPE_LOWER}/lib/cmake/vtk-${VTK_VER}" CACHE PATH "Location of VTKConfig.cmake")
-
-    if(NOT IS_DIRECTORY ${VTK_DIR})
-        message( FATAL_ERROR "Can't find VTK! Set VTK_VER correctly for the version of VTK you want to build against!")
-    endif()
+    set( VTK_BASE "${LIB_PRE_REQS}/VTK-9.0.1")
+    set( VTK_DIR "${VTK_BASE}/lib/cmake/vtk-9.0" CACHE PATH "Location of VTKConfig.cmake")
 
     if(UNIX)
         set( VTK_LIBRARY_DIR "${VTK_DIR}/../.." CACHE PATH "Location of VTK shared libraries")
@@ -364,8 +328,7 @@ if(WITH_VTK)    # VTK
         set( VTK_BIN "${VTK_DIR}/../../../bin" CACHE PATH "Location of VTK shared libraries")
     endif()
 
-    find_package( VTK REQUIRED)
-    include( ${VTK_USE_FILE})
+    find_package( VTK 9.0 REQUIRED)
     set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${VTK_LIBRARY_DIR})
     message( STATUS "VTK:        ${VTK_DIR}")
 endif()
@@ -376,20 +339,17 @@ if(WITH_QT)     # Qt5
     if(NOT IS_DIRECTORY ${Qt5_DIR})
         message( FATAL_ERROR "Can't find Qt5! Set environment variable QT5 to the location of the library!")
     endif()
-    get_filename_component( QT_INSTALLER_FRAMEWORK "$ENV{QT5}/../../Tools/QtInstallerFramework/3.1/bin" REALPATH)
+    get_filename_component( QT_INSTALLER_FRAMEWORK "$ENV{QT5}/../../Tools/QtInstallerFramework/3.2/bin" REALPATH)
     set( QT_INF_BINARY_CREATOR "${QT_INSTALLER_FRAMEWORK}/binarycreator${CMAKE_EXECUTABLE_SUFFIX}")
     set( QT_INF_REPO_GEN "${QT_INSTALLER_FRAMEWORK}/repogen${CMAKE_EXECUTABLE_SUFFIX}")
 
-    #find_package( Qt5 CONFIG REQUIRED Core Widgets WebEngine Charts Sql Svg)
     find_package( Qt5 CONFIG REQUIRED Core Widgets Charts Sql Svg)
     include_directories( ${Qt5Core_INCLUDE_DIRS})
     include_directories( ${Qt5Widgets_INCLUDE_DIRS})
-    #include_directories( ${Qt5WebEngine_INCLUDE_DIRS})
     include_directories( ${Qt5Charts_INCLUDE_DIRS})
     include_directories( ${Qt5Sql_INCLUDE_DIRS})
     include_directories( ${Qt5Svg_INCLUDE_DIRS})
 
-    #set( QT_LIBRARIES Qt5::Core Qt5::Widgets Qt5::WebEngine Qt5::Charts Qt5::Sql Qt5::Svg)
     set( QT_LIBRARIES Qt5::Core Qt5::Widgets Qt5::Charts Qt5::Sql Qt5::Svg)
 
     set( QT_LIB_DIR "${Qt5_DIR}/../..")
@@ -400,17 +360,12 @@ endif()
 
 
 if(WITH_OPENCV) # OpenCV
-    set( OpenCV_BASE "${LIB_PRE_REQS}/opencv")
+    set( OpenCV_BASE "${LIB_PRE_REQS}/opencv-4.3.0")
+    set( OpenCV_DIR "${OpenCV_BASE}" CACHE PATH "Location of OpenCVConfig.cmake")
+    find_package( OpenCV 4.3 REQUIRED)
     if(WIN32)
-        set( OpenCV_DIR "${OpenCV_BASE}" CACHE PATH "Location of OpenCVConfig.cmake")
-    else()
-        set( OpenCV_DIR "${OpenCV_BASE}/lib/cmake/opencv4" CACHE PATH "Location of OpenCVConfig.cmake")
-    endif()
-    find_package( OpenCV 4.1 REQUIRED)
-    if(WIN32)
-        get_msvc_version( _msvcv)
-        set( OpenCV_MSVC "${OpenCV_DIR}/x64/vc${_msvcv}")
-        set( OpenCV_BIN "${OpenCV_MSVC}/bin" CACHE PATH "Location of OpenCV binary (dll) files")
+        set( OpenCV_MSVC "${OpenCV_DIR}/$ENV{PLATFORM}/vc16")
+        set( OpenCV_BIN "${OpenCV_MSVC}/bin" CACHE PATH "Location of OpenCV binary (DLL) files")
     endif()
     include_directories( ${OpenCV_INCLUDE_DIRS})
     message( STATUS "OpenCV:     ${OpenCV_DIR}")
@@ -418,12 +373,14 @@ endif()
 
 
 if(WITH_BOOST)  # Boost
-    set( BOOST_ROOT "${LIB_PRE_REQS}/boost_1_68_0" CACHE PATH "Location of boost")
+    set( _boost_ver_major "1")
+    set( _boost_ver_minor "73")
+    set( _boost_ver_patch "0")
+    set( _boost_ver_str "${_boost_ver_major}_${_boost_ver_minor}_${_boost_ver_patch}")
+    set( BOOST_ROOT "${LIB_PRE_REQS}/boost/boost_${_boost_ver_str}" CACHE PATH "Location of boost")
     set( BOOST_LIBRARYDIR "${BOOST_ROOT}/lib")
 
     if(WIN32)
-        get_msvc_version( _msvcv)
-        set( BOOST_LIBRARYDIR "${BOOST_ROOT}/lib64-msvc-${_msvcv}.0")
         add_definitions( ${Boost_LIB_DIAGNOSTIC_DEFINITIONS})   # Info about Boost's auto linking
     endif()
 
@@ -435,7 +392,9 @@ if(WITH_BOOST)  # Boost
     add_definitions( -DBOOST_ALL_DYN_LINK)  # Force dynamic linking (probably don't need this)
     add_definitions( -DBOOST_SYSTEM_NO_DEPRECATED)
 
-    find_package( Boost 1.68 REQUIRED COMPONENTS regex random thread filesystem system program_options)
+    find_package( Boost "${_boost_ver_major}.${_boost_ver_minor}"
+        REQUIRED COMPONENTS regex random thread filesystem system program_options)
+
     include_directories( ${Boost_INCLUDE_DIRS})
     set( Boost_LIBRARIES Boost::regex Boost::random Boost::thread Boost::filesystem Boost::system Boost::program_options)
 

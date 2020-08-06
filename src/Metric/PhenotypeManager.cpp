@@ -45,9 +45,11 @@ bool checkMissingCriteria( Phenotype::Ptr hpo)
 {
     if ( hpo->objectiveCriteria().isEmpty())
     {
-        std::cout << "Warning: skipping HPO term with no objective criteria "
+#ifndef NDEBUG
+        std::cerr << "Warning: skipping HPO term with no objective criteria "
             << QString("HP:%1 (%2)").arg( hpo->id(), int(7), int(10), QChar('0')).arg( hpo->name()).toStdString()
             << std::endl;
+#endif
         return true;
     }   // end if
     return false;
@@ -67,23 +69,25 @@ bool checkMissingStats( Phenotype::Ptr hpo)
             noStats.insert(mid);
     }   // end for
 
+#ifndef NDEBUG
     if ( !noMids.empty())
     {
-        std::cout << "Warning: HPO term "
+        std::cerr << "Warning: HPO term "
             << QString("HP:%1 (%2)").arg( hpo->id(), int(7), int(10), QChar('0')).arg( hpo->name()).toStdString()
             << " is missing required metrics:" << std::endl;
         for ( int mid : noMids)
-            std::cout << QString( "\t -- %1").arg( mid).toStdString() << std::endl;
+            std::cerr << QString( "\t -- %1").arg( mid).toStdString() << std::endl;
     }   // end if
 
     if ( !noStats.empty())
     {
-        std::cout << "Warning: HPO term "
+        std::cerr << "Warning: HPO term "
             << QString("HP:%1 (%2)").arg( hpo->id(), int(7), int(10), QChar('0')).arg( hpo->name()).toStdString()
             << " has no stats for its metric(s):" << std::endl;
         for ( int mid : noStats)
-            std::cout << QString( "\t -- %1 (%2)").arg( MetricManager::metric(mid)->name()).arg( mid).toStdString() << std::endl;
+            std::cerr << QString( "\t -- %1 (%2)").arg( MetricManager::metric(mid)->name()).arg( mid).toStdString() << std::endl;
     }   // end if
+#endif
 
     return !noStats.empty();
 }   // end checkMissingStats

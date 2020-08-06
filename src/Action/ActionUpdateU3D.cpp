@@ -52,6 +52,8 @@ void ActionUpdateU3D::purge( const FM* fm) { U3DCache::purge(fm);}
 Event ActionUpdateU3D::doAfterAction( Event)
 {
     const std::string fpath = U3DCache::u3dfilepath( MS::selectedModel())->toStdString();
-    std::cout << "[INFO] FaceTools::Action::ActionUpdateU3D::doAfterAction: U3D cached at '" << fpath << "'" << std::endl;
+#ifndef NDEBUG
+    std::cerr << "[INFO] FaceTools::Action::ActionUpdateU3D::doAfterAction: U3D cached at '" << fpath << "'" << std::endl;
+#endif
     return Event::NONE;
 }   // end doAfterAction

@@ -7,12 +7,10 @@ generate_export_header( ${PROJECT_NAME}
                         STATIC_DEFINE ${PROJECT_NAME}_BUILT_AS_STATIC)
 include_directories( ${PROJECT_BINARY_DIR}) # Include because generated header files sit here.
 
-# Rename the library if compiled using MSVC to append the MSVC version so as to avoid DLL HELL.
+# Rename the library if compiled using MSVC to append the toolset version used to avoid DLL HELL.
 if(WIN32)
-    include("${CMAKE_CURRENT_LIST_DIR}/Macros.cmake")
-    get_msvc_version( _msvcv)
-    set_target_properties( ${PROJECT_NAME} PROPERTIES SUFFIX "-vc${_msvcv}0.dll")
-    set_target_properties( ${PROJECT_NAME} PROPERTIES IMPORT_SUFFIX "-vc${_msvcv}0.lib")
+    set_target_properties( ${PROJECT_NAME} PROPERTIES SUFFIX "-vc${MSVC_TOOLSET_VERSION}.dll")
+    set_target_properties( ${PROJECT_NAME} PROPERTIES IMPORT_SUFFIX "-vc${MSVC_TOOLSET_VERSION}.lib")
 endif(WIN32)
 
 set_target_properties( ${PROJECT_NAME} PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)

@@ -49,6 +49,9 @@ public:
     // Return reference to the phenotype term with given id or null if doesn't exist.
     static Phenotype::Ptr phenotype( int id) { return _hpos.count(id) > 0 ? _hpos.at(id) : nullptr;}
 
+    // Return the given id in the standard 7 digit HP: prefix format.
+    static QString formattedId( int id) { return QString("HP:%1").arg( id, int(7), int(10), QChar('0'));}
+
     // Discover and return the set of PhenotypicIndication IDs for the given model and
     // assessment ID. If the assessment ID is < 0, then the current assessment set on the
     // model is used. Demographic information about the model is ignored here - the only

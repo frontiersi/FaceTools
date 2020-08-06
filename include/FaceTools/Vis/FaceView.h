@@ -113,6 +113,9 @@ public:
     // Set/get the surface colour of the face actor. Alpha value ignored - use setOpacity.
     void setColour( const QColor&);
     QColor colour() const;
+    
+    // The standard (default) base colour of untextured models.
+    static const QColor BASECOL;
 
     // Set/get rendering of wireframe on surface.
     void setWireframe( bool);

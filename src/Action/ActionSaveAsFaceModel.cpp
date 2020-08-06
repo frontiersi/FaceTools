@@ -131,7 +131,7 @@ bool ActionSaveAsFaceModel::doBeforeAction( Event)
     }   // end while
 
     if ( !_filename.isEmpty())
-        MS::showStatus( QString( "Saving model to '%1'...").arg(_filename), 0, true);
+        MS::showStatus( QString( "Saving to '%1'...").arg(_filename), 0, true);
 
     return !_filename.isEmpty();
 }   // end doBeforeAction
@@ -150,7 +150,7 @@ void ActionSaveAsFaceModel::doAction( Event)
     }   // end if
     //if ( _discardTexture) // Will also need to rebuild the model so don't bother to actually discard the texture
     //  fm->wmesh()->removeAllMaterials();
-    const bool wokay = FMM::write( fm, &_filename); // Save by specifying new filename
+    const bool wokay = FMM::write( fm, _filename); // Save by specifying new filename
     fm->unlock();
     if ( wokay)
     {

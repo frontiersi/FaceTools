@@ -64,6 +64,9 @@ public:
     void addMetric( int id) { _metrics.insert(id);}
     void removeMetric( int id) { _metrics.erase(id);}
 
+    // Generate and return the set of metric ids sorted and comma separated.
+    QString metricsList() const;
+
     /**
      * Returns true iff a match of the given sex is possible to every metric's
      * statistics necessary to evaluate the presence of this phenotypic indication.

@@ -57,7 +57,7 @@ void ModelViewer::updateRender() { _qviewer->updateRender();}
 ModelViewer::ModelViewer( QWidget* parent, bool floodFill)
     : QWidget(parent), _qviewer( nullptr), _floodLightsEnabled(floodFill)
 {
-    _qviewer = new QTools::VtkActorViewer(this);
+    _qviewer = new QTools::VtkActorViewer( this);
     enableFloodLights( _floodLightsEnabled);
 
     setLayout(new QVBoxLayout);

@@ -25,7 +25,6 @@
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
-#include <QMessageBox>
 #include <cassert>
 using FaceTools::Action::ActionDetectFace;
 using FaceTools::Action::FaceAction;
@@ -62,7 +61,6 @@ bool ActionDetectFace::doBeforeAction( Event)
 {
     FM* fm = MS::selectedModel();
     _ulmks.clear();
-    _err = "";
     _ev = Event::NONE;
     bool goDetect = true;
 
@@ -90,52 +88,43 @@ void ActionDetectFace::doAction( Event)
 {
     FM *fm = MS::selectedModel();
     fm->lockForWrite();
-    _err = detect( fm, _ulmks);
+    detect( fm, _ulmks);
     fm->unlock();
 }   // end doAction
 
 
 // public static
-std::string ActionDetectFace::detect( FM* fm, const IntSet &ulmks)
+void ActionDetectFace::detect( FM* fm, const IntSet &ulmks)
 {
-    std::cout << "Doing initial alignment of model..." << std::endl;
+    //std::cout << "Doing initial alignment of model..." << std::endl;
     ActionAlignModel::align( fm);
     fm->fixTransformMatrix();
-    std::cout << "Registering mask against target face..." << std::endl;
+    //std::cout << "Registering mask against target face..." << std::endl;
     r3d::Mesh::Ptr mask = MaskRegistration::registerMask( fm);
 
-    std::cout << "Setting mask..." << std::endl;
+    //std::cout << "Setting mask..." << std::endl;
     fm->setMask( mask);
     fm->setMaskHash( MaskRegistration::maskHash());
 
     if ( !ulmks.empty())
     {
-        std::cout << "Transferring landmarks..." << std::endl;
+        //std::cout << "Transferring landmarks..." << std::endl;
         ActionRestoreLandmarks::restoreLandmarks( fm, ulmks);
     }   // end if
 
-    std::cout << "Doing Procrustes alignment of the coregistered mask with the original..." << std::endl;
+    //std::cout << "Doing Procrustes alignment of the coregistered mask with the original..." << std::endl;
     const Mat4f align = MaskRegistration::calcMaskAlignment( *mask);
     const Mat4f ialign = align.inverse();
 
     fm->addTransformMatrix( ialign);
     fm->fixTransformMatrix();
-    return "";
 }   // end detect
 
 
 Event ActionDetectFace::doAfterAction( Event)
 {
-    if ( _err.empty())
-    {
-        MS::clearStatus();
-        MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-        MS::showStatus( "Detected face and placed landmarks.", 5000);
-    }   // end if
-    else
-    {
-        QMessageBox::warning( static_cast<QWidget*>(parent()), tr("Face Detection Failed!"), tr( _err.c_str()));
-        MS::showStatus("Face Detection Failed!", 10000);
-    }   // end else
+    MS::clearStatus();
+    MS::setInteractionMode( IMode::CAMERA_INTERACTION);
+    MS::showStatus( "Detected face and placed landmarks.", 5000);
     return _ev;
 }   // end doAfterAction

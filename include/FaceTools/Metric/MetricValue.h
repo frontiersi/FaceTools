@@ -52,10 +52,12 @@ public:
     // Return the raw value at dimension i.
     float value( size_t i=0) const { return _values.at(i);}
 
-    // Returns the mean at the given age for dimension i.
+    // Returns the mean at the given age for dimension i
+    // against the currently set growth data for the metric.
     float mean( float age, size_t i=0) const;
 
-    // Returns the z-score at the given age for dimension i.
+    // Returns the z-score at the given age for dimension i
+    // against the currently set growth data for the metric.
     float zscore( float age, size_t i=0) const;
 
     void write( PTree&, float age) const;

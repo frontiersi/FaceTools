@@ -90,7 +90,7 @@ public:
 
     void transform( const Mat4f&);
 
-    void write( PTree&, bool withExtras) const;
+    void write( PTree&, bool withFullPath) const;
 
     // After reading in, path vertices will need calculating via a call to update.
     void read( const PTree&);
@@ -110,7 +110,7 @@ private:
     Vec3f _dmax;            // Point on path orthogonal to handles line at depth handle position
     Vec3f _orient;          // View plane orientation of the path
     void _updateMeasures();
-    void _writePathMetrics( PTree&) const;
+    void _writeFullPath( PTree&) const;
 };  // end class
 
 }   // end namespace

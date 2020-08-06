@@ -21,6 +21,9 @@
 #include "FaceTypes.h"
 #include <r3d/Curvature.h>
 #include <QReadWriteLock>
+#include <vtkActor.h>
+#include <vtkFloatArray.h>
+#include <vtkSmartPointer.h>
 
 namespace FaceTools {
 
@@ -48,6 +51,9 @@ private:
     static std::unordered_map<const FM*, r3d::Curvature::Ptr> _metrics;
     static QReadWriteLock _lock;
 };  // end class
+
+
+FaceTools_EXPORT vtkSmartPointer<vtkFloatArray> setNormals( vtkActor*, const FM*);
 
 }   // end namespace
 

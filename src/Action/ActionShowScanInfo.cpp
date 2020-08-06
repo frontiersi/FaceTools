@@ -59,7 +59,9 @@ bool ActionShowScanInfo::checkState( Event e)
         _dialog->hide();
     if ( _dialog->isVisible() && has( e, Event::METRICS_CHANGE | Event::MODEL_SELECT))
         _dialog->refresh();
-    return _dialog->isVisible() || (has( e, Event::MASK_CHANGE) && fm->hasLandmarks() && fm->dateOfBirth() == QDate::currentDate());
+    // Set check if a change of AM occurred with the setting of landmarks and the date of birth is the same
+    // as the capture date. This equivalency ensures that this this dialog appears even for old files.
+    return _dialog->isVisible() || (has( e, Event::MASK_CHANGE) && fm->hasLandmarks() && fm->dateOfBirth() == fm->captureDate());
 }   // end checkState
 
 

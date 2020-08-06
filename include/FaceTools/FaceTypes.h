@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 #include "FaceTools_Export.h"
 #include <Eigen/Dense>
 #include <vtkSmartPointer.h>
+#include <QtGlobal>
 #include <QMetaType>
 #include <QWidget>
 #include <QString>
@@ -201,6 +202,10 @@ Q_DECLARE_METATYPE( FaceTools::FaceLateral)
 
 namespace std {
 
+// This hash function in the std namespace is defined in QtCore/qhashfunctions.h (204)
+// in version 5.15.0 of Qt - it might be defined in earlier versions, but nothing lower
+// than 5.12.3 (not present in this version on Linux).
+#if (QT_VERSION < QT_VERSION_CHECK(5, 15, 0))
 template <>
 struct hash<QString>
 {
@@ -209,6 +214,7 @@ struct hash<QString>
         return hash<std::string>()( x.toStdString());
     }   // end operator()
 };  // end struct
+#endif
 
 template <class T>
 struct hash<vtkSmartPointer<T> >

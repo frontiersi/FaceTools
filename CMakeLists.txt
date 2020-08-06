@@ -174,6 +174,7 @@ set( INCLUDE_FILES
     "${INCLUDE_DETECT_DIR}/FeaturesDetector.h"
 
     "${INCLUDE_FILEIO_DIR}/FaceModelAssImpFileHandlerFactory.h"
+    "${INCLUDE_FILEIO_DIR}/FaceModelFileData.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelFileHandlerException.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelFileHandlerMap.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelManager.h"
@@ -363,6 +364,7 @@ set( SRC_FILES
     ${SRC_FILEIO_DIR}/AsyncModelLoader
     ${SRC_FILEIO_DIR}/FaceModelAssImpFileHandler
     ${SRC_FILEIO_DIR}/FaceModelAssImpFileHandlerFactory
+    ${SRC_FILEIO_DIR}/FaceModelFileData
     ${SRC_FILEIO_DIR}/FaceModelFileHandler
     ${SRC_FILEIO_DIR}/FaceModelFileHandlerException
     ${SRC_FILEIO_DIR}/FaceModelFileHandlerMap

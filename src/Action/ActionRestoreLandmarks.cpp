@@ -88,7 +88,7 @@ bool ActionRestoreLandmarks::restoreLandmarks( FM *fm, const IntSet &ulmks)
     if ( !fm->hasMask())
         return false;
 
-    const r3d::Mesh &msk = fm->mask();
+    const r3d::Mesh &msk = ((const FM*)fm)->mask();
     const r3d::KDTree &kdt = fm->kdtree();
     MaskRegistration::MaskPtr mdata = MaskRegistration::maskData();
     for ( int lmid : ulmks)

@@ -137,19 +137,23 @@ bool MaskRegistration::setMask( const QString &mpath)
     QString meshfname, unused;
     if ( !FileIO::importMetaData( *fm, ptree, fversion, meshfname, unused))
     {
-        std::cout << "[WARNING] FaceTools::Action::MaskRegistration::setMask: Invalid metadata!" << std::endl;
+#ifndef NDEBUG
+        std::cerr << "[WARNING] FaceTools::MaskRegistration::setMask: Invalid metadata!" << std::endl;
+#endif
         delete fm;
         return false;
     }   // end if
 
     if ( !fm->hasLandmarks())
     {
-        std::cout << "[WARNING] FaceTools::Action::MaskRegistration::setMask: No landmarks in mask!" << std::endl;
+#ifndef NDEBUG
+        std::cerr << "[WARNING] FaceTools::MaskRegistration::setMask: No landmarks in mask!" << std::endl;
+#endif
         delete fm;
         return false;
     }   // end if
 
-    std::cout << "Loading anthropomorphic mask for surface registration..." << std::endl;
+    //std::cout << "Loading anthropomorphic mask for surface registration..." << std::endl;
     QThread *thread = QThread::create(
         [abspath, meshfname, tdir, fm]()
         {
@@ -272,7 +276,7 @@ r3d::Mesh::Ptr MaskRegistration::registerMask( const FM *fm)
     r3d::Mesh::Ptr mask = s_mask.mask->mesh().deepCopy();
     s_lock.unlock();
 
-    std::cout << "Calculating affine alignment (rigid + scaling) of mask to target face..." << std::endl;
+    //std::cout << "Calculating affine alignment (rigid + scaling) of mask to target face..." << std::endl;
 
     rNonRigid::Mesh floating;
     floating.features = mask->toFeatures( floating.topology, true/*use transformed*/);
@@ -284,11 +288,11 @@ r3d::Mesh::Ptr MaskRegistration::registerMask( const FM *fm)
 
     const Mat4f T1 = rNonRigid::RigidRegistration()( floating, target);
 
-    std::cout << "Adding rigid transform to mask and reobtaining features..." << std::endl;
+    //std::cout << "Adding rigid transform to mask and reobtaining features..." << std::endl;
     mask->addTransformMatrix( T1);
     floating.features = mask->toFeatures( floating.topology, true/*use transformed*/);
 
-    std::cout << "Calculating non-rigid registration of mask to target face..." << std::endl;
+    //std::cout << "Calculating non-rigid registration of mask to target face..." << std::endl;
     rNonRigid::NonRigidRegistration( s_params.k, s_params.flagThresh, s_params.eqPushPull,
                                      s_params.kappa, s_params.useOrient, s_params.numInlierIts,
                                      s_params.smoothK, s_params.sigmaSmooth,
@@ -297,11 +301,11 @@ r3d::Mesh::Ptr MaskRegistration::registerMask( const FM *fm)
                                      s_params.numUpdateIts)( floating, target);
     //rNonRigid::FastDeformRegistration( s_params.numUpdateIts)( floating, target);
 
-    std::cout << "Creating point cloud from registered vertices..." << std::endl;
+    //std::cout << "Creating point cloud from registered vertices..." << std::endl;
     // On return, the vertices of feats are in correspondence with the surface of the model.
     // Make a new r3d::Mesh object from the surface registered points.
     r3d::Mesh::Ptr cmask = r3d::Mesh::fromVertices( floating.features.leftCols(3));
-    std::cout << "Setting mesh topology..." << std::endl;
+    //std::cout << "Setting mesh topology..." << std::endl;
     cmask->setFaces( floating.topology);
     return cmask;
 }   // end registerMask

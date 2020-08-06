@@ -68,7 +68,6 @@ void applyFnToModels( const Event &e, const FM* fm, const std::function<void( co
 
 
 FaceActionManager::Ptr FaceActionManager::s_singleton;
-QMutex FaceActionManager::s_closeLock;
 
 
 // static
@@ -110,7 +109,7 @@ QAction* FaceActionManager::registerAction( FaceAction* act)
 void FaceActionManager::close( const FM* fm)
 {
     assert(fm);
-    s_closeLock.lock();
+    get()->_closeLock.lock();
     fm->lockForRead();
     const auto& acts = get()->_actions;
     for ( FaceAction* act : acts)
@@ -153,7 +152,7 @@ void FaceActionManager::close( const FM* fm)
         MS::setSelected( nextfv);
     if ( movedView)
         get()->doEvent( Event::VIEWER_CHANGE);
-    s_closeLock.unlock();
+    get()->_closeLock.unlock();
 }   // end close
 
 

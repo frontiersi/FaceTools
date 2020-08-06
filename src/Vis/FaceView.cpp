@@ -21,8 +21,8 @@
 #include <Vis/ScalarVisualisation.h>
 #include <Vis/VectorVisualisation.h>
 #include <Action/ModelSelector.h>
-#include <FaceModelViewer.h>
 #include <FaceModelCurvature.h>
+#include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <vtkProperty.h>
 #include <r3dvis/VtkTools.h>
@@ -42,6 +42,7 @@ using MS = FaceTools::Action::ModelSelector;
 // static definitions
 bool FaceView::s_smoothLighting(false);
 bool FaceView::s_interpolateShading(false);
+const QColor FaceView::BASECOL(202, 188, 232);
 
 void FaceView::setSmoothLighting( bool v)
 {
@@ -65,7 +66,7 @@ bool FaceView::interpolatedShading() { return s_interpolateShading;}
 
 FaceView::FaceView( FM* fm, FMV* viewer)
     : _data(fm), _actor(nullptr), _texture(nullptr), _nrms(nullptr), _viewer(nullptr), _pviewer(nullptr),
-      _smm(nullptr), _vmm(nullptr), _baseCol(202,188,232), _xvis(nullptr)
+      _smm(nullptr), _vmm(nullptr), _baseCol(FaceView::BASECOL), _xvis(nullptr)
 {
     assert(viewer);
     assert(fm);
@@ -75,19 +76,7 @@ FaceView::FaceView( FM* fm, FMV* viewer)
 }   // end ctor
 
 
-void FaceView::resetNormals()
-{
-    FaceModelCurvature::RPtr cmap = FaceModelCurvature::rmetrics( _data);  // May be null if not yet processed curvature
-    if ( cmap)
-    {
-        vtkSmartPointer<vtkFloatArray> nrms = r3dvis::makeNormals( *cmap);
-        nrms->SetName("Normals");
-        assert(nrms);
-        vtkPolyData *pd = r3dvis::getPolyData( _actor);
-        pd->GetPointData()->SetNormals( nrms);
-        _nrms = nrms;
-    }   // end if
-}   // end resetNormals
+void FaceView::resetNormals() { _nrms = setNormals( _actor, _data);}
 
 
 void FaceView::copyFrom( const FaceView* fv)
@@ -387,8 +376,8 @@ QColor FaceView::colour() const { return _baseCol;}
 void FaceView::setColour( const QColor& c)
 {
     assert(_actor);
-    _actor->GetProperty()->SetColor( c.redF(), c.greenF(), c.blueF());
     _baseCol = c;
+    _updateSurfaceProperties();
 }   // end setColour
 
 
@@ -424,19 +413,10 @@ bool FaceView::wireframe() const
 void FaceView::setTextured( bool v)
 {
     assert(_actor);
-    vtkProperty* property = _actor->GetProperty();
-
     if ( v && _texture)
-    {
-        property->SetColor( 1.0, 1.0, 1.0);    // Set the base colour to white
         _actor->SetTexture( _texture);
-    }   // end if
     else
-    {
-        setColour(_baseCol);
         _actor->SetTexture( nullptr);
-    }   // end else
-
     setActiveScalars( nullptr);
 }   // end setTextured
 
@@ -462,12 +442,7 @@ void FaceView::setActiveScalars( ScalarVisualisation* s)
     }   // end if
 
     if ( _smm)
-    {
-        _actor->GetProperty()->SetColor( 1.0, 1.0, 1.0);    // Set the base colour to white
         _actor->SetTexture( nullptr);
-    }   // end if
-    else
-        setColour(_baseCol);
 
     setActiveVectors( _vmm);
 }   // end setActiveScalars
@@ -503,14 +478,23 @@ VectorVisualisation* FaceView::activeVectors() const { return _vmm;}
 void FaceView::_updateSurfaceProperties()
 {
     vtkProperty* property = _actor->GetProperty();
-    property->SetAmbient( textured() ? 1.0 : 0.0);
-    property->SetDiffuse( 1.0);
-    property->SetSpecular( 0.0);
-
-    // Lighting interpolation?
     property->SetInterpolationToFlat();
     if ( s_smoothLighting)
         property->SetInterpolationToPhong();
+
+    property->SetRoughness( 1.0);
+    property->SetEmissiveFactor( 0.0, 0.0, 0.0);
+    property->SetShading( false);
+    property->SetMetallic( 0.0);
+
+    if ( textured() || _smm)
+        property->SetColor( 1, 1, 1);
+    else
+        property->SetColor( _baseCol.redF(), _baseCol.greenF(), _baseCol.blueF());
+
+    property->SetAmbient( textured() ? 1.0 : 0.0);
+    property->SetDiffuse( textured() ? 0.0 : 1.0);
+    property->SetSpecular( 0.0);
 
     // Interpolation of scalar mapped data?
     _actor->GetMapper()->SetInterpolateScalarsBeforeMapping(false);

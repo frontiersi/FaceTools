@@ -42,6 +42,10 @@ using FaceTools::FM;
 using FaceTools::Metric::PhenotypeManager;
 using FaceTools::Metric::Phenotype;
 
+// Disable warnings about using of QTextStreamFunctions::endl
+#ifdef _WIN32
+#pragma warning( disable : 4996)
+#endif
 
 namespace {
 QString sanit( QString s)
@@ -125,9 +129,9 @@ Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _os(nullptr), _model(nullp
                                   "name", &Phenotype::name);
 
     _lua.new_usertype<QDate>( "QDate",
-                              "day", &QDate::day,
-                              "month", &QDate::month,
-                              "year", &QDate::year);
+                              "day", QOverload<>::of(&QDate::day),
+                              "month", QOverload<>::of(&QDate::month),
+                              "year", QOverload<>::of(&QDate::year));
 
     _lua.new_usertype<QString>( "QString",
                                 "toStdString", &QString::toStdString,
@@ -314,7 +318,7 @@ bool Report::_useSVG() const
 
 bool Report::_writeLatex( QTextStream& os) const
 {
-    os << "\\documentclass{article}" << endl
+    os << "\\documentclass{article}" << endl 
        << "\\listfiles" << endl   // Do this to see in the .log file which packages are used
        << "\\usepackage[textwidth=20cm,textheight=25cm]{geometry}" << endl
        << "\\usepackage{graphicx}" << endl

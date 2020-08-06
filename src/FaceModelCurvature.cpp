@@ -17,6 +17,8 @@
 
 #include <FaceModelCurvature.h>
 #include <FaceModel.h>
+#include <r3dvis/VtkTools.h>
+#include <vtkPointData.h>
 #include <cassert>
 using FaceTools::FaceModelCurvature;
 using FaceTools::FM;
@@ -71,3 +73,18 @@ void FaceModelCurvature::add( const FM *fm)
     _metrics[fm] = cmap;
     _lock.unlock();
 }   // end add
+
+
+vtkSmartPointer<vtkFloatArray> FaceTools::setNormals( vtkActor *actor, const FM *fm)
+{
+    vtkSmartPointer<vtkFloatArray> nrms;
+    FaceModelCurvature::RPtr cmap = FaceModelCurvature::rmetrics( fm);  // May be null if not yet processed curvature
+    if ( cmap)
+    {
+        nrms = r3dvis::makeNormals( *cmap);
+        nrms->SetName("Normals");
+        vtkPolyData *pd = r3dvis::getPolyData( actor);
+        pd->GetPointData()->SetNormals( nrms);
+    }   // end if
+    return nrms;
+}   // end setNormals

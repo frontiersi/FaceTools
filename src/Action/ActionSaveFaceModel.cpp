@@ -74,7 +74,7 @@ void ActionSaveFaceModel::doAction( Event)
         fm->fixTransformMatrix();
     }   // end if
     QString filepath;   // Will be the last saved filepath
-    const bool wokay = FMM::write( fm, &filepath);  // Save using current filepath for the model
+    const bool wokay = FMM::write( fm, filepath);  // Save using current filepath for the model
     fm->unlock();
     if ( wokay)
     {

@@ -30,8 +30,6 @@
 
 namespace FaceTools { namespace Action {
 
-class ModelSelector;
-
 class FaceTools_EXPORT FaceActionManager : public QObject
 { Q_OBJECT
 public:
@@ -57,10 +55,10 @@ signals:
 
 private:
     static FaceActionManager::Ptr s_singleton;
-    static QMutex s_closeLock;
 
     QWidget *_parent;
     std::unordered_set<FaceAction*> _actions;
+    QMutex _closeLock;
 
     FaceActionManager();
     FaceActionManager( const FaceActionManager&) = delete;

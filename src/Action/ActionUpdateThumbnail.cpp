@@ -16,6 +16,8 @@
  ************************************************************************/
 
 #include <Action/ActionUpdateThumbnail.h>
+#include <Vis/FaceView.h>
+#include <FaceModelCurvature.h>
 #include <FaceModel.h>
 using FaceTools::Action::ActionUpdateThumbnail;
 using FaceTools::Action::FaceAction;
@@ -54,7 +56,12 @@ const cv::Mat ActionUpdateThumbnail::thumbnail( const FM* fm)
         return _thumbs.at(fm);
 
     fm->lockForRead();
-    _omv.setModel( fm->mesh());
+    vtkActor *actor = _omv.setModel( fm->mesh());
+    if ( !fm->mesh().hasMaterials())
+    {
+        _omv.setModelColour( Vis::FV::BASECOL.redF(), Vis::FV::BASECOL.greenF(), Vis::FV::BASECOL.blueF());
+        setNormals( actor, fm);
+    }   // end if
     const Mat4f& T = fm->transformMatrix();
     fm->unlock();
 

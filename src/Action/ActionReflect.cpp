@@ -113,7 +113,7 @@ void ActionReflect::doAction( Event)
     size_t mhash = 0;
     if ( fm->hasMask())
     {
-        mask = fm->mask().deepCopy();
+        mask = fm->mask()->deepCopy();
         mhash = fm->maskHash();
         fm->setMask( nullptr);
     }   // end if

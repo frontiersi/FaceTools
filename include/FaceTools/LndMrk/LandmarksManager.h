@@ -58,8 +58,11 @@ public:
     static int codeId( const QString& cd);
     static int codeId( const std::string&);
 
-    // Returns Ids of all landmarks.
+    // Returns IDs of all landmarks.
     static const IntSet& ids() { return _ids;}
+
+    // Returns just the IDs of the medial landmarks.
+    static const IntSet& medialIds() { return _mids;}
 
     // Return reference to the landmark with given id or null if doesn't exist.
     static Landmark* landmark( int id) { return _lmks.count(id) > 0 ? &_lmks.at(id) : nullptr;}
@@ -83,6 +86,7 @@ public:
 
 private:
     static IntSet _ids;
+    static IntSet _mids;
     static QStringList _codes;                      // Sorted landmark codes
     static std::unordered_map<int, Landmark> _lmks; // Landmarks keyed by id
     static std::unordered_map<QString, int> _clmks; // Landmark ids keyed by code

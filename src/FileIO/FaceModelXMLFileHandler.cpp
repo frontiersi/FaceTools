@@ -78,16 +78,9 @@ void FaceTools::FileIO::exportMetaData( const FM* fm, bool withExtras, PTree& tn
         {
             PTree& pnode = pnodes.add( "Term", "");
             const Phenotype::Ptr hpo = PhenotypeManager::phenotype(hid);
-
-            pnode.put( "ID", QString("HP:%1").arg( hpo->id(), int(7), int(10), QChar('0')).toStdString());
+            pnode.put( "ID", PhenotypeManager::formattedId(hid).toStdString());
             pnode.put( "Name", hpo->name().toStdString());
-
-            QStringList mids;
-            for ( int mid : hpo->metrics())
-                mids << QString("%1").arg(mid);
-            const QString midList = mids.join(",");
-            pnode.put( "Metrics", midList.toStdString());
-
+            pnode.put( "Metrics", hpo->metricsList().toStdString());
             pnode.put( "AgeMatch", hpo->isAgeMatch( age));
             pnode.put( "SexMatch", hpo->isSexMatch( fm->sex()));
             pnode.put( "MaternalEthnicityMatch", hpo->isEthnicityMatch(fm->maternalEthnicity()));
@@ -144,7 +137,7 @@ bool FaceModelXMLFileHandler::write( const FM* fm, const QString& fname)
         ofs.close();
 
         // Write out the model geometry itself into .obj format.
-        if ( !r3dio::saveAsOBJ( fm->mesh(), tdir.filePath( "mesh.obj").toLocal8Bit().toStdString()))
+        if ( !r3dio::saveAsOBJ( fm->mesh(), tdir.filePath( "mesh.obj").toLocal8Bit().toStdString(), false/*as jpeg*/))
         {
             _err = "Failed to write mesh!";
             return false;
@@ -420,11 +413,8 @@ bool FaceTools::FileIO::importMetaData( FM &fm, const PTree& tree, double &fvers
         //std::cerr << "Read in XML data from version " << *vstr << " file" << std::endl;
     }   // end if
 
-    // If the file version is lower than this library version then print a warning (should be backwards compatible).
-    // But if the file version is higher, then compatibility may not be possible (still try to read in).
-    if ( fvers < VERSION)
-        std::cerr << "[INFO]" << msghd << "Lower version " << fvers << " of XML file being read into version " << VERSION << " library." << std::endl;
-    else if ( fvers > VERSION)
+    // If the file version is higher, then compatibility may not be possible (still try to read in).
+    if ( fvers > VERSION)
         std::cerr << "[WARNING]" << msghd << "Higher version " << fvers << " of XML file being read into version " << VERSION << " library!" << std::endl;
 
     importModelRecord( fm, *fnode, meshfname, maskfname);

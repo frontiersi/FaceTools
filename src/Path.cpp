@@ -216,7 +216,7 @@ const Vec3f& Path::handle( int h) const
 }   // end handle
 
 
-void Path::write( PTree& pathsNode, bool withExtras) const
+void Path::write( PTree& pathsNode, bool withFullPath) const
 {
     PTree& pnode = pathsNode.add("Path","");
     pnode.put( "Name", name());
@@ -224,23 +224,25 @@ void Path::write( PTree& pathsNode, bool withExtras) const
     r3d::putNamedVertex( pnode, "V1", handle1());
     r3d::putNamedVertex( pnode, "VD", depthHandle());
     r3d::putNamedVertex( pnode, "Orient", orientation());
-    if ( withExtras)
-        _writePathMetrics( pnode);
-}   // end write
 
-
-void Path::_writePathMetrics( PTree& pnode) const
-{
     PTree& metrics = pnode.add( "Metrics", "");
     metrics.put("DirectDistance", euclideanDistance());
     metrics.put("SurfaceDistance", surfaceDistance());
     metrics.put("Depth", depth());
     metrics.put("AngleAtDepth", angleAtDepth());
     metrics.put("CrossSectionArea", crossSectionalArea());
+
+    if ( withFullPath)
+        _writeFullPath( pnode);
+}   // end write
+
+
+void Path::_writeFullPath( PTree& pnode) const
+{
     PTree& fullpath = pnode.add( "FullPath", "");
     for ( const Vec3f &v : pathVertices())
         r3d::addVertex( fullpath, v);
-}   // end _writePathMetrics
+}   // end _writeFullPath
 
 
 void Path::read( const PTree& pnode)
@@ -275,4 +277,11 @@ void Path::read( const PTree& pnode)
     if ( pnode.count("Orient") > 0)
         u = r3d::getVertex( pnode.get_child("Orient"));
     setOrientation( u);
+
+    const PTree &mnode = pnode.get_child("Metrics");
+    _elen = mnode.get<float>("DirectDistance");
+    _slen = mnode.get<float>("SurfaceDistance");
+    _depth = mnode.get<float>("Depth");
+    _angle = mnode.get<float>("AngleAtDepth");
+    _area = mnode.get<float>("CrossSectionArea");
 }   // end read

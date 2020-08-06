@@ -108,6 +108,7 @@ public:
      */
     void setMask( r3d::Mesh::Ptr, bool copyInTexture=false);
     const r3d::Mesh &mask() const { return *_mask;}
+    r3d::Mesh::Ptr mask() { return _mask;}
     const r3d::KDTree& maskKDTree() const { return *_mkdtree;}
 
     /**

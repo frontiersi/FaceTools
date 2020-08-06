@@ -42,6 +42,7 @@
 </qresource>
 <qresource prefix="/imgs">
     <file alias="HOT_PINK">res/imgs/hotpink.png</file>
+    <file alias="BASE_BLUE">res/imgs/baseblue.png</file>
 </qresource>
 </RCC>
 
