@@ -38,7 +38,9 @@ private:
     bool _modelSaved;
 
     QString _source;    // Image source
-    QString _studyId;   // Study ID info
+    QString _studyId;   // Study ID
+    QString _subjectId; // Subject ID
+    QString _imageId;   // Image ID
     QDate _dob;         // Subject date of birth
     int8_t _sex;        // Subject sex
     int _methnicity;    // Subject's maternal ethnicity

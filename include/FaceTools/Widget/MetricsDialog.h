@@ -67,7 +67,8 @@ private slots:
     void _doOnClickedFlipCombosButton();
     void _doOnClickedPhenotype();
     void _doOnClickedAutoStats();
-    void _doOnSelectSexOrEthnicity();
+    void _doOnSelectEthnicity();
+    void _doOnSelectSex();
     void _doOnSelectSource();
     void _doOnClickedRegion();
     void _doOnClickedType();
@@ -93,6 +94,7 @@ private:
     IntSet _getModelMatchedPhenotypes( const IntSet&) const;
     int _refreshDisplayedRows( const IntSet&);
     void _setCurrentMetric( int);
+    void _onSelectSexAndEthnicity( int8_t, int);
     void _refreshAvailableSexesFromMetric();
     void _refreshAvailableEthnicitiesFromMetric();
     const Metric::GrowthData *_updateSourcesDropdown( int8_t, int);

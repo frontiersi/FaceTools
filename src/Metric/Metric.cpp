@@ -183,14 +183,14 @@ bool Metric::measure( FM* fm) const
 
     if ( isBilateral())
     {
-        if ( _setIfMetricValueChanged( ass->metricsL(), _measure( fm, false)))
+        if ( _setIfMetricValueChanged( ass->metrics(RIGHT), _measure( fm, true)))
             changedVal = true;
-        if ( _setIfMetricValueChanged( ass->metricsR(), _measure( fm, true)))
+        if ( _setIfMetricValueChanged( ass->metrics(LEFT), _measure( fm, false)))
             changedVal = true;
     }   // end if
     else
     {
-        if ( _setIfMetricValueChanged( ass->metrics(), _measure( fm, false)))
+        if ( _setIfMetricValueChanged( ass->metrics(MID), _measure( fm, false)))
             changedVal = true;
     }   // end else
     return changedVal;

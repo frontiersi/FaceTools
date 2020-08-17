@@ -59,14 +59,8 @@ public:
     bool setPaths( const PathSet&);
     bool hasPaths() const { return !_paths.empty();}
 
-    Metric::MetricSet& metrics() { return _metrics;}
-    Metric::MetricSet& metricsL() { return _metricsL;}
-    Metric::MetricSet& metricsR() { return _metricsR;}
-
-    // Const versions (require different name for use by Lua).
-    const Metric::MetricSet& cmetrics() const { return _metrics;}
-    const Metric::MetricSet& cmetricsL() const { return _metricsL;}
-    const Metric::MetricSet& cmetricsR() const { return _metricsR;}
+    Metric::MetricSet& metrics( FaceSide);
+    const Metric::MetricSet& cmetrics( FaceSide) const; // Const versions (different name for use by Lua).
 
     // Is the metric with given ID recorded in this FaceAssessment?
     bool hasMetric( int mid) const;

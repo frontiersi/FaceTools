@@ -111,8 +111,8 @@ MetricsDialog::MetricsDialog( QWidget *parent) :
     connect( _ui->hpoComboBox, QOverload<int>::of(&QComboBox::activated), this, &MetricsDialog::_doOnClickedPhenotype);
     connect( _ui->autoStatsCheckBox, &QCheckBox::clicked, this, &MetricsDialog::_doOnClickedAutoStats);
 
-    connect( _ui->sexComboBox, QOverload<int>::of(&QComboBox::activated), this, &MetricsDialog::_doOnSelectSexOrEthnicity);
-    connect( _ui->ethnicityComboBox, QOverload<int>::of(&QComboBox::activated), this, &MetricsDialog::_doOnSelectSexOrEthnicity);
+    connect( _ui->sexComboBox, QOverload<int>::of(&QComboBox::activated), this, &MetricsDialog::_doOnSelectSex);
+    connect( _ui->ethnicityComboBox, QOverload<int>::of(&QComboBox::activated), this, &MetricsDialog::_doOnSelectEthnicity);
     connect( _ui->sourceComboBox, QOverload<int>::of(&QComboBox::activated), this, &MetricsDialog::_doOnSelectSource);
     connect( _ui->inPlaneCheckBox, &QCheckBox::clicked, this, &MetricsDialog::_doOnClickedForceInPlane);
 
@@ -233,7 +233,7 @@ void MetricsDialog::_populateRegionType()
     QSet<QString> rset;
     for ( int mid : MM::ids())
         rset.insert( MM::metric(mid)->region());
-    QStringList rlst = QStringList::fromSet(rset);
+    QStringList rlst( rset.begin(), rset.end());
     rlst.sort();
 
     _ui->regionComboBox->addItems( rlst);
@@ -250,7 +250,7 @@ void MetricsDialog::_populateMetricType()
     QSet<QString> tset;
     for ( int mid : MM::ids())
         tset.insert( MM::metric(mid)->category());
-    QStringList tlst = QStringList::fromSet(tset);
+    QStringList tlst( tset.begin(), tset.end());
     tlst.sort();
 
     _ui->typeComboBox->addItems( tlst);
@@ -526,19 +526,20 @@ void MetricsDialog::_highlightRow( int mid)
 
     if ( _prowid >= 0)
     {
-        _ui->table->item( _prowid, SHOW_COL)->setBackgroundColor( Qt::white);
-        _ui->table->item( _prowid, IDNT_COL)->setBackgroundColor( Qt::white);
-        _ui->table->item( _prowid, NAME_COL)->setBackgroundColor( Qt::white);
-        _ui->table->item( _prowid, DESC_COL)->setBackgroundColor( Qt::white);
+        static const QBrush wbrush( Qt::white);
+        _ui->table->item( _prowid, SHOW_COL)->setBackground( wbrush);
+        _ui->table->item( _prowid, IDNT_COL)->setBackground( wbrush);
+        _ui->table->item( _prowid, NAME_COL)->setBackground( wbrush);
+        _ui->table->item( _prowid, DESC_COL)->setBackground( wbrush);
     }   // end if
 
     if ( rowid >= 0)
     {
-        static const QColor BG(200,235,255);
-        _ui->table->item( rowid, SHOW_COL)->setBackgroundColor( BG);
-        _ui->table->item( rowid, IDNT_COL)->setBackgroundColor( BG);
-        _ui->table->item( rowid, NAME_COL)->setBackgroundColor( BG);
-        _ui->table->item( rowid, DESC_COL)->setBackgroundColor( BG);
+        static const QBrush BG( QColor(200,235,255));
+        _ui->table->item( rowid, SHOW_COL)->setBackground( BG);
+        _ui->table->item( rowid, IDNT_COL)->setBackground( BG);
+        _ui->table->item( rowid, NAME_COL)->setBackground( BG);
+        _ui->table->item( rowid, DESC_COL)->setBackground( BG);
         _ui->table->setCurrentCell( rowid, SHOW_COL);
     }   // end if
 
@@ -589,16 +590,62 @@ void MetricsDialog::_doOnClickedAutoStats()
 }   // end _doOnClickedAutoStats
 
 
-void MetricsDialog::_doOnSelectSexOrEthnicity()
+namespace {
+void setTestItemEnabled( QStandardItem *item, int8_t sex, int ethn)
 {
+    if ( item)
+    {
+        if ( MM::currentMetric()->growthData().hasData( sex, ethn))
+            item->setFlags( item->flags() | Qt::ItemIsEnabled);
+        else
+            item->setFlags( item->flags() & ~Qt::ItemIsEnabled);
+    }   // end if
+}   // end setTestItemEnabled
+}   // end namespace
+
+
+void MetricsDialog::_doOnSelectEthnicity()
+{
+    assert( !_ui->autoStatsCheckBox->isChecked());
+    int8_t sex = int8_t( _ui->sexComboBox->currentData().toInt());
+    const int ethn = _ui->ethnicityComboBox->currentData().toInt();
+
+    if ( !MM::currentMetric()->growthData().hasData( sex, ethn))
+    {
+        QSignalBlocker blocker(_ui->sexComboBox);
+        _ui->sexComboBox->setCurrentIndex( _ui->sexComboBox->findData( UNKNOWN_SEX));
+        sex = UNKNOWN_SEX;
+    }   // end if
+
+    /*
+    QStandardItemModel *cbmodel = qobject_cast<QStandardItemModel*>( _ui->sexComboBox->model());
+    setTestItemEnabled( cbmodel->item(1), FEMALE_SEX, ethn);
+    setTestItemEnabled( cbmodel->item(2), MALE_SEX, ethn);
+    */
+
+    _onSelectSexAndEthnicity( sex, ethn);
+}   // end _doOnSelectEthnicity
+
+
+void MetricsDialog::_doOnSelectSex()
+{
+    _doOnSelectEthnicity();
+    /*
     assert( !_ui->autoStatsCheckBox->isChecked());
     const int8_t sex = int8_t( _ui->sexComboBox->currentData().toInt());
     const int ethn = _ui->ethnicityComboBox->currentData().toInt();
-    const GD *gd = _updateSourcesDropdown( sex, ethn);
+    _onSelectSexAndEthnicity( sex, ethn);
+    */
+}   // end _doOnSelectSex
+
+
+void MetricsDialog::_onSelectSexAndEthnicity( int8_t sex, int ethn)
+{
     assert( MM::currentMetric());
+    const GD *gd = _updateSourcesDropdown( sex, ethn);
     MM::currentMetric()->growthData().setCurrent( gd);
     _doOnClickedRegion();
-}   // end _doOnSelectSexOrEthnicity
+}   // end _onSelectSexAndEthnicity
 
 
 void MetricsDialog::_doOnSelectSource()

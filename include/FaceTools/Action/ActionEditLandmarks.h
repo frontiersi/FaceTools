@@ -55,8 +55,8 @@ protected:
 
 private slots:
     void _doOnClosedDialog();
-    void _doOnStartedDrag( int, FaceLateral);
-    void _doOnDoingDrag( int, FaceLateral);
+    void _doOnStartedDrag( int, FaceSide);
+    void _doOnDoingDrag( int, FaceSide);
 
 private:
     Interactor::LandmarksHandler::Ptr _handler;
@@ -66,7 +66,7 @@ private:
     FaceAction *_actRestore;
     FaceAction *_actShowLabels;
     int _lmid;
-    FaceLateral _lat;
+    FaceSide _lat;
     Event _egrp;
 };  // end class
 

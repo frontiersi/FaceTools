@@ -102,7 +102,7 @@ int SyndromeManager::load( const QString& fname)
         syn.setName( recs[2].c_str());
 
         // Add associated genes
-        QStringList sgids = QString( recs[3].c_str()).split(SC, QString::SkipEmptyParts);
+        QStringList sgids = QString( recs[3].c_str()).split(SC, Qt::SkipEmptyParts);
         for ( const QString& sgid : sgids)
         {
             int gid = sgid.toInt(&ok);
@@ -114,7 +114,7 @@ int SyndromeManager::load( const QString& fname)
         }   // end for
 
         // Add associated HPO terms
-        QStringList shids = QString( recs[4].c_str()).split(SC, QString::SkipEmptyParts);
+        QStringList shids = QString( recs[4].c_str()).split(SC, Qt::SkipEmptyParts);
         for ( const QString& shid : shids)
         {
             int hid = shid.toInt(&ok);
@@ -146,8 +146,8 @@ bool SyndromeManager::save( const QString& fname)
 
     QTextStream out(&file);
     for ( int id : ids())
-        out << *syndrome(id) << endl;
-    out << endl;   // Add EoF newline
+        out << *syndrome(id) << Qt::endl;
+    out << Qt::endl;   // Add EoF newline
 
     file.close();
     return true;

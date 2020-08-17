@@ -117,9 +117,9 @@ Phenotype::Ptr Phenotype::load( const QString& fpath)
 bool Phenotype::_hasMeasurements( const FM* fm, int aid) const
 {
     FaceAssessment::CPtr ass = aid < 0 ? fm->currentAssessment() : fm->assessment(aid);
-    const MetricSet& mlat = ass->cmetrics();
-    const MetricSet& llat = ass->cmetricsL();
-    const MetricSet& rlat = ass->cmetricsR();
+    const MetricSet& mlat = ass->cmetrics(MID);
+    const MetricSet& llat = ass->cmetrics(LEFT);
+    const MetricSet& rlat = ass->cmetrics(RIGHT);
 
     // Only evaluate if all the measurements are available for this indication
     for ( int mid : _metrics)
@@ -155,9 +155,9 @@ bool Phenotype::isPresent( const FM* fm, int aid) const
     try
     {
         FaceAssessment::CPtr ass = aid < 0 ? fm->currentAssessment() : fm->assessment(aid);
-        const MetricSet& mlat = ass->cmetrics();
-        const MetricSet& llat = ass->cmetricsL();
-        const MetricSet& rlat = ass->cmetricsR();
+        const MetricSet& mlat = ass->cmetrics(MID);
+        const MetricSet& llat = ass->cmetrics(LEFT);
+        const MetricSet& rlat = ass->cmetrics(RIGHT);
         sol::function_result result = _determine( fm->age(), mlat, llat, rlat);
         if ( result.valid())
             present = result;

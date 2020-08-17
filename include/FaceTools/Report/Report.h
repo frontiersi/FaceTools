@@ -84,7 +84,8 @@ private:
 
     void _addLatexScanInfo();
     void _addLatexNotes();
-    void _addLatexPhenotypicVariationsList();
+    bool _addLatexPhenotypicTraits(int,int);
+    int _getNumPhenotypicTraits() const;
 
     void _addLatexStartMinipage();
     void _addLatexEndMinipage();

@@ -134,9 +134,6 @@ Chart::Chart( const GrowthData *gd, size_t d, const FM* fm) : _gdata(gd), _dim(d
 }   // end ctor
 
 
-Chart::~Chart() { }   // end dtor
-
-
 namespace {
 QString makeTitleString( const GrowthData *gd, size_t dim)
 {
@@ -148,11 +145,13 @@ QString makeTitleString( const GrowthData *gd, size_t dim)
 }   // end makeTitleString
 
 
-QString makeDemographicString( const GrowthData *gd)
+QString makeDemographicString( const GrowthData *gd, bool asLatex)
 {
     // Get the statics info as "sex; ethnicity; N"
     const QString ethName = FaceTools::Ethnicities::name( gd->ethnicity());
     QString demog = FaceTools::toLongSexString( gd->sex());
+    if ( asLatex)   // Replace possible "|" with \mid
+        demog.replace("|", "$\\mid$");
     if ( !ethName.isEmpty())
         demog += "; " + ethName;
     if ( gd->n() > 0)
@@ -177,7 +176,7 @@ QString makeSourceString( const GrowthData *gd, const QString& lb)
 QString Chart::makeRichTextTitleString() const
 {
     const QString title = makeTitleString( _gdata, _dim);
-    const QString demog = makeDemographicString( _gdata);
+    const QString demog = makeDemographicString( _gdata, false);
     const QString src = makeSourceString( _gdata, "<br>");
     return QString("<center><big><b>%1</b> (%2)</big><br><em>%3</em></center>").arg( title, demog, src);
 }   // end makeRichTextTitleString
@@ -186,7 +185,7 @@ QString Chart::makeRichTextTitleString() const
 QString Chart::makeLatexTitleString( int fnm) const
 {
     const QString title = makeTitleString( _gdata, _dim);
-    const QString demog = makeDemographicString( _gdata);
+    const QString demog = makeDemographicString( _gdata, true);
     if ( fnm > 0)
         return QString("\\textbf{%1}\\\\ \\small{(%2) \\footnotemark[%3]}").arg( title, demog).arg(fnm);
     const QString src = makeSourceString( _gdata, "\\\\");
@@ -206,24 +205,24 @@ void Chart::_addDataPoints( const FM* fm, float &ymin, float &ymax)
 
     if ( MM::metric(mid)->isBilateral())
     {
-        if ( ass->cmetricsL().has(mid))
+        if ( ass->cmetrics(LEFT).has(mid))
         {
-            assert( ass->cmetricsR().has(mid));
-            const MetricValue& mvl = ass->cmetricsL().metric( mid);
-            const MetricValue& mvr = ass->cmetricsR().metric( mid);
+            assert( ass->cmetrics(RIGHT).has(mid));
+            const MetricValue& mvl = ass->cmetrics(LEFT).metric( mid);
+            const MetricValue& mvr = ass->cmetrics(RIGHT).metric( mid);
             const float val = 0.5f * (mvl.value(_dim) + mvr.value(_dim));
 
-            this->addSeries( createMetricPoint( age, mvl.value(_dim), "Right", Qt::blue));
-            this->addSeries( createMetricPoint( age, mvr.value(_dim), "Left", Qt::darkGreen));
+            this->addSeries( createMetricPoint( age, mvl.value(_dim), "Left", Qt::blue));
+            this->addSeries( createMetricPoint( age, mvr.value(_dim), "Right", Qt::darkGreen));
             this->addSeries( createMetricPoint( age, val, "Mean", Qt::red));
 
             ymin = std::min( mvl.value(_dim), mvr.value(_dim));
             ymax = std::max( mvl.value(_dim), mvr.value(_dim));
         }   // end if
     }   // end if
-    else if ( ass->cmetrics().has(mid))
+    else if ( ass->cmetrics(MID).has(mid))
     {
-        const MetricValue &mv = ass->cmetrics().metric( mid);
+        const MetricValue &mv = ass->cmetrics(MID).metric( mid);
         this->addSeries( createMetricPoint( age, mv.value(_dim), "Subject", Qt::red));
         ymin = ymax = mv.value(_dim);
     }   // end else if

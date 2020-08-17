@@ -48,6 +48,9 @@ public:
     // Return the matched GrowthData sources or an empty set.
     GrowthDataSources lookup( int8_t sex, int ethn) const;
 
+    // Returns true iff data exist for the given sex, ethnicity.
+    bool hasData( int8_t sex, int ethn) const;
+
     // Return the match GrowthData or null.
     const GrowthData* lookup( int8_t sex, int ethn, const QString& src) const;
 

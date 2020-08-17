@@ -28,6 +28,7 @@ using FaceTools::Metric::MetricSet;
 using FaceTools::Metric::PhenotypeManager;
 using FaceTools::Metric::Phenotype;
 using FaceTools::FaceAssessment;
+using FaceTools::FaceSide;
 using FaceTools::Vec3f;
 using FaceTools::FM;
 
@@ -104,7 +105,7 @@ MetricSet readMetricSet( const PTree &msetNode)
             if ( dv.count("axis") == 0) // Skip no content node
                 continue;
 
-            const int d = dv.get<size_t>( "axis");
+            const int d = int(dv.get<size_t>( "axis"));
             dvals[d] = dv.get<float>( "value");
         }   // end for
 
@@ -208,9 +209,9 @@ FaceModelFileData::FaceModelFileData( const QString &fpath, const QString &asses
     if ( assm->count("MetricGroups") > 0)
     {
         const PTree &mgroups = assm->get_child("MetricGroups");
-        ass.metricsL() = readMetricSet( mgroups.get_child("LeftLateral"));
-        ass.metricsR() = readMetricSet( mgroups.get_child("RightLateral"));
-        ass.metrics()  = readMetricSet( mgroups.get_child("Frontal"));
+        ass.metrics(RIGHT) = readMetricSet( mgroups.get_child("RightLateral"));
+        ass.metrics(LEFT) = readMetricSet( mgroups.get_child("LeftLateral"));
+        ass.metrics(MID)  = readMetricSet( mgroups.get_child("Frontal"));
     }   // end if
 
     if ( assm->count("HPO_Terms") > 0)
@@ -233,19 +234,11 @@ FaceAssessment& FaceModelFileData::_setCurrentAssessment( const QString &nm)
 }   // end _setCurrentAssessment
 
 
-float FaceModelFileData::measurementValue( int mid, FaceLateral lat, size_t d) const
+float FaceModelFileData::measurementValue( int mid, FaceSide lat, size_t d) const
 {
-    const MetricSet *mset = nullptr;
-    if ( lat == FACE_LATERAL_LEFT)
-        mset = &_fm->currentAssessment()->cmetricsL();
-    else if ( lat == FACE_LATERAL_RIGHT)
-        mset = &_fm->currentAssessment()->cmetricsR();
-    else
-        mset = &_fm->currentAssessment()->cmetrics();
-
-    assert( mset);
-    assert( mset->hasMetric(mid));
-    const MetricValue &mv = mset->metric( mid);
+    const MetricSet &mset = _fm->currentAssessment()->cmetrics(lat);
+    assert( mset.hasMetric(mid));
+    const MetricValue &mv = mset.metric( mid);
     assert( d >= 0 && d < mv.ndims());
     return mv.value( d);
 }   // end measurementValue
@@ -253,37 +246,22 @@ float FaceModelFileData::measurementValue( int mid, FaceLateral lat, size_t d) c
 
 void FaceModelFileData::_printSummaryLine( std::ostream &os, Content content) const
 {
-    bool needComma = false;
+    os << str2csv( imageId()) << "," << str2csv( subjectId());
 
     if ( (content & Content::SEX) != Content::EMPTY)
-    {
-        os << sex().toStdString();
-        needComma = true;
-    }   // end if
+        os << "," << sex().toStdString();
 
     if ( (content & Content::AGE) != Content::EMPTY)
     {
-        if ( needComma)
-            os << ",";
-        os << dateOfBirth().toString().toStdString() << "," << captureDate().toString().toStdString() << ","
+        os << "," << dateOfBirth().toString().toStdString() << "," << captureDate().toString().toStdString() << ","
            << std::fixed << std::setprecision(2) << age();
-        needComma = true;
     }   // end if
 
     if ( (content & Content::ETHNICITY) != Content::EMPTY)
-    {
-        if ( needComma)
-            os << ",";
-        os << str2csv( maternalEthnicityString()) << "," << str2csv( paternalEthnicityString());
-        needComma = true;
-    }   // end if
+        os << "," << str2csv( maternalEthnicityString()) << "," << str2csv( paternalEthnicityString());
 
     if ( (content & Content::IMAGE) != Content::EMPTY)
-    {
-        if ( needComma)
-            os << ",";
-        os << str2csv( studyId()) << "," << str2csv( source()) << "," << str2csv( assessor()) << "," << str2csv( notes());
-    }   // end if
+        os << "," << str2csv( studyId()) << "," << str2csv( source()) << "," << str2csv( assessor()) << "," << str2csv( notes());
 
     os << std::endl;    // Basic info all on first line
 }   // end _printSummaryLine
@@ -344,12 +322,12 @@ void FaceModelFileData::toCSV( std::ostream &os, Content content) const
 
 
 namespace {
-char getLateralChar( FaceTools::FaceLateral lat)
+char getLateralChar( FaceSide lat)
 {
-    if ( lat == FaceTools::FaceLateral::FACE_LATERAL_LEFT)
-        return 'R';
-    if ( lat == FaceTools::FaceLateral::FACE_LATERAL_RIGHT)
+    if ( lat == FaceTools::LEFT)
         return 'L';
+    if ( lat == FaceTools::RIGHT)
+        return 'R';
     return 'M';
 }   // end getLateralChar
 
@@ -365,7 +343,7 @@ std::ostream &printVec( const Vec3f& pos, std::ostream &os)
 }   // end namespace
 
 
-void FaceModelFileData::_printLandmark( int lid, FaceTools::FaceLateral lat, const std::string &nm, std::ostream &os) const
+void FaceModelFileData::_printLandmark( int lid, FaceSide lat, const std::string &nm, std::ostream &os) const
 {
     const Vec3f &pos = landmarks().pos( lid, lat);
     os << lid << "," << nm << "," << getLateralChar(lat) << ",";
@@ -373,7 +351,7 @@ void FaceModelFileData::_printLandmark( int lid, FaceTools::FaceLateral lat, con
 }   // end _printLandmark
 
 
-void FaceModelFileData::_printMeasurement( int mid, FaceTools::FaceLateral lat, const std::string &nm, size_t ndims, std::ostream &os) const
+void FaceModelFileData::_printMeasurement( int mid, FaceSide lat, const std::string &nm, size_t ndims, std::ostream &os) const
 {
     os << mid << "," << nm << "," << getLateralChar( lat) << "," << ndims;
     for ( size_t i = 0; i < ndims; ++i)
@@ -391,11 +369,11 @@ void FaceModelFileData::_landmarksToCSV( std::ostream &os) const
     {
         const std::string nm = str2csv( LMAN::landmark(lid)->name());
         if ( !LMAN::isBilateral( lid))
-            _printLandmark( lid, FACE_LATERAL_MEDIAL, nm, os);
+            _printLandmark( lid, MID, nm, os);
         else
         {
-            _printLandmark( lid, FACE_LATERAL_LEFT, nm, os);
-            _printLandmark( lid, FACE_LATERAL_RIGHT, nm, os);
+            _printLandmark( lid, LEFT, nm, os);
+            _printLandmark( lid, RIGHT, nm, os);
         }   // end else
     }   // end for
 }   // end _landmarksToCSV
@@ -412,11 +390,11 @@ void FaceModelFileData::_measurementsToCSV( std::ostream &os) const
         const size_t ndims = mc->dims();
 
         if ( !mc->isBilateral())
-            _printMeasurement( mid, FACE_LATERAL_MEDIAL, nm, ndims, os);
+            _printMeasurement( mid, MID, nm, ndims, os);
         else
         {
-            _printMeasurement( mid, FACE_LATERAL_LEFT, nm, ndims, os);
-            _printMeasurement( mid, FACE_LATERAL_RIGHT, nm, ndims, os);
+            _printMeasurement( mid, LEFT, nm, ndims, os);
+            _printMeasurement( mid, RIGHT, nm, ndims, os);
         }   // end else
     }   // end for
 }   // end _measurementsToCSV

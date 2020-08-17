@@ -26,14 +26,14 @@ namespace FaceTools { namespace Landmark {
 
 struct FaceTools_EXPORT SpecificLandmark
 {
-    SpecificLandmark() : id(-1), lat(FACE_LATERAL_MEDIAL), prop(Vec3f::Ones()) {}
+    SpecificLandmark() : id(-1), lat(MID), prop(Vec3f::Ones()) {}
 
     // Set from a string e.g. "4Ren", "321Lex", "001Ren", "Rex", "sbal" etc returning true on success. 
     bool set( const QString&);
 
-    int id;             // Landmark identifier
-    FaceLateral lat;    // The landmark lateral (always FACE_LATERAL_MEDIAL for uni-lateral landmarks)
-    Vec3f prop;         // Proportion of this landmark to use (x,y,z) (only relevant if used in combinations)
+    int id;         // Landmark identifier
+    FaceSide lat;   // The landmark lateral (always MID for uni-lateral landmarks)
+    Vec3f prop;     // Proportion of this landmark to use (x,y,z) (only relevant if used in combinations)
 };  // end struct
 
 using LmkList = std::vector<SpecificLandmark>;

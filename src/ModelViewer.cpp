@@ -186,7 +186,7 @@ void ModelViewer::fitCamera( float r)
     setCamera(cp);
 }   // end fitCamera
 
-cv::Mat_<cv::Vec3b> ModelViewer::grabImage() const { return r3dvis::ImageGrabber( _qviewer->GetRenderWindow()).colour();}
+cv::Mat_<cv::Vec3b> ModelViewer::grabImage() const { return r3dvis::ImageGrabber( _qviewer->getRenderWindow()).colour();}
 
 
 void ModelViewer::setParallelProjection( bool enable)

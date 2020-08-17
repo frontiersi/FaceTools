@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@ using r3dio::U3DExporter;
 // Static definitions
 QTemporaryDir ReportManager::_tmpdir;
 QString ReportManager::_hname;
+QString ReportManager::_version;
 QString ReportManager::_logopath;
 QString ReportManager::_logofile;
 QString ReportManager::_inkscape;
@@ -64,21 +65,21 @@ bool ReportManager::init( const QString& pdflatex, const QString& idtfConverter,
     }   // end if
 
     QTextStream ots( &viewsfile);
-    ots << "VIEW=Front" << endl
-        << "\tROO=300" << endl
-        << "\tC2C=0 -1 0" << endl
-        << "\tLIGHTS=AmbientLight" << endl
-        << "END" << endl
-        << "VIEW=Right" << endl
-        << "\tROO=300" << endl
-        << "\tC2C=-1 0 0" << endl
-        << "\tLIGHTS=AmbientLight" << endl
-        << "END" << endl
-        << "VIEW=Left" << endl
-        << "\tROO=300" << endl
-        << "\tC2C=1 0 0" << endl
-        << "\tLIGHTS=AmbientLight" << endl
-        << "END" << endl;
+    ots << "VIEW=Front" << Qt::endl
+        << "  C2C=0 -1 0" << Qt::endl
+        << "  ROO=300" << Qt::endl
+        << "  LIGHTS=AmbientLight" << Qt::endl
+        << "END" << Qt::endl
+        << "VIEW=Right" << Qt::endl
+        << "  C2C=-1 0 0" << Qt::endl
+        << "  ROO=300" << Qt::endl
+        << "  LIGHTS=AmbientLight" << Qt::endl
+        << "END" << Qt::endl
+        << "VIEW=Left" << Qt::endl
+        << "  C2C=1 0 0" << Qt::endl
+        << "  ROO=300" << Qt::endl
+        << "  LIGHTS=AmbientLight" << Qt::endl
+        << "END" << Qt::endl;
     viewsfile.close();
 
     return isAvailable();

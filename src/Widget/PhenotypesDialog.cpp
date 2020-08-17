@@ -134,18 +134,19 @@ void PhenotypesDialog::_highlightRow( int rowid)
     {
         assert(_idRows.count(_chid) > 0);
         int orid = _idRows.at(_chid);
-        _ui->table->item(orid, ID_COL)->setBackgroundColor( Qt::white);
-        _ui->table->item(orid, NAME_COL)->setBackgroundColor( Qt::white);
-        _ui->table->item(orid, METRICS_COL)->setBackgroundColor( Qt::white);
+        static const QBrush wbg( Qt::white);
+        _ui->table->item(orid, ID_COL)->setBackground( wbg);
+        _ui->table->item(orid, NAME_COL)->setBackground( wbg);
+        _ui->table->item(orid, METRICS_COL)->setBackground( wbg);
     }   // end if
 
     _chid = -1;
     if ( rowid >= 0)
     {
-        static const QColor bg(200,235,255);
-        _ui->table->item(rowid, ID_COL)->setBackgroundColor( bg);
-        _ui->table->item(rowid, NAME_COL)->setBackgroundColor( bg);
-        _ui->table->item(rowid, METRICS_COL)->setBackgroundColor( bg);
+        static const QBrush bg( QColor(200,235,255));
+        _ui->table->item(rowid, ID_COL)->setBackground( bg);
+        _ui->table->item(rowid, NAME_COL)->setBackground( bg);
+        _ui->table->item(rowid, METRICS_COL)->setBackground( bg);
         _chid = _ui->table->item(rowid, ID_COL)->data(Qt::UserRole).toInt();
     }   // end if
 

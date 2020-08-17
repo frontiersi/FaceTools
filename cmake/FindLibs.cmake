@@ -380,6 +380,9 @@ if(WITH_BOOST)  # Boost
     set( BOOST_ROOT "${LIB_PRE_REQS}/boost/boost_${_boost_ver_str}" CACHE PATH "Location of boost")
     set( BOOST_LIBRARYDIR "${BOOST_ROOT}/lib")
 
+    # Needed for 1.73 to avoid warning that practice of declaring Bind placeholders in global namespace is deprecated
+    add_definitions( -DBOOST_BIND_GLOBAL_PLACEHOLDERS=1)
+
     if(WIN32)
         add_definitions( ${Boost_LIB_DIAGNOSTIC_DEFINITIONS})   # Info about Boost's auto linking
     endif()

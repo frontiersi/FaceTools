@@ -24,7 +24,7 @@
 using FaceTools::Vis::LandmarkSetView;
 using FaceTools::Vis::SphereView;
 using FaceTools::ModelViewer;
-using FaceTools::FaceLateral;
+using FaceTools::FaceSide;
 using FaceTools::Landmark::LandmarkSet;
 using ViewPair = std::pair<int, SphereView*>;
 using FaceTools::Vec3f;
@@ -102,30 +102,30 @@ void LandmarkSetView::showLandmark( bool enable, int lm)
 }   // end showLandmark
 
 
-void LandmarkSetView::setLabelVisible( bool enable, int lm, FaceLateral lat)
+void LandmarkSetView::setLabelVisible( bool enable, int lm, FaceSide lat)
 {
     enable = enable && LMAN::landmark(lm)->isVisible();
-    if ( (lat & FACE_LATERAL_LEFT) && _lviews.count(lm) > 0)
+    if ( (lat & LEFT) && _lviews.count(lm) > 0)
         _lviews.at(lm)->showCaption( enable);
-    else if ( (lat & FACE_LATERAL_MEDIAL) && _mviews.count(lm) > 0)
+    else if ( (lat & MID) && _mviews.count(lm) > 0)
         _mviews.at(lm)->showCaption( enable);
-    else if ( (lat & FACE_LATERAL_RIGHT) && _rviews.count(lm) > 0)
+    else if ( (lat & RIGHT) && _rviews.count(lm) > 0)
         _rviews.at(lm)->showCaption( enable);
 }   // end setLabelVisible
 
 
-void LandmarkSetView::setLandmarkColour( const Vec3f &col, int lm, FaceLateral lat)
+void LandmarkSetView::setLandmarkColour( const Vec3f &col, int lm, FaceSide lat)
 {
     const double r = col[0];
     const double g = col[1];
     const double b = col[2];
     const double a = ALPHA;
 
-    if ( (lat & FACE_LATERAL_LEFT) && _lviews.count(lm) > 0)
+    if ( (lat & LEFT) && _lviews.count(lm) > 0)
         _lviews.at(lm)->setColour( r, g, b, a);
-    else if ( (lat & FACE_LATERAL_MEDIAL) && _mviews.count(lm) > 0)
+    else if ( (lat & MID) && _mviews.count(lm) > 0)
         _mviews.at(lm)->setColour( r, g, b, a);
-    else if ( (lat & FACE_LATERAL_RIGHT) && _rviews.count(lm) > 0)
+    else if ( (lat & RIGHT) && _rviews.count(lm) > 0)
         _rviews.at(lm)->setColour( r, g, b, a);
 }   // end setLandmarkColour
 
@@ -147,23 +147,23 @@ void LandmarkSetView::pokeTransform( const vtkMatrix4x4* vd)
 }   // end pokeTransform
 
 
-int LandmarkSetView::landmarkId( const vtkProp* prop, FaceLateral& lat) const
+int LandmarkSetView::landmarkId( const vtkProp* prop, FaceSide& lat) const
 {
     if ( _lprops.count(prop) > 0)
     {
-        lat = FACE_LATERAL_LEFT;
+        lat = LEFT;
         return _lprops.at(prop);
     }   // end if
 
     if ( _mprops.count(prop) > 0)
     {
-        lat = FACE_LATERAL_MEDIAL;
+        lat = MID;
         return _mprops.at(prop);
     }   // end if
 
     if ( _rprops.count(prop) > 0)
     {
-        lat = FACE_LATERAL_RIGHT;
+        lat = RIGHT;
         return _rprops.at(prop);
     }   // end if
 
@@ -180,13 +180,13 @@ void LandmarkSetView::remove( int lm)
 }   // end remove
 
 
-void LandmarkSetView::set( int lm, FaceLateral lat, const Vec3f& pos)
+void LandmarkSetView::set( int lm, FaceSide lat, const Vec3f& pos)
 {
-    if ( lat == FACE_LATERAL_LEFT)
+    if ( lat == LEFT)
         _set( lm, lat, _lviews, _lprops, pos);
-    else if ( lat == FACE_LATERAL_MEDIAL)
+    else if ( lat == MID)
         _set( lm, lat, _mviews, _mprops, pos);
-    else if ( lat == FACE_LATERAL_RIGHT)
+    else if ( lat == RIGHT)
         _set( lm, lat, _rviews, _rprops, pos);
 }   // end set
 
@@ -204,7 +204,7 @@ void LandmarkSetView::_remove( int lm, SphereMap& views, PropMap& props)
 }   // end _remove
 
 
-void LandmarkSetView::_set( int lm, FaceLateral lat, SphereMap& views, PropMap& props, const Vec3f& pos)
+void LandmarkSetView::_set( int lm, FaceSide lat, SphereMap& views, PropMap& props, const Vec3f& pos)
 {
     SphereView *sv = nullptr;
     if ( views.count(lm) > 0) // Get the landmark sphere view to update

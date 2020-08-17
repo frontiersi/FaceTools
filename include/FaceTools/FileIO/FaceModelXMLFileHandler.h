@@ -70,6 +70,11 @@ FaceTools_EXPORT QString loadData( FM&, const QTemporaryDir&, const QString &mes
 // export formats are available (not just XML).
 FaceTools_EXPORT void exportMetaData( const FM*, bool withExtras, PTree&);
 
+template <typename T>
+T getRecord( const PTree&, const QString& label);
+
+#include "FaceModelXMLFileHandler.cpp"
+
 }}   // end namespaces
 
 #endif

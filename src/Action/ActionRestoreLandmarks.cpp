@@ -97,15 +97,15 @@ bool ActionRestoreLandmarks::restoreLandmarks( FM *fm, const IntSet &ulmks)
         if ( LMAN::isBilateral(lmid))
         {
             bcds = &mdata->lmksL.at(lmid);
-            fm->setLandmarkPosition( lmid, FACE_LATERAL_LEFT, toSurface( kdt, msk.fromBarycentric( bcds->first, bcds->second)));
+            fm->setLandmarkPosition( lmid, LEFT, toSurface( kdt, msk.fromBarycentric( bcds->first, bcds->second)));
 
             bcds = &mdata->lmksR.at(lmid);
-            fm->setLandmarkPosition( lmid, FACE_LATERAL_RIGHT, toSurface( kdt, msk.fromBarycentric( bcds->first, bcds->second)));
+            fm->setLandmarkPosition( lmid, RIGHT, toSurface( kdt, msk.fromBarycentric( bcds->first, bcds->second)));
         }   // end if
         else
         {
             bcds = &mdata->lmksM.at(lmid);
-            fm->setLandmarkPosition( lmid, FACE_LATERAL_MEDIAL, toSurface( kdt, msk.fromBarycentric( bcds->first, bcds->second)));
+            fm->setLandmarkPosition( lmid, MID, toSurface( kdt, msk.fromBarycentric( bcds->first, bcds->second)));
         }   // end else
     }   // end for
     return true;

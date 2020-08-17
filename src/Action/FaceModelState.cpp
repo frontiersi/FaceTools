@@ -82,6 +82,8 @@ void FaceModelState::_saveMetaData()
 {
     _source = _fm->_source;
     _studyId = _fm->_studyId;
+    _subjectId = _fm->_subjectId;
+    _imageId = _fm->_imageId;
     _dob = _fm->_dob;
     _sex = _fm->_sex;
     _methnicity = _fm->_methnicity;
@@ -94,6 +96,8 @@ void FaceModelState::_restoreMetaData() const
 {
     _fm->_source = _source;
     _fm->_studyId = _studyId;
+    _fm->_subjectId = _subjectId;
+    _fm->_imageId = _imageId;
     _fm->_dob = _dob;
     _fm->_sex = _sex;
     _fm->_methnicity = _methnicity;

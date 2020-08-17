@@ -127,10 +127,7 @@ Event ActionExportPDF::doAfterAction( Event)
         QMessageBox::warning( static_cast<QWidget*>(parent()), tr("Report Creation Error!"), _err);
     }   // end if
     else
-    {
-        //std::cerr << "Created PDF at '" << _tmpfile.toStdString() << "'" << std::endl;
         saveGeneratedReport(_tmpfile, _fileDialog);
-    }   // end else
     return Event::NONE;
 }   // end doAfterAction
 
@@ -167,7 +164,7 @@ bool ActionExportPDF::saveGeneratedReport( const QString& tmpfile, QFileDialog *
         {
             if ( !QFile::remove(outfile))
             {
-                static const QString err = "Unable to remove existing file! Choose a different filename.";
+                static const QString err = "Unable to overwrite existing file! Is it already open?\nChoose a different filename or close the file.";
                 QMessageBox::warning( static_cast<QWidget*>(fdialog->parent()), tr("Report Save Error!"), err);
                 docopy = false; // Try again!
             }   // end if

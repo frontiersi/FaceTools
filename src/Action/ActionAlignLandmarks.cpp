@@ -78,7 +78,7 @@ void centreMedialLandmarks( FM *fm)
     const FaceTools::Landmark::LandmarkSet &lmks = fm->currentLandmarks();
     static const float MAX_XPOS_DIFF = 1.0e-8f;
     static const size_t MAX_ITERATIONS = 10;
-    const std::unordered_map<int, r3d::Vec3f>& mlmks = lmks.lateral( FaceTools::FACE_LATERAL_MEDIAL);
+    const std::unordered_map<int, r3d::Vec3f>& mlmks = lmks.lateral( FaceTools::MID);
     for ( const auto &p : mlmks)
     {
         r3d::Vec3f pos = p.second;
@@ -90,19 +90,19 @@ void centreMedialLandmarks( FM *fm)
             i++;
         }   // end while
         pos[0] = 0.0f;
-        fm->setLandmarkPosition( p.first, FaceTools::FACE_LATERAL_MEDIAL, pos);
+        fm->setLandmarkPosition( p.first, FaceTools::MID, pos);
     }   // end for
 }   // end centreMedialLandmarks
 
 
 void reflectLateralLandmarks( FM *fm)
 {
-    const std::unordered_map<int, r3d::Vec3f>& lmks = fm->currentLandmarks().lateral( FaceTools::FACE_LATERAL_LEFT);
+    const std::unordered_map<int, r3d::Vec3f>& lmks = fm->currentLandmarks().lateral( FaceTools::LEFT);
     for ( const auto &p : lmks)
     {
         r3d::Vec3f pos = p.second;
         pos[0] = -pos[0];
-        fm->setLandmarkPosition( p.first, FaceTools::FACE_LATERAL_RIGHT, pos);
+        fm->setLandmarkPosition( p.first, FaceTools::RIGHT, pos);
     }   // end for
 }   // end reflectLateralLandmarks
 

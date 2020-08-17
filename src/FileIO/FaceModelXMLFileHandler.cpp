@@ -41,6 +41,8 @@ void FaceTools::FileIO::exportMetaData( const FM* fm, bool withExtras, PTree& tn
 
     rnode.put( "Source", fm->source().toStdString());
     rnode.put( "StudyId", fm->studyId().toStdString());
+    rnode.put( "SubjectId", fm->subjectId().toStdString());
+    rnode.put( "ImageId", fm->imageId().toStdString());
     rnode.put( "DateOfBirth", fm->dateOfBirth().toString().toStdString());
     rnode.put( "Sex", FaceTools::toSexString(fm->sex()).toStdString());
     rnode.put( "MaternalEthnicity", fm->maternalEthnicity());
@@ -68,9 +70,9 @@ void FaceTools::FileIO::exportMetaData( const FM* fm, bool withExtras, PTree& tn
         ass->paths().write( anode.put("Paths", ""), withExtras);
 
         PTree& mgrps = anode.put("MetricGroups", "");
-        ass->cmetrics().write( mgrps.put("Frontal", ""), age);
-        ass->cmetricsL().write( mgrps.put("LeftLateral", ""), age);
-        ass->cmetricsR().write( mgrps.put("RightLateral", ""), age);
+        ass->cmetrics( MID).write( mgrps.put("Frontal", ""), age);
+        ass->cmetrics( LEFT).write( mgrps.put("LeftLateral", ""), age);
+        ass->cmetrics( RIGHT).write( mgrps.put("RightLateral", ""), age);
 
         PTree& pnodes = anode.put("HPO_Terms", "");
         const IntSet ptypes = PhenotypeManager::discover( fm, id);
@@ -170,78 +172,53 @@ bool FaceModelXMLFileHandler::write( const FM* fm, const QString& fname)
 
 namespace {
 
+QDate getDateRecord( const PTree &n, const QString &camelCaseLabel)
+{
+    QDate date = QDate::currentDate();
+    const QString sdate = QString::fromStdString( FaceTools::FileIO::getRecord<std::string>( n, camelCaseLabel));
+    if ( !sdate.isEmpty() && QDate::fromString(sdate).isValid())
+        date = QDate::fromString( sdate);
+    return date;
+}   // end getDateRecord
+
+
+QString getStringRecord( const PTree &n, const QString &camelCaseLabel)
+{
+    return QString::fromStdString( FaceTools::FileIO::getRecord<std::string>( n, camelCaseLabel));
+}   // end getStringRecord
+
+
 void importModelRecord( FM &fm, const PTree& rnode, QString &meshfname, QString &maskfname)
 {
-    meshfname = "mesh.obj";
-    if ( rnode.count("objfilename") > 0)
-        meshfname = QString::fromStdString( rnode.get<std::string>( "objfilename"));
-    else if ( rnode.count("ObjFilename") > 0)
-        meshfname = QString::fromStdString( rnode.get<std::string>( "ObjFilename"));
+    meshfname = getStringRecord( rnode, "ObjFilename");
+    if ( meshfname.isEmpty())
+        meshfname = "mesh.obj";
 
-    QString src;
-    if ( rnode.count("source") > 0)
-        src = QString::fromStdString( rnode.get<std::string>( "source"));
-    else if ( rnode.count("Source") > 0)
-        src = QString::fromStdString( rnode.get<std::string>( "Source"));
-    fm.setSource(src);
-
-    QString sid;
-    if ( rnode.count("studyid") > 0)
-        sid = QString::fromStdString( rnode.get<std::string>( "studyid"));
-    else if ( rnode.count("StudyId") > 0)
-        sid = QString::fromStdString( rnode.get<std::string>( "StudyId"));
-    fm.setStudyId(sid);
-
-    QDate cdate = QDate::currentDate();
-    if ( rnode.count("capture_date") > 0)
-        cdate = QDate::fromString( QString::fromStdString( rnode.get<std::string>( "capture_date")));
-    else if ( rnode.count("CaptureDate") > 0)
-        cdate = QDate::fromString( QString::fromStdString( rnode.get<std::string>( "CaptureDate")));
-    fm.setCaptureDate( cdate);
-
-    double age = 0.0;   // Only use age if DateOfBirth not present in XML
-    if ( rnode.count("age") > 0)
-        age = rnode.get<double>("age");
-    else if ( rnode.count("Age") > 0)
-        age = rnode.get<double>("Age");
-
-    QDate dob = QDate::currentDate();
-    if ( rnode.count("DateOfBirth") > 0)
-        dob = QDate::fromString( QString::fromStdString( rnode.get<std::string>( "DateOfBirth")));
-
+    fm.setSource( getStringRecord( rnode, "Source"));
+    fm.setStudyId( getStringRecord( rnode, "StudyId"));
+    fm.setSubjectId( getStringRecord( rnode, "SubjectId"));
+    fm.setImageId( getStringRecord( rnode, "ImageId"));
+    fm.setCaptureDate( getDateRecord( rnode, "CaptureDate"));
+    QDate dob = getDateRecord( rnode, "DateOfBirth");
     // If no date of birth given, find it as the capture date minus the age (assumed given)
-    if ( dob == QDate::currentDate() && cdate != QDate::currentDate())
-        dob = cdate.addDays(qint64( -age * 365.25));
+    if ( dob == QDate::currentDate() && fm.captureDate() != QDate::currentDate())
+    {
+        const double age = FaceTools::FileIO::getRecord<double>( rnode, "Age");   // Will be zero if not found
+        if ( age > 0.0)
+            dob = fm.captureDate().addDays(qint64( -age * 365.25));
+    }   // end if
     fm.setDateOfBirth( dob);
 
-    int8_t sex = FaceTools::UNKNOWN_SEX;
-    if ( rnode.count("sex") > 0)
-        sex = FaceTools::fromSexString( QString::fromStdString( rnode.get<std::string>("sex")));
-    else if ( rnode.count("Sex") > 0)
-        sex = FaceTools::fromSexString( QString::fromStdString( rnode.get<std::string>("Sex")));
-    fm.setSex(sex);
+    fm.setSex( FaceTools::fromSexString( getStringRecord( rnode, "Sex")));
 
-    int methn = 0;
-    int pethn = 0;
-    if ( rnode.count("ethnicity") > 0)
+    int methn = FaceTools::FileIO::getRecord<int>( rnode, "MaternalEthnicity");
+    int pethn = FaceTools::FileIO::getRecord<int>( rnode, "PaternalEthnicity");
+    if ( methn == 0 && pethn == 0)
     {
-        QString seth = QString::fromStdString( rnode.get<std::string>( "ethnicity"));
-        seth = seth.split(" ")[0].trimmed();  // Use just the first word
-        pethn = methn = FaceTools::Ethnicities::code( seth);
+        const QString seth = getStringRecord( rnode, "Ethnicity");
+        if ( !seth.isEmpty())
+            pethn = methn = FaceTools::Ethnicities::code( seth.split(" ")[0].trimmed());  // Use just the first word
     }   // end if
-    else if ( rnode.count("Ethnicity") > 0)
-    {
-        QString seth = QString::fromStdString( rnode.get<std::string>( "Ethnicity"));
-        seth = seth.split(" ")[0].trimmed();  // Use just the first word
-        pethn = methn = FaceTools::Ethnicities::code( seth);
-    }   // end else if
-
-    if ( rnode.count("MaternalEthnicity") > 0)
-        methn = rnode.get<int>( "MaternalEthnicity");
-
-    if ( rnode.count("PaternalEthnicity") > 0)
-        pethn = rnode.get<int>( "PaternalEthnicity");
-
     fm.setMaternalEthnicity(methn);
     fm.setPaternalEthnicity(pethn);
 
@@ -251,9 +228,9 @@ void importModelRecord( FM &fm, const PTree& rnode, QString &meshfname, QString 
         const PTree &maskNode = rnode.get_child("Mask");
         if ( maskNode.count("Filename") > 0)
         {
-            maskfname = QString::fromStdString( maskNode.get<std::string>("Filename")); // Will end in 3DF - needs to end with OBJ
+            maskfname = getStringRecord( maskNode, "Filename"); // Will end in 3DF - needs to end with OBJ
             const QFileInfo finfo( maskfname);
-            if ( finfo.suffix() == "3df")
+            if ( finfo.suffix().toLower() == "3df")
                 maskfname = finfo.baseName() + ".obj";
         }   // end if
         if ( maskNode.count("Hash") > 0)
@@ -282,13 +259,9 @@ void importModelRecord( FM &fm, const PTree& rnode, QString &meshfname, QString 
         ass->setPaths( paths);
     }   // end if
 
-    QString notes;
-    if ( rnode.count("description") > 0)
-        notes = QString::fromStdString( rnode.get<std::string>( "description"));
-    else if ( rnode.count("Description") > 0)
-        notes = QString::fromStdString( rnode.get<std::string>( "Description"));
-    else if ( rnode.count("Notes") > 0)
-        notes = QString::fromStdString( rnode.get<std::string>( "Notes"));
+    QString notes = getStringRecord( rnode, "Notes");
+    if ( notes.isEmpty())
+        notes = getStringRecord( rnode, "Description");
 
     QString assessor = "Unknown";
     ass->setAssessor( assessor);
@@ -307,9 +280,8 @@ void importModelRecord( FM &fm, const PTree& rnode, QString &meshfname, QString 
         for ( const PTree::value_type& vnode : anodes)
         {
             const PTree& anode = vnode.second;
-
-            assessor = anode.count("Assessor") > 0 ? QString::fromStdString( anode.get<std::string>("Assessor")) : "";
-            notes = anode.count("Notes") > 0 ? QString::fromStdString( anode.get<std::string>("Notes")) : "";
+            assessor = getStringRecord( anode, "Assessor");
+            notes = getStringRecord( anode, "Notes");
             lmks = FaceTools::Landmark::LandmarkSet();
             if ( anode.count("Landmarks") > 0)
                 lmks.read( anode.get_child("Landmarks"));
@@ -415,7 +387,7 @@ bool FaceTools::FileIO::importMetaData( FM &fm, const PTree& tree, double &fvers
 
     // If the file version is higher, then compatibility may not be possible (still try to read in).
     if ( fvers > VERSION)
-        std::cerr << "[WARNING]" << msghd << "Higher version " << fvers << " of XML file being read into version " << VERSION << " library!" << std::endl;
+        std::cerr << "[WARNING]" << msghd << "Higher version " << fvers << " of cannot be read into version " << VERSION << " library!" << std::endl;
 
     importModelRecord( fm, *fnode, meshfname, maskfname);
     return true;
@@ -529,9 +501,14 @@ FM* FaceModelXMLFileHandler::read( const QString& fname)
         _fversion = 0.0;
         QString meshfname, maskfname;
         if ( !importMetaData( *fm, tree, _fversion, meshfname, maskfname))
-            _err = "No FaceModel objects recorded in file!";
+            _err = QObject::tr("No FaceModel objects recorded in file!");
         else
-            _err = loadData( *fm, tdir, meshfname, maskfname);
+        {
+            if ( _fversion > XML_VERSION.toDouble())
+                _err = QObject::tr("File version is more recent than this library allows!");
+            else
+                _err = loadData( *fm, tdir, meshfname, maskfname);
+        }   // end else
     }   // end if
 
     if ( !_err.isEmpty())

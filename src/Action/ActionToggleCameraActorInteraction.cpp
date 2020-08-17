@@ -45,14 +45,14 @@ ActionToggleCameraActorInteraction::ActionToggleCameraActorInteraction( const QS
 
 QString ActionToggleCameraActorInteraction::toolTip() const
 {
-    return "Toggle on to move models by clicking and dragging on them.";
+    return "Toggle on to reposition models by clicking and dragging on them.";
 }   // end toolTip
 
 
 QString ActionToggleCameraActorInteraction::whatsThis() const
 {
     QStringList ht;
-    ht << "If toggled on, clicking and dragging on a model moves it around.";
+    ht << "If toggled on, clicking and dragging on a model repositions it.";
     ht << "Click and drag with the left mouse button to rotate the model in place.";
     ht << "Click and drag with the right mouse button (or hold SHIFT while left clicking and dragging)";
     ht << "to shift the model laterally. Click and drag with the middle mouse button (or hold CTRL while";

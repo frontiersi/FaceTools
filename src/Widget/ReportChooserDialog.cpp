@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ ReportChooserDialog::ReportChooserDialog(QWidget *parent) :
     QDialog(parent), _ui(new Ui::ReportChooserDialog)
 {
     _ui->setupUi(this);
-    setWindowTitle( parent->windowTitle() + " | Report Template Selection");
+    setWindowTitle( parent->windowTitle() + " | Report Selection");
 }   // end ctor
 
 

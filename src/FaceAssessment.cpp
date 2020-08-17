@@ -22,6 +22,8 @@ using FaceTools::PathSet;
 using FaceTools::FM;
 using FaceTools::Vec3f;
 using FaceTools::Mat4f;
+using FaceTools::FaceSide;
+using FaceTools::Metric::MetricSet;
 
 namespace {
 const QString UNKNOWN_NAME = "Unknown";
@@ -107,6 +109,28 @@ bool FaceAssessment::setPaths( const PathSet &pths)
     }   // end if
     return setok;
 }   // end setPaths
+
+
+MetricSet &FaceAssessment::metrics( FaceSide fs)
+{
+    MetricSet *mset = &_metrics;
+    if ( fs == FaceSide::LEFT)
+        mset = &_metricsL;
+    else if ( fs == FaceSide::RIGHT)
+        mset = &_metricsR;
+    return *mset;
+}   // end metrics
+
+
+const MetricSet &FaceAssessment::cmetrics( FaceSide fside) const
+{
+    const MetricSet *mset = &_metrics;
+    if ( fside == FaceSide::LEFT)
+        mset = &_metricsL;
+    else if ( fside == FaceSide::RIGHT)
+        mset = &_metricsR;
+    return *mset;
+}   // end cmetrics
 
 
 bool FaceAssessment::hasMetric( int mid) const

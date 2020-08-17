@@ -192,15 +192,16 @@ void LandmarksDialog::_highlightRow( int rowid)
 
     if ( _prowid >= 0)
     {
-        _ui->table->item( _prowid, SHOW_COL)->setBackgroundColor( Qt::white);
-        _ui->table->item( _prowid, IDNT_COL)->setBackgroundColor( Qt::white);
-        _ui->table->item( _prowid, NAME_COL)->setBackgroundColor( Qt::white);
+        static const QBrush wbg( Qt::white);
+        _ui->table->item( _prowid, SHOW_COL)->setBackground( wbg);
+        _ui->table->item( _prowid, IDNT_COL)->setBackground( wbg);
+        _ui->table->item( _prowid, NAME_COL)->setBackground( wbg);
     }   // end if
 
-    static const QColor bg(200,235,255);
-    _ui->table->item( rowid, SHOW_COL)->setBackgroundColor( bg);
-    _ui->table->item( rowid, IDNT_COL)->setBackgroundColor( bg);
-    _ui->table->item( rowid, NAME_COL)->setBackgroundColor( bg);
+    static const QBrush bg( QColor(200,235,255));
+    _ui->table->item( rowid, SHOW_COL)->setBackground( bg);
+    _ui->table->item( rowid, IDNT_COL)->setBackground( bg);
+    _ui->table->item( rowid, NAME_COL)->setBackground( bg);
 
     _ui->table->setCurrentCell( rowid, SHOW_COL);
     _ui->table->blockSignals(false);

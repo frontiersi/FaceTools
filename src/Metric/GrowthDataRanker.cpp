@@ -293,7 +293,7 @@ QStringList GrowthDataRanker::sources( const GDS &gds)
     QSet<QString> sset;
     for ( const GD *gd : gds)
         sset.insert( gd->source());
-    slst = QStringList::fromSet(sset);
+    slst = QStringList(sset.begin(), sset.end());
     slst.sort();
     return slst;
 }   // end sources
@@ -306,6 +306,9 @@ GDS GrowthDataRanker::lookup( int8_t sex, int ethn) const
         gds = _gdata.at(sex).at(ethn);
     return gds;
 }   // end lookup
+
+
+bool GrowthDataRanker::hasData( int8_t sex, int ethn) const { return !lookup( sex, ethn).empty();}
 
 
 const GD* GrowthDataRanker::lookup( int8_t sex, int ethn, const QString& src) const

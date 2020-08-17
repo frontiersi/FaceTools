@@ -71,7 +71,7 @@ void GrowthData::addSource( const QString& s)
     sset.insert(ns.trimmed());
 
     // Sort them
-    srcs = QStringList::fromSet(sset);
+    srcs = QStringList( sset.begin(), sset.end());
     srcs.sort();
 
     // Finally, reset.

@@ -25,7 +25,7 @@ using FaceTools::Landmark::LandmarkSet;
 using FaceTools::Landmark::Landmark;
 using FaceTools::Landmark::LmkList;
 using FaceTools::Landmark::SpecificLandmark;
-using FaceTools::FaceLateral;
+using FaceTools::FaceSide;
 using FaceTools::Vec3f;
 using FaceTools::Mat4f;
 using FaceTools::MatX3f;
@@ -34,7 +34,7 @@ using LMAN = FaceTools::Landmark::LandmarksManager;
 
 
 namespace  {
-void addLandmarks( const std::unordered_map<int, Vec3f>& vs, FaceTools::FaceLateral lat, LandmarkSet &mlmks)
+void addLandmarks( const std::unordered_map<int, Vec3f>& vs, FaceSide lat, LandmarkSet &mlmks)
 {
     for ( const auto& p : vs)
     {
@@ -66,13 +66,13 @@ LandmarkSet::LandmarkSet( const std::unordered_set<const LandmarkSet*>& lms)
             continue;
 
         n++;
-        const std::unordered_map<int, Vec3f>& llat = lmks->lateral(FACE_LATERAL_LEFT);
-        const std::unordered_map<int, Vec3f>& mlat = lmks->lateral(FACE_LATERAL_MEDIAL);
-        const std::unordered_map<int, Vec3f>& rlat = lmks->lateral(FACE_LATERAL_RIGHT);
+        const std::unordered_map<int, Vec3f>& llat = lmks->lateral(LEFT);
+        const std::unordered_map<int, Vec3f>& mlat = lmks->lateral(MID);
+        const std::unordered_map<int, Vec3f>& rlat = lmks->lateral(RIGHT);
 
-        addLandmarks( llat, FACE_LATERAL_LEFT, *this);
-        addLandmarks( mlat, FACE_LATERAL_MEDIAL, *this);
-        addLandmarks( rlat, FACE_LATERAL_RIGHT, *this);
+        addLandmarks( llat, LEFT, *this);
+        addLandmarks( mlat, MID, *this);
+        addLandmarks( rlat, RIGHT, *this);
     }   // end for
 
     if ( n > 0)
@@ -94,7 +94,7 @@ void LandmarkSet::_clearAlignment() const
 */
 
 
-bool LandmarkSet::has( int id, FaceLateral lat) const
+bool LandmarkSet::has( int id, FaceSide lat) const
 {
     if ( !has(id))
         return false;
@@ -102,13 +102,13 @@ bool LandmarkSet::has( int id, FaceLateral lat) const
     bool hasLmk = false;
     switch (lat)
     {
-        case FACE_LATERAL_LEFT:
+        case LEFT:
             hasLmk = _lmksL.count(id) > 0;
             break;
-        case FACE_LATERAL_MEDIAL:
+        case MID:
             hasLmk = _lmksM.count(id) > 0;
             break;
-        case FACE_LATERAL_RIGHT:
+        case RIGHT:
             hasLmk = _lmksR.count(id) > 0;
             break;
     }   // end switch
@@ -119,18 +119,18 @@ bool LandmarkSet::has( int id, FaceLateral lat) const
 bool LandmarkSet::has( const SpecificLandmark& p) const { return has(p.id, p.lat);}
 
 
-const LandmarkSet::LDMRKS& LandmarkSet::lateral( FaceLateral lat) const
+const LandmarkSet::LDMRKS& LandmarkSet::lateral( FaceSide lat) const
 {
     const LDMRKS* lmks = nullptr;
     switch (lat)
     {
-        case FACE_LATERAL_LEFT:
+        case LEFT:
             lmks = &_lmksL;
             break;
-        case FACE_LATERAL_MEDIAL:
+        case MID:
             lmks = &_lmksM;
             break;
-        case FACE_LATERAL_RIGHT:
+        case RIGHT:
             lmks = &_lmksR;
             break;
     }   // end switch
@@ -138,21 +138,21 @@ const LandmarkSet::LDMRKS& LandmarkSet::lateral( FaceLateral lat) const
 }   // end lateral
 
 
-LandmarkSet::LDMRKS& LandmarkSet::_lateral( FaceLateral lat)
+LandmarkSet::LDMRKS& LandmarkSet::_lateral( FaceSide lat)
 {
     const LandmarkSet* me = this;
     return const_cast<LDMRKS&>( me->lateral(lat));
 }   // end _lateral
 
 
-bool LandmarkSet::set( int id, const Vec3f& v, FaceLateral lat)
+bool LandmarkSet::set( int id, const Vec3f& v, FaceSide lat)
 {
     Landmark* lmk = LMAN::landmark(id);
     if ( !lmk)
         return false;
 
     if ( !lmk->isBilateral())   // Ignore specified lateral if landmark is not bilateral
-        lat = FACE_LATERAL_MEDIAL;
+        lat = MID;
 
     _lateral(lat)[id] = v;
     _ids.insert(id);
@@ -165,7 +165,7 @@ bool LandmarkSet::set( int id, const Vec3f& v, FaceLateral lat)
 }   // end set
 
 
-bool LandmarkSet::set( const QString& lmcode, const Vec3f& v, FaceLateral lat)
+bool LandmarkSet::set( const QString& lmcode, const Vec3f& v, FaceSide lat)
 {
     Landmark* lmk = LMAN::landmark(lmcode);
     if ( !lmk)
@@ -174,11 +174,11 @@ bool LandmarkSet::set( const QString& lmcode, const Vec3f& v, FaceLateral lat)
 }   // end set
 
 
-const Vec3f& LandmarkSet::pos( int id, FaceLateral lat) const
+const Vec3f& LandmarkSet::pos( int id, FaceSide lat) const
 {
     static const Vec3f ZERO_VEC = Vec3f::Zero();    // Otherwise returning reference to temporary
 
-    if ( LMAN::landmark(id)->isBilateral() && lat == FACE_LATERAL_MEDIAL)
+    if ( LMAN::landmark(id)->isBilateral() && lat == MID)
     {
         std::cerr << "[ERROR] FaceTools::Landmark::LandmarkSet::pos: Requested landmark is bilateral but requested medial!" << std::endl;
         assert(false);
@@ -193,7 +193,7 @@ const Vec3f& LandmarkSet::pos( int id, FaceLateral lat) const
 }   // end pos
 
 
-const Vec3f& LandmarkSet::pos( const QString& lmcode, FaceLateral lat) const
+const Vec3f& LandmarkSet::pos( const QString& lmcode, FaceSide lat) const
 {
     return pos( LMAN::landmark(lmcode)->id(), lat);
 }   // end pos
@@ -221,11 +221,11 @@ r3d::Mesh::Ptr LandmarkSet::toMesh() const
     {
         if ( LMAN::landmark(id)->isBilateral())
         {
-            mesh->addVertex( pos( id, FACE_LATERAL_LEFT));
-            mesh->addVertex( pos( id, FACE_LATERAL_RIGHT));
+            mesh->addVertex( pos( id, LEFT));
+            mesh->addVertex( pos( id, RIGHT));
         }   // end if
         else
-            mesh->addVertex( pos( id, FACE_LATERAL_MEDIAL));
+            mesh->addVertex( pos( id, MID));
     }   // end for
 
     return mesh;
@@ -238,7 +238,7 @@ Vec3f LandmarkSet::eyeVec() const
     if ( has( LMAN::codeId(P)))
     {
         const int id = LMAN::landmark(P)->id(); // Get the id of the pupil landmark
-        v = pos( id, FACE_LATERAL_RIGHT) - pos( id, FACE_LATERAL_LEFT);
+        v = pos( id, RIGHT) - pos( id, LEFT);
     }   // end if
     return v;
 }   // end eyeVec
@@ -250,7 +250,7 @@ Vec3f LandmarkSet::midEyePos() const
     if ( has( LMAN::codeId(P)))
     {
         const int id = LMAN::landmark(P)->id(); // Get the id of the pupil landmark
-        v = 0.5f*(pos( id, FACE_LATERAL_RIGHT) + pos( id, FACE_LATERAL_LEFT));
+        v = 0.5f*(pos( id, RIGHT) + pos( id, LEFT));
     }   // end if
     return v;
 }   // end midEyePos
@@ -449,25 +449,34 @@ void LandmarkSet::transform( const Mat4f& t)
 // Write out the landmarks to record.
 void LandmarkSet::write( PTree& lnodes) const
 {
-    PTree& llat = lnodes.put("LeftLateral", "");
+    PTree& llat = lnodes.put("LeftSide", "");
     for ( const auto& p : _lmksL)
         r3d::putNamedVertex( llat, LMAN::landmark(p.first)->code().toStdString(), p.second);
     PTree& mlat = lnodes.put("Medial", "");
     for ( const auto& p : _lmksM)
         r3d::putNamedVertex( mlat, LMAN::landmark(p.first)->code().toStdString(), p.second);
-    PTree& rlat = lnodes.put("RightLateral", "");
+    PTree& rlat = lnodes.put("RightSide", "");
     for ( const auto& p : _lmksR)
         r3d::putNamedVertex( rlat, LMAN::landmark(p.first)->code().toStdString(), p.second);
 }   // end write
 
 
-bool LandmarkSet::_readLateral( const PTree& lats, FaceLateral lat)
+bool LandmarkSet::_readLateral( const PTree& lats, FaceSide lat)
 {
     std::string tag = "Medial";
-    if ( lat == FACE_LATERAL_LEFT)
-        tag = "LeftLateral";
-    else if ( lat == FACE_LATERAL_RIGHT)
-        tag = "RightLateral";
+
+    if ( lat == LEFT)
+    {
+        tag = "RightLateral";   // Note swapped in old version!
+        if ( lats.count(tag) == 0)
+            tag = "LeftSide";
+    }   // end if
+    else if ( lat == RIGHT)
+    {
+        tag = "LeftLateral";    // Note swapped in old version!
+        if ( lats.count(tag) == 0)
+            tag = "RightSide";
+    }   // end else if
 
     if ( lats.count(tag) == 0)
     {
@@ -497,11 +506,11 @@ bool LandmarkSet::_readLateral( const PTree& lats, FaceLateral lat)
 bool LandmarkSet::read( const PTree& lnodes)
 {
     //_clearAlignment();
-    if ( !_readLateral( lnodes, FACE_LATERAL_LEFT))
+    if ( !_readLateral( lnodes, LEFT))
         return false;
-    if ( !_readLateral( lnodes, FACE_LATERAL_MEDIAL))
+    if ( !_readLateral( lnodes, MID))
         return false;
-    if ( !_readLateral( lnodes, FACE_LATERAL_RIGHT))
+    if ( !_readLateral( lnodes, RIGHT))
         return false;
     return true;
 }   // end read
@@ -530,11 +539,11 @@ Vec3f LandmarkSet::snapToVisible( const Vec3f &v, float snapSqDist) const
         {
             if ( LMAN::isBilateral(lmid))
             {
-                checkCloser( minSqDist, nv, pos(lmid, FACE_LATERAL_LEFT), v, snapSqDist);
-                checkCloser( minSqDist, nv, pos(lmid, FACE_LATERAL_RIGHT), v, snapSqDist);
+                checkCloser( minSqDist, nv, pos(lmid, LEFT), v, snapSqDist);
+                checkCloser( minSqDist, nv, pos(lmid, RIGHT), v, snapSqDist);
             }   // end if
             else
-                checkCloser( minSqDist, nv, pos(lmid, FACE_LATERAL_MEDIAL), v, snapSqDist);
+                checkCloser( minSqDist, nv, pos(lmid, MID), v, snapSqDist);
         }   // end if
     }   // end for
     return nv;

@@ -37,6 +37,7 @@ using FaceTools::Metric::PhenotypeManager;
 using FaceTools::FM;
 using FMM = FaceTools::FileIO::FaceModelManager;
 using MS = FaceTools::Action::ModelSelector;
+using QMB = QMessageBox;
 
 /*
 // Never allow automatic insertion!
@@ -51,6 +52,7 @@ namespace {
 
 void _setEthnicityComboBox( QComboBox* cb, int ecode=0)
 {
+    QSignalBlocker blocker( cb);
     static const IntSet EMPTY_INT_SET;
 
     std::list<int> path;  // Will be path from root to leaf (ecode)
@@ -87,12 +89,6 @@ void _setEthnicityComboBox( QComboBox* cb, int ecode=0)
 
     if ( ecode != 0)
     {
-        if ( FaceTools::Ethnicities::isMixed(ecode))
-        {
-            midx = cb->model()->index( 1, 0, midx); // Set to the aggregate option
-            cb->setRootModelIndex(midx);
-        }   // end else
-
         for ( int ec : path)
         {
             const QString& ename = FaceTools::Ethnicities::name(ec);
@@ -114,7 +110,7 @@ QTools::TreeModel* createEthnicityComboBoxModel()
     QTools::TreeModel *emodel = new QTools::TreeModel;
     QTools::TreeItem *root = emodel->setNewRoot({"Cultural and Ethnic Group"});
     root->appendChild( new QTools::TreeItem( {"Not stated"}));
-    QTools::TreeItem *supplm = new QTools::TreeItem( {"Aggregated"}, root);
+
     QTools::TreeItem *cbroad = nullptr; // Current broad node
     QTools::TreeItem *cnrrow = nullptr; // Current narrow node
 
@@ -126,7 +122,7 @@ QTools::TreeModel* createEthnicityComboBoxModel()
         const QString ename = FaceTools::Ethnicities::name(ethn);
 
         if ( FaceTools::Ethnicities::isMixed( ethn))
-            supplm->appendChild( new QTools::TreeItem( {ename}));
+            root->appendChild( new QTools::TreeItem( {ename}));
         else if ( FaceTools::Ethnicities::isBroad(ethn))    // 1000, 2000, 3000 etc
             cbroad = new QTools::TreeItem( {ename}, root);
         else if ( FaceTools::Ethnicities::isNarrow(ethn))  // 1100, 1200, 1300 etc
@@ -151,6 +147,15 @@ ScanInfoDialog::ScanInfoDialog( QWidget *parent) :
     QDialog(parent), _ui(new Ui::ScanInfoDialog), _dialogRootTitle( parent->windowTitle() + " | Assessment Information")
 {
     _ui->setupUi(this);
+    // Can't get splitter to stay the correct height! Investigate again later...
+    //_ui->splitter->setStretchFactor( 0, 2);
+    //_ui->splitter->setStretchFactor( 1, 1);
+    //_ui->notesTextEdit->setMaximumHeight(252);
+    //_ui->hpoTermsTextBrowser->setMaximumHeight(252);
+
+    _ui->hpoTermsTextBrowser->setOpenExternalLinks(true);
+    layout()->setSizeConstraint( QLayout::SetFixedSize);
+    setSizeGripEnabled( false);
 
     setWindowTitle( _dialogRootTitle);
     connect( _ui->buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked, this, &ScanInfoDialog::_apply);
@@ -164,6 +169,8 @@ ScanInfoDialog::ScanInfoDialog( QWidget *parent) :
 
     connect( _ui->sourceLineEdit, &QLineEdit::textEdited, this, &ScanInfoDialog::_doOnSourceChanged);
     connect( _ui->studyIdLineEdit, &QLineEdit::textEdited, this, &ScanInfoDialog::_doOnStudyIdChanged);
+    connect( _ui->imageIdLineEdit, &QLineEdit::textEdited, this, &ScanInfoDialog::_doOnImageIdChanged);
+    connect( _ui->subjectIdLineEdit, &QLineEdit::textEdited, this, &ScanInfoDialog::_doOnSubjectIdChanged);
 
     connect( _ui->notesTextEdit, &QPlainTextEdit::textChanged, this, &ScanInfoDialog::_doOnNotesChanged);
     connect( _ui->assessorComboBox, QOverload<int>::of(&QComboBox::activated), this, &ScanInfoDialog::_doOnAssessorChanged);
@@ -204,11 +211,11 @@ void ScanInfoDialog::refresh()
     QSignalBlocker b0( _ui->captureDateEdit);
     QSignalBlocker b1( _ui->dobDateEdit);
     QSignalBlocker b2( _ui->sexComboBox);
-    QSignalBlocker b3( _ui->maternalEthnicityComboBox);
-    QSignalBlocker b4( _ui->paternalEthnicityComboBox);
     QSignalBlocker b5( _ui->sourceLineEdit);
     QSignalBlocker b6( _ui->studyIdLineEdit);
-    QSignalBlocker b7( _ui->assessorComboBox);
+    QSignalBlocker b7( _ui->subjectIdLineEdit);
+    QSignalBlocker b8( _ui->imageIdLineEdit);
+    QSignalBlocker b9( _ui->assessorComboBox);
 
     _ui->dobDateEdit->setDate( QDate::currentDate());
     _ui->sexComboBox->setCurrentIndex( _ui->sexComboBox->findData( UNKNOWN_SEX));
@@ -219,6 +226,8 @@ void ScanInfoDialog::refresh()
     _ui->captureDateEdit->setDate( QDate::currentDate());
     _ui->sourceLineEdit->clear();
     _ui->studyIdLineEdit->clear();
+    _ui->subjectIdLineEdit->clear();
+    _ui->imageIdLineEdit->clear();
     _ui->assessorComboBox->clear();
 
     const FM *fm = MS::selectedModel();
@@ -236,6 +245,8 @@ void ScanInfoDialog::refresh()
         _ui->captureDateEdit->setDate( fm->captureDate());
         _ui->sourceLineEdit->setText( fm->source());
         _ui->studyIdLineEdit->setText( fm->studyId());
+        _ui->subjectIdLineEdit->setText( fm->subjectId());
+        _ui->imageIdLineEdit->setText( fm->imageId());
 
         for ( int ai : fm->assessmentIds())
         {
@@ -247,7 +258,7 @@ void ScanInfoDialog::refresh()
 
     _ui->buttonBox->button(QDialogButtonBox::Apply)->setEnabled( false);
     _ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled( fm != nullptr);
-    }   // end scope
+    }   // end signal blocking scope
 
     _refreshCurrentAssessment();
 }   // end refresh
@@ -299,6 +310,14 @@ void ScanInfoDialog::_apply()
     if ( fm->studyId() != sid)
         fm->setStudyId( sid);
 
+    const QString jid = _ui->subjectIdLineEdit->text();
+    if ( fm->subjectId() != jid)
+        fm->setSubjectId( jid);
+
+    const QString iid = _ui->imageIdLineEdit->text();
+    if ( fm->imageId() != iid)
+        fm->setImageId (iid);
+
     const int aid = _ui->assessorComboBox->currentData().toInt();
 
     const QString ass = _ui->assessorComboBox->currentText().trimmed();
@@ -338,38 +357,36 @@ bool ScanInfoDialog::_isDifferentToCurrent() const
     if ( _ui->dobDateEdit->date() != fm->dateOfBirth())
         return true;
 
-    const int methn = Ethnicities::code( _ui->maternalEthnicityComboBox->currentText());
-    if ( methn != fm->maternalEthnicity())
+    if ( fm->maternalEthnicity() != Ethnicities::code( _ui->maternalEthnicityComboBox->currentText()))
         return true;
 
-    const int pethn = Ethnicities::code( _ui->paternalEthnicityComboBox->currentText());
-    if ( pethn != fm->paternalEthnicity())
+    if ( fm->paternalEthnicity() != Ethnicities::code( _ui->paternalEthnicityComboBox->currentText()))
         return true;
 
-    const int8_t sex = static_cast<int8_t>(_ui->sexComboBox->currentData().toInt());
-    if ( sex != fm->sex())
+    if ( fm->sex() != static_cast<int8_t>(_ui->sexComboBox->currentData().toInt()))
         return true;
 
-    const QDate date = _ui->captureDateEdit->date();
-    if ( date != fm->captureDate())
+    if ( fm->captureDate() != _ui->captureDateEdit->date())
         return true;
 
-    const QString src = _ui->sourceLineEdit->text();
-    if ( fm->source() != src)
+    if ( fm->source() != _ui->sourceLineEdit->text())
         return true;
 
-    const QString sid = _ui->studyIdLineEdit->text();
-    if ( fm->studyId() != sid)
+    if ( fm->studyId() != _ui->studyIdLineEdit->text())
+        return true;
+
+    if ( fm->subjectId() != _ui->subjectIdLineEdit->text())
+        return true;
+
+    if ( fm->imageId() != _ui->imageIdLineEdit->text())
         return true;
 
     const int aid = _ui->assessorComboBox->currentData().toInt();
 
-    const QString ass = _ui->assessorComboBox->currentText().trimmed();
-    if ( fm->assessment(aid)->assessor() != ass)
+    if ( fm->assessment(aid)->assessor() != _ui->assessorComboBox->currentText().trimmed())
         return true;
 
-    const QString rem = _ui->notesTextEdit->toPlainText();
-    if ( fm->assessment(aid)->notes() != rem)
+    if ( fm->assessment(aid)->notes() != _ui->notesTextEdit->toPlainText())
         return true;
 
     return false;
@@ -380,61 +397,48 @@ void ScanInfoDialog::_checkEnableApply()
 {
     const bool diffToCurrent = _isDifferentToCurrent();
     _ui->buttonBox->button( QDialogButtonBox::Apply)->setEnabled( diffToCurrent);
-    //_ui->buttonBox->button( QDialogButtonBox::Cancel)->setEnabled( diffToCurrent);
 }   // end _checkEnableApply
-
-
-void ScanInfoDialog::_doOnChangedMaternalEthnicity()
-{
-    const FM *fm = MS::selectedModel();
-    // If user landed on the "Aggregated" option, set back to the current ethnicity.
-    if ( fm && _ui->maternalEthnicityComboBox->currentText() == "Aggregated")
-        _setEthnicityComboBox( _ui->maternalEthnicityComboBox, fm->maternalEthnicity());
-    _checkEnableApply();
-}   // end _doOnChangedMaternalEthnicity
-
-
-void ScanInfoDialog::_doOnChangedPaternalEthnicity()
-{
-    const FM *fm = MS::selectedModel();
-    // If user landed on the "Aggregated" option, set back to the current ethnicity.
-    if ( fm && _ui->paternalEthnicityComboBox->currentText() == "Aggregated")
-        _setEthnicityComboBox( _ui->paternalEthnicityComboBox, fm->paternalEthnicity());
-    _checkEnableApply();
-}   // end _doOnChangedPaternalEthnicity
 
 
 void ScanInfoDialog::_doOnDOBChanged()
 {
-    if ( MS::isViewSelected() && _ui->dobDateEdit->date() > QDate::currentDate())   // Can't have dates beyond current date!
-        _ui->dobDateEdit->setDate( QDate::currentDate());
+    const QDate capDate = _ui->captureDateEdit->date();
+    if ( MS::isViewSelected() && _ui->dobDateEdit->date() > capDate)   // Can't have dates beyond image capture date!
+    {
+        QSignalBlocker b0( _ui->dobDateEdit);
+        _ui->dobDateEdit->setDate( capDate);
+    }   // end if
     _checkEnableApply();
 }   // end _doOnDOBChanged
 
 
 void ScanInfoDialog::_doOnCaptureDateChanged()
 {
-    // Can't have capture date later than current date or before date of birth
+    // Can't have capture date later than current date or before date of birth.
     if ( MS::isViewSelected())
     {
-        QDate capDate = _ui->captureDateEdit->date();
-        QDate dobDate = _ui->dobDateEdit->date();
+        QSignalBlocker b0( _ui->dobDateEdit);
+        QSignalBlocker b1( _ui->captureDateEdit);
+        const QDate capDate = _ui->captureDateEdit->date();
+        const QDate dobDate = _ui->dobDateEdit->date();
         if ( capDate > QDate::currentDate())
             _ui->captureDateEdit->setDate( QDate::currentDate());
         else if ( capDate < dobDate)
-            _ui->captureDateEdit->setDate( dobDate);
+            _ui->dobDateEdit->setDate( capDate);
     }   // end if
     _checkEnableApply();
 }   // end _doOnCaptureDateChanged
 
 
+void ScanInfoDialog::_doOnChangedMaternalEthnicity() { _checkEnableApply();}
+void ScanInfoDialog::_doOnChangedPaternalEthnicity() { _checkEnableApply();}
 void ScanInfoDialog::_doOnSexChanged() { _checkEnableApply();}
-
 void ScanInfoDialog::_doOnSourceChanged() { _checkEnableApply();}
-
 void ScanInfoDialog::_doOnStudyIdChanged() { _checkEnableApply();}
-
+void ScanInfoDialog::_doOnSubjectIdChanged() { _checkEnableApply();}
+void ScanInfoDialog::_doOnImageIdChanged() { _checkEnableApply();}
 void ScanInfoDialog::_doOnNotesChanged() { _checkEnableApply();}
+void ScanInfoDialog::_doOnEditedAssessorText() { _checkEnableApply();}
 
 
 void ScanInfoDialog::_doOnAssessorChanged()
@@ -448,12 +452,6 @@ void ScanInfoDialog::_doOnAssessorChanged()
         emit onAssessmentChanged();
     }   // end if
 }   // end _doOnAssessorChanged
-
-
-void ScanInfoDialog::_doOnEditedAssessorText()
-{
-    _checkEnableApply();
-}   // end _doOnEditedAssessorText
 
 
 void ScanInfoDialog::accept()
@@ -489,26 +487,31 @@ void ScanInfoDialog::_refreshCurrentAssessment()
         assert(cass);
         _ui->assessorComboBox->setCurrentIndex( _ui->assessorComboBox->findData( cass->id()));
         _ui->notesTextEdit->setPlainText( cass->notes());
+        _ui->notesTextEdit->moveCursor( QTextCursor::Start);
         _ui->addAssessmentButton->setEnabled( true);
         _ui->removeAssessmentButton->setEnabled( fm->assessmentsCount() > 1);
         _ui->copyLandmarksButton->setEnabled( !cass->landmarks().empty() && fm->assessmentsCount() > 1);
 
         if ( !fm->hasLandmarks())
-            msg = tr("Run face detection for dysmorphological analysis.");
+            msg = tr("<center><b>Detect face for morphological assessment</b></center>");
         else
         {
             const IntSet ptypes = PhenotypeManager::discover( fm, cass->id());
-            QStringList pterms;
+
+            QStringList lterms;
             for ( int hid : ptypes)
-                pterms << PhenotypeManager::phenotype(hid)->name();
-            if ( !pterms.isEmpty())
-                msg = tr("Dymorphological features: ") + pterms.join("; ");
+                lterms << PhenotypeManager::htmlLinkString(hid);
+            lterms.sort();  // Sort into alphanumeric order
+
+            if ( !lterms.isEmpty())
+                msg = tr("<b>Notable morphology: </b><ul type=\"disc\"><li>") + lterms.join("<li>") + "</ul>";
             else
-                msg = tr("No dysmorphological features identified.");
+                msg = tr("<b>No notable morphology found.</b>");
         }   // end else
     }   // end if
 
-    _ui->hpoTermsLabel->setText(msg);
+    _ui->hpoTermsTextBrowser->document()->setHtml(msg);
+    _ui->hpoTermsTextBrowser->moveCursor( QTextCursor::Start);
 }   // end _refreshCurrentAssessment
 
 
@@ -581,7 +584,7 @@ void ScanInfoDialog::_doOnDeleteAssessment()
     if ( ass->hasLandmarks() || ass->hasPaths() || ass->hasNotes())
     {
         static const QString msg = tr("This action will erase this assessment's landmarks, custom paths, and notes! Really delete?");
-        dodel = QMessageBox::Yes == QMessageBox::warning( this, tr("Delete Assessment?"), msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        dodel = QMB::Yes == QMB::warning( this, tr("Delete Assessment?"), msg, QMB::Yes | QMB::No, QMB::No);
     }   // end if
 
     if ( dodel)
@@ -623,7 +626,7 @@ void ScanInfoDialog::_doOnCopyLandmarks()
     if ( dowarn)
     {
         static const QString msg = tr("This action will overwrite existing landmarks for other assessments! Really overwrite?");
-        docopy = QMessageBox::Yes == QMessageBox::warning( this, tr("Overwrite Landmarks?"), msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        docopy = QMB::Yes == QMB::warning( this, tr("Overwrite Landmarks?"), msg, QMB::Yes | QMB::No, QMB::No);
     }   // end if
 
     if ( docopy)

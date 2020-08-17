@@ -38,7 +38,7 @@ static const float MATRIX_PRECISION = 1e-4f;
 
 
 FaceModel::FaceModel( r3d::Mesh::Ptr mesh)
-    : _savedMeta(false), _savedModel(false), _source(""), _studyId(""),
+    : _savedMeta(false), _savedModel(false), _source(""), _studyId(""), _subjectId(""), _imageId(""),
       _dob( QDate::currentDate()), _sex(FaceTools::UNKNOWN_SEX),
       _methnicity(0), _pethnicity(0), _cdate( QDate::currentDate())
 {
@@ -49,7 +49,7 @@ FaceModel::FaceModel( r3d::Mesh::Ptr mesh)
 
 
 FaceModel::FaceModel()
-    : _savedMeta(false), _savedModel(false), _source(""), _studyId(""),
+    : _savedMeta(false), _savedModel(false), _source(""), _studyId(""), _subjectId(""), _imageId(""),
       _dob( QDate::currentDate()), _sex(FaceTools::UNKNOWN_SEX),
       _methnicity(0), _pethnicity(0), _cdate( QDate::currentDate())
 {
@@ -230,6 +230,26 @@ void FaceModel::setStudyId( const QString& s)
 }   // end setStudyId
 
 
+void FaceModel::setSubjectId( const QString& s)
+{
+    if ( _subjectId != s)
+    {
+        _subjectId = s;
+        setMetaSaved(false);
+    }   // end if
+}   // end setSubjectId
+
+
+void FaceModel::setImageId( const QString& s)
+{
+    if ( _imageId != s)
+    {
+        _imageId = s;
+        setMetaSaved(false);
+    }   // end if
+}   // end setImageId
+
+
 void FaceModel::setDateOfBirth( const QDate& d)
 {
     if ( _dob != d)
@@ -295,6 +315,8 @@ bool FaceModel::hasMetaData() const
     return assContent
         || !_source.isEmpty()
         || !_studyId.isEmpty()
+        || !_subjectId.isEmpty()
+        || !_imageId.isEmpty()
         || _dob != QDate::currentDate()
         || _sex != FaceTools::UNKNOWN_SEX
         || _methnicity != 0
@@ -450,7 +472,7 @@ void FaceModel::setLandmarks( const LandmarkSet &lmks)
 bool FaceModel::hasLandmarks() const { return _cass->hasLandmarks();}
 
 
-void FaceModel::setLandmarkPosition( int lid, FaceTools::FaceLateral flat, const Vec3f &pos)
+void FaceModel::setLandmarkPosition( int lid, FaceTools::FaceSide flat, const Vec3f &pos)
 {
     _cass->landmarks().set( lid, pos, flat);
     remakeBounds();

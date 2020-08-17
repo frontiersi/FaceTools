@@ -58,7 +58,7 @@ int StatisticsManager::load( const QString& dname)
         if ( !mc->growthData().empty())
         {
             mc->growthData().combineSexes();       // Combine single sex growth curve datasets
-            mc->growthData().combineEthnicities(); // Make ethnic pairs for same sexes
+            //mc->growthData().combineEthnicities(); // Make ethnic pairs for same sexes
         }   // end if
 #ifndef NDEBUG
         // Warn if the metric has no growth data

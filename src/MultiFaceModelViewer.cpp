@@ -68,8 +68,7 @@ MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent) : QWidget(parent)
         connect( _fmvs[i], &FMV::onAttached, [=]( FV* fv){ _doOnViewerChanged( i, fv);});
         connect( _fmvs[i], &FMV::onDetached, [=]( FV* fv){ _doOnViewerChanged( i, fv);});
         _modelLists.push_back( new QComboBox(this));
-        connect( _modelLists[i], QOverload<const QString&>::of( &QComboBox::activated),
-                 [=](const QString &txt){ _doOnComboBoxChanged( i, txt);});
+        connect( _modelLists[i], &QComboBox::textActivated, [=](const QString &txt){ _doOnComboBoxChanged( i, txt);});
     }   // end for
 
     QVBoxLayout* v0layout = new QVBoxLayout;

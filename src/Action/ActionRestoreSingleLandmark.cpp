@@ -24,7 +24,7 @@ using FaceTools::Action::ActionRestoreSingleLandmark;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Interactor::LandmarksHandler;
-using FaceTools::FaceLateral;
+using FaceTools::FaceSide;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
@@ -43,7 +43,7 @@ int ActionRestoreSingleLandmark::_getLandmarkFromMousePos() const
     const FV *fv = MS::selectedView();
     if ( fv)
     {
-        FaceLateral lat;
+        FaceSide lat;
         const vtkProp *prop = fv->viewer()->getPointedAt( primedMousePos());
         lmid = _handler->visualisation().landmarkId( fv, prop, lat);
     }   // end if

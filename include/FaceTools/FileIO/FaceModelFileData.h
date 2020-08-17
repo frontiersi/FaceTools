@@ -69,6 +69,8 @@ public:
 
     inline const QString& source() const { return _fm->source();}
     inline const QString& studyId() const { return _fm->studyId();}
+    inline const QString& imageId() const { return _fm->imageId();}
+    inline const QString& subjectId() const { return _fm->subjectId();}
     inline const QString& notes() const { return _fm->currentAssessment()->notes();}
     inline const QString& assessor() const { return _fm->currentAssessment()->assessor();}
 
@@ -79,7 +81,7 @@ public:
      * Return the dimension value of the given measurement on the given lateral.
      * Defaults to the first (and possibly only) dimension for the metric.
      */
-    float measurementValue( int mid, FaceLateral, size_t dim=0) const;
+    float measurementValue( int mid, FaceSide, size_t dim=0) const;
 
     /**
      * Output data in CSV format. Pass in a binary union of the data to output to the given stream.
@@ -103,8 +105,8 @@ private:
     void _pathsToCSV( std::ostream&) const;
     void _hposToCSV( std::ostream&) const;
 
-    void _printMeasurement( int, FaceLateral, const std::string&, size_t, std::ostream&) const;
-    void _printLandmark( int, FaceLateral, const std::string&, std::ostream&) const;
+    void _printMeasurement( int, FaceSide, const std::string&, size_t, std::ostream&) const;
+    void _printLandmark( int, FaceSide, const std::string&, std::ostream&) const;
     void _readHPOTerms( const PTree&);
     void _clearHPOTerms();
 

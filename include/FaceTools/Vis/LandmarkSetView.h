@@ -39,18 +39,18 @@ public:
 
     void showLandmark( bool, int lmID);
 
-    void setLabelVisible( bool, int, FaceLateral);
+    void setLabelVisible( bool, int, FaceSide);
 
-    void setLandmarkColour( const Vec3f&, int, FaceLateral);
+    void setLandmarkColour( const Vec3f&, int, FaceSide);
 
     // Set the untransformed landmark position.
-    void set( int, FaceLateral, const Vec3f&);
+    void set( int, FaceSide, const Vec3f&);
     void remove( int);
 
     // Returns ID of landmark for prop or -1 if not found.
-    // On return >= 0, out parameter FaceLateral is set to the
+    // On return >= 0, out parameter FaceSide is set to the
     // lateral on which the landmark appears.
-    int landmarkId( const vtkProp*, FaceLateral&) const;
+    int landmarkId( const vtkProp*, FaceSide&) const;
 
     void pokeTransform( const vtkMatrix4x4*);
 
@@ -66,7 +66,7 @@ private:
     PropMap _lprops, _mprops, _rprops;
 
     void _remove( int, SphereMap&, PropMap&);
-    void _set( int, FaceLateral, SphereMap&, PropMap&, const Vec3f&);
+    void _set( int, FaceSide, SphereMap&, PropMap&, const Vec3f&);
     LandmarkSetView( const LandmarkSetView&) = delete;
     void operator=( const LandmarkSetView&) = delete;
 };  // end class

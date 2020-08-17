@@ -35,27 +35,27 @@ namespace {
 void reflectLandmarks( FM* fm, const Mat4f& tmat, const Vec3f& p, const Vec3f& n)
 {
     const FaceTools::Landmark::LandmarkSet& lmks = fm->currentLandmarks();
-    for ( const auto& pair : lmks.lateral( FaceTools::FACE_LATERAL_LEFT))
+    for ( const auto& pair : lmks.lateral( FaceTools::LEFT))
     {
         const int lmid = pair.first;
-        const Vec3f lpos = lmks.pos(lmid, FaceTools::FACE_LATERAL_LEFT);
-        const Vec3f rpos = lmks.pos(lmid, FaceTools::FACE_LATERAL_RIGHT);
+        const Vec3f lpos = lmks.pos(lmid, FaceTools::LEFT);
+        const Vec3f rpos = lmks.pos(lmid, FaceTools::RIGHT);
         // Find which lateral needs to be reflected by testing the dot product
         const float ldot = n.dot(lpos - p);
         const float rdot = n.dot(rpos - p);
         if ( ldot > 0 && rdot < 0)   // Keep the left lateral
-            fm->setLandmarkPosition( lmid, FaceTools::FACE_LATERAL_RIGHT, r3d::transform( tmat, lpos));
+            fm->setLandmarkPosition( lmid, FaceTools::RIGHT, r3d::transform( tmat, lpos));
         else if ( rdot > 0 && ldot < 0)   // Keep the right lateral
-            fm->setLandmarkPosition( lmid, FaceTools::FACE_LATERAL_LEFT, r3d::transform( tmat, rpos));
+            fm->setLandmarkPosition( lmid, FaceTools::LEFT, r3d::transform( tmat, rpos));
     }   // end for
 
-    for ( const auto& pair : lmks.lateral( FaceTools::FACE_LATERAL_MEDIAL))
+    for ( const auto& pair : lmks.lateral( FaceTools::MID))
     {
         const int lmid = pair.first;
-        const Vec3f lpos0 = lmks.pos(lmid, FaceTools::FACE_LATERAL_MEDIAL);
+        const Vec3f lpos0 = lmks.pos(lmid, FaceTools::MID);
         const Vec3f lpos1 = r3d::transform( tmat, lpos0);
         const Vec3f lpos = fm->findClosestSurfacePoint( (lpos0 + lpos1) * 0.5f);
-        fm->setLandmarkPosition( lmid, FaceTools::FACE_LATERAL_MEDIAL, lpos);
+        fm->setLandmarkPosition( lmid, FaceTools::MID, lpos);
     }   // end for
 }   // end reflectLandmarks
 

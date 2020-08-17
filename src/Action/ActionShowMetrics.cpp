@@ -246,15 +246,15 @@ bool ActionShowMetrics::_updateText( const FV *fv, int mid)
 
     if ( !mc->isBilateral())
     {
-        if ( ass->cmetrics().has( mid))
-            mv = &ass->cmetrics().metric(mid);
+        if ( ass->cmetrics(MID).has( mid))
+            mv = &ass->cmetrics(MID).metric(mid);
     }   // end if
     else
     {
-        if ( ass->cmetricsL().has(mid))
-            mvl = &ass->cmetricsL().metric( mid);
-        if ( ass->cmetricsR().has(mid))
-            mvr = &ass->cmetricsR().metric( mid);
+        if ( ass->cmetrics(RIGHT).has(mid))
+            mvr = &ass->cmetrics(RIGHT).metric( mid);
+        if ( ass->cmetrics(LEFT).has(mid))
+            mvl = &ass->cmetrics(LEFT).metric( mid);
     }   // end else
 
     std::string units;
@@ -299,8 +299,8 @@ bool ActionShowMetrics::_updateText( const FV *fv, int mid)
             oss << std::right << std::setw(fws[i]) << mv->value(i);
         else
         {
-            oss << std::right << std::setw(fws[i]) << mvl->value(i) << "; ";
             oss << std::right << std::setw(fws[i]) << mvr->value(i) << "; ";
+            oss << std::right << std::setw(fws[i]) << mvl->value(i) << "; ";
             oss << std::right << std::setw(fws[i]) << (0.5 * (mvl->value(i) + mvr->value(i)));
         }   // end else
     }   // end for
@@ -327,11 +327,11 @@ bool ActionShowMetrics::_updateText( const FV *fv, int mid)
             {
                 if ( age > 0.0f)
                 {
-                    const double zsl = mvl->zscore( age, i);
                     const double zsr = mvr->zscore( age, i);
+                    const double zsl = mvl->zscore( age, i);
                     const double zsm = 0.5 * (zsl + zsr);
-                    oss << std::right << std::setw(fw) << zsl << "; "
-                                      << std::setw(fw) << zsr << "; "
+                    oss << std::right << std::setw(fw) << zsr << "; "
+                                      << std::setw(fw) << zsl << "; "
                                       << std::setw(fw) << zsm;
                 }   // end if
                 else

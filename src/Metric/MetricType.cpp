@@ -51,8 +51,8 @@ void MetricType::setParams( const MetricParams &prms)
             for ( auto &sl : lmlst)
             {
                 _lmids.insert( sl.id);
-                if ( sl.lat != FACE_LATERAL_MEDIAL)
-                    sl.lat = sl.lat == FACE_LATERAL_LEFT ? FACE_LATERAL_RIGHT : FACE_LATERAL_LEFT;
+                if ( sl.lat != MID)
+                    sl.lat = sl.lat == LEFT ? RIGHT : LEFT;
             }   // end for
         }   // end for
     }   // end for

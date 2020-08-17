@@ -51,6 +51,8 @@ private slots:
     void _doOnSexChanged();
     void _doOnSourceChanged();
     void _doOnStudyIdChanged();
+    void _doOnImageIdChanged();
+    void _doOnSubjectIdChanged();
     void _doOnNotesChanged();
     void _doOnAssessorChanged();
     void _doOnEditedAssessorText();

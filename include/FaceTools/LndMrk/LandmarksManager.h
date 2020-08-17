@@ -41,8 +41,8 @@ public:
     // Returns alphanumerically sorted list of names.
     static QStringList names();
 
-    // Construct and return the landmark name appended with (L) or (R) if left or right lateral given.
-    static QString makeLandmarkString( int id, FaceLateral=FACE_LATERAL_MEDIAL);
+    // Construct and return the landmark name appended with (L) or (R) if left or right side given.
+    static QString makeLandmarkString( int id, FaceSide=MID);
 
     // Check if the given landmark name is present.
     // Lower case versions of landmark names are unique.

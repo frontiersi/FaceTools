@@ -162,15 +162,15 @@ int LandmarksManager::load( const QString& fname)
 }   // end load
 
 
-QString LandmarksManager::makeLandmarkString( int id, FaceTools::FaceLateral lat)
+QString LandmarksManager::makeLandmarkString( int id, FaceTools::FaceSide lat)
 {
     assert(landmark(id));
     QString lmname = landmark(id)->name();
     QString lats;
-    if ( lat == FACE_LATERAL_LEFT)
-        lats = " (R)";
-    else if ( lat == FACE_LATERAL_RIGHT)
+    if ( lat == LEFT)
         lats = " (L)";
+    else if ( lat == RIGHT)
+        lats = " (R)";
     return lmname + lats;
 }   // end makeLandmarkString
 

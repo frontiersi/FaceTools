@@ -23,7 +23,7 @@ using FaceTools::Vis::LandmarksVisualisation;
 using FaceTools::Vis::BaseVisualisation;
 using FaceTools::Vis::LandmarkSetView;
 using FaceTools::Vis::FV;
-using FaceTools::FaceLateral;
+using FaceTools::FaceSide;
 using FaceTools::Landmark::LandmarkSet;
 using FaceTools::Vec3f;
 using LMAN = FaceTools::Landmark::LandmarksManager;
@@ -107,7 +107,7 @@ void LandmarksVisualisation::refreshState( const FV *fv)
 }   // end refreshState
 
 
-void LandmarksVisualisation::setLabelVisible( const FV* fv, int lm, FaceLateral lat, bool v)  // Called from handler
+void LandmarksVisualisation::setLabelVisible( const FV* fv, int lm, FaceSide lat, bool v)  // Called from handler
 {
     assert( LMAN::landmark(lm));
     if ( _hasView(fv))
@@ -115,7 +115,7 @@ void LandmarksVisualisation::setLabelVisible( const FV* fv, int lm, FaceLateral 
 }   // end setLabelVisible
 
 
-void LandmarksVisualisation::setLandmarkHighlighted( const FV* fv, int lm, FaceLateral lat, bool v)    // Called from handler
+void LandmarksVisualisation::setLandmarkHighlighted( const FV* fv, int lm, FaceSide lat, bool v)    // Called from handler
 {
     assert( LMAN::landmark(lm));
     const Vec3f *col = v ? &HGLT_COL : &CURR_COL;
@@ -139,15 +139,15 @@ void LandmarksVisualisation::refreshLandmark( const FV* fv, int id)
 
     if ( lmk->isBilateral())
     {
-        view.set( id, FACE_LATERAL_LEFT, r3d::transform( iT, lmks.pos(id, FACE_LATERAL_LEFT)));
-        view.set( id, FACE_LATERAL_RIGHT, r3d::transform( iT, lmks.pos(id, FACE_LATERAL_RIGHT)));
+        view.set( id, LEFT, r3d::transform( iT, lmks.pos(id, LEFT)));
+        view.set( id, RIGHT, r3d::transform( iT, lmks.pos(id, RIGHT)));
     }   // end if
     else
-        view.set( id, FACE_LATERAL_MEDIAL, r3d::transform( iT, lmks.pos(id, FACE_LATERAL_MEDIAL)));
+        view.set( id, MID, r3d::transform( iT, lmks.pos(id, MID)));
 }   // end refreshLandmark
 
 
-int LandmarksVisualisation::landmarkId( const FV* fv, const vtkProp* prop, FaceLateral &lat) const  // Called from handler
+int LandmarksVisualisation::landmarkId( const FV* fv, const vtkProp* prop, FaceSide &lat) const  // Called from handler
 {
     return _hasView(fv) ? _views.at(fv)->landmarkId( prop, lat) : -1;
 }   // end landmarkId
@@ -158,7 +158,7 @@ bool LandmarksVisualisation::belongs( const vtkProp* p, const FV* fv) const
     bool b = false;
     if ( _hasView(fv))
     {
-        FaceLateral ignored;
+        FaceSide ignored;
         b = _views.at(fv)->landmarkId(p, ignored) >= 0;
     }   // end if
     return b;

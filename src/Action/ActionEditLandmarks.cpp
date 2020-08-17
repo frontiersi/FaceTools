@@ -27,7 +27,7 @@ using FaceTools::Action::UndoState;
 using FaceTools::Vis::FV;
 using FaceTools::Interactor::LandmarksHandler;
 using FaceTools::Widget::LandmarksDialog;
-using FaceTools::FaceLateral;
+using FaceTools::FaceSide;
 using MS = FaceTools::Action::ModelSelector;
 using LMAN = FaceTools::Landmark::LandmarksManager;
 
@@ -36,7 +36,7 @@ ActionEditLandmarks::ActionEditLandmarks( const QString& dn, const QIcon& ico, c
     : FaceAction( dn, ico, ks), _handler( LandmarksHandler::create()),
         _dialog(nullptr),
         _actShow(nullptr), _actAlign(nullptr), _actRestore(nullptr), _actShowLabels(nullptr),
-        _lmid(-1), _lat(FACE_LATERAL_MEDIAL), _egrp( Event::NONE)
+        _lmid(-1), _lat(MID), _egrp( Event::NONE)
 {
     setCheckable( true, false);
     addTriggerEvent( Event::MASK_CHANGE | Event::CLOSED_MODEL);
@@ -92,7 +92,7 @@ void ActionEditLandmarks::doAction( Event e)
         _dialog->setMessage( msg);
 
         _lmid = -1;
-        _lat = FACE_LATERAL_MEDIAL;
+        _lat = MID;
         for ( int id : LMAN::ids())
             LMAN::landmark(id)->setLocked( false);
 
@@ -126,14 +126,14 @@ void ActionEditLandmarks::saveState( UndoState &us) const
 void ActionEditLandmarks::restoreState( const UndoState &us)
 {
     _lmid = us.userData("LandmarkId").value<int>();
-    _lat = us.userData("LandmarkLat").value<FaceLateral>();
+    _lat = us.userData("LandmarkLat").value<FaceSide>();
     us.model()->setLandmarkPosition( _lmid, _lat, us.userData("LandmarkPos").value<Vec3f>());
     if ( has( us.events(), Event::METRICS_CHANGE))
         ActionUpdateMeasurements::updateMeasurementsForLandmark( us.model(), _lmid);
 }   // end restoreState
 
 
-void ActionEditLandmarks::_doOnStartedDrag( int lmid, FaceLateral lat)
+void ActionEditLandmarks::_doOnStartedDrag( int lmid, FaceSide lat)
 {
     _lmid = lmid;
     _lat = lat;
@@ -144,7 +144,7 @@ void ActionEditLandmarks::_doOnStartedDrag( int lmid, FaceLateral lat)
 }   // end _doOnStartedDrag
 
 
-void ActionEditLandmarks::_doOnDoingDrag( int lmid, FaceLateral)
+void ActionEditLandmarks::_doOnDoingDrag( int lmid, FaceSide)
 {
     // Update measurements related to the moved landmark
     ActionUpdateMeasurements::updateMeasurementsForLandmark( MS::selectedModel(), lmid);

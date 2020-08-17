@@ -51,7 +51,7 @@ bool U3DCache::isAvailable()
 }   // end isAvailable
 
 
-void U3DCache::refresh( const FM* fm, bool med9)
+bool U3DCache::refresh( const FM* fm, bool med9)
 {
     // Copy out model
     fm->lockForRead();
@@ -70,19 +70,21 @@ void U3DCache::refresh( const FM* fm, bool med9)
             mesh->setOrderedFaceUVs( 0, fid, uvs);
     }   // end if
 
+    bool refreshed = false;
     _cacheLock.lockForWrite();
     QTemporaryFile tfile( QDir::tempPath() + "/XXXXXX.u3d");
     if ( tfile.open())
     {
         r3dio::U3DExporter xptr( true, med9, ambv);
         //std::cerr << QString( "Exporting U3D model to '%1'").arg( tfile.fileName()).toStdString() << std::endl;
-        if ( xptr.save( *mesh, tfile.fileName().toStdString()))
+        if ( xptr.save( *mesh, tfile.fileName().toLocal8Bit().toStdString()))
         {
             // Copy U3D model exported to the temporary location to the cache location
             const QString cacheFileName = makeFilePath(fm);
             QFile::copy( tfile.fileName(), cacheFileName);
             _cache.insert(fm);
             QFile::remove( tfile.fileName());
+            refreshed = true;
         }   // end if
         else
             std::cerr << "[ERROR] FaceTools::U3DCache::refresh: Unable to save to U3D format!" << std::endl;
@@ -90,6 +92,8 @@ void U3DCache::refresh( const FM* fm, bool med9)
     else
         std::cerr << "[ERROR] FaceTools::U3DCache::refresh: Couldn't open temporary file for exporting U3D!" << std::endl;
     _cacheLock.unlock();
+
+    return refreshed;
 }   // end refresh
 
 
@@ -110,7 +114,7 @@ QString U3DCache::makeFilePath( const FM* fm)
 {
     QString fname;
     QTextStream os(&fname);
-    os << "obj_" << hex << fm << ".u3d";
+    os << "obj_" << Qt::hex << fm << ".u3d";
     fname = _tmpdir.filePath( fname);   // The filename to save to
     return fname;
 }   // end makeFilePath

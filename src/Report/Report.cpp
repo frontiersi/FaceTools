@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <Report/Report.h>
+#include <Report/ReportManager.h>
 #include <Metric/MetricManager.h>
 #include <Metric/PhenotypeManager.h>
 #include <Metric/Chart.h>
@@ -42,11 +43,6 @@ using FaceTools::FM;
 using FaceTools::Metric::PhenotypeManager;
 using FaceTools::Metric::Phenotype;
 
-// Disable warnings about using of QTextStreamFunctions::endl
-#ifdef _WIN32
-#pragma warning( disable : 4996)
-#endif
-
 namespace {
 QString sanit( QString s)
 {
@@ -61,6 +57,7 @@ QString sanit( QString s)
     s.replace("{", "\\{");
     s.replace("}", "\\}");
     s.replace("~", "\\~{}");
+    s.replace("|", "$\\mid$");
     return s;
 }   // end sanit
 }   // end namespace
@@ -71,10 +68,16 @@ Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _os(nullptr), _model(nullp
     // Create some standardised Lua scripting functions for inserting report elements.
     addCustomLuaFn( "addScanInfo", [this](){ this->_addLatexScanInfo();});
     addCustomLuaFn( "addNotes", [this](){ this->_addLatexNotes();});
-    addCustomLuaFn( "addPhenotypicVariationsList", [this](){ this->_addLatexPhenotypicVariationsList();});
     addCustomLuaFn( "addStartColumn", [this](){ this->_addLatexStartMinipage();});
     addCustomLuaFn( "addEndColumn", [this](){ this->_addLatexEndMinipage();});
     addCustomLuaFn( "addLineBreak", [this](){ this->_addLatexLineBreak();});
+
+    _lua.set_function( "getNumPhenotypicTraits",
+                        [this](){ return this->_getNumPhenotypicTraits();});
+
+    _lua.set_function( "addPhenotypicTraits",
+                       [this](int sidx, int nhids)
+                       { return this->_addLatexPhenotypicTraits( sidx, nhids);});
 
     _lua.set_function( "addFigure",
                        [this]( float widthMM, float heightMM, const std::string& caption)
@@ -109,6 +112,11 @@ Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _os(nullptr), _model(nullp
                                    "note", &GrowthData::note,
                                    "longNote", &GrowthData::longNote);
 
+    _lua.new_enum( "FaceSide",
+                   "MID", FaceSide::MID,
+                   "LEFT", FaceSide::LEFT,
+                   "RIGHT", FaceSide::RIGHT);
+
     _lua.new_usertype<FM>( "FM",
                            "age", &FM::age,
                            "sex", &FM::sex,
@@ -121,9 +129,7 @@ Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _os(nullptr), _model(nullp
 
     _lua.new_usertype<FaceAssessment>( "FaceAssessment",
                            "hasLandmarks", &FaceAssessment::hasLandmarks,
-                           "metrics", &FaceAssessment::cmetrics,
-                           "metricsL", &FaceAssessment::cmetricsL,
-                           "metricsR", &FaceAssessment::cmetricsR);
+                           "metrics", &FaceAssessment::cmetrics);
 
     _lua.new_usertype<Phenotype>( "Phenotype",
                                   "name", &Phenotype::name);
@@ -155,7 +161,7 @@ void Report::addCustomLatex( const QString &s)
 {
     assert(_os);
     QTextStream& os = *_os;
-    os << s << endl;
+    os << s << Qt::endl;
 }   // end addCustomLatex
 
 
@@ -190,13 +196,12 @@ Report::Ptr Report::load( const QString& fname, QTemporaryDir& tdir)
             QTextStream in(&file);
             const QString code = in.readAll();
             report->_lua.script( code.toStdString());
-            //report->_lua.script_file( fpath.toStdString());
             loadedOk = true;
         }   // end if
     }   // end try
     catch ( const sol::error& e)
     {
-        qWarning() << "Unable to load and execute file '" << fname << "'!" << endl << "\t" << e.what();
+        qWarning() << "Unable to load and execute file '" << fname << "'!" << Qt::endl << "\t" << e.what();
     }   // end catch
 
     if ( !loadedOk)
@@ -235,7 +240,7 @@ Report::Ptr Report::load( const QString& fname, QTemporaryDir& tdir)
         return nullptr;
     }   // end else
 
-    if ( sol::optional<sol::function> v = table["available"])
+    if ( sol::optional<sol::function> v = table["isAvailable"])
         report->_available = v.value();
     else
     {
@@ -289,11 +294,11 @@ bool Report::generate( const FM* fm, const QString& u3dfile, const QString& pdff
         return false;
     }   // end if
 
-    qInfo( "Generating PDF from LaTeX...");
+    //qInfo( "Generating PDF from LaTeX...");
 
     // Need to generate from within the directory.
     r3dio::PDFGenerator pdfgen(true);
-    const bool genOk = pdfgen( texfile.fileName().toStdString(), false);
+    const bool genOk = pdfgen( QFileInfo(texfile).absoluteFilePath().toLocal8Bit().toStdString(), false);
     if ( !genOk)
     {
         qWarning() << "Failed to generate PDF!";
@@ -318,65 +323,61 @@ bool Report::_useSVG() const
 
 bool Report::_writeLatex( QTextStream& os) const
 {
-    os << "\\documentclass{article}" << endl 
-       << "\\listfiles" << endl   // Do this to see in the .log file which packages are used
-       << "\\usepackage[textwidth=20cm,textheight=25cm]{geometry}" << endl
-       << "\\usepackage{graphicx}" << endl
-       << "\\usepackage{verbatim}" << endl
-       << "\\usepackage{xcolor}" << endl;
+    os << "\\documentclass{article}" << Qt::endl
+       << "\\listfiles" << Qt::endl   // Do this to see in the .log file which packages are used
+       << "\\usepackage[textwidth=20cm,textheight=25cm]{geometry}" << Qt::endl
+       << "\\usepackage{graphicx}" << Qt::endl
+       << "\\usepackage{verbatim}" << Qt::endl
+       << "\\usepackage{xcolor}" << Qt::endl;
 
     if ( _useSVG())
     {
-        os << "\\usepackage{svg}" << endl   // graphicx also included by svg
-           << "\\setsvg{inkscape={\"" << _inkscape << "\"}}" << endl
-           << "\\usepackage{relsize}" << endl;
+        os << "\\usepackage{svg}" << Qt::endl   // graphicx also included by svg
+           << "\\setsvg{inkscape={\"" << _inkscape << "\"}}" << Qt::endl
+           << "\\usepackage{relsize}" << Qt::endl;
     }   // end if
 
-    os << "\\usepackage{float}" << endl
-       << "\\usepackage[justification=centering]{caption}" << endl
-       << "\\usepackage{media9}" << endl
-       << "\\usepackage{amsmath}" << endl
-       << "\\usepackage[parfill]{parskip}" << endl
-       << "\\usepackage[colorlinks=true,urlcolor=red]{hyperref}" << endl
-       << "\\DeclareGraphicsExtensions{.png,.jpg,.pdf,.eps}" << endl;
+    os << "\\usepackage{float}" << Qt::endl
+       << "\\usepackage[justification=centering]{caption}" << Qt::endl
+       << "\\usepackage{media9}" << Qt::endl
+       << "\\usepackage{amsmath}" << Qt::endl
+       << "\\usepackage[parfill]{parskip}" << Qt::endl
+       << "\\usepackage[colorlinks=true,urlcolor=blue]{hyperref}" << Qt::endl
+       << "\\DeclareGraphicsExtensions{.png,.jpg,.pdf,.eps}" << Qt::endl;
 
     // Header
-    os << endl
-       << "\\usepackage{fancyhdr}" << endl
-       << "\\pagestyle{fancy}" << endl
-       //<< "\\renewcommand{\\headrulewidth}{0pt}" << endl
-       //<< "\\renewcommand{\\footrulewidth}{0pt}" << endl
-       << "\\setlength\\headheight{24mm}" << endl
-       << "\\addtolength{\\textheight}{-7mm}" << endl
-       << "\\rhead{\\includegraphics[width=60mm]{" << _logofile << "}}" << endl
-       << "\\lhead{" << endl
-       << "\\Large \\textbf{" << sanit(_title) << "} \\\\" << endl;
+    os << Qt::endl
+       << "\\usepackage{fancyhdr}" << Qt::endl
+       << "\\pagestyle{fancy}" << Qt::endl
+       //<< "\\renewcommand{\\headrulewidth}{0pt}" << Qt::endl
+       //<< "\\renewcommand{\\footrulewidth}{0pt}" << Qt::endl
+       << "\\setlength\\headheight{30mm}" << Qt::endl
+       << "\\rhead{\\raisebox{0.05\\height}{\\includegraphics[width=60mm]{" << _logofile << "}} \\\\" << Qt::endl
+       << "\\footnotesize " << sanit(ReportManager::versionString()) << "}" << Qt::endl
+       << "\\lhead{" << Qt::endl
+       << "\\Large \\textbf{" << sanit(_title) << "} \\\\" << Qt::endl;
 
-    os << "\\vspace{2mm} \\normalsize" << endl; // Small gap below title
+    os << "\\vspace{2mm} \\normalsize" << Qt::endl; // Small gap below title
 
-    // Source and Study ID if present
-    bool hasSource = !_model->source().isEmpty();
-    bool hasStudyId = !_model->studyId().isEmpty();
-    if ( hasSource)
-        os << "\\textbf{Source:} " << sanit(_model->source());
-    if ( hasStudyId)
-    {
-        if ( hasSource)
-            os << "\\hspace{3mm}";
-        os << "\\textbf{Study Id:} " << sanit(_model->studyId());
-    }   // end if
-    if ( hasSource || hasStudyId)
-        os << " \\\\" << endl;
+    // Source and Study reference
+    const QString src = sanit(_model->source().isEmpty() ? "N/A" : _model->source());
+    const QString studyId = sanit(_model->studyId().isEmpty() ? "N/A" : _model->studyId());
+    os << "\\textbf{Source:} " << src << "\\hspace{3mm}\\textbf{Study Ref:} " << studyId << " \\\\" << Qt::endl;
 
-    os << "\\textbf{Report Date:} " << QDate::currentDate().toString("dd MMMM yyyy") << "\\\\" << endl;
+    // Subject and Image reference
+    const QString subRef = sanit(_model->subjectId().isEmpty() ? "N/A" : _model->subjectId());
+    const QString imgRef = sanit(_model->imageId().isEmpty() ? "N/A" : _model->imageId());
+    os << "\\textbf{Subject Ref:} " << subRef << "\\hspace{3mm}\\textbf{Image Ref:} " << imgRef << " \\\\" << Qt::endl;
 
-    os << "}" << endl;
+    os << "\\textbf{Report Date:} " << QDate::currentDate().toString("dd MMMM yyyy") << "\\\\" << Qt::endl;
+
+    os << "}" << Qt::endl;
 
     // Document
-    os << endl
-       << "\\begin{document}" << endl
-       << "\\pagenumbering{gobble}" << endl
-       << "\\thispagestyle{fancy}" << endl << endl;
+    os << Qt::endl
+       << "\\begin{document}" << Qt::endl
+       << "\\pagenumbering{gobble}" << Qt::endl
+       << "\\thispagestyle{fancy}" << Qt::endl << Qt::endl;
 
     bool valid = true;
     try
@@ -389,7 +390,7 @@ bool Report::_writeLatex( QTextStream& os) const
         valid = false;
     }   // end catch
 
-    os << "\\end{document}" << endl;
+    os << "\\end{document}" << Qt::endl;
     os.flush();
     return valid;
 }   // end _writeLaTeX
@@ -410,9 +411,9 @@ bool writefig( const QString& u3dfile, QTextStream& os, float wmm, float hmm, co
     os << R"(\begin{figure}[H]
             \centering
             \includemedia[
-            label=)" << label << "," << endl
-       << "width=" << wmm << "mm," << endl
-       << "height=" << hmm << "mm," << endl
+            label=)" << label << "," << Qt::endl
+       << "width=" << wmm << "mm," << Qt::endl
+       << "height=" << hmm << "mm," << Qt::endl
        << R"(add3Djscript=3Dspintool.js,   % let scene rotate about z-axis
              keepaspectratio,
              activate=pageopen,
@@ -420,19 +421,18 @@ bool writefig( const QString& u3dfile, QTextStream& os, float wmm, float hmm, co
              3Dbg=1 1 1,
              3Dmenu,
              3Dviews=views.vws,
-             ]{}{)" << u3dfile << R"(}\\)" << endl;
-       //<< "3Dtoolbar," << endl
+             ]{}{)" << u3dfile << R"(}\\)" << Qt::endl;
 
-    /* THESE AREN'T WORKING! (and also aren't formatted well)
-    os << "\\mediabutton[3Dgotoview=" << label << ":(Right)]{\\fbox{Right}}" << endl
-       << "\\mediabutton[3Dgotoview=" << label << ":(Front)]{\\fbox{Front}}" << endl
-       << "\\mediabutton[3Dgotoview=" << label << ":(Left)]{\\fbox{Left}}" << endl;
+    /* THESE DON'T WORK (and also aren't formatted well).
+    os << "\\mediabutton[3Dgotoview=" << label << ":1]{\\fbox{RIGHT}}" << Qt::endl
+       << "\\mediabutton[3Dgotoview=" << label << ":0]{\\fbox{FRONT}}" << Qt::endl
+       << "\\mediabutton[3Dgotoview=" << label << ":2]{\\fbox{LEFT}}" << Qt::endl;
     */
 
     if ( !caption.isEmpty())
-        os << "\\caption*{" << caption << "}" << endl;
+        os << "\\caption*{" << caption << "}" << Qt::endl;
 
-    os << "\\end{figure}" << endl;
+    os << "\\end{figure}" << Qt::endl;
 
     return true;
 }   // end writefig
@@ -458,42 +458,49 @@ void Report::_addLatexGrowthCurvesChart( int mid, size_t d, int footnotemark)
     const QString imname = QString("chart_%1").arg(abs(chartid));   // abs (LOL)
     chartid++;
 
+    // Define the resolution and aspect ratio of the chart
+    const int spx = 587;
+    const int spy = 505;
+    static const QRectF crect( 0,0, spx, spy);
+
     const GrowthData *gd = mc->growthData().current();
-    Metric::Chart* chart = new Metric::Chart( gd, d, _model);
+    Metric::Chart *chart = new Metric::Chart( gd, d, _model);
+    chart->resize( crect.size());
+    QtCharts::QChartView cview( chart); // Chart deleted when cview is destroyed
 
-    QtCharts::QChartView cview( chart);
-    cview.setRenderHint(QPainter::Antialiasing);
+    cview.setRenderHint( QPainter::Antialiasing);
+    cview.setSceneRect( crect);
 
-    static const QRectF outRect( 0,0,570,450);
-    chart->resize( outRect.size());
-
-    QPaintDevice *img = nullptr;
+    QPaintDevice *pdev = nullptr;
     QString imgpath;
 
-    if ( _useSVG())
+    const bool usingSVG = _useSVG();
+
+    if ( usingSVG)
     {
         imgpath = _tmpdir.filePath(QString("%1.svg").arg(imname));
         QSvgGenerator* simg = new QSvgGenerator;
         simg->setFileName(imgpath);
-        simg->setSize(outRect.toRect().size());
-        simg->setViewBox(outRect);
-        img = simg;
+        simg->setSize( QSize( spx, spx));
+        simg->setViewBox( crect);
+        pdev = simg;
     }   // end if
     else
     {
         imgpath = _tmpdir.filePath(QString("%1.png").arg(imname));
-        QPixmap* pimg = new QPixmap( outRect.toRect().size());
+        QPixmap* pimg = new QPixmap( QSize( spx, spy));
         pimg->fill( Qt::transparent);
-        img = pimg;
+        pdev = pimg;
     }   // end else
 
     QPainter painter;
-    painter.begin( img);
-    painter.setRenderHint(QPainter::Antialiasing);
-    chart->scene()->render( &painter, outRect);
+    painter.begin( pdev);
+    painter.setRenderHint( QPainter::Antialiasing);
+    cview.render( &painter, QRectF(0, 0, spx, spy), cview.viewport()->rect());
     painter.end();
 
-    if ( !_useSVG() && !static_cast<QPixmap*>(img)->save( imgpath))
+    //std::cout << "Chart image path: " << imgpath.toLocal8Bit().toStdString() << std::endl;
+    if ( !usingSVG && !static_cast<QPixmap*>(pdev)->save( imgpath))
     {
         qWarning( "Unable to save PNG!");
         return;
@@ -503,99 +510,103 @@ void Report::_addLatexGrowthCurvesChart( int mid, size_t d, int footnotemark)
     assert(_os);
     QTextStream& os = *_os;
     os << R"(\begin{figure}[H]
-             \centering)" << endl;
+             \centering)" << Qt::endl;
     if ( !qcaption.isEmpty())
-        os << "\\caption*{" << qcaption << "}" << endl;
+        os << "\\caption*{" << qcaption << "}" << Qt::endl;
 
     if ( _useSVG())
     {
-        os << R"(\includesvg[width=98.00mm,pretex=\relscale{0.8}]{)" << imname << "}" << endl;
-        delete static_cast<QSvgGenerator*>(img);
+        os << R"(\includesvg[width=93.00mm]{)" << imname << "}" << Qt::endl;
+        delete static_cast<QSvgGenerator*>(pdev);
     }   // end if
     else
     {
-        //os << "\\includegraphics[width=\\linewidth]{" << imgpath << "}" << endl;
-        os << "\\includegraphics[width=110.00mm]{" << imgpath << "}" << endl;
-        delete static_cast<QPixmap*>(img);
+        os << "\\includegraphics[width=\\linewidth]{" << imgpath << "}" << Qt::endl;
+        delete static_cast<QPixmap*>(pdev);
     }   // end else
 
-    os << "\\end{figure}" << endl;
+    os << "\\end{figure}" << Qt::endl;
 }   // end _addLatexGrowthCurvesChart
 
 
 void Report::_addLatexScanInfo()
 {
-    assert(_os);
-    QTextStream& os = *_os;
-    os << "\\textbf{Image Capture Date:} " << _model->captureDate().toString("dd MMMM yyyy") << " \\\\" << endl;
-
-    os << "\\textbf{Ethnicity:} " << sanit(Ethnicities::name(_model->maternalEthnicity()));
-    if ( _model->maternalEthnicity() != _model->paternalEthnicity())
-        os << sanit(" (M) & " + Ethnicities::name(_model->paternalEthnicity()) + " (P)");
-    os << " \\\\" << endl;
-
-    // Sex and DOB on one line
-    os << "\\textbf{Sex:} " << sanit(FaceTools::toLongSexString( _model->sex()));
-    os << "\\hspace{3mm} \\textbf{DOB:} " << _model->dateOfBirth().toString("dd MMMM yyyy") << " \\\\" << endl;
+    const QString cdate = _model->captureDate().toString("dd MMMM yyyy");
+    const QString dob = _model->dateOfBirth().toString("dd MMMM yyyy");
     const double age = _model->age();
     const int yrs = int(age);
     const int mths = int((age - double(yrs)) * 12);
-    os << QString("\\textbf{Age:} %1 years %2 months \\\\").arg(yrs).arg(mths) << endl;
+    const QString sage = QString("%1 yrs. %2 mons.").arg(yrs).arg(mths);
+
+    const QString sexs = sanit(FaceTools::toLongSexString( _model->sex()));
+    QString eths = sanit(Ethnicities::name(_model->maternalEthnicity()));
+    if ( _model->maternalEthnicity() != _model->paternalEthnicity())
+        eths += sanit(" (M) & " + Ethnicities::name(_model->paternalEthnicity()) + " (P)");
+    if ( eths.isEmpty())
+        eths = "N/A";
+
+    QTextStream& os = *_os;
+    os << "\\textbf{Image Captured:} " << cdate << " \\\\" << Qt::endl;
+    os << "\\textbf{DOB:} " << dob << "\\hspace{3mm} \\textbf{Age:} " << sage << " \\\\" << Qt::endl;
+    os << "\\textbf{Ethnicity:} " << eths << " \\\\" << Qt::endl;
+    os << "\\textbf{Sex:} " << sexs << " \\\\" << Qt::endl;
 }   // end _addLatexScanInfo
 
 
 void Report::_addLatexNotes()
 {
-    assert(_os);
     QTextStream& os = *_os;
-
     FaceAssessment::CPtr ass = _model->currentAssessment();
-    os << " \\normalsize{\\textbf{" << tr("Assessor") << ":} " << sanit(ass->assessor()) << R"(} \\)" << endl;
-    os << R"( \small{)" << sanit( ass->hasNotes() ? ass->notes() : tr("Nothing recorded.")) << R"(} \\)" << endl;
+    os << " \\normalsize{\\textbf{" << tr("Assessor") << ":} " << sanit(ass->assessor()) << R"(} \\)" << Qt::endl;
+    os << R"( \small{)" << sanit( ass->hasNotes() ? ass->notes() : tr("Nothing recorded.")) << R"(} \\)" << Qt::endl;
 }   // end _addLatexNotes
 
 
-void Report::_addLatexPhenotypicVariationsList()
+int Report::_getNumPhenotypicTraits() const
 {
-    assert(_os);
+    const IntSet pids = PhenotypeManager::discover(_model, -1); // Use the current assessment id
+    return int(pids.size());
+}   // end _getNumPhenotypicTraits
+
+
+bool Report::_addLatexPhenotypicTraits( int sidx, int nhids)
+{
+    sidx = std::max( 0, sidx);
+    const IntSet pids = PhenotypeManager::discover(_model, -1); // Use the current assessment id
+    bool moreToGo = false;
+
     QTextStream& os = *_os;
 
-    const IntSet pids = PhenotypeManager::discover(_model, -1); // Use the current assessment id
     if ( pids.empty())
-        os << tr("No dysmorphological features identified.") << endl;
+        os << tr("No notable morphology found.") << Qt::endl;
     else
     {
-        os << "\\textbf{" << tr("Dysmorphological Features") << ":}" << endl
-           << "\\begin{itemize}" << endl;
-        for ( int pid : pids)
-            os << "\t\\item " << PhenotypeManager::phenotype(pid)->name() << endl;
-        os << "\\end{itemize}" << endl;
+        if ( int(pids.size()) <= sidx)
+            return false;
+
+        const int topidx = std::min<int>( int(pids.size()), sidx + nhids);
+        if ( int(pids.size()) > topidx)
+            moreToGo = true;
+
+        std::list<int> lids( pids.begin(), pids.end());
+        lids.sort();
+        std::vector<int> vids( lids.begin(), lids.end());
+        const QString title = tr("Notable morphology");
+        os << "\\textbf{" << title << ":}" << Qt::endl
+           << "\\begin{itemize}" << Qt::endl;
+        for ( int i = sidx; i < topidx; ++i)
+            os << "\t\\item " << PhenotypeManager::latexLinkString(vids[i]) << Qt::endl;
+        os << "\\end{itemize}" << Qt::endl;
     }   // end else
-}   // end _addLatexPhenotypicVariationsList
+
+    return moreToGo;
+}   // end _addLatexPhenotypicTraits
 
 
-void Report::_addLatexStartMinipage()
-{
-    assert(_os);
-    QTextStream& os = *_os;
-    os << R"(\begin{minipage}[t]{.5\linewidth})" << endl;
-}   // end _addLatexStartMinipage
+void Report::_addLatexStartMinipage() { *_os << R"(\begin{minipage}[t]{.5\textwidth})" << Qt::endl;}
+void Report::_addLatexEndMinipage() { *_os << R"(\end{minipage})" << Qt::endl;}
 
-
-void Report::_addLatexEndMinipage()
-{
-    assert(_os);
-    QTextStream& os = *_os;
-    os << R"(\end{minipage})" << endl;
-}   // end _addLatexEndMinipage
-
-
-void Report::_addLatexLineBreak()
-{
-    assert(_os);
-    QTextStream& os = *_os;
-    os << R"(\hfill \break)" << endl;
-}   // end _addLatexLineBreak
+void Report::_addLatexLineBreak() { *_os << R"(\hfill \break)" << Qt::endl;}
 
 
 QString Report::_metricCurrentSource( int mid) const
@@ -650,7 +661,7 @@ void Report::_addFootnoteSources( const sol::table& mids)
         if ( !src.isEmpty() && !refs.contains(src))
         {
             refs.insert(src);
-            os << "\\footnotetext[" << idx << "]{" << src << "}" << endl;
+            os << "\\footnotetext[" << idx << "]{" << src << "}" << Qt::endl;
             idx++;
         }   // end if
     }   // end for

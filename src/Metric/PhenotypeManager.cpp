@@ -37,6 +37,7 @@ std::unordered_map<QString, IntSet> PhenotypeManager::_rhpos;
 
 namespace {
 static const IntSet EMPTY_INT_SET;
+static const QString BASE_URL = "https://hpo.jax.org/app/browse/term";
 
 using namespace FaceTools::Metric;
 
@@ -175,3 +176,21 @@ IntSet PhenotypeManager::discover( const FM* fm, int aid)
     }   // end for
     return dids;
 }   // end discover
+
+
+QString PhenotypeManager::htmlLinkString( int id)
+{
+    const QString fid = formattedId(id);
+    const QString hpoUrl = QString( "%1/%2").arg(BASE_URL).arg(fid);
+    return QString("<a href=\"%1\"><b>%2</b> <em>%3</em></a>").arg(hpoUrl).arg(fid).arg(name(id));
+}   // end htmlLinkString
+
+
+QString PhenotypeManager::latexLinkString( int id)
+{
+    const QString fid = formattedId(id);
+    const QString hpoUrl = QString( "%1/%2").arg(BASE_URL).arg(fid);
+    return QString("\\href{%1}{\\textbf{%2} \\textit{%3}}").arg(hpoUrl).arg(fid).arg(name(id));
+}   // end latexLinkString
+
+

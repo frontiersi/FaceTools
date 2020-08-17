@@ -35,7 +35,6 @@ public:
     static Ptr create( int mid, size_t d, const FM* fm=nullptr);
 
     Chart( const GrowthData*, size_t, const FM* fm=nullptr);
-    ~Chart() override;
 
     /**
      * Set this chart to have the default rich text formatted title

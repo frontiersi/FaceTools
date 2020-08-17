@@ -80,11 +80,11 @@ static const char IBAR = '|';
 static const char SC = ';';
 static const QString ANY_ITEM = "-- Any --";
 
-enum FaceLateral : uint8_t
+enum FaceSide : uint8_t
 {
-    FACE_LATERAL_MEDIAL = 1,
-    FACE_LATERAL_LEFT = 2,
-    FACE_LATERAL_RIGHT = 4
+    MID = 1,
+    LEFT = 2,
+    RIGHT = 4
 };  // end enum
 
 
@@ -192,7 +192,7 @@ class ContextMenu;
 
 
 Q_DECLARE_METATYPE( FaceTools::Vec3f)
-Q_DECLARE_METATYPE( FaceTools::FaceLateral)
+Q_DECLARE_METATYPE( FaceTools::FaceSide)
 
 /**********************************************************************/
 

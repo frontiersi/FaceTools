@@ -39,8 +39,9 @@ public:
     // Locks for write the export of the model to U3D and unlocks on return.
     // If media9 is true, coordinates are transformed as (a,b,c) --> (a,-c,b)
     // to allow for LaTeX media9 inclusion of 3D figures.
+    // Returns true iff model was updated in the cache successfully.
     // *** THIS FUNCTION calls FM::lockForRead on the passed in FaceModel ***
-    static void refresh( const FM*, bool media9=false);
+    static bool refresh( const FM*, bool media9=false);
 
     static void purge( const FM*);
 

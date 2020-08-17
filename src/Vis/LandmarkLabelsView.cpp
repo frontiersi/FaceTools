@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,15 +37,15 @@ vtkSmartPointer<vtkPolyData> LandmarkLabelsView::createLabels( const FM *fm) con
     {
         if ( LMAN::isBilateral( lmid))
         {
-            lmnames.push_back( LMAN::makeLandmarkString( lmid, FaceLateral::FACE_LATERAL_LEFT).toStdString());
-            lmpos.push_back( lmks.pos( lmid, FaceLateral::FACE_LATERAL_LEFT).cast<double>());
-            lmnames.push_back( LMAN::makeLandmarkString( lmid, FaceLateral::FACE_LATERAL_RIGHT).toStdString());
-            lmpos.push_back( lmks.pos( lmid, FaceLateral::FACE_LATERAL_RIGHT).cast<double>());
+            lmnames.push_back( LMAN::makeLandmarkString( lmid, LEFT).toStdString());
+            lmpos.push_back( lmks.pos( lmid, LEFT).cast<double>());
+            lmnames.push_back( LMAN::makeLandmarkString( lmid, RIGHT).toStdString());
+            lmpos.push_back( lmks.pos( lmid, RIGHT).cast<double>());
         }   // end if
         else
         {
-            lmnames.push_back( LMAN::makeLandmarkString( lmid, FaceLateral::FACE_LATERAL_MEDIAL).toStdString());
-            lmpos.push_back( lmks.pos( lmid, FaceLateral::FACE_LATERAL_MEDIAL).cast<double>());
+            lmnames.push_back( LMAN::makeLandmarkString( lmid, MID).toStdString());
+            lmpos.push_back( lmks.pos( lmid, MID).cast<double>());
         }   // end else
     }   // end for
 

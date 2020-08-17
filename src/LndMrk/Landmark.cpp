@@ -54,16 +54,16 @@ bool SpecificLandmark::set( const QString &tok)
 
     // Left/right modifier?
     if ( sface == "L")
-        lat = FACE_LATERAL_LEFT;
+        lat = LEFT;
     else if ( sface == "R")
-        lat = FACE_LATERAL_RIGHT;
+        lat = RIGHT;
     else if ( lmk->isBilateral())
     {
         std::cerr << ESTR << "bilateral landmark not qualified (L|R)!" << std::endl;
         return false;
     }   // end else if
 
-    if ( !lmk->isBilateral() && lat != FACE_LATERAL_MEDIAL)
+    if ( !lmk->isBilateral() && lat != MID)
     {
         std::cerr << ESTR << "Non-bilateral landmark with lateral qualifier!" << std::endl;
         return false;

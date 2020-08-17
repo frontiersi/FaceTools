@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,21 +43,21 @@ public:
     LandmarkSet( const std::unordered_set<const LandmarkSet*>&);
 
     // Add/change position of landmark with given id on given lateral.
-    // If landmark is not bilateral, the FaceLateral argument may be ignored.
+    // If landmark is not bilateral, the FaceSide argument may be ignored.
     // Returns true iff landmark with given id on the given lateral exists.
-    bool set( int id, const Vec3f&, FaceLateral=FACE_LATERAL_MEDIAL);
-    bool set( const QString& code, const Vec3f&, FaceLateral=FACE_LATERAL_MEDIAL);
+    bool set( int id, const Vec3f&, FaceSide=MID);
+    bool set( const QString& code, const Vec3f&, FaceSide=MID);
 
     // Return the full set of landmarks for one lateral.
-    const std::unordered_map<int, Vec3f>& lateral( FaceLateral) const;
+    const std::unordered_map<int, Vec3f>& lateral( FaceSide) const;
 
     // Return the position of the landmark for the given lateral.
     // The FACE_LATERAL_MEDIAL constant does not need to be specified if the
     // landmark is medial. Note though that only the given lateral is checked.
-    const Vec3f& pos( int id, FaceLateral=FACE_LATERAL_MEDIAL) const;
+    const Vec3f& pos( int id, FaceSide=MID) const;
 
     // Alternative usage takes a landmark code.
-    const Vec3f& pos( const QString& lmcode, FaceLateral=FACE_LATERAL_MEDIAL) const;
+    const Vec3f& pos( const QString& lmcode, FaceSide=MID) const;
 
     // Another alternative.
     const Vec3f& pos( const SpecificLandmark&) const;
@@ -104,7 +104,7 @@ public:
 
     // Set membership tests
     bool has( int id) const { return _ids.count(id) > 0;}
-    bool has( int id, FaceLateral) const;   // Landmark with given id present for the given lateral?
+    bool has( int id, FaceSide) const;   // Landmark with given id present for the given lateral?
     bool has( const SpecificLandmark&) const;
 
     // Set size tests
@@ -121,12 +121,12 @@ private:
     IntSet _ids;
 
     using LDMRKS = std::unordered_map<int, Vec3f>;
-    LDMRKS _lmksL;  // Left lateral (subject's right)
-    LDMRKS _lmksM;  // Medial (none)
-    LDMRKS _lmksR;  // Right lateral (subject's left)
+    LDMRKS _lmksL;  // Subject's left side
+    LDMRKS _lmksM;  // Middle
+    LDMRKS _lmksR;  // Subject's right side
 
-    LDMRKS& _lateral( FaceLateral);
-    bool _readLateral( const PTree&, FaceLateral);
+    LDMRKS& _lateral( FaceSide);
+    bool _readLateral( const PTree&, FaceSide);
     Vec3f _quarter0() const;
     Vec3f _quarter1() const;
     Vec3f _quarter2() const;

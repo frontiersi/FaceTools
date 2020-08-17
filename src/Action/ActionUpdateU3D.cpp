@@ -36,7 +36,7 @@ ActionUpdateU3D::ActionUpdateU3D() : FaceAction( "U3D Updater")
 bool ActionUpdateU3D::isAllowed( Event)
 {
     const FM *fm = MS::selectedModel();
-    return fm && fm->hasMask() && fm->isAligned() && U3DCache::isAvailable();
+    return fm && fm->hasLandmarks() && fm->isAligned() && U3DCache::isAvailable();
 }   // end isAllowed
 
 

@@ -26,7 +26,7 @@ using FaceTools::Vis::LandmarksVisualisation;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
 using FaceTools::Vec3f;
-using FaceTools::FaceLateral;
+using FaceTools::FaceSide;
 using MS = FaceTools::Action::ModelSelector;
 using LMAN = FaceTools::Landmark::LandmarksManager;
 
@@ -35,7 +35,7 @@ LandmarksHandler::Ptr LandmarksHandler::create() { return Ptr( new LandmarksHand
 
 // private
 LandmarksHandler::LandmarksHandler()
-    : _hoverId(-1), _dragId(-1), _lat(FACE_LATERAL_MEDIAL) {}
+    : _hoverId(-1), _dragId(-1), _lat(MID) {}
 
 
 void LandmarksHandler::refreshState()
@@ -48,7 +48,7 @@ void LandmarksHandler::doEnterProp( FV *fv, const vtkProp *p)
 {
     if ( fv == MS::selectedView())
     {
-        FaceLateral lat;
+        FaceSide lat;
         const int hid = _vis.landmarkId( fv, p, lat);    // Sets _lat as an out parameter
         if ( _dragId < 0 && hid >= 0) // Ignore other landmarks if dragging one already
         {
@@ -67,7 +67,7 @@ void LandmarksHandler::doEnterProp( FV *fv, const vtkProp *p)
 
 void LandmarksHandler::doLeaveProp( FV* fv, const vtkProp* p)
 {
-    FaceLateral lat;
+    FaceSide lat;
     const int hid = _vis.landmarkId( fv, p, lat);
     if ( _dragId < 0 && hid == _hoverId && lat == _lat)
         _leaveLandmark();
@@ -82,13 +82,13 @@ void LandmarksHandler::_leaveLandmark()
     _vis.setLandmarkHighlighted( fv, _hoverId, _lat, false);
     emit onLeaveLandmark( _hoverId, _lat); 
     _hoverId = -1;
-    _lat = FACE_LATERAL_MEDIAL;
+    _lat = MID;
 }   // end _leaveLandmark
 
 
 bool LandmarksHandler::leftButtonDown()
 {
-    FaceLateral lat;
+    FaceSide lat;
     const int lmid = _vis.landmarkId( MS::selectedView(), MS::cursorProp(), lat);
     if ( lmid >= 0 && lmid == _hoverId && lat == _lat && !LMAN::landmark( lmid)->isLocked())
     {
@@ -107,7 +107,7 @@ bool LandmarksHandler::leftButtonUp()
         emit onFinishedDrag( _dragId, _lat);
         // Deal with the case where mouse button is released with cursor off the landmark
         // (because landmark was restricted in movement).
-        FaceLateral lat;
+        FaceSide lat;
         const int lmid = _vis.landmarkId( MS::selectedView(), MS::cursorProp(), lat);
         if ( lmid < 0 && _hoverId >= 0)
             _leaveLandmark();

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,6 +33,9 @@ public:
     static bool isAvailable();
 
     static void setReportHeaderName( const QString& n) { _hname = n;}
+    static void setVersionString( const QString& v) { _version = v;}
+    static const QString& versionString() { return _version;}
+
     static void setLogoPath( const QString& p) { _logopath = p;}
 
     // Load all report Lua scripts from the given directory.
@@ -54,6 +57,7 @@ public:
 private:
     static QTemporaryDir _tmpdir;
     static QString _hname;
+    static QString _version;
     static QString _logopath;
     static QString _logofile;
     static QString _inkscape;

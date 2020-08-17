@@ -34,16 +34,16 @@ public:
     Vis::LandmarksVisualisation &visualisation() { return _vis;}
 
     // Return the ID of the landmark that's currently being moved
-    // and set out parameter lat to the FaceLateral of the landmark.
-    int dragging( FaceLateral& lat) const { lat = _lat; return _dragId;}
+    // and set out parameter lat to the FaceSide of the landmark.
+    int dragging( FaceSide& lat) const { lat = _lat; return _dragId;}
 
 signals:
-    void onStartedDrag( int, FaceLateral);
-    void onDoingDrag( int, FaceLateral);
-    void onFinishedDrag( int, FaceLateral);
+    void onStartedDrag( int, FaceSide);
+    void onDoingDrag( int, FaceSide);
+    void onFinishedDrag( int, FaceSide);
 
-    void onEnterLandmark( int, FaceLateral);
-    void onLeaveLandmark( int, FaceLateral);
+    void onEnterLandmark( int, FaceSide);
+    void onLeaveLandmark( int, FaceSide);
 
 private slots:
     void doEnterProp( Vis::FV*, const vtkProp*) override;
@@ -58,7 +58,7 @@ private:
 
     int _hoverId;
     int _dragId;
-    FaceLateral _lat;
+    FaceSide _lat;
 
     void _leaveLandmark();
 

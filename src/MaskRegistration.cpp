@@ -169,9 +169,9 @@ bool MaskRegistration::setMask( const QString &mpath)
                 // Note that there's an opportunity here to have a mask store several different
                 // sets of landmarks (perhaps derived from different assessors of whatever).
                 const Landmark::LandmarkSet& lmset = fm->currentLandmarks();
-                setBarycentricLandmarkPositions( s_mask.lmksL, lmset.lateral( FACE_LATERAL_LEFT), fm->kdtree());
-                setBarycentricLandmarkPositions( s_mask.lmksM, lmset.lateral( FACE_LATERAL_MEDIAL), fm->kdtree());
-                setBarycentricLandmarkPositions( s_mask.lmksR, lmset.lateral( FACE_LATERAL_RIGHT), fm->kdtree());
+                setBarycentricLandmarkPositions( s_mask.lmksL, lmset.lateral( LEFT), fm->kdtree());
+                setBarycentricLandmarkPositions( s_mask.lmksM, lmset.lateral( MID), fm->kdtree());
+                setBarycentricLandmarkPositions( s_mask.lmksR, lmset.lateral( RIGHT), fm->kdtree());
 
                 // Set the laterally opposite vertex IDs:
                 for ( int vidx : fm->mesh().vtxIds())

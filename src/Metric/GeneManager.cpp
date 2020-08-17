@@ -80,8 +80,8 @@ bool GeneManager::save( const QString& fname)
 
     QTextStream out(&file);
     for ( int id : _ids)
-        out << _genes.at(id) << endl;
-    out << endl;   // Add EoF newline
+        out << _genes.at(id) << Qt::endl;
+    out << Qt::endl;   // Add EoF newline
 
     file.close();
     return true;

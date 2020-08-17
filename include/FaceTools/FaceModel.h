@@ -184,7 +184,7 @@ public:
      * Set the position of the landmark with given ID on the current assessment.
      * Position should be as found on the currently transformed model.
      */
-    void setLandmarkPosition( int, FaceLateral, const Vec3f&);
+    void setLandmarkPosition( int, FaceSide, const Vec3f&);
 
     /**
      * Swap the landmark laterals for ALL assessments.
@@ -222,6 +222,14 @@ public:
     // Set/get study ID
     void setStudyId( const QString&);
     const QString& studyId() const { return _studyId;}
+
+    // Set/get subject ID
+    void setSubjectId( const QString&);
+    const QString& subjectId() const { return _subjectId;}
+
+    // Set/get image ID
+    void setImageId( const QString&);
+    const QString& imageId() const { return _imageId;}
 
     // Get age of individual at date of image capture.
     float age() const { return float( dateOfBirth().daysTo( captureDate())) / 365.25f;}
@@ -285,7 +293,9 @@ private:
     bool _savedModel;
 
     QString _source;    // Image source
-    QString _studyId;   // Study ID info
+    QString _studyId;   // Study ID
+    QString _subjectId; // Subject ID
+    QString _imageId;   // Image ID
     QDate _dob;         // Subject date of birth
     int8_t _sex;        // Subject sex
     int _methnicity;    // Subject's maternal ethnicity
