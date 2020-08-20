@@ -270,9 +270,7 @@ bool Report::generate( const FM* fm, const QString& u3dfile, const QString& pdff
         return false;
     }   // end if
 
-    _model = fm;
-    _u3dfile = u3dfile;
-
+    // Create the filestream to the raw LaTeX file
     QFile texfile( _tmpdir.filePath("report.tex"));
     texfile.open( QIODevice::ReadWrite | QIODevice::Text);
     if ( !texfile.isOpen())
@@ -281,6 +279,10 @@ bool Report::generate( const FM* fm, const QString& u3dfile, const QString& pdff
         emit onFinishedGenerate( nullptr, pdffile);
         return false;
     }   // end if
+
+    _model = fm;
+    QFile::copy( _logofile, _tmpdir.filePath( "logo.pdf")); // Copy the logo into the report temporary directory
+    QFile::copy( u3dfile, _tmpdir.filePath( "model.u3d"));  // Copy the model into the report temporary directory
 
     _os = new QTextStream( &texfile);
     const bool writtenLatexOk = _writeLatex( *_os);
@@ -323,7 +325,7 @@ bool Report::_useSVG() const
 
 bool Report::_writeLatex( QTextStream& os) const
 {
-    os << "\\documentclass{article}" << Qt::endl
+    os << "\\documentclass[a4paper]{article}" << Qt::endl
        << "\\listfiles" << Qt::endl   // Do this to see in the .log file which packages are used
        << "\\usepackage[textwidth=20cm,textheight=25cm]{geometry}" << Qt::endl
        << "\\usepackage{graphicx}" << Qt::endl
@@ -351,8 +353,9 @@ bool Report::_writeLatex( QTextStream& os) const
        << "\\pagestyle{fancy}" << Qt::endl
        //<< "\\renewcommand{\\headrulewidth}{0pt}" << Qt::endl
        //<< "\\renewcommand{\\footrulewidth}{0pt}" << Qt::endl
-       << "\\setlength\\headheight{30mm}" << Qt::endl
-       << "\\rhead{\\raisebox{0.05\\height}{\\includegraphics[width=60mm]{" << _logofile << "}} \\\\" << Qt::endl
+       //<< "\\setlength\\headheight{30mm}" << Qt::endl
+       << "\\setlength\\headheight{23mm}" << Qt::endl
+       << "\\rhead{\\raisebox{0.05\\height}{\\includegraphics[width=60mm]{logo.pdf}} \\\\" << Qt::endl
        << "\\footnotesize " << sanit(ReportManager::versionString()) << "}" << Qt::endl
        << "\\lhead{" << Qt::endl
        << "\\Large \\textbf{" << sanit(_title) << "} \\\\" << Qt::endl;
@@ -396,11 +399,11 @@ bool Report::_writeLatex( QTextStream& os) const
 }   // end _writeLaTeX
 
 
-namespace {
-bool writefig( const QString& u3dfile, QTextStream& os, float wmm, float hmm, const QString& caption)
+void Report::_addLatexFigure( float wmm, float hmm, const std::string& scaption)
 {
-    if ( u3dfile.isEmpty())
-        return false;
+    assert(_os);
+    QTextStream &os = *_os;
+    const QString caption = QString::fromStdString(scaption);
 
     static int labelID = 0;
     const QString label = QString("label%1").arg(labelID++);
@@ -421,7 +424,7 @@ bool writefig( const QString& u3dfile, QTextStream& os, float wmm, float hmm, co
              3Dbg=1 1 1,
              3Dmenu,
              3Dviews=views.vws,
-             ]{}{)" << u3dfile << R"(}\\)" << Qt::endl;
+             ]{}{model.u3d}\\)" << Qt::endl;
 
     /* THESE DON'T WORK (and also aren't formatted well).
     os << "\\mediabutton[3Dgotoview=" << label << ":1]{\\fbox{RIGHT}}" << Qt::endl
@@ -433,16 +436,6 @@ bool writefig( const QString& u3dfile, QTextStream& os, float wmm, float hmm, co
         os << "\\caption*{" << caption << "}" << Qt::endl;
 
     os << "\\end{figure}" << Qt::endl;
-
-    return true;
-}   // end writefig
-}   // end namespace
-
-
-void Report::_addLatexFigure( float wmm, float hmm, const std::string& caption)
-{
-    assert(_os);
-    writefig( _u3dfile, *_os, wmm, hmm, QString( caption.c_str()));
 }   // end _addLatexFigure
 
 

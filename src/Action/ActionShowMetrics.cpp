@@ -260,9 +260,11 @@ bool ActionShowMetrics::_updateText( const FV *fv, int mid)
     std::string units;
     if ( !mc->units().isEmpty())
         units = " [" + mc->units().toStdString() + "]";
+    /*
     std::string bilat;
     if ( mc->isBilateral())
         bilat = " (R;L;Mean)";
+    */
 
     const Metric::GrowthData *gd = mc->growthData().current();
 
@@ -277,7 +279,7 @@ bool ActionShowMetrics::_updateText( const FV *fv, int mid)
 
     const size_t nds = mc->numDecimals();
     std::ostringstream oss;
-    oss << mc->name().toStdString() << units << bilat << inplane << "\n";
+    oss << mc->name().toStdString() << units << inplane << "\n";
     oss << std::fixed << std::setprecision(nds);
 
     oss << "Measure";
@@ -289,19 +291,18 @@ bool ActionShowMetrics::_updateText( const FV *fv, int mid)
     {
         std::ostringstream voss;    // Just used to check required space for text
         if ( mv)
-            voss << std::fixed << std::setprecision(nds) << mv->value(i);
+            voss << std::fixed << std::setprecision(nds) << fabs(mv->value(i));
         else
-            voss << std::fixed << std::setprecision(nds) << mvl->value(i);
-
-        fws[i] = int(voss.str().size()) + 1;
+            voss << std::fixed << std::setprecision(nds) << std::max<float>(fabs(mvl->value(i)), fabs(mvr->value(i)));
+        fws[i] = int(voss.str().size()) + 2;
 
         if ( mv)
             oss << std::right << std::setw(fws[i]) << mv->value(i);
         else
         {
-            oss << std::right << std::setw(fws[i]) << mvr->value(i) << "; ";
-            oss << std::right << std::setw(fws[i]) << mvl->value(i) << "; ";
-            oss << std::right << std::setw(fws[i]) << (0.5 * (mvl->value(i) + mvr->value(i)));
+            oss << std::right << std::setw(fws[i]) << mvr->value(i) << " (R)";
+            oss << std::right << std::setw(fws[i]) << mvl->value(i) << " (L)";
+            oss << std::right << std::setw(fws[i]) << (0.5 * (mvl->value(i) + mvr->value(i))) << " (Mean)";
         }   // end else
     }   // end for
 
@@ -330,14 +331,14 @@ bool ActionShowMetrics::_updateText( const FV *fv, int mid)
                     const double zsr = mvr->zscore( age, i);
                     const double zsl = mvl->zscore( age, i);
                     const double zsm = 0.5 * (zsl + zsr);
-                    oss << std::right << std::setw(fw) << zsr << "; "
-                                      << std::setw(fw) << zsl << "; "
-                                      << std::setw(fw) << zsm;
+                    oss << std::right << std::setw(fw) << zsr << " (R)"
+                                      << std::setw(fw) << zsl << " (L)"
+                                      << std::setw(fw) << zsm << " (Mean)";
                 }   // end if
                 else
                 {
-                    oss << std::right << std::setw(fw) << "----" << "; "
-                                      << std::setw(fw) << "----" << "; "
+                    oss << std::right << std::setw(fw) << "----"
+                                      << std::setw(fw) << "----"
                                       << std::setw(fw) << "----";
                 }   // end else
             }   // end if
