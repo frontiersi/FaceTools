@@ -111,8 +111,9 @@ void ActionExportPDF::doAction( Event)
     _err = "";
     const FM* fm = MS::selectedModel();
     const U3DCache::Filepath u3dfile = U3DCache::u3dfilepath(fm);
+    _report->setModelFile( *u3dfile);
     _tmpfile = _tmpdir.filePath( "report.pdf");
-    const bool genok = _report->generate( fm, *u3dfile, _tmpfile);   // May take time - make asynchronous?
+    const bool genok = _report->generate( fm, _tmpfile);   // May take time - make asynchronous?
     if ( !genok)
         _err = "Failed to generate report PDF!";
 }   // end doAction

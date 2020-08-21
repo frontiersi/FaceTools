@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,7 +41,6 @@ public:
     // Add some custom latex from within the generate function.
     void addCustomLatex( const QString&);
 
-    void setLogo( const QString& f) { _logofile = f;}
     void setHeaderName( const QString& n){ _headerName = n;}
     void setInkscape( const QString& exe){ _inkscape = exe;}    // Set the Inkscape exe (required for SVG output)
 
@@ -51,10 +50,15 @@ public:
     // Return true iff this report can be generated for the given model.
     bool isAvailable( const FM*) const;
 
+    // Set the filepath of the U3D model to include in the report if requested
+    // by report scripting function addFigure. Ensure this is called to set the
+    // model appropriately before calling generate.
+    void setModelFile( const QString &pathToU3DModel);
+
     // Generate a report for the given model and save to given filename returning true on success.
     // This function may take some time to run so best to run in separate thread and wait
     // for onFinishedGenerate signal to be emitted.
-    bool generate( const FM*, const QString& u3dfile, const QString& pdffile);
+    bool generate( const FM*, const QString& pdffile);
 
 signals:
     // Signal that report for the given model has finished being generated and is at the given location.
@@ -63,7 +67,7 @@ signals:
 
 private:
     QTemporaryDir& _tmpdir;
-    QString _logofile, _headerName;
+    QString _headerName;
     QString _inkscape;
     QString _name;
     QString _title;

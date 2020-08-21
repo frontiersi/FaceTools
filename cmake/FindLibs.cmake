@@ -349,7 +349,6 @@ if(WITH_QT)     # Qt5
     include_directories( ${Qt5Charts_INCLUDE_DIRS})
     include_directories( ${Qt5Sql_INCLUDE_DIRS})
     include_directories( ${Qt5Svg_INCLUDE_DIRS})
-
     set( QT_LIBRARIES Qt5::Core Qt5::Widgets Qt5::Charts Qt5::Sql Qt5::Svg)
 
     set( QT_LIB_DIR "${Qt5_DIR}/../..")
@@ -387,7 +386,7 @@ if(WITH_BOOST)  # Boost
         add_definitions( ${Boost_LIB_DIAGNOSTIC_DEFINITIONS})   # Info about Boost's auto linking
     endif()
 
-    set( Boost_NO_SYSTEM_PATHS TRUE)  # Don't search for Boost in system directories
+    set( Boost_NO_SYSTEM_PATHS ON)  # Don't search for Boost in system directories
     set( Boost_USE_STATIC_LIBS OFF CACHE BOOL "use static Boost libraries")
     set( Boost_USE_MULTITHREADED ON)
     set( Boost_USE_STATIC_RUNTIME OFF)

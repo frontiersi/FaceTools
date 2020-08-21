@@ -94,10 +94,15 @@ bool ReportManager::isAvailable()
 
 int ReportManager::load( const QString& sdir)
 {
-    // Copy the logo into the temporary directory for latex to include
-    QFile logo( _logopath);
+    static const std::string err = "[ERROR] FaceTools::Report::ReportManager::load: ";
+
+    // Copy the logo into the report generation directory
     _logofile = _tmpdir.filePath("logo.pdf");
-    logo.copy( _logofile);
+    if ( !QFile( _logopath).copy( _logofile))
+    {
+        std::cerr << err << "Unable to copy logo to report generation directory!" << std::endl;
+        return -1;
+    }   // end if
 
     _names.clear();
     _reports.clear();
@@ -105,18 +110,15 @@ int ReportManager::load( const QString& sdir)
     QDir rdir( sdir);
     if ( !rdir.exists() || !rdir.isReadable())
     {
-        static const std::string werr = "[WARNING] FaceTools::Report::ReportManager::load: ";
-        std::cerr << werr << "Unable to open directory: " << sdir.toStdString() << std::endl;
+        std::cerr << err << "Unable to open directory: " << sdir.toStdString() << std::endl;
         return -1;
     }   // end if
 
     const QStringList fnames = rdir.entryList( QDir::Files | QDir::Readable, QDir::Type | QDir::Name);
     int nrecs = 0;
     for ( const QString& fname : fnames)
-    {
         if ( !add( rdir.absoluteFilePath( rdir.absoluteFilePath(fname))).isEmpty())
             nrecs++;
-    }   // end for
 
     return nrecs;
 }   // end load
@@ -129,7 +131,6 @@ QString ReportManager::add( const QString& file)
     if ( !rep)
         return "";
 
-    rep->setLogo(_logofile);
     rep->setHeaderName(_hname);
     rep->setInkscape(_inkscape);
 
@@ -141,7 +142,7 @@ QString ReportManager::add( const QString& file)
     }   // end if
 #ifndef NDEBUG
     else
-        std::cerr << werr << "Overwriting report " << rep->name().toStdString() << std::endl;
+        std::cerr << werr << " Overwriting report " << rep->name().toStdString() << std::endl;
 #endif
 
     _reports[rep->name()] = rep;    // Possibly overwrites existing!

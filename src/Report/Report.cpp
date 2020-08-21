@@ -260,7 +260,13 @@ Report::Ptr Report::load( const QString& fname, QTemporaryDir& tdir)
 }   // end load
 
 
-bool Report::generate( const FM* fm, const QString& u3dfile, const QString& pdffile)
+void Report::setModelFile( const QString &pathToU3DModel)
+{
+    _u3dfile = QDir( _tmpdir.path()).relativeFilePath( pathToU3DModel);
+}   // end setModelFile
+
+
+bool Report::generate( const FM* fm, const QString& pdffile)
 {
     QFile pfile(pdffile);
     if ( pfile.exists() && !pfile.remove())
@@ -281,8 +287,6 @@ bool Report::generate( const FM* fm, const QString& u3dfile, const QString& pdff
     }   // end if
 
     _model = fm;
-    QFile::copy( _logofile, _tmpdir.filePath( "logo.pdf")); // Copy the logo into the report temporary directory
-    QFile::copy( u3dfile, _tmpdir.filePath( "model.u3d"));  // Copy the model into the report temporary directory
 
     _os = new QTextStream( &texfile);
     const bool writtenLatexOk = _writeLatex( *_os);
@@ -424,7 +428,7 @@ void Report::_addLatexFigure( float wmm, float hmm, const std::string& scaption)
              3Dbg=1 1 1,
              3Dmenu,
              3Dviews=views.vws,
-             ]{}{model.u3d}\\)" << Qt::endl;
+             ]{}{)" << _u3dfile << R"(}\\)" << Qt::endl;
 
     /* THESE DON'T WORK (and also aren't formatted well).
     os << "\\mediabutton[3Dgotoview=" << label << ":1]{\\fbox{RIGHT}}" << Qt::endl
@@ -492,7 +496,6 @@ void Report::_addLatexGrowthCurvesChart( int mid, size_t d, int footnotemark)
     cview.render( &painter, QRectF(0, 0, spx, spy), cview.viewport()->rect());
     painter.end();
 
-    //std::cout << "Chart image path: " << imgpath.toLocal8Bit().toStdString() << std::endl;
     if ( !usingSVG && !static_cast<QPixmap*>(pdev)->save( imgpath))
     {
         qWarning( "Unable to save PNG!");
@@ -507,14 +510,14 @@ void Report::_addLatexGrowthCurvesChart( int mid, size_t d, int footnotemark)
     if ( !qcaption.isEmpty())
         os << "\\caption*{" << qcaption << "}" << Qt::endl;
 
-    if ( _useSVG())
+    if ( usingSVG)
     {
-        os << R"(\includesvg[width=93.00mm]{)" << imname << "}" << Qt::endl;
+        os << "\\includesvg[width=93.00mm]{" << imname << "}" << Qt::endl;
         delete static_cast<QSvgGenerator*>(pdev);
     }   // end if
     else
     {
-        os << "\\includegraphics[width=\\linewidth]{" << imgpath << "}" << Qt::endl;
+        os << "\\includegraphics[width=\\linewidth]{" << imname << "}" << Qt::endl;
         delete static_cast<QPixmap*>(pdev);
     }   // end else
 
