@@ -70,6 +70,7 @@ public:
 private:
     ModelViewer *_viewer;
     bool _isVisible;
+    bool _hasSurface;
     int _id;
     Handle *_h0, *_h1;
     Handle *_g;     // Depth changing handle

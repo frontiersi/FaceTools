@@ -529,7 +529,7 @@ void checkCloser( float &minSqDist, Vec3f &nv, const Vec3f &vm, const Vec3f &v, 
 }   // end namespace
 
 
-Vec3f LandmarkSet::snapToVisible( const Vec3f &v, float snapSqDist) const
+Vec3f LandmarkSet::snapTo( const Vec3f &v, float snapSqDist) const
 {
     Vec3f nv = v;
     float minSqDist = FLT_MAX;
@@ -547,4 +547,4 @@ Vec3f LandmarkSet::snapToVisible( const Vec3f &v, float snapSqDist) const
         }   // end if
     }   // end for
     return nv;
-}   // end snapToVisible
+}   // end snapTo

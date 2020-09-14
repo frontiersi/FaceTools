@@ -31,13 +31,14 @@ ActionSetParallelProjection::ActionSetParallelProjection( const QString& dn, con
 {
     setCheckable(true,false);
     addTriggerEvent( Event::CLOSED_MODEL);
+    addRefreshEvent( Event::CAMERA_CHANGE);
 }   // end ctor
 
 
-bool ActionSetParallelProjection::checkState( Event e)
+bool ActionSetParallelProjection::update( Event e)
 {
     return MS::defaultViewer()->parallelProjection() && !has( e, Event::LOADED_MODEL);
-}   // end checkState
+}   // end update
 
 
 bool ActionSetParallelProjection::isAllowed( Event e) { return has( e, Event::CLOSED_MODEL) || FMM::numOpen() > 0;}

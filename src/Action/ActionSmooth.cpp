@@ -38,13 +38,13 @@ void ActionSmooth::setMaxIterations( size_t i) { s_maxi = i;}
 ActionSmooth::ActionSmooth( const QString& dn, const QIcon& ico) : FaceAction(dn, ico)
 {
     setAsync(true);
+    addRefreshEvent( Event::SURFACE_DATA_CHANGE);
 }   // end ctor
 
 
 bool ActionSmooth::isAllowed( Event)
 {
-    const Vis::FV* fv = MS::selectedView();
-    return fv && FaceModelCurvature::rmetrics( fv->data());
+    return MS::isViewSelected() && FaceModelCurvature::rmetrics( MS::selectedModel());
 }   // end isAllowed
 
 

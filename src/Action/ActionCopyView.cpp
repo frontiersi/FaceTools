@@ -36,6 +36,7 @@ using MS = FaceTools::Action::ModelSelector;
 ActionCopyView::ActionCopyView( FMV *tv, FMV *sv, const QString& dn, const QIcon& ico)
     : FaceAction(dn, ico), _tviewer(tv), _sviewer(sv)
 {
+    addRefreshEvent( Event::VIEWER_CHANGE);
 }   // end ctor
 
 

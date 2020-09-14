@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,7 +47,7 @@ public:
     void setCopyRightToCentreAction( QAction*);
 
 public slots:
-    void doOnUpdateModelLists( const FM*);
+    void doOnUpdateModelLists();
 
 private:
     std::vector<QToolButton*> _copyButton;
@@ -59,6 +59,7 @@ private:
     // The reference names (filenames) shown in the dropdown lists for attached models.
     std::unordered_map<const FM*, QString> _attachedNames;
 
+    void _updateModelLists( const FM*);
     void _setViewerVisible( size_t, bool);
     void _doOnViewerChanged( size_t, const Vis::FV*);
     void _doOnComboBoxChanged( size_t, const QString&);

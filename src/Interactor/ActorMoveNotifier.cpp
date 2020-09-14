@@ -28,11 +28,18 @@ using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
 
 
+bool ActorMoveNotifier::_isValidView( const vtkProp3D *prop) const
+{
+    FV *fv = viewFromActor(prop);
+    return fv && fv == MS::selectedView();
+}   // end _isValidView
+
+
 void ActorMoveNotifier::actorStart( const vtkProp3D* prop)
 {
-    FV* fv = viewFromActor( prop);
-    if ( fv)
+    if ( _isValidView(prop))
     {
+        FV* fv = viewFromActor( prop);
         emit onActorStart(fv);
         _cam = fv->viewer()->camera();
     }   // end if
@@ -41,9 +48,9 @@ void ActorMoveNotifier::actorStart( const vtkProp3D* prop)
 
 void ActorMoveNotifier::actorMove( const vtkProp3D* prop)
 {
-    FV* fv = viewFromActor( prop);
-    if ( fv) // Propogate the matrix of the affected actor to all associated FaceView actors.
+    if ( _isValidView(prop)) // Propogate the matrix of the affected actor to all associated FaceView actors.
     {
+        FV* fv = viewFromActor( prop);
         const vtkMatrix4x4 *vt = fv->transformMatrix();
         for ( FV* f : fv->data()->fvs())
             f->pokeTransform( vt);
@@ -67,9 +74,9 @@ void ActorMoveNotifier::actorMove( const vtkProp3D* prop)
 
 void ActorMoveNotifier::actorStop( const vtkProp3D* prop)
 {
-    FV* fv = viewFromActor( prop);
-    if ( fv)
+    if ( _isValidView(prop))
     {
+        FV* fv = viewFromActor( prop);
         // Catch up the data transform to the actor's.
         const vtkMatrix4x4 *vt = fv->transformMatrix();
         FM* fm = fv->data();

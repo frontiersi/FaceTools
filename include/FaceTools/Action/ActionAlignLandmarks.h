@@ -19,14 +19,13 @@
 #define FACE_TOOLS_ACTION_ALIGN_LANDMARKS_H
 
 #include "FaceAction.h"
-#include <FaceTools/Interactor/LandmarksHandler.h>
 
 namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionAlignLandmarks : public FaceAction
 { Q_OBJECT
 public:
-    ActionAlignLandmarks( const QString&, const QIcon&, Interactor::LandmarksHandler::Ptr);
+    ActionAlignLandmarks( const QString&, const QIcon&);
 
     QString toolTip() const override;
     QString whatsThis() const override;
@@ -36,9 +35,6 @@ protected:
     bool doBeforeAction( Event) override;
     void doAction( Event) override;
     Event doAfterAction( Event) override;
-
-private:
-    Interactor::LandmarksHandler::Ptr _handler;
 };  // end class
 
 }}   // end namespace

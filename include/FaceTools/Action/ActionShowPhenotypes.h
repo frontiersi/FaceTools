@@ -33,7 +33,7 @@ public:
 
 protected:
     void postInit() override;
-    bool checkState( Event) override;
+    bool update( Event) override;
     void doAction( Event) override;
 
 private:

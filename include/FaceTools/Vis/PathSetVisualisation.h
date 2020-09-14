@@ -26,17 +26,19 @@ namespace FaceTools { namespace Vis {
 class FaceTools_EXPORT PathSetVisualisation : public BaseVisualisation
 {
 public:
+    PathSetVisualisation();
     ~PathSetVisualisation() override;
 
     const char* name() const override { return "PathSetVisualisation";}
 
     bool applyToAllInViewer() const override { return false;}
-    bool applyToAllViewers() const override { return false;}
+    bool applyToAllViewers() const override { return true;}
 
     bool isAvailable( const FV*, const QPoint*) const override;
 
     float minAllowedOpacity() const override { return 0.1f;}
-    float maxAllowedOpacity() const override { return 1.0f;}
+    float maxAllowedOpacity() const override { return _maxOpacity;}
+    void setMaxAllowedOpacity( float v);
 
     bool belongs( const vtkProp*, const FV*) const override;
 
@@ -58,17 +60,18 @@ public:
 
     // Update text info from the specified path from the given model.
     // Text displayed at display coordinates x,y.
-    void setText( const FM*, int pid, int x, int y);
+    void updateCaption( const FM*, int pid, int x, int y);
 
     // Show the text caption just for the given view (turns off others).
-    void showText( const Vis::FV* fv=nullptr);
+    void showCaption( const Vis::FV* fv=nullptr);
 
-    void refreshState( const FV*) override;
+    void refresh( const FV*) override;
     void syncWithViewTransform( const FV*) override;
 
 private:
     // The paths associated with a FV.
     std::unordered_map<const FV*, PathSetView*> _views;
+    float _maxOpacity;
     bool _hasView( const FV*) const;
 };  // end class
 

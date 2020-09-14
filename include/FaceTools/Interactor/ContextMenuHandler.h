@@ -15,13 +15,38 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <Interactor/PropHandler.h>
-#include <Action/ModelSelector.h>
-using FaceTools::Interactor::PropHandler;
+#ifndef FACE_TOOLS_CONTEXT_MENU_HANDLER_H
+#define FACE_TOOLS_CONTEXT_MENU_HANDLER_H
 
-PropHandler::PropHandler()
-{
-    const SelectNotifier* sn = Action::ModelSelector::selector();
-    connect( sn, &SelectNotifier::onEnterProp, this, &PropHandler::doEnterProp);
-    connect( sn, &SelectNotifier::onLeaveProp, this, &PropHandler::doLeaveProp);
-}   // end ctor
+#include "GizmoHandler.h"
+#include <FaceTools/Action/FaceAction.h>
+#include <QMenu>
+
+namespace FaceTools { namespace Interactor {
+
+class FaceTools_EXPORT ContextMenuHandler : public GizmoHandler
+{ Q_OBJECT
+public:
+    using Ptr = std::shared_ptr<ContextMenuHandler>;
+    static Ptr create();
+
+    void refresh() override;
+
+    void addAction( Action::FaceAction*);
+    void addSeparator();
+
+private:
+    bool doRightButtonDown() override;
+    bool doRightButtonUp() override;
+
+    int _rDownTime;
+    QPoint _mDownPos;
+    QMenu _cmenu;
+    std::vector<Action::FaceAction*> _actions;
+
+    ContextMenuHandler();
+};  // end class
+
+}}   // end namespace
+
+#endif

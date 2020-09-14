@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ public:
     QString toolTip() const override { return "Toggles rendering of the surface 'backface' on and off.";}
 
 protected:
-    bool checkState( Event) override;
+    bool update( Event) override;
     bool isAllowed( Event) override;
     void doAction( Event) override;
     Event doAfterAction( Event) override;

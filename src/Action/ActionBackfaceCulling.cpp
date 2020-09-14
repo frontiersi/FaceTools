@@ -34,7 +34,7 @@ ActionBackfaceCulling::ActionBackfaceCulling( const QString& dn, const QIcon& ic
 }   // end ctor
 
 
-bool ActionBackfaceCulling::checkState( Event e)
+bool ActionBackfaceCulling::update( Event e)
 {
     bool rval = false;
     const FV* fv = MS::selectedView();
@@ -45,7 +45,7 @@ bool ActionBackfaceCulling::checkState( Event e)
             rval = false;
     }   // end if
     return rval;
-}   // end checkState
+}   // end update
 
 
 bool ActionBackfaceCulling::isAllowed( Event) { return MS::isViewSelected();}   // end isAllowed

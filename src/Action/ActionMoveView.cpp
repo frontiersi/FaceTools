@@ -38,6 +38,7 @@ ActionMoveView::ActionMoveView( FMV *tv, FMV *sv, const QString& dn, const QIcon
     : FaceAction(dn, ico), _tviewer(tv), _sviewer(sv)
 {
     assert( _tviewer);
+    addRefreshEvent( Event::VIEWER_CHANGE);
 }   // end ctor
 
 

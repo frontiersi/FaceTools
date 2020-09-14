@@ -44,7 +44,7 @@ public:
 
     void syncWithViewTransform( const FV*) override;
 
-    void refreshState( const FV*) override;
+    void refresh( const FV*) override;
 
 private:
     std::unordered_map<const FV*, T> _views;

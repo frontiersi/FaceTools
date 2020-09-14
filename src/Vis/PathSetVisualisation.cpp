@@ -32,6 +32,9 @@ using FaceTools::FM;
 using FaceTools::Path;
 
 
+PathSetVisualisation::PathSetVisualisation() : _maxOpacity(1.0f) {}
+
+
 PathSetVisualisation::~PathSetVisualisation()
 {
     while (!_views.empty())
@@ -49,6 +52,12 @@ bool PathSetVisualisation::belongs( const vtkProp* prop, const FV* fv) const
 {
     return pathHandle( fv, prop) != nullptr;
 }   // end belongs
+
+
+void PathSetVisualisation::setMaxAllowedOpacity( float v)
+{
+    _maxOpacity = std::min<float>( 1.0f, std::max<float>( minAllowedOpacity(), v));
+}   // end setMaxAllowedOpacity
 
 
 void PathSetVisualisation::apply( const FV* fv, const QPoint*)
@@ -144,23 +153,23 @@ void PathSetVisualisation::syncPaths( const FM* fm)
 }   // end syncPaths
 
 
-void PathSetVisualisation::setText( const FM* fm, int pid, int xpos, int ypos)
+void PathSetVisualisation::updateCaption( const FM* fm, int pid, int xpos, int ypos)
 {
+    const Mat3f iR = fm->inverseTransformMatrix().block<3,3>(0,0);
     const Path& path = fm->currentPaths().path(pid);
     for ( FV* fv : fm->fvs())
         if ( _hasView(fv))
-            _views.at(fv)->setText( path, xpos, ypos);
-}   // end setText
+            _views.at(fv)->setCaption( path, xpos, ypos, iR);
+}   // end updateCaption
 
 
-void PathSetVisualisation::showText( const FV *fv)
+void PathSetVisualisation::showCaption( const FV *fv)
 {
     for ( auto& p : _views)
-        p.second->setTextVisible(false);
-
+        p.second->setCaptionVisible(false);
     if ( _hasView(fv))
-        _views.at(fv)->setTextVisible(true);
-}   // end showText
+        _views.at(fv)->setCaptionVisible(true);
+}   // end showCaption
 
 
 PathView::Handle* PathSetVisualisation::pathHandle( const FV* fv, const vtkProp* prop) const
@@ -189,14 +198,11 @@ void PathSetVisualisation::syncWithViewTransform( const FV* fv)
 }   // end syncWithViewTransform
 
 
-void PathSetVisualisation::refreshState( const FV *fv)
+void PathSetVisualisation::refresh( const FV *fv)
 {
     if ( _hasView(fv))
-    {
         _views.at(fv)->updateTextColours();
-        //syncPaths( fv->data());
-    }   // end if
-}   // end refreshState
+}   // end refresh
 
 
 bool PathSetVisualisation::_hasView( const FV* fv) const { return fv && _views.count(fv) > 0;}

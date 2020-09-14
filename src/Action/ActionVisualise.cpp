@@ -31,32 +31,60 @@ using MS = FaceTools::Action::ModelSelector;
 ActionVisualise::ActionVisualise( const QString& dn, const QIcon& ic, BaseVisualisation* vis, const QKeySequence& ks)
     : FaceAction( dn, ic, ks), _vis(vis)
 {
-    assert(vis);
     setCheckable( true, false);
 }   // end ctor
 
 
-bool ActionVisualise::checkState( Event e)
+FaceTools::FVS ActionVisualise::_getWorkViews()
 {
-    FV* fv = MS::selectedView();
-    if ( !fv)
-        return false;
-
-    if ( !_vis->isAvailable( fv, &primedMousePos()))
+    FV* sfv = MS::selectedView();
+    FVS fvs;
+    if ( sfv)
     {
-        if ( _vis->isVisible( fv))
-            _vis->setVisible( fv, false);
-        return false;
-    }   // end if
+        if ( _vis->applyToAllViewers())
+        {
+            _evg |= Event::ALL_VIEWERS;
+            fvs = sfv->data()->fvs();
+        }   // end if
+        else
+            fvs.insert(sfv);
 
-    if ( _vis->isVisible(fv))
+        if ( _vis->applyToAllInViewer())
+        {
+            FVS afvs;
+            for ( const FV* fv : fvs)
+                afvs.insert( fv->viewer()->attached());
+            fvs.insert(afvs);
+            _evg |= Event::ALL_VIEWS;
+        }   // end if
+    }   // end sfv
+
+    return fvs;
+}   // end _getWorkViews
+
+
+bool ActionVisualise::update( Event e)
+{
+    bool rval = false;
+    FVS fvs = _getWorkViews();
+    const bool isTrigger = isTriggerEvent(e);
+    for ( FV *fv : fvs)
     {
-        _vis->refreshState( fv);
-        return true;
-    }   // end if
+        if ( _vis->isAvailable( fv, &primedMousePos()) && (_vis->isVisible(fv) || isTrigger))
+        {
+            rval = true;
+            if ( _vis->isVisible(fv))   // Refresh if already visible
+                _vis->refresh( fv);
+        }   // end if
+        else if ( _vis->isVisible( fv))
+            _vis->setVisible( fv, false);   // Hide visualisation
+    }   // end for
 
-    return isTriggerEvent(e);
-}   // end checkState
+    if ( !fvs.empty())
+        MS::updateRender();
+
+    return rval;
+}   // end update
 
 
 bool ActionVisualise::isAllowed( Event)
@@ -78,28 +106,8 @@ void ActionVisualise::_toggleVis( FV* fv, const QPoint* mc) const
 void ActionVisualise::doAction( Event)
 {
     _evg = Event::VIEW_CHANGE;
-
-    FV* sfv = MS::selectedView();
-    assert( sfv);
-    FVS fvs;
-    fvs.insert(sfv);
-
-    if ( _vis->applyToAllViewers())
-    {
-        fvs = sfv->data()->fvs();
-        _evg |= Event::ALL_VIEWERS;
-    }   // end if
-
-    if ( _vis->applyToAllInViewer())
-    {
-        FVS afvs;
-        for ( const FV* fv : fvs)
-            afvs.insert( fv->viewer()->attached());
-        fvs.insert(afvs);
-        _evg |= Event::ALL_VIEWS;
-    }   // end if
-
-    QPoint mc = primedMousePos();
+    FVS fvs = _getWorkViews();
+    const QPoint& mc = primedMousePos();
     for ( FV* fv : fvs)
         if ( _vis->isAvailable( fv, &mc))
             _toggleVis( fv, &mc);

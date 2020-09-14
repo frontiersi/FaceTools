@@ -18,6 +18,7 @@
 #include <Action/ActionDetectFace.h>
 #include <Action/ActionAlignModel.h>
 #include <Action/ActionRestoreLandmarks.h>
+#include <Action/ActionOrientCameraToFace.h>
 #include <Detect/FaceAlignmentFinder.h>
 #include <LndMrk/LandmarksManager.h>
 #include <boost/filesystem/path.hpp>
@@ -74,7 +75,7 @@ bool ActionDetectFace::doBeforeAction( Event)
     if ( goDetect)
     {
         MS::showStatus("Detecting face - please wait ...");
-        _ev = Event::MESH_CHANGE | Event::MASK_CHANGE | Event::AFFINE_CHANGE;
+        _ev = Event::MESH_CHANGE | Event::MASK_CHANGE | Event::AFFINE_CHANGE | Event::VIEW_CHANGE;
         if ( !_ulmks.empty())
             _ev |= Event::LANDMARKS_CHANGE;
         storeUndo( this, _ev);
@@ -109,7 +110,7 @@ void ActionDetectFace::detect( FM* fm, const IntSet &ulmks)
     if ( !ulmks.empty())
     {
         //std::cout << "Transferring landmarks..." << std::endl;
-        ActionRestoreLandmarks::restoreLandmarks( fm, ulmks);
+        ActionRestoreLandmarks::restoreLandmarks( fm, ulmks, false);
     }   // end if
 
     //std::cout << "Doing Procrustes alignment of the coregistered mask with the original..." << std::endl;
@@ -123,8 +124,12 @@ void ActionDetectFace::detect( FM* fm, const IntSet &ulmks)
 
 Event ActionDetectFace::doAfterAction( Event)
 {
+    ActionOrientCameraToFace::orientToFace( MS::selectedView(), 1);
     MS::clearStatus();
     MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-    MS::showStatus( "Detected face and placed landmarks.", 5000);
+    QString plusLmks;
+    if ( has( _ev, Event::LANDMARKS_CHANGE))
+        plusLmks = " and placed landmarks";
+    MS::showStatus( QString("Detected face%1.").arg(plusLmks), 5000);
     return _ev;
 }   // end doAfterAction

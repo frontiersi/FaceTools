@@ -36,6 +36,8 @@ public:
     bool attach( Vis::FV*);
     bool detach( Vis::FV*);
 
+    bool isZeroArea() const;
+
     const FVS& attached() const { return _attached;}
     bool isAttached( const FM* fm) const { return _models.count(fm) > 0;}
     Vis::FV* get( const FM* fm) const; // Pointer to view/control of given model or null if model not attached.

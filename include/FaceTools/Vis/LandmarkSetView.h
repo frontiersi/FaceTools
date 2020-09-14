@@ -32,7 +32,7 @@ public:
     void setLandmarkRadius( double);
     double landmarkRadius() const { return _lmrad;}
 
-    void setColour( const Vec3f&);
+    void setSelectedColour( bool);
 
     void setVisible( bool, ModelViewer*);
     bool isVisible() const { return _visible;}
@@ -40,8 +40,7 @@ public:
     void showLandmark( bool, int lmID);
 
     void setLabelVisible( bool, int, FaceSide);
-
-    void setLandmarkColour( const Vec3f&, int, FaceSide);
+    void setHighlighted( bool, int, FaceSide);
 
     // Set the untransformed landmark position.
     void set( int, FaceSide, const Vec3f&);
@@ -67,6 +66,7 @@ private:
 
     void _remove( int, SphereMap&, PropMap&);
     void _set( int, FaceSide, SphereMap&, PropMap&, const Vec3f&);
+    void _setLandmarkColour( const Vec3f&, int, FaceSide);
     LandmarkSetView( const LandmarkSetView&) = delete;
     void operator=( const LandmarkSetView&) = delete;
 };  // end class

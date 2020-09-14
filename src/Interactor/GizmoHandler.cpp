@@ -15,34 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_CONTEXT_MENU_H
-#define FACE_TOOLS_CONTEXT_MENU_H
+#include <Interactor/GizmoHandler.h>
+using FaceTools::Interactor::GizmoHandler;
 
-#include "MouseHandler.h"
-#include <FaceTools/Action/FaceAction.h>
-#include <QMenu>
 
-namespace FaceTools { namespace Interactor {
-
-class FaceTools_EXPORT ContextMenu : public MouseHandler
-{
-public:
-    ContextMenu();
-
-    void addAction( Action::FaceAction*);
-    void addSeparator();
-
-private:
-    bool rightButtonDown() override;
-    bool rightButtonUp() override;
-
-    int _rDownTime;
-    QPoint _mDownPos;
-    QMenu _cmenu;
-    std::vector<Action::FaceAction*> _actions;
-    size_t _testEnabledActions() const;
-};  // end class
-
-}}   // end namespace
-
-#endif
+GizmoHandler::GizmoHandler() : _enabled(false), _vwr(nullptr), _prop(nullptr) {}

@@ -71,6 +71,7 @@ ActionToggleAxes::ActionToggleAxes( const QString& dn, const QIcon& ico, const Q
     : FaceAction( dn, ico, ks)
 {
     setCheckable( true, false);
+    addRefreshEvent( Event::LOADED_MODEL);
 }   // end ctor
 
 
@@ -125,7 +126,7 @@ void ActionToggleAxes::_addViewer( FMV* fmv)
 }   // end _addViewer
 
 
-bool ActionToggleAxes::checkState( Event e)
+bool ActionToggleAxes::update( Event e)
 {
     const bool chk = has( Event::LOADED_MODEL, e) || (isChecked() && MS::isViewSelected());
     for ( const auto& p : _viewers)
@@ -134,10 +135,7 @@ bool ActionToggleAxes::checkState( Event e)
         p.second->SetVisibility(chk);
     }   // end for
     return chk;
-}   // end checkState
+}   // end update
 
 
-bool ActionToggleAxes::isAllowed( Event)
-{
-    return MS::isViewSelected();
-}   // end isAllowed
+bool ActionToggleAxes::isAllowed( Event) { return MS::isViewSelected();}

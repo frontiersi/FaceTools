@@ -32,6 +32,10 @@ using LMAN = FaceTools::Landmark::LandmarksManager;
 
 namespace {
 const double ALPHA = 0.99;
+const Vec3f BASE_COL( 0.6f, 0.2f, 1.0f);
+const Vec3f CURR_COL( 0.4f, 1.0f, 0.1f);
+const Vec3f HGLT_COL( 1.0f, 1.0f, 0.7f);
+const Vec3f MOVG_COL( 1.0f, 0.0f, 0.7f);
 }   // end namespace
 
 
@@ -47,12 +51,18 @@ LandmarkSetView::~LandmarkSetView()
 }   // end dtor
 
 
-void LandmarkSetView::setColour( const Vec3f& c)
+void LandmarkSetView::setSelectedColour( bool isSelected)
 {
-    const double r = c[0];
-    const double g = c[1];
-    const double b = c[2];
+    double r = BASE_COL[0];
+    double g = BASE_COL[1];
+    double b = BASE_COL[2];
     const double a = ALPHA;
+    if ( isSelected)
+    {
+        r = CURR_COL[0];
+        g = CURR_COL[1];
+        b = CURR_COL[2];
+    }   // end if
 
     for ( auto& p : _lviews) p.second->setColour( r, g, b, a);
     for ( auto& p : _mviews) p.second->setColour( r, g, b, a);
@@ -63,7 +73,7 @@ void LandmarkSetView::setColour( const Vec3f& c)
     for ( auto& p : _lviews) p.second->setCaptionColour( fg);
     for ( auto& p : _mviews) p.second->setCaptionColour( fg);
     for ( auto& p : _rviews) p.second->setCaptionColour( fg);
-}   // end setColour
+}   // end setSelectedColour
 
 
 void LandmarkSetView::setVisible( bool enable, ModelViewer* viewer)
@@ -114,7 +124,7 @@ void LandmarkSetView::setLabelVisible( bool enable, int lm, FaceSide lat)
 }   // end setLabelVisible
 
 
-void LandmarkSetView::setLandmarkColour( const Vec3f &col, int lm, FaceSide lat)
+void LandmarkSetView::_setLandmarkColour( const Vec3f &col, int lm, FaceSide lat)
 {
     const double r = col[0];
     const double g = col[1];
@@ -127,7 +137,16 @@ void LandmarkSetView::setLandmarkColour( const Vec3f &col, int lm, FaceSide lat)
         _mviews.at(lm)->setColour( r, g, b, a);
     else if ( (lat & RIGHT) && _rviews.count(lm) > 0)
         _rviews.at(lm)->setColour( r, g, b, a);
-}   // end setLandmarkColour
+}   // end _setLandmarkColour
+
+
+void LandmarkSetView::setHighlighted( bool enable, int lm, FaceSide lat)
+{
+    const Vec3f *col = &CURR_COL;
+    if ( enable)
+        col = LMAN::isLocked(lm) ? &HGLT_COL : &MOVG_COL;
+    _setLandmarkColour( *col, lm, lat);
+}   // end setHighlighted
 
 
 void LandmarkSetView::setLandmarkRadius( double r)
@@ -213,7 +232,7 @@ void LandmarkSetView::_set( int lm, FaceSide lat, SphereMap& views, PropMap& pro
     {
         sv = views[lm] = new SphereView( pos, _lmrad, true/*pickable*/, true/*fixed scale*/);
         props[sv->prop()] = lm;
-        sv->setColour( 1, 1, 1, ALPHA);
+        sv->setColour( BASE_COL[0], BASE_COL[1], BASE_COL[2], ALPHA);
         sv->setResolution(21);
     }   // end if
     sv->setCaption( LMAN::makeLandmarkString( lm, lat).toStdString());

@@ -86,7 +86,7 @@ public:
      * Only unlocked actions (unlocked is the default) can be enabled and executed.
      * It doesn't matter if a descendent class's isAllowed() function returns
      * true since the lock value is checked here in the parent class before enabling.
-     * Calling setLocked will call refreshState on this action immediately afterwards.
+     * Calling setLocked will call refresh on this action immediately afterwards.
      */
     bool isUnlocked() const { return _unlocked;}
     void setLocked( bool);
@@ -100,25 +100,32 @@ public:
     bool isWorking() const { return _isWorking;}
 
     /**
-     * Some actions may need the mouse position at the time they are actioned. This may be
-     * different from the current mouse position during the call to doBeforeAction since
-     * the action can be executed by a variety of means. Calling this function allows clients
-     * to prime this action with a default mouse position before the action is executed.
-     * This primed mouse position is reset after the action finishes executing so must be
-     * reprimed by the client if necessary.
+     * Some actions may need the mouse position at time of actioning. This may be different from the
+     * mouse position during the call to doBeforeAction since the action can be executed by a variety
+     * of means. This function primes the action with a default mouse position before the action is
+     * executed. This primed mouse position is reset after the action finishes so must be reprimed by
+     * the client if necessary. After priming the mouse position, refresh is called to allow the
+     * action to test its readiness based on the provided mouse position. If the action is not
+     * enabled with the primed mouse position, the mouse position is deprimed (set as -1,-1).
+     * Returns true iff the action is allowed to execute after priming.
      */
-    void primeMousePos( const QPoint& p=QPoint(-1,-1));
+    bool primeMousePos( const QPoint& p=QPoint(-1,-1));
 
     /**
-     * Derived types can specify the events that they wish to be purged for, and/or triggered by.
+     * Derived types can specify the events that they wish to be purged for, triggered, and/or refreshed by.
      * For any event, purging comes before refreshing (checking state/enable) which comes before triggering.
     */
     void addPurgeEvent( Event);
     bool isPurgeEvent( Event) const;
     Event purgeEvents() const { return _pevents;}
+
     void addTriggerEvent( Event);
     bool isTriggerEvent( Event) const;
     Event triggerEvents() const { return _tevents;}
+
+    void addRefreshEvent( Event);
+    bool isRefreshEvent( Event) const;
+    Event refreshEvents() const { return _revents;}
 
 signals:
     void onEvent( Event);   // Report to others that state changing event(s) have occurred.
@@ -136,10 +143,10 @@ public slots:
      * 2) doBeforeAction (in GUI thread)
      * 3) doAction  (in GUI thread OR background thread)
      * 4) doAfterAction (in GUI thread)
-     * 5) refreshState (in GUI thread)
+     * 5) refresh (in GUI thread)
      * 6) onEvent( Event::NONE)
      * Calls after 2 are only made if doBeforeAction returns true. If doBeforeAction returns false,
-     * then refreshState is called followed by the emission of signal onEvent( Event::ACT_CANCELLED).
+     * then refresh is called followed by the emission of signal onEvent( Event::ACT_CANCELLED).
      * Note that BEFORE doBeforeAction until AFTER doAfterAction (or after false is returned from
      * doBeforeAction), the action will return false from isEnabled() and true from _isRunning().
      * True is eventually returned from execute() iff doBeforeAction returns true.
@@ -180,28 +187,27 @@ protected:
     virtual void purge( const FM*){}
 
     /**
-     * First calls checkState on self and sets the action's checked state to the returned value.
-     * Then calls isAllowed on self and sets the action's enabled state to the returned value.
-     * This function is called at the end of this action being executed just prior to the
-     * final onEvent signal being emitted. It can also be called internally at any point.
+     * Derived actions should test the application's state, configure themselves accordingly,
+     * and return whether they should be checked or not (the returned value is used as the parameter
+     * to setChecked). The returned value is ignored if this action is not checkable. The passed
+     * in Event is the reason for calling this function.
      */
-    void refreshState( Event e=Event::NONE);
+    virtual bool update( Event) { return isChecked();}
 
     /**
-     * Derived actions should test the
-     * application's state, configure themselves accordingly, and return whether they should be
-     * checked or not (the returned value is used as the parameter to setChecked). The returned
-     * value is ignored if this action is not checkable. The passed in Event is the reason for
-     * calling this function.
-     */
-    virtual bool checkState( Event) { return isChecked();}
-
-    /**
-     * Called immediately after checkState, this function should return whether or not this action
+     * Called immediately after update, this function should return whether or not this action
      * should be enabled. Only enabled actions are available to the user and to be executed
      * in response to received events.
      */
     virtual bool isAllowed( Event) { return _unlocked;}
+
+    /**
+     * First calls update on self and sets the action's checked state to the returned value.
+     * Then calls isAllowed on self and sets the action's enabled state to the returned value.
+     * This function is called at the end of this action being executed just prior to the
+     * final onEvent signal being emitted. It can also be called internally at any point.
+     */
+    void refresh( Event e=Event::NONE);
 
     /**
      * doBeforeAction always occurs in the GUI thread so this is where to show dialogs etc in order to get
@@ -264,6 +270,7 @@ private:
     bool _unlocked; // If true, this action is enabled (true by default)
     Event _pevents; // Purge events
     Event _tevents; // Trigger events
+    Event _revents; // Refresh events
     QPoint _mpos;   // The primed mouse position
 
     void _pinit();
@@ -280,7 +287,6 @@ private:
     friend class FaceActionManager;
     friend class UndoStates;
     friend class UndoState;
-    friend class Interactor::ContextMenu;
     FaceAction( const FaceAction&) = delete;
     void operator=( const FaceAction&) = delete;
 };  // end class

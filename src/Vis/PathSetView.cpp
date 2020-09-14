@@ -32,12 +32,12 @@ using ViewPair = std::pair<int, PathView*>;
 PathSetView::PathSetView() : _viewer(nullptr)
 {
     // The bottom right text.
-    _text->GetTextProperty()->SetJustificationToRight();
-    _text->GetTextProperty()->SetFontFamilyToCourier();
-    _text->GetTextProperty()->SetFontSize(21);
-    _text->GetTextProperty()->SetBackgroundOpacity(0.7);
-    _text->SetPickable( false);
-    _text->SetVisibility(false);
+    _caption->GetTextProperty()->SetJustificationToRight();
+    _caption->GetTextProperty()->SetFontFamilyToCourier();
+    _caption->GetTextProperty()->SetFontSize(21);
+    _caption->GetTextProperty()->SetBackgroundOpacity(0.7);
+    _caption->SetPickable( false);
+    _caption->SetVisibility(false);
 }   // end ctor
 
 
@@ -50,7 +50,7 @@ PathSetView::~PathSetView()
 void PathSetView::setVisible( bool enable, ModelViewer *viewer)
 {
     if ( _viewer)
-        _viewer->remove(_text);
+        _viewer->remove(_caption);
 
     while ( !_visible.empty())
         _showPath( false, *_visible.begin());
@@ -61,7 +61,7 @@ void PathSetView::setVisible( bool enable, ModelViewer *viewer)
     {
         for ( const auto& p : _views)
             _showPath( true, p.first);
-        _viewer->add(_text);
+        _viewer->add(_caption);
     }   // end if
 }   // end setVisible
 
@@ -89,30 +89,39 @@ std::string appendValue( float v, const std::string &send="")
 }   // end namespace
 
 
-void PathSetView::setText( const Path& path, int xpos, int ypos)
+void PathSetView::setCaption( const Path& path, int xpos, int ypos, const Mat3f &iR)
 {
     const std::string lnunits = FaceTools::FM::LENGTH_UNITS.toStdString();
     // Set the text contents for the label and the caption
-    std::ostringstream oss0, oss1, oss2, oss3, oss4, oss5, oss6;
+    std::ostringstream oss0, oss1, oss2, oss3, oss4, oss5, oss6, oss7, oss8, oss9;
     if ( !path.name().empty())
         oss0 << std::left << std::setfill(' ') << std::setw(21) << path.name() << std::endl;
-    oss1 << "   Surface:";
-    oss2 << "\n  Direct:" << appendValue( path.euclideanDistance(), lnunits);
-    oss3 << "\n   Ratio:" << appendValue( path.surface2EuclideanRatio());
-    oss4 << "\n   Depth:" << appendValue( path.depth(), lnunits);
-    oss5 << "\n   Angle:" << appendValue( path.angleAtDepth(), "degs");
-    oss6 << "\n    Area:" << appendValue( path.crossSectionalArea(), lnunits + "^2");
-    float psum = path.surfaceDistance();
-    if ( psum > 0.0f)
-        oss1 << appendValue( psum, lnunits);
+
+    if (path.validPath())
+    {
+        oss1 << "   Surface:" << appendValue( path.surfaceDistance(), lnunits);
+        oss3 << "\n   Ratio:" << appendValue( path.surface2EuclideanRatio());
+    }   // end if
     else
-        oss1 << " N/A ";
-    _text->SetInput( (oss0.str() + oss1.str() + oss2.str() + oss3.str() + oss4.str() + oss5.str() + oss6.str()).c_str());
-    _text->SetDisplayPosition( xpos, ypos);
-}   // end setText
+    {
+        oss1 << "   Surface:  Not Found  ";
+        oss3 << "\n   Ratio:     N/A     ";
+    }   // end else
+
+    const Vec3f avec = iR * path.deltaVector();
+    oss2 << "\n  Direct:" << appendValue( path.euclideanDistance(), lnunits);
+    oss4 << "\n  X Size:" << appendValue( fabsf(avec[0]), lnunits);
+    oss5 << "\n  Y Size:" << appendValue( fabsf(avec[1]), lnunits);
+    oss6 << "\n  Z Size:" << appendValue( fabsf(avec[2]), lnunits);
+    oss7 << "\n   Depth:" << appendValue( path.depth(), lnunits);
+    oss8 << "\n   Angle:" << appendValue( path.angleAtDepth(), "degs");
+    oss9 << "\n    Area:" << appendValue( path.crossSectionalArea(), lnunits + "^2");
+    _caption->SetInput( (oss0.str() + oss1.str() + oss2.str() + oss3.str() + oss4.str() + oss5.str() + oss6.str() + oss7.str() + oss8.str() + oss9.str()).c_str());
+    _caption->SetDisplayPosition( xpos, ypos);
+}   // end setCaption
 
 
-void PathSetView::setTextVisible( bool v) { _text->SetVisibility(v);}
+void PathSetView::setCaptionVisible( bool v) { _caption->SetVisibility(v);}
 
 
 PathView::Handle* PathSetView::handle( const vtkProp* prop) const
@@ -200,8 +209,8 @@ void PathSetView::updateTextColours()
     {
         const QColor bg = _viewer->backgroundColour();
         const QColor fg = chooseContrasting(bg);
-        _text->GetTextProperty()->SetBackgroundColor( bg.redF(), bg.greenF(), bg.blueF());
-        _text->GetTextProperty()->SetColor( fg.redF(), fg.greenF(), fg.blueF());
+        _caption->GetTextProperty()->SetBackgroundColor( bg.redF(), bg.greenF(), bg.blueF());
+        _caption->GetTextProperty()->SetColor( fg.redF(), fg.greenF(), fg.blueF());
         for ( auto& p : _views)
             p.second->updateColours();
     }   // end if

@@ -35,16 +35,8 @@ ActionToggleScalarLegend::ActionToggleScalarLegend( const QString& dn)
     : FaceAction( dn)
 {
     setCheckable(true,true);
+    addRefreshEvent( Event::VIEW_CHANGE);
 }   // end ctor
-
-
-ActionToggleScalarLegend::~ActionToggleScalarLegend()
-{
-    /*
-    for ( const auto& p : _legends)
-        delete p.second;
-    */
-}   // end dtor
 
 
 void ActionToggleScalarLegend::postInit()
@@ -81,7 +73,7 @@ void updateLabelProperties( vtkTextProperty* tp)
 }   // end namespace
 
 
-bool ActionToggleScalarLegend::checkState( Event)
+bool ActionToggleScalarLegend::update( Event)
 {
     for ( const auto& p : _legends)
     {
@@ -130,4 +122,4 @@ bool ActionToggleScalarLegend::isAllowed( Event)
             if ( fv->activeScalars())
                 return true;
     return false;
-}   // end isAllowedd
+}   // end isAllowed

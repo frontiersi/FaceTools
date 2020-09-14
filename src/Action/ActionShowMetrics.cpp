@@ -18,6 +18,7 @@
 #include <Action/ActionShowMetrics.h>
 #include <Action/ActionSetParallelProjection.h>
 #include <Metric/MetricManager.h>
+#include <Interactor/LandmarksHandler.h>
 #include <FileIO/FaceModelManager.h>
 #include <Vis/MetricVisualiser.h>
 #include <Ethnicities.h>
@@ -50,7 +51,7 @@ ActionShowMetrics::ActionShowMetrics( const QString& dn, const QIcon& ico, const
     : FaceAction( dn, ico, ks), _mdialog(nullptr), _cdialog(nullptr), _pmid(-1)
 {
     setCheckable( true, false);
-    addTriggerEvent( Event::METRICS_CHANGE | Event::CLOSED_MODEL | Event::RESTORE_CHANGE | Event::VIEWER_CHANGE);
+    addRefreshEvent( Event::METRICS_CHANGE | Event::RESTORE_CHANGE | Event::VIEWER_CHANGE);
 }   // end ctor
 
 
@@ -61,7 +62,7 @@ void ActionShowMetrics::postInit()
     _cdialog = new Widget::ChartDialog( p);
     connect( _mdialog, &Widget::MetricsDialog::onShowChart, this, &ActionShowMetrics::_doOnShowChart);
     connect( _mdialog, &Widget::MetricsDialog::accepted, [this](){ _closeDialog( Event::USER);});
-    // Emitting STATS_CHANGE will always result in Event::METRICS_CHANGE being emitted from ActionUpdateMeasurements
+    // Firing STATS_CHANGE always results in Event::METRICS_CHANGE from ActionUpdateMeasurements
     connect( _mdialog, &Widget::MetricsDialog::onStatsChanged, [this](){ emit onEvent( Event::STATS_CHANGE);});
     connect( _mdialog, &Widget::MetricsDialog::onRefreshAllMetrics, this, &ActionShowMetrics::_doRefreshGraphics);
     for ( FMV* fmv : MS::viewers())
@@ -77,29 +78,22 @@ void ActionShowMetrics::_doOnShowChart()
 }   // end _doOnShowChart
 
 
-bool ActionShowMetrics::checkState( Event e)
+bool ActionShowMetrics::update( Event e)
 {
     const FV *fv = MS::selectedView();
     const bool showing = _mdialog->isVisible() && fv && fv->data()->hasLandmarks();
-    if ( isTriggerEvent(e))
-    {
-        _doRefreshGraphics();
-        _mdialog->reflectCurrentMetricStats();
-        _mdialog->reflectAtypical();
-        _cdialog->refresh();
-    }   // end if
+    _doRefreshGraphics();
+    _mdialog->reflectCurrentMetricStats();
+    _mdialog->reflectAtypical();
+    _cdialog->refresh();
 
     if ( !showing)
         _closeDialog( e);
     return showing;
-}   // end checkState
+}   // end update
 
 
-bool ActionShowMetrics::isAllowed( Event)
-{
-    const FV *fv = MS::selectedView();
-    return fv && fv->data()->hasLandmarks();
-}   // end isAllowed
+bool ActionShowMetrics::isAllowed( Event) { return MS::selectedView() && MS::selectedModel()->hasLandmarks();}
 
 
 void ActionShowMetrics::_addViewer( FMV* fmv)
@@ -181,13 +175,18 @@ void ActionShowMetrics::doAction( Event e)
     {
         if ( !_mdialog->isVisible())
         {
-            _mdialog->show();   // Will cause onStatsChanged to be emitted
-            _doRefreshGraphics(); // Has to happen here as well as checkState
+            _mdialog->show();     // Will cause onStatsChanged to be emitted
+            _doRefreshGraphics(); // Has to happen here as well as update
             _setParallelProjection(true);
         }   // end if
     }   // end if
     else if ( _mdialog->isVisible())
         _closeDialog( e);
+
+    using Interactor::LandmarksHandler;
+    LandmarksHandler *lmksHandler = MS::handler<LandmarksHandler>();
+    if ( lmksHandler)
+        lmksHandler->setEmitOnDrag( isChecked());
 }   // end doAction
 
 
@@ -224,7 +223,7 @@ void ActionShowMetrics::_hideGraphics()
 
 void ActionShowMetrics::_setParallelProjection( bool v)
 {
-    if ( s_showParallelProjection && isChecked())
+    if ( s_showParallelProjection)
         ActionSetParallelProjection::setParallelProjection( v);
 }   // end _setParallelProjection
 

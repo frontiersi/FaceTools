@@ -28,7 +28,7 @@ using FaceTools::Path;
 
 
 PathView::PathView( int id)
-    : _viewer(nullptr), _isVisible(false), _id(id), _h0(nullptr), _h1(nullptr),
+    : _viewer(nullptr), _isVisible(false), _hasSurface(false), _id(id), _h0(nullptr), _h1(nullptr),
     _sprop(nullptr), _hprop(nullptr), _jprop(nullptr), _p0prop(nullptr), _p1prop(nullptr), _dprop(nullptr)
 {
     _h0 = new Handle( 0, _id, Vec3f::Zero(), 1.4);
@@ -78,7 +78,7 @@ void PathView::setVisible( bool enable, ModelViewer *viewer)
     {
         _h0->_sv->setVisible( true, _viewer);
         _h1->_sv->setVisible( true, _viewer);
-        _g->_sv->setVisible( true, _viewer);
+        _g->_sv->setVisible( _hasSurface, _viewer);
         if ( _sprop)
             _addLineProps();
         _isVisible = true;
@@ -106,7 +106,7 @@ void PathView::_addLineProps()
     _viewer->add(_p0prop);
     _viewer->add(_p1prop);
     _viewer->add(_dprop);
-    _aview.setVisible( true, _viewer);
+    _aview.setVisible( _hasSurface, _viewer);
 }   // end _addLineProps
 
 
@@ -205,8 +205,12 @@ void PathView::update( const Path &path)
         _h1->_sv->setPickable(true);
     }   // end else
 
-    if ( _isVisible)
+    _hasSurface = path.validPath();
+    if ( _isVisible && h0 != h1)
+    {
         _addLineProps();
+        _g->_sv->setVisible( _hasSurface, _viewer);
+    }   // end if
 }   // end update
 
 

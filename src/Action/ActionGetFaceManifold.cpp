@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@ ActionGetFaceManifold::ActionGetFaceManifold( const QString& dn, const QIcon& ic
     : FaceAction( dn, ico)
 {
     setAsync(true);
+    addRefreshEvent( Event::MESH_CHANGE);
 }   // end ctor
 
 
@@ -67,7 +68,7 @@ bool ActionGetFaceManifold::isAllowed( Event)
     const bool rval = !lmks.empty() && fm->manifolds().count() > 1;
     fm->unlock();
     return rval;
-}   // end isAllowedd
+}   // end isAllowed
 
 
 bool ActionGetFaceManifold::doBeforeAction( Event)
@@ -88,7 +89,7 @@ bool ActionGetFaceManifold::doBeforeAction( Event)
 
 void ActionGetFaceManifold::doAction( Event)
 {
-    storeUndo(this, Event::MESH_CHANGE | Event::CONNECTIVITY_CHANGE | Event::LANDMARKS_CHANGE);
+    storeUndo(this, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE);
     removeNonFaceManifolds( MS::selectedModel());
 }   // end doAction
 
@@ -96,6 +97,6 @@ void ActionGetFaceManifold::doAction( Event)
 Event ActionGetFaceManifold::doAfterAction( Event)
 {
     MS::showStatus("Finished removing non-face manifolds.", 5000);
-    return Event::MESH_CHANGE | Event::CONNECTIVITY_CHANGE | Event::LANDMARKS_CHANGE;
+    return Event::MESH_CHANGE | Event::LANDMARKS_CHANGE;
 }   // end doAfterAction
 

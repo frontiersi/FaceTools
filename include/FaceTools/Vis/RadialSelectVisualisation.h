@@ -50,7 +50,7 @@ public:
     void setVisible( FV*, bool) override;
     bool isVisible( const FV*) const override;
 
-    void refreshState( const FV*) override;
+    void refresh( const FV*) override;
     void syncWithViewTransform( const FV*) override;
 
     // Set whether the visualisation is highlighted or not.

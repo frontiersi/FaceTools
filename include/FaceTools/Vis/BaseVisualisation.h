@@ -46,7 +46,6 @@ public:
 
     // Return true iff given prop relating to the given FV belongs to this visualisation.
     virtual bool belongs( const vtkProp*, const FV*) const { return false;}
-    //return fv && p && fv->actor() == p
 
     // Cause this visualisation to update its actor transforms to match the FaceView actor transform.
     // given FaceView transform. This may not be the same as the FaceModel or data transform since
@@ -61,7 +60,7 @@ public:
     // Called from ActionVisualise::checkState and only if this visualisation is currently
     // visible against the given view in order to allow this visualisation to update itself
     // according to the application's current state.
-    virtual void refreshState( const FV*){}
+    virtual void refresh( const FV*){}
 
     // Specify the minimum and maximum allowed opacity of the face when this
     // visualisation is applied. If multiple visualisations are applied, the

@@ -48,7 +48,7 @@ void FaceAction::_pinit()
     _isWorking = false;
     _worker = nullptr;
     _unlocked = true;
-    _pevents = _tevents = Event::NONE;
+    _pevents = _tevents = _revents = Event::NONE;
     if ( _dname.isEmpty())
         _dname = QTools::PluginInterface::displayName();
     _debugName = "\"" + _dname.replace( "\n", " ").remove('&').toStdString() + "\"";
@@ -84,21 +84,12 @@ void FaceAction::setCheckable( bool b, bool ival)
 void FaceAction::setChecked( bool b)
 {
     _action.setChecked(b);
-    /*
-    if ( _action.isCheckable() && _action.isChecked() != b)
-    {
-        const QSignalBlocker blocker( _action);
-        _action.setChecked(b);
-        execute( Event::NONE);
-    }   // end if
-    */
 }   // end setChecked
 
 
-void FaceAction::refreshState( Event e)
+void FaceAction::refresh( Event e)
 {
-    e |= Event::USER;
-    const bool chk = checkState( e);
+    const bool chk = update( e);
     if ( _action.isCheckable() && _action.isChecked() != chk)
     {
         const QSignalBlocker blocker( _action);
@@ -108,23 +99,35 @@ void FaceAction::refreshState( Event e)
     _action.setEnabled( _unlocked && isAllowed( e));
     if ( widget())
         widget()->setEnabled( isEnabled());
-}   // end refreshState
+}   // end refresh
 
 
 void FaceAction::setLocked( bool v)
 {
     _unlocked = !v;
-    refreshState();
+    refresh( Event::USER);
 }   // end setLocked
 
 
-void FaceAction::primeMousePos(const QPoint &p) { _mpos = p;}
+bool FaceAction::primeMousePos( const QPoint &p)
+{
+    if ( p != _mpos)
+    {
+        _mpos = p;
+        refresh( Event::USER);
+        if ( !isEnabled())
+            _mpos = QPoint(-1,-1);
+    }   // end if
+    return isEnabled();
+}   // end primeMousePos
 
 
 void FaceAction::addPurgeEvent( Event e) { _pevents |= e;}
 void FaceAction::addTriggerEvent( Event e) { _tevents |= e;}
+void FaceAction::addRefreshEvent( Event e) { _revents |= e;}
 bool FaceAction::isPurgeEvent( Event e) const { return (_pevents & e) != Event::NONE;}
 bool FaceAction::isTriggerEvent( Event e) const { return (_tevents & e) != Event::NONE;}
+bool FaceAction::isRefreshEvent( Event e) const { return (_revents & e) != Event::NONE;}
 
 
 // protected
@@ -161,9 +164,9 @@ void FaceAction::_init( QWidget* parent) // Called by FaceActionManager after co
     const QIcon* ic = icon();
     if ( ic)
         _action.setIcon(*ic);
-    const QKeySequence* keys = shortcut();
-    if ( keys)
-        _action.setShortcut(*keys);
+    const QKeySequence* ks = shortcut();
+    if ( ks)
+        _action.setShortcut(*ks);
 
     if ( parent)
         setParent(parent);
@@ -186,8 +189,8 @@ bool FaceAction::execute( Event e)
 #ifndef NDEBUG
         std::cerr << "Cancelled: " << debugName() << std::endl;
 #endif
-        refreshState();
-        emit onEvent( Event::CANCELLED);
+        refresh( e);
+        emit onEvent( Event::CANCEL);
     }   // end if
     else
     {
@@ -252,7 +255,7 @@ void FaceAction::_endExecute( Event e)   // Always in GUI thread
 #ifndef NDEBUG
     std::cerr << " Finished: " << debugName() << " did event(s) " << fev << std::endl;
 #endif
-    refreshState();
+    refresh( e);
     emit onEvent( fev);
 }   // end _endExecute
 

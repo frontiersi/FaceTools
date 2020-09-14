@@ -19,14 +19,13 @@
 #define FACE_TOOLS_ACTION_RESTORE_SINGLE_LANDMARK_H
 
 #include "FaceAction.h"
-#include <FaceTools/Interactor/LandmarksHandler.h>
 
 namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionRestoreSingleLandmark : public FaceAction
 { Q_OBJECT
 public:
-    ActionRestoreSingleLandmark( const QString&, const QIcon&, Interactor::LandmarksHandler::Ptr);
+    ActionRestoreSingleLandmark( const QString&, const QIcon&);
 
     QString toolTip() const override { return "Restore the selected landmark (and its bilateral counterpart if applicable) to its originally detected position.";}
 
@@ -36,9 +35,7 @@ protected:
     Event doAfterAction( Event) override;
 
 private:
-    Interactor::LandmarksHandler::Ptr _handler;
     int _lmid;
-
     int _getLandmarkFromMousePos() const;
 };  // end class
 

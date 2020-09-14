@@ -17,6 +17,7 @@
 
 #include <Action/ActionExtractFace.h>
 #include <Action/ActionAlignModel.h>
+#include <Interactor/RadialSelectHandler.h>
 #include <FaceModel.h>
 #include <r3d/Copier.h>
 using FaceTools::Action::ActionExtractFace;
@@ -27,13 +28,13 @@ using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
 
 
-float ActionExtractFace::s_cropRadius(100.0f);
+float ActionExtractFace::s_cropRadius(110.0f);
 void ActionExtractFace::setCropRadius( float d) { s_cropRadius = std::max( 1.0f, d);}
 float ActionExtractFace::cropRadius() { return s_cropRadius;}
 
 
-ActionExtractFace::ActionExtractFace( const QString& dn, const QIcon& ico, const RadialSelectHandler &handler)
-    : FaceAction(dn, ico), _handler(handler), _ev(Event::NONE)
+ActionExtractFace::ActionExtractFace( const QString& dn, const QIcon& ico)
+    : FaceAction(dn, ico), _ev(Event::NONE)
 {
     setAsync(true);
 }   // end ctor
@@ -66,11 +67,12 @@ bool ActionExtractFace::isAllowed( Event) { return MS::isViewSelected();}
 
 bool ActionExtractFace::doBeforeAction( Event)
 {
-    if ( _handler.isEnabled())
+    const RadialSelectHandler *h = MS::handler<RadialSelectHandler>();
+    if ( h->isEnabled())
         MS::showStatus("Extracting radially bounded region...");
     else
         MS::showStatus("Extracting facial region...");
-    _ev = Event::MESH_CHANGE | Event::CONNECTIVITY_CHANGE | Event::AFFINE_CHANGE;
+    _ev = Event::MESH_CHANGE | Event::AFFINE_CHANGE;
     storeUndo( this, _ev);
     return true;
 }   // end doBeforeAction
@@ -145,8 +147,9 @@ void ActionExtractFace::doAction( Event)
 
     r3d::Mesh::Ptr nmod;
 
-    if ( _handler.isEnabled())
-        nmod = cropRegion( fm->mesh(), _handler.selectedFaces());
+    const RadialSelectHandler *h = MS::handler<RadialSelectHandler>();
+    if ( h->isEnabled())
+        nmod = cropRegion( fm->mesh(), h->selectedFaces());
     else
         nmod = extract( fm);
 

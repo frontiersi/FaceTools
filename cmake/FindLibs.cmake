@@ -343,13 +343,14 @@ if(WITH_QT)     # Qt5
     set( QT_INF_BINARY_CREATOR "${QT_INSTALLER_FRAMEWORK}/binarycreator${CMAKE_EXECUTABLE_SUFFIX}")
     set( QT_INF_REPO_GEN "${QT_INSTALLER_FRAMEWORK}/repogen${CMAKE_EXECUTABLE_SUFFIX}")
 
-    find_package( Qt5 CONFIG REQUIRED Core Widgets Charts Sql Svg)
+    find_package( Qt5 CONFIG REQUIRED Core Widgets Charts Network Sql Svg)
     include_directories( ${Qt5Core_INCLUDE_DIRS})
     include_directories( ${Qt5Widgets_INCLUDE_DIRS})
     include_directories( ${Qt5Charts_INCLUDE_DIRS})
+    include_directories( ${Qt5Network_INCLUDE_DIRS})
     include_directories( ${Qt5Sql_INCLUDE_DIRS})
     include_directories( ${Qt5Svg_INCLUDE_DIRS})
-    set( QT_LIBRARIES Qt5::Core Qt5::Widgets Qt5::Charts Qt5::Sql Qt5::Svg)
+    set( QT_LIBRARIES Qt5::Core Qt5::Widgets Qt5::Charts Qt5::Network Qt5::Sql Qt5::Svg)
 
     set( QT_LIB_DIR "${Qt5_DIR}/../..")
     set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${QT_LIB_DIR})

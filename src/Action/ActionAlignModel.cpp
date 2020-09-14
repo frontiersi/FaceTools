@@ -41,6 +41,7 @@ ActionAlignModel::ActionAlignModel( const QString& dn, const QIcon& ico, const Q
     : FaceAction(dn, ico, ks)
 {
     setAsync(true);
+    addRefreshEvent( Event::AFFINE_CHANGE | Event::MESH_CHANGE | Event::SURFACE_DATA_CHANGE);
 }   // end ctor
 
 
@@ -212,7 +213,7 @@ void ActionAlignModel::doAction( Event)
 Event ActionAlignModel::doAfterAction( Event)
 {
     const Vis::FV *fv = MS::selectedView();
-    ActionOrientCameraToFace::orientToFace( fv);
+    ActionOrientCameraToFace::orientToFace( fv, 1);
 
     QString msg = "Alignment defined by mask";
     if ( !fv->data()->hasMask())

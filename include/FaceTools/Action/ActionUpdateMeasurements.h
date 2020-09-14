@@ -34,6 +34,7 @@ public:
     static bool updateMeasurementsForLandmarks( FM*, const IntSet&);
 
 protected:
+    void postInit() override;
     void doAction( Event) override;
     Event doAfterAction( Event) override { return _ev;}
 

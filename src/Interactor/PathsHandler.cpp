@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <Interactor/PathsHandler.h>
+#include <Interactor/LandmarksHandler.h>
 #include <LndMrk/LandmarksManager.h>
 #include <Action/ModelSelector.h>
 #include <Vis/FaceView.h>
@@ -27,7 +28,6 @@ using FaceTools::Vis::PathView;
 using FaceTools::Vis::FV;
 using FaceTools::Path;
 using FaceTools::FM;
-using FaceTools::Vec2f;
 using FaceTools::Vec3f;
 using MS = FaceTools::Action::ModelSelector;
 using LMAN = FaceTools::Landmark::LandmarksManager;
@@ -39,107 +39,131 @@ PathsHandler::Ptr PathsHandler::create() { return Ptr( new PathsHandler);}
 PathsHandler::PathsHandler() : _handle(nullptr), _dragging(false), _initPlacement(false), _lmkVis(nullptr) {}
 
 
-void PathsHandler::refreshState()
+void PathsHandler::postRegister()
+{
+    _lmkVis = &MS::handler<LandmarksHandler>()->visualisation();
+    assert( _lmkVis);
+}   // end postRegister
+
+
+void PathsHandler::refresh()
 {
     const FV *fv = MS::selectedView();
-    if ( _handle && fv)
+    setEnabled( fv && _vis.isVisible(fv));
+
+    // Handle possibility of closed model or deleted paths
+    if ( !fv || fv->data()->currentAssessment()->paths().empty())
+        _handle = nullptr;
+    else if ( isEnabled() && _handle)
     {
         const int pid = _handle->pathId();
         FM *fm = fv->data();
         fm->lockForRead();
-
-        QString handleCaption;
-        const Path& path = fm->currentAssessment()->paths().path( pid);
-        if ( !path.name().empty())
-            handleCaption = QString::fromStdString( path.name()) + "\n";
-        if ( _handle->handleId() <= 1)
-            handleCaption += QString("%1 ").arg( path.euclideanDistance(), 4, 'f', 1) + FM::LENGTH_UNITS;
-        else
-            handleCaption += QString("%1 ").arg( path.depth(), 4, 'f', 1) + FM::LENGTH_UNITS;
-        _handle->setCaption( handleCaption);
-        _vis.setText( fm, pid, int( fv->viewer()->getWidth()) - 10, 10);    // Set display caption at bottom right
-
+        _updateCaption();
         fm->unlock();
     }   // end if
-    setEnabled( fv && fv->isApplied(&_vis));
-}   // end refreshState
+}   // end refresh
 
 
-void PathsHandler::doEnterProp( FV* fv, const vtkProp* p)
+bool PathsHandler::doEnterProp()
 {
-    if ( fv == MS::selectedView())
+    const FV *fv = MS::selectedView();
+    const vtkProp *p = this->prop();
+    bool swallowed = false;
+    PathView::Handle* h = _vis.pathHandle( fv, p);
+    if ( !_dragging)
     {
-        PathView::Handle* h = _vis.pathHandle( fv, p);
-        if ( !_dragging)
+        _handle = h;
+        if ( _handle)
         {
-            _handle = h;
-            if ( _handle)
-                _enterPath();
+            swallowed = true;
+            _showPathInfo();
+            emit onEnterHandle( _handle->pathId(), _handle->handleId());
         }   // end if
     }   // end if
+    return swallowed;
 }   // end doEnterProp
 
 
-void PathsHandler::doLeaveProp( FV* fv, const vtkProp* p)
+bool PathsHandler::doLeaveProp()
 {
-    assert(fv);
-    if ( fv == MS::selectedView() && _handle && (!_dragging || _initPlacement))
+    const FV *fv = MS::selectedView();
+    const vtkProp *p = this->prop();
+    bool swallowed = false;
+    if ( _handle && (!_dragging || _initPlacement))
     {
         const PathView::Handle* h = _vis.pathHandle( fv, p);
         if ( h == _handle)
         {
-            if ( _initPlacement)
-                leftButtonUp();
-            leavePath();
+            swallowed = true;
+            if ( !_initPlacement)
+            {
+                endDragging();
+                leavePath();
+            }   // end if
         }   // end if
     }   // end if
+    return swallowed;
 }   // end doLeaveProp
 
 
-void PathsHandler::addPath( const FV *fv, int pid)
+void PathsHandler::addPath( int pid)
 {
+    const FV *fv = MS::selectedView();
     _vis.addPath( fv->data(), pid);  // Adds PathView to all views of the model data
     _handle = _vis.pathHandle0( fv, pid);
     assert(_handle);
-    _enterPath();
     _dragging = true;
     _initPlacement = true;
-    const_cast<FV*>(fv)->apply( &_vis, nullptr);
-    leftDrag();
+    for ( FV *f : fv->data()->fvs())
+        f->apply( &_vis, nullptr);
+    doLeftDrag();
 }   // end addPath
 
 
-bool PathsHandler::leftButtonDown()
-{
-    if ( _dragging)
-        leftButtonUp();
-    if ( _handle != nullptr)
-    {
-        emit onStartedDrag(_handle);
-        _dragging = true;
-    }   // end if
-    return _dragging;
-}   // end leftButtonDown
-
-
-bool PathsHandler::leftButtonUp()
+bool PathsHandler::endDragging()
 {
     bool swallowed = false;
     if ( _dragging)
     {
+        swallowed = true;
         assert(_handle);
-        emit onFinishedDrag(_handle);
-        if ( MS::cursorProp() != _handle->prop())
+        const int pid = _handle->pathId();
+        const int hid = _handle->handleId();
+        if ( this->prop() != _handle->prop())
             leavePath();
         _dragging = false;
         _initPlacement = false;
-        swallowed = true;
+        emit onFinishedDrag( pid, hid);
     }   // end if
     return swallowed;
-}   // end leftButtonUp
+}   // end endDragging
 
 
-bool PathsHandler::mouseMove() { return leftDrag();}
+bool PathsHandler::doLeftButtonDown()
+{
+    bool swallowed = endDragging();
+    if ( !swallowed && _handle && this->prop() == _handle->prop())
+    {
+        swallowed = true;
+        _dragging = true;
+        emit onStartedDrag( _handle->pathId(), _handle->handleId());
+    }   // end else if
+    return swallowed;
+}   // end doLeftButtonDown
+
+
+bool PathsHandler::doLeftButtonUp() { return endDragging();}
+
+
+// Needed only when initial placement happening
+bool PathsHandler::doMouseMove()
+{
+    bool swallowed = false;
+    if ( _initPlacement)
+        swallowed = doLeftDrag();
+    return swallowed;
+}   // end doMouseMove
 
 
 namespace {
@@ -172,40 +196,39 @@ Vec3f snapToPathHandle( int hpid, const FaceTools::PathSet &paths, const Vec3f &
 }   // end namespace
 
 
-bool PathsHandler::leftDrag()
+bool PathsHandler::doLeftDrag()
 {
     if ( !_dragging)
         return false;
 
-    assert( _handle);
     const int hid = _handle->handleId();
     const FV *fv = MS::selectedView();
     const FMV *fmv = fv->viewer();
-    const QPoint mc = fmv->mouseCoords();
+    const QPoint mc = fmv->mouseCoords();   // NB current cursor coords according to Qt - NOT the interaction coords from VTK!
     FM *fm = fv->data();
     fm->lockForWrite();
     Path& path = fm->currentAssessment()->paths().path( _handle->pathId());
 
     if ( hid != 2)
     {
-        Vec3f v; // Get the new handle position on the face
+        Vec3f v; // Get the new endpoint handle position on the face
         if ( !fv->projectToSurface( mc, v))
             v = path.handle( hid);
+
         // Calculate the orientation vector for the path
         const r3d::CameraParams cp = fmv->camera();
-        const Vec3f u = cp.pos() - cp.focus();
-        const float unorm = u.norm();
 
-        // Check if can snap to endpoint of any other path. If don't snap and landmarks are visible, snap to a landmark.
-        // Snap range scales with view distance for an apparently fixed distance no matter where the camera is positioned.
-        const float sqRange = powf( 0.015f*unorm, 2);
+        // Check if can snap to endpoint of another path. If don't snap and landmarks are visible, snap to one.
+        // Snap range scales with view distance for an apparently fixed distance no matter where camera is.
+        const float sqRange = powf( fmv->snapRange(), 2);
         const Vec3f inv = v;
         v = snapToPathHandle( _handle->pathId(), fm->currentAssessment()->paths(), v, sqRange);
-        if ( _lmkVis && _lmkVis->isVisible(fv) && inv == v)
-            v = fm->currentLandmarks().snapToVisible( v, sqRange);
+        if ( _lmkVis->isVisible(fv) && inv == v)
+            v = fm->currentLandmarks().snapTo( v, sqRange);
 
-        path.setOrientation( u/unorm);
+        path.setOrientation( cp.pos() - cp.focus());    // Will be normalized
         path.setHandle( hid, v);    // Handle position (transformed)
+        path.update( fm);
     }   // end if
     else
     {
@@ -221,34 +244,72 @@ bool PathsHandler::leftDrag()
         path.setDepthHandle( dprop);    // Restricts to be in [0,1]
     }   // end else
 
-    path.update( fm);
-    fm->setMetaSaved(false);
+    path.updateMeasures();
+    fm->setMetaSaved( false);
 
     _vis.updatePath( fm, _handle->pathId());
     fm->unlock();
-    MS::updateRender();
 
-    _enterPath();
+    _showPathInfo();
+
+    MS::updateRender(); // Ensure render update happens across viewers
+
     return true;
-}   // end leftDrag
+}   // end doLeftDrag
 
 
-void PathsHandler::_enterPath()
+void PathsHandler::_showPathInfo()
 {
     assert( _handle);
-    refreshState();
+    _updateCaption();
     _handle->showCaption(true);
-    _vis.showText( MS::selectedView());
+    _vis.showCaption( MS::selectedView());
     MS::showStatus( posString( "Handle", _handle->viewPos()), 5000);
     MS::setCursor( Qt::CursorShape::CrossCursor);
-}   // end _enterPath
+}   // end _showPathInfo
 
 
-void PathsHandler::leavePath()
+void PathsHandler::_updateCaption()
 {
-    if ( _handle)
-        _handle->showCaption(false);
-    _vis.showText(nullptr);
+    const FV *fv = MS::selectedView();
+    assert(fv);
+    const FM *fm = fv->data();
+    assert(_handle);
+    const int pid = _handle->pathId();
+    const Path& path = fm->currentAssessment()->paths().path( pid);
+
+    QString handleCaption;
+    if ( !path.name().empty())
+        handleCaption = QString::fromStdString( path.name()) + "\n";
+
+    float val;
+    QString valType;
+    if ( _handle->handleId() <= 1)
+    {
+        val = path.euclideanDistance();
+        valType = "[Direct]";
+    }   // end if
+    else
+    {
+        val = path.depth();
+        valType = "[Depth]";
+    }   // end else
+
+    handleCaption += QString("%1 %2 %3").arg( val, 4, 'f', 2).arg(FM::LENGTH_UNITS).arg(valType);
+    _handle->setCaption( handleCaption);
+
+    _vis.updateCaption( fm, pid, int( fv->viewer()->getWidth()) - 10, 10);    // Display caption at bottom right
+}   // end _updateCaption
+
+
+int PathsHandler::leavePath()
+{
+    assert(_handle);
+    _handle->showCaption(false);
+    const int pid = _handle->pathId();
+    emit onLeaveHandle( pid, _handle->handleId());
+    _vis.showCaption(nullptr);
     _handle = nullptr;
     MS::restoreCursor();
+    return pid;
 }   // end leavePath

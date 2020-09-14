@@ -194,6 +194,6 @@ void ActionMakeHalfFace::doAction( Event)
 
 Event ActionMakeHalfFace::doAfterAction( Event)
 {
-    return Event::MESH_CHANGE | Event::CONNECTIVITY_CHANGE | Event::LANDMARKS_CHANGE | Event::PATHS_CHANGE;
+    return Event::MESH_CHANGE | Event::LANDMARKS_CHANGE | Event::PATHS_CHANGE;
 }   // end doAfterAction
 

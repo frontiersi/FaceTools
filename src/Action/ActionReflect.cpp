@@ -40,10 +40,7 @@ QString ActionReflect::toolTip() const
 }   // end toolTip
 
 
-bool ActionReflect::isAllowed( Event)
-{
-    return MS::isViewSelected();
-}   // end isAllowed
+bool ActionReflect::isAllowed( Event) { return MS::isViewSelected();}
 
 
 void ActionReflect::saveState( UndoState &us) const

@@ -16,10 +16,11 @@
  ************************************************************************/
 
 #include <Action/FaceActionManager.h>
-#include <FileIO/FaceModelManager.h>
-#include <FaceModelViewer.h>
 #include <Action/ActionMoveView.h>
 #include <Action/ModelSelector.h>
+#include <Interactor/SelectNotifier.h>
+#include <FileIO/FaceModelManager.h>
+#include <FaceModelViewer.h>
 #include <Metric/MetricManager.h>
 #include <FaceModel.h>
 #include <Vis/FaceView.h>
@@ -85,8 +86,8 @@ FaceActionManager::Ptr FaceActionManager::get( QWidget* parent)
 // private
 FaceActionManager::FaceActionManager()
 {
-    const Interactor::SelectNotifier *sn = MS::selector();
-    connect( sn, &Interactor::SelectNotifier::onSelected, [this](){ this->doEvent( Event::MODEL_SELECT);});
+    const Interactor::SelectNotifier *sn = MS::selectNotifier();
+    connect( sn, &Interactor::SelectNotifier::onSelected, [this]( Vis::FV*, bool s){ if ( s) this->doEvent( Event::MODEL_SELECT);});
 }   // end ctor
 
 
@@ -99,7 +100,8 @@ QAction* FaceActionManager::registerAction( FaceAction* act)
     connect( act, &FaceAction::onShowHelp, [](const QString& tok){ emit get()->onShowHelp(tok);});
     acts.insert(act);
     act->_init(s_singleton->_parent);
-    act->refreshState();
+    act->addRefreshEvent( Event::MODEL_SELECT | Event::LOADED_MODEL | Event::CLOSED_MODEL);
+    act->refresh();
     emit s_singleton->onRegisteredAction(act);
     return act->qaction();
 }   // end registerAction
@@ -115,7 +117,7 @@ void FaceActionManager::close( const FM* fm)
     for ( FaceAction* act : acts)
         act->purge( fm);
     fm->unlock();
-    MS::remove(fm); // Removes views
+    MS::remove(fm); // Removes views which ordinarily would cause Event::MODEL_SELECT but signal is blocked
     MM::purge(fm);  // Removes cached metric calculation data
     FMM::close(fm);
 
@@ -148,19 +150,18 @@ void FaceActionManager::close( const FM* fm)
         }   // end else
     }   // end if
 
-    if ( nextfv)
-        MS::setSelected( nextfv);
+    MS::setSelected( nextfv);
     if ( movedView)
         get()->doEvent( Event::VIEWER_CHANGE);
     get()->_closeLock.unlock();
 }   // end close
 
 
-void FaceActionManager::doEvent( const Event &E)
+void FaceActionManager::doEvent( Event E)
 {
     const FM* fm = MS::selectedModel();
     assert( fm || FMM::numOpen() == 0);
-    if ( E == Event::CANCELLED)
+    if ( E == Event::CANCEL)
         return;
 
     // The sending action should not be triggered by its own events (note that
@@ -193,7 +194,11 @@ void FaceActionManager::doEvent( const Event &E)
             applyFnToModels( E, fm, MS::syncBoundingVisualisation);
     }   // end if
 
-    MS::updateRender();
+    // Load events have to have an initial mesh change event
+    if ( has( E, Event::LOADED_MODEL))
+        E |= Event::MESH_CHANGE;
+
+    MS::refreshHandlers();
 
     // Have actions recheck their own state and whether or not they're enabled, then see
     // if the received event triggers them.
@@ -205,7 +210,8 @@ void FaceActionManager::doEvent( const Event &E)
             continue;
 
         // In refreshing state, actions decide whether to enable themselves and check themselves.
-        act->refreshState(E);
+        if ( act->isRefreshEvent(E) || act->isTriggerEvent(E) || act->isPurgeEvent(E))
+            act->refresh(E);
 
         if ( act->isEnabled() && act->isTriggerEvent(E))
         {
@@ -214,7 +220,6 @@ void FaceActionManager::doEvent( const Event &E)
         }   // end if
     }   // end for
 
-    // Finally notify the client application of updates and re-render.
-    emit onUpdate( fm);
     MS::updateRender();
+    emit onUpdateSelected();
 }   // end doEvent

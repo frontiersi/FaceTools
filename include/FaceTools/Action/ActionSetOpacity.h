@@ -37,7 +37,7 @@ public:
 
 protected:
     void postInit() override;
-    bool checkState( Event) override;
+    bool update( Event) override;
     bool isAllowed( Event) override;
 
 private slots:

@@ -43,8 +43,8 @@ set( FORMS
     "${FORMS_DIR}/ChartDialog.ui"
     "${FORMS_DIR}/LandmarksCheckDialog.ui"
     "${FORMS_DIR}/LandmarksDialog.ui"
+    "${FORMS_DIR}/MeshInfoDialog.ui"
     "${FORMS_DIR}/MetricsDialog.ui"
-    "${FORMS_DIR}/ModelPropertiesDialog.ui"
     "${FORMS_DIR}/PhenotypesDialog.ui"
     "${FORMS_DIR}/ReportChooserDialog.ui"
     "${FORMS_DIR}/ResizeDialog.ui"
@@ -76,12 +76,13 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionGetFaceManifold.h"
     "${INCLUDE_ACTION_DIR}/ActionImportMetaData.h"
     "${INCLUDE_ACTION_DIR}/ActionInvertNormals.h"
-    "${INCLUDE_ACTION_DIR}/ActionLoadFaceModels.h"
+    "${INCLUDE_ACTION_DIR}/ActionLoad.h"
     "${INCLUDE_ACTION_DIR}/ActionMakeHalfFace.h"
     "${INCLUDE_ACTION_DIR}/ActionMapCurvature.h"
     "${INCLUDE_ACTION_DIR}/ActionMapSymmetry.h"
     "${INCLUDE_ACTION_DIR}/ActionMarquee.h"
     "${INCLUDE_ACTION_DIR}/ActionMoveView.h"
+    "${INCLUDE_ACTION_DIR}/ActionNewerVersionFinder.h"
     "${INCLUDE_ACTION_DIR}/ActionOrientCameraToFace.h"
     "${INCLUDE_ACTION_DIR}/ActionRadialSelect.h"
     "${INCLUDE_ACTION_DIR}/ActionRedo.h"
@@ -104,8 +105,8 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionSetOpacity.h"
     "${INCLUDE_ACTION_DIR}/ActionSetParallelProjection.h"
     "${INCLUDE_ACTION_DIR}/ActionSetSurfaceColour.h"
+    "${INCLUDE_ACTION_DIR}/ActionShowMeshInfo.h"
     "${INCLUDE_ACTION_DIR}/ActionShowMetrics.h"
-    "${INCLUDE_ACTION_DIR}/ActionShowModelProperties.h"
     "${INCLUDE_ACTION_DIR}/ActionShowPhenotypes.h"
     "${INCLUDE_ACTION_DIR}/ActionShowScanInfo.h"
     "${INCLUDE_ACTION_DIR}/ActionSlice.h"
@@ -134,21 +135,22 @@ set( QOBJECTS
 
     "${INCLUDE_REPORT_DIR}/Report.h"
 
+    "${INCLUDE_INT_DIR}/ActionClickHandler.h"
     "${INCLUDE_INT_DIR}/ActorMoveNotifier.h"
+    "${INCLUDE_INT_DIR}/ContextMenuHandler.h"
+    "${INCLUDE_INT_DIR}/GizmoHandler.h"
     "${INCLUDE_INT_DIR}/LandmarksHandler.h"
     "${INCLUDE_INT_DIR}/MovementNotifier.h"
     "${INCLUDE_INT_DIR}/PathsHandler.h"
-    "${INCLUDE_INT_DIR}/PropHandler.h"
-    "${INCLUDE_INT_DIR}/PropNotifier.h"
-    "${INCLUDE_INT_DIR}/RadialSelectHandler.h"
     "${INCLUDE_INT_DIR}/SelectNotifier.h"
+    "${INCLUDE_INT_DIR}/RadialSelectHandler.h"
 
     "${INCLUDE_WIDGET_DIR}/ChartDialog.h"
     "${INCLUDE_WIDGET_DIR}/CheckAllTableHeader.h"
     "${INCLUDE_WIDGET_DIR}/LandmarksCheckDialog.h"
     "${INCLUDE_WIDGET_DIR}/LandmarksDialog.h"
+    "${INCLUDE_WIDGET_DIR}/MeshInfoDialog.h"
     "${INCLUDE_WIDGET_DIR}/MetricsDialog.h"
-    "${INCLUDE_WIDGET_DIR}/ModelPropertiesDialog.h"
     "${INCLUDE_WIDGET_DIR}/PhenotypesDialog.h"
     "${INCLUDE_WIDGET_DIR}/ReportChooserDialog.h"
     "${INCLUDE_WIDGET_DIR}/ResizeDialog.h"
@@ -188,7 +190,6 @@ set( INCLUDE_FILES
     "${INCLUDE_FILEIO_DIR}/FaceModelU3DFileHandler.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelXMLFileHandler.h"
 
-    "${INCLUDE_INT_DIR}/ContextMenu.h"
     "${INCLUDE_INT_DIR}/MouseHandler.h"
     "${INCLUDE_INT_DIR}/ViewerNotifier.h"
 
@@ -302,12 +303,13 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/ActionGetFaceManifold
     ${SRC_ACTION_DIR}/ActionImportMetaData
     ${SRC_ACTION_DIR}/ActionInvertNormals
-    ${SRC_ACTION_DIR}/ActionLoadFaceModels
+    ${SRC_ACTION_DIR}/ActionLoad
     ${SRC_ACTION_DIR}/ActionMakeHalfFace
     ${SRC_ACTION_DIR}/ActionMapCurvature
     ${SRC_ACTION_DIR}/ActionMapSymmetry
     ${SRC_ACTION_DIR}/ActionMarquee
     ${SRC_ACTION_DIR}/ActionMoveView
+    ${SRC_ACTION_DIR}/ActionNewerVersionFinder
     ${SRC_ACTION_DIR}/ActionOrientCameraToFace
     ${SRC_ACTION_DIR}/ActionRadialSelect
     ${SRC_ACTION_DIR}/ActionRedo
@@ -330,8 +332,8 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/ActionSetOpacity
     ${SRC_ACTION_DIR}/ActionSetParallelProjection
     ${SRC_ACTION_DIR}/ActionSetSurfaceColour
+    ${SRC_ACTION_DIR}/ActionShowMeshInfo
     ${SRC_ACTION_DIR}/ActionShowMetrics
-    ${SRC_ACTION_DIR}/ActionShowModelProperties
     ${SRC_ACTION_DIR}/ActionShowPhenotypes
     ${SRC_ACTION_DIR}/ActionShowScanInfo
     ${SRC_ACTION_DIR}/ActionSlice
@@ -377,13 +379,13 @@ set( SRC_FILES
     ${SRC_FILEIO_DIR}/FaceModelU3DFileHandler
     ${SRC_FILEIO_DIR}/LoadFaceModelsHelper
 
+    ${SRC_INT_DIR}/ActionClickHandler
     ${SRC_INT_DIR}/ActorMoveNotifier
-    ${SRC_INT_DIR}/ContextMenu
+    ${SRC_INT_DIR}/ContextMenuHandler
+    ${SRC_INT_DIR}/GizmoHandler
     ${SRC_INT_DIR}/LandmarksHandler
     ${SRC_INT_DIR}/MouseHandler
     ${SRC_INT_DIR}/MovementNotifier
-    ${SRC_INT_DIR}/PropHandler
-    ${SRC_INT_DIR}/PropNotifier
     ${SRC_INT_DIR}/PathsHandler
     ${SRC_INT_DIR}/RadialSelectHandler
     ${SRC_INT_DIR}/SelectNotifier
@@ -461,7 +463,7 @@ set( SRC_FILES
     ${SRC_WIDGET_DIR}/IntTableWidgetItem
     ${SRC_WIDGET_DIR}/LandmarksDialog
     ${SRC_WIDGET_DIR}/MetricsDialog
-    ${SRC_WIDGET_DIR}/ModelPropertiesDialog
+    ${SRC_WIDGET_DIR}/MeshInfoDialog
     ${SRC_WIDGET_DIR}/PhenotypesDialog
     ${SRC_WIDGET_DIR}/ReportChooserDialog
     ${SRC_WIDGET_DIR}/ResizeDialog

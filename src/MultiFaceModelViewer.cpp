@@ -176,11 +176,25 @@ void MultiFaceModelViewer::_setViewerVisible( size_t idx, bool visible)
 }   // end _setViewerVisible
 
 
-// public slot
-void MultiFaceModelViewer::doOnUpdateModelLists( const FM* fm)
+void MultiFaceModelViewer::_doOnViewerChanged( size_t idx, const FV *fv)
 {
-    if ( !fm)
-        return;
+    _updateModelLists( fv->data());
+    if ( idx != 1)
+        _setViewerVisible( idx, !_fmvs.at(idx)->attached().empty());
+}   // end _doOnViewerChanged
+
+
+// public slot
+void MultiFaceModelViewer::doOnUpdateModelLists()
+{
+    const FM *fm = MS::selectedModel();
+    if ( fm)
+        _updateModelLists(fm);
+}   // end doOnUpdateModelLists
+
+
+void MultiFaceModelViewer::_updateModelLists( const FM *fm)
+{
     QString pname;
     if ( _attachedNames.count(fm) > 0)
         pname = _attachedNames.at(fm);  // Previous name
@@ -206,7 +220,7 @@ void MultiFaceModelViewer::doOnUpdateModelLists( const FM* fm)
     _attachedNames.erase(fm);
     if ( isAttached)
         _attachedNames[fm] = cname; // Update the name for the attached model
-}   // end doOnUpdateModelLists
+}   // end _updateModelLists
 
 
 void MultiFaceModelViewer::_doOnComboBoxChanged( size_t i, const QString &txt)
@@ -218,11 +232,3 @@ void MultiFaceModelViewer::_doOnComboBoxChanged( size_t i, const QString &txt)
     assert(fv);
     MS::setSelected(fv);
 }   // end _doOnComboBoxChanged
-
-
-void MultiFaceModelViewer::_doOnViewerChanged( size_t idx, const FV *fv)
-{
-    doOnUpdateModelLists( fv->data());
-    if ( idx != 1)
-        _setViewerVisible( idx, !_fmvs.at(idx)->attached().empty());
-}   // end _doOnViewerChanged

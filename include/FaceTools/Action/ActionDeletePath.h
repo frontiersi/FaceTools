@@ -19,24 +19,20 @@
 #define FACE_TOOLS_ACTION_DELETE_PATH_H
 
 #include "FaceAction.h"
-#include <FaceTools/Interactor/PathsHandler.h>
 
 namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionDeletePath : public FaceAction
 { Q_OBJECT
 public:
-    ActionDeletePath( const QString&, const QIcon&, Interactor::PathsHandler::Ptr, const QKeySequence& ks=QKeySequence());
+    ActionDeletePath( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
 
-    QString toolTip() const override { return "Remove the selected measurement from the model.";}
+    QString toolTip() const override { return "Delete this calliper measurement.";}
 
 protected:
     bool isAllowed( Event) override;
     void doAction( Event) override;
     Event doAfterAction( Event) override;
-
-private:
-    Interactor::PathsHandler::Ptr _handler;
 };  // end class
 
 }}   // end namespace

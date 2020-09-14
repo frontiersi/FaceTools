@@ -31,6 +31,7 @@ ActionShowScanInfo::ActionShowScanInfo( const QString& dname, const QIcon& icon,
 {
     setCheckable( true, false);
     addTriggerEvent( Event::MASK_CHANGE);
+    addRefreshEvent( Event::METRICS_CHANGE);
 }   // end ctor
 
 
@@ -52,17 +53,21 @@ void ActionShowScanInfo::setThumbnailUpdater( ActionUpdateThumbnail* act)
 }   // end setThumbnailUpdater
 
 
-bool ActionShowScanInfo::checkState( Event e)
+bool ActionShowScanInfo::update( Event e)
 {
+    bool chk = false;
     FM *fm = MS::selectedModel();
     if ( !fm || has( e, Event::CLOSED_MODEL))
         _dialog->hide();
-    if ( _dialog->isVisible() && has( e, Event::METRICS_CHANGE | Event::MODEL_SELECT))
+    else
+    {
         _dialog->refresh();
-    // Set check if a change of AM occurred with the setting of landmarks and the date of birth is the same
-    // as the capture date. This equivalency ensures that this this dialog appears even for old files.
-    return _dialog->isVisible() || (has( e, Event::MASK_CHANGE) && fm->hasLandmarks() && fm->dateOfBirth() == fm->captureDate());
-}   // end checkState
+        // Set check if a change of AM occurred with the setting of landmarks and the date of birth is the same
+        // as the capture date. This equivalency ensures that this this dialog appears even for old files.
+        chk = _dialog->isVisible() || (isTriggerEvent( e) && fm->hasLandmarks() && fm->dateOfBirth() == fm->captureDate());
+    }   // end else
+    return chk;
+}   // end update
 
 
 bool ActionShowScanInfo::isAllowed( Event) { return MS::isViewSelected();}
@@ -77,7 +82,6 @@ void ActionShowScanInfo::doAction( Event)
     {
         FM *fm = MS::selectedModel();
         assert(fm);
-        _dialog->refresh();
         if ( _tupdater)
             _dialog->setThumbnail( _tupdater->thumbnail(fm));
         _dialog->show();

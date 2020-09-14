@@ -53,29 +53,32 @@ bool Path::update( const FM* fm)
     _validPath = false;
     Vec3f v0 = _vtxs.front();
     Vec3f v1 = _vtxs.back();
-    //v0 = toSurface( fm->kdtree(), v0);
-    //v1 = toSurface( fm->kdtree(), v1);
 
     const Vec3f &u = orientation(); // For ORIENTED_CURVE
 
-    // Obtain the path according to preferred method
-    _vtxs.clear();
-    switch ( s_pathType)
+    if ( v0 == v1)
+        _validPath = true;
+    else
     {
-        case CURVE_FOLLOWING_0:
-            _validPath = findPath( fm->kdtree(), v0, v1, _vtxs); // Previous
-            break;
-        case CURVE_FOLLOWING_1:
-            _validPath = findCurveFollowingPath( fm->kdtree(), v0, v1, _vtxs);   // Experimental
-            break;
-        case STRAIGHT_CURVE:
-            _validPath = findStraightPath( fm->kdtree(), v0, v1, _vtxs);    // Default
-            break;
-        case ORIENTED_CURVE:
-            assert( u != Vec3f::Zero());
-            _validPath = findOrientedPath( fm->kdtree(), v0, v1, u, _vtxs);
-            break;
-    };  // end switch
+        // Obtain the path according to preferred method
+        _vtxs.clear();
+        switch ( s_pathType)
+        {
+            case CURVE_FOLLOWING_0:
+                _validPath = findPath( fm->kdtree(), v0, v1, _vtxs); // Previous
+                break;
+            case CURVE_FOLLOWING_1:
+                _validPath = findCurveFollowingPath( fm->kdtree(), v0, v1, _vtxs);   // Experimental
+                break;
+            case STRAIGHT_CURVE:
+                _validPath = findStraightPath( fm->kdtree(), v0, v1, _vtxs);    // Default
+                break;
+            case ORIENTED_CURVE:
+                assert( u != Vec3f::Zero());
+                _validPath = findOrientedPath( fm->kdtree(), v0, v1, u, _vtxs);
+                break;
+        };  // end switch
+    }   // end if
 
     if ( !_validPath)
     {
@@ -85,13 +88,11 @@ bool Path::update( const FM* fm)
     }   // end else
 
     assert(_vtxs.size() >= 2);
-    _updateMeasures();
-
     return _validPath;
 }   // end update
 
 
-void Path::_updateMeasures()
+void Path::updateMeasures()
 {
     const Vec3f& h0 = handle0();    // First point in path
     const Vec3f& h1 = handle1();    // Last point in path
@@ -101,9 +102,10 @@ void Path::_updateMeasures()
     _area = 0.0f;
     _depth = 0.0f;
 
-    Vec3f u = h1 - h0;
-    _elen = u.norm();
-    u = u / _elen;  // Euclidean direction between end points
+    Vec3f u = h1 - h0;  // Could be zero vector
+    _elen = u.norm();   // May be zero
+    if ( _elen > 0.0f)
+        u = u / _elen;  // Euclidean direction between end points
 
     // Find two vectors va and vb where va = a-h0, and |va| < dh, and vb = b-h0, and |vb| >= dh,
     // and a and b are consecutive points in the surface path.
@@ -163,7 +165,7 @@ void Path::_updateMeasures()
         if ( std::isnan(_angle))
             _angle = 180.0f;
     }   // end if
-}   // end _updateMeasures
+}   // end updateMeasures
 
 
 void Path::transform( const Mat4f &t)
@@ -172,6 +174,7 @@ void Path::transform( const Mat4f &t)
         v = r3d::transform( t, v);
     _dmax = r3d::transform( t, _dmax);
     _orient = t.block<3,3>(0,0) * _orient;
+    _orient.normalize();
 }   // end transform
 
 
@@ -179,7 +182,11 @@ void Path::setHandle0( const Vec3f& v) { _vtxs.front() = v;}
 void Path::setHandle1( const Vec3f& v) { _vtxs.back() = v;}
 void Path::setDepthHandle( float v) { _dhan = std::max( 0.0f, std::min( v, 1.0f));}
 Vec3f Path::depthHandle() const { return handle0() + _dhan * (handle1() - handle0());}
-void Path::setOrientation( const Vec3f& u) { _orient = u;}
+void Path::setOrientation( const Vec3f& u)
+{
+    _orient = u;
+    _orient.normalize();
+}   // end setOrientation
 
 
 void Path::setHandle( int h, const Vec3f &v)
@@ -278,10 +285,18 @@ void Path::read( const PTree& pnode)
         u = r3d::getVertex( pnode.get_child("Orient"));
     setOrientation( u);
 
-    const PTree &mnode = pnode.get_child("Metrics");
-    _elen = mnode.get<float>("DirectDistance");
-    _slen = mnode.get<float>("SurfaceDistance");
-    _depth = mnode.get<float>("Depth");
-    _angle = mnode.get<float>("AngleAtDepth");
-    _area = mnode.get<float>("CrossSectionArea");
+    if ( pnode.count("Metrics") > 0)
+    {
+        const PTree &mnode = pnode.get_child("Metrics");
+        if ( mnode.count("DirectDistance") > 0)
+            _elen = mnode.get<float>("DirectDistance");
+        if ( mnode.count("SurfaceDistance") > 0)
+            _slen = mnode.get<float>("SurfaceDistance");
+        if ( mnode.count("Depth") > 0)
+            _depth = mnode.get<float>("Depth");
+        if ( mnode.count("AngleAtDepth") > 0)
+            _angle = mnode.get<float>("AngleAtDepth");
+        if ( mnode.count("CrossSectionArea") > 0)
+            _area = mnode.get<float>("CrossSectionArea");
+    }   // end if
 }   // end read

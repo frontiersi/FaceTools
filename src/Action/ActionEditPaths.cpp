@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <Action/ActionEditPaths.h>
+#include <Interactor/PathsHandler.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 using FaceTools::Action::ActionEditPaths;
@@ -23,55 +24,87 @@ using FaceTools::Action::Event;
 using FaceTools::Action::UndoState;
 using FaceTools::Action::ActionVisualise;
 using FaceTools::Interactor::PathsHandler;
-using FaceTools::FM;
-using FaceTools::Vis::FV;
-using FaceTools::Vis::PathView;
 using MS = FaceTools::Action::ModelSelector;
 
-Q_DECLARE_METATYPE( FaceTools::Path)
 
-
-ActionEditPaths::ActionEditPaths( const QString& dn, const QIcon& ic, PathsHandler::Ptr handler, const QKeySequence& ks)
-    : ActionVisualise( dn, ic, &handler->visualisation(), ks), _handler( handler)
+ActionEditPaths::ActionEditPaths( const QString& dn, const QIcon& ic, const QKeySequence& ks)
+    : ActionVisualise( dn, ic, &MS::handler<PathsHandler>()->visualisation(), ks), _tchanged(false)
 {
-    connect( &*_handler, &PathsHandler::onStartedDrag, this, &ActionEditPaths::_doOnStartedDrag);
-    connect( &*_handler, &PathsHandler::onFinishedDrag, [this](){ emit onEvent( Event::PATHS_CHANGE);});
+    const PathsHandler *h = MS::handler<PathsHandler>();
+    connect( h, &PathsHandler::onStartedDrag, this, &ActionEditPaths::_doOnStartedDrag);
+    connect( h, &PathsHandler::onFinishedDrag, this, &ActionEditPaths::_doOnFinishedDrag);
+    connect( h, &PathsHandler::onEnterHandle, this, &ActionEditPaths::_doOnEnterHandle);
+    connect( h, &PathsHandler::onLeaveHandle, this, &ActionEditPaths::_doOnLeaveHandle);
+    addRefreshEvent( Event::PATHS_CHANGE);
+    addTriggerEvent( Event::RESTORE_CHANGE);
 }   // end ctor
 
 
-bool ActionEditPaths::checkState( Event e)
+bool ActionEditPaths::update( Event e)
 {
-    _handler->refreshState();
-    return ActionVisualise::checkState(e);
-}   // end checkState
+    bool chk = isChecked();
+    const FM *fm = MS::selectedModel();
+    if ( fm && isTriggerEvent(e) && has( e, Event::PATHS_CHANGE))
+        chk = !fm->currentPaths().empty();
+    else
+        chk = ActionVisualise::update(e);
+    return chk;
+}   // end update
 
 
 Event ActionEditPaths::doAfterAction( Event e)
 {
-    MS::clearStatus();
-    if ( isChecked())
-        MS::showStatus( "Move path handles by left-clicking and dragging; right click to rename/delete.");
+    if (!isTriggerEvent(e))
+    {
+        if ( isChecked())
+            MS::showStatus( "Move path handles by left-clicking and dragging; right click to rename/delete.");
+        else
+            MS::clearStatus();
+    }   // end if
     return ActionVisualise::doAfterAction( e);
 }   // end doAfterAction
 
 
-void ActionEditPaths::saveState( UndoState &us) const
+void ActionEditPaths::_setTempTransparency( bool enable)
 {
-    const Path &path = us.model()->currentPaths().path(_pid);
-    us.setName( "Move Path");
-    us.setUserData( "Path", QVariant::fromValue( path));
-}   // end saveState
+    FaceTools::Vis::FV *fv = MS::selectedView();
+    if ( enable && fv->opacity() == 1.0f)
+    {
+        fv->setOpacity( 0.99f);
+        _tchanged = true;
+    }   // end if
+    else if ( !enable && _tchanged)
+    {
+        fv->setOpacity( 1.00f);
+        _tchanged = false;
+    }   // end else if
+}   // end _setTempTransparency
 
 
-void ActionEditPaths::restoreState( const UndoState& us)
+void ActionEditPaths::_doOnStartedDrag( int pid, int hid)
 {
-    const Path &path = us.userData("Path").value<Path>();
-    us.model()->currentAssessment()->paths().path(path.id()) = path;
-}   // end restoreState
-
-
-void ActionEditPaths::_doOnStartedDrag( PathView::Handle *h)
-{
-    _pid = h->pathId();
-    storeUndo( this, Event::PATHS_CHANGE, false);
+    _setTempTransparency( true);
+    storeUndo( this, Event::PATHS_CHANGE);
+    emit onEvent( Event::PATHS_CHANGE);
 }   // end _doOnStartedDrag
+
+
+void ActionEditPaths::_doOnFinishedDrag( int, int)
+{
+    _setTempTransparency( false);
+    emit onEvent( Event::PATHS_CHANGE);
+}   // end _doOnFinishedDrag
+
+
+void ActionEditPaths::_doOnEnterHandle( int, int hid)
+{
+    if ( hid == 2)
+        _setTempTransparency( true);
+}   // end _doOnEnterHandle
+
+
+void ActionEditPaths::_doOnLeaveHandle( int, int hid)
+{
+    if ( hid == 2 && !MS::handler<PathsHandler>()->isDragging())
+        _setTempTransparency( false);
+}   // end _doOnLeaveHandle

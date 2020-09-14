@@ -69,16 +69,25 @@ public:
     void setDepthHandle( float h);  // h \in [0.0f,1.0f]
     Vec3f depthHandle() const;
 
+    // Return the difference vector between the path endpoints.
+    Vec3f deltaVector() const { return handle1() - handle0();}
+
     void setOrientation( const Vec3f&);
     inline const Vec3f& orientation() const { return _orient;}
 
     // Set path endpoints on the model surface and recalculate path and both path
     // lengths using the given model. If no path could be found, return false.
+    // Remember to call updateMeasures after calling this function and setting
+    // the depth handle!
     bool update( const FM*);
 
+    // After calling update, or setting the depth handle, call this to update measurements.
+    void updateMeasures();
+
+    inline bool validPath() const { return _validPath;}
     inline float euclideanDistance() const { return _elen;}
     inline float surfaceDistance() const { return _slen;}
-    inline float surface2EuclideanRatio() const { return _slen / _elen;}    // Curvature metric
+    inline float surface2EuclideanRatio() const { return _elen > 0.0f ? _slen / _elen : 1.0f;}
 
     inline const Vec3f& depthPoint() const { return _dmax;}    // Point on surface at depth point
     inline float crossSectionalArea() const { return _area;}
@@ -109,7 +118,6 @@ private:
     float _dhan;            // Depth handle position
     Vec3f _dmax;            // Point on path orthogonal to handles line at depth handle position
     Vec3f _orient;          // View plane orientation of the path
-    void _updateMeasures();
     void _writeFullPath( PTree&) const;
 };  // end class
 

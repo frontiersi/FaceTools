@@ -70,3 +70,9 @@ void FaceModelViewer::resizeEvent( QResizeEvent* evt)
     else if ( newsize > 0 && oldsize == 0)
         emit toggleZeroArea( false);
 }   // end resizeEvent
+
+
+bool FaceModelViewer::isZeroArea() const
+{
+    return size().width() * size().height() == 0;
+}   // end isZeroArea

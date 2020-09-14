@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,17 +48,8 @@ void ViewerNotifier::mouseEnter( const QTools::VtkActorViewer *v)
     assert(_vwrs.count(v->getRenderWindow()) > 0);
     FMV* vwr = _vwrs.at(v->getRenderWindow());
     _vwr = vwr;
-    enterViewer(vwr);
+    //enterViewer(vwr);
 }   // end mouseEnter
-
-
-void ViewerNotifier::mouseLeave( const QTools::VtkActorViewer *v)
-{
-    assert(_vwrs.count(v->getRenderWindow()) > 0);
-    FMV* vwr = _vwrs.at(v->getRenderWindow());
-    if ( _vwr == vwr)
-        leaveViewer(vwr);
-}   // end mouseLeave
 
 
 FV* ViewerNotifier::viewFromActor( const vtkProp3D* prop) const

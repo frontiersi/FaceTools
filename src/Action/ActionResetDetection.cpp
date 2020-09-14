@@ -26,14 +26,17 @@ using QMB = QMessageBox;
 
 
 ActionResetDetection::ActionResetDetection( const QString& dn, const QIcon& icon)
-    : FaceAction(dn, icon) {}
+    : FaceAction(dn, icon)
+{
+    addRefreshEvent( Event::MASK_CHANGE);
+}   // end ctor
 
 
 bool ActionResetDetection::isAllowed( Event)
 {
     const FM *fm = MS::selectedModel();
     return fm && fm->hasLandmarks();
-}   // end isAllowedd
+}   // end isAllowed
 
 
 bool ActionResetDetection::doBeforeAction( Event)

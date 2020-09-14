@@ -84,6 +84,11 @@ public:
     float measurementValue( int mid, FaceSide, size_t dim=0) const;
 
     /**
+     * Returns true iff the given measurement exists.
+     */
+    bool hasMeasurement( int mid) const;
+
+    /**
      * Output data in CSV format. Pass in a binary union of the data to output to the given stream.
      * If left default (empty) all content are exported.
      */
@@ -98,6 +103,7 @@ private:
 
     FaceAssessment& _setCurrentAssessment( const QString&);
 
+    std::list<int> _sortedMeasurementIds() const;
     void _printSummaryLine( std::ostream&, Content) const;
     void _printSectionLine( std::ostream&, Content) const;
     void _landmarksToCSV( std::ostream&) const;

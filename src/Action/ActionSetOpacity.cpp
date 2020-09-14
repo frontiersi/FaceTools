@@ -32,12 +32,14 @@ void ActionSetOpacity::setOverlapOpacityReduction( float v) { s_opacityReduction
 ActionSetOpacity::ActionSetOpacity( const QString& dname)
     : FaceAction( dname), _opacitySpinBox(nullptr)
 {
+    addRefreshEvent( Event::VIEWER_CHANGE | Event::AFFINE_CHANGE | Event::VIEW_CHANGE);
 }   // end ctor
 
 
 void ActionSetOpacity::postInit()
 {
     _opacitySpinBox = new QDoubleSpinBox( static_cast<QWidget*>(parent()));
+    _opacitySpinBox->setToolTip( toolTip());
     _opacitySpinBox->setValue(1.0);
     _opacitySpinBox->setDecimals(1);
     _opacitySpinBox->setSingleStep(0.1);
@@ -81,7 +83,7 @@ void ActionSetOpacity::_updateOpacities( const FMV *fmv)
 }   // end _updateOpacities
 
 
-bool ActionSetOpacity::checkState( Event e)
+bool ActionSetOpacity::update( Event e)
 {
     const FV *fv = MS::selectedView();
     if ( fv)
@@ -104,7 +106,7 @@ bool ActionSetOpacity::checkState( Event e)
     else
         _opacitySpinBox->setValue(1.0);
     return true;
-}   // end checkState
+}   // end update
 
 
 bool ActionSetOpacity::isAllowed( Event) { return MS::isViewSelected();}

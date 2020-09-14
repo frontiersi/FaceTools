@@ -63,11 +63,11 @@ bool MaskVisualisation::isVisible( const FV *fv) const
 }   // end isVisible
 
 
-void MaskVisualisation::refreshState( const FV *fv)
+void MaskVisualisation::refresh( const FV *fv)
 {
     if ( _views.count(fv) > 0)
         _views.at(fv)->refresh( fv);
-}   // end refreshState
+}   // end refresh
 
 
 void MaskVisualisation::syncWithViewTransform( const FV *fv)

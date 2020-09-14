@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -92,10 +92,10 @@ void LabelsVisualisation<T>::syncWithViewTransform( const FV *fv)
 
 
 template <class T>
-void LabelsVisualisation<T>::refreshState( const FV *fv)
+void LabelsVisualisation<T>::refresh( const FV *fv)
 {
     const QColor bg = fv->viewer()->backgroundColour();
     T& lv = _views.at(fv);
     lv.setColours( chooseContrasting(bg), bg);
     lv.refresh( fv->data());
-}   // end refreshState
+}   // end refresh

@@ -18,18 +18,21 @@
 #include <Action/ActionSaveFaceModel.h>
 #include <FileIO/FaceModelManager.h>
 #include <QMessageBox>
-#include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionSaveFaceModel;
 using FaceTools::Action::Event;
 using FaceTools::Action::FaceAction;
 using FMM = FaceTools::FileIO::FaceModelManager;
 using MS = FaceTools::Action::ModelSelector;
+using QMB = QMessageBox;
 
 
 ActionSaveFaceModel::ActionSaveFaceModel( const QString& dn, const QIcon& ico, const QKeySequence& ks)
     : FaceAction( dn, ico, ks), _saveAs( nullptr)
 {
+    addRefreshEvent( Event::MESH_CHANGE | Event::AFFINE_CHANGE
+                   | Event::LANDMARKS_CHANGE | Event::PATHS_CHANGE | Event::ASSESSMENT_CHANGE
+                   | Event::RESTORE_CHANGE);
 }   // end ctor
 
 
@@ -104,7 +107,7 @@ Event ActionSaveFaceModel::doAfterAction( Event)
             MS::showStatus( "Failed to save model!", 10000);
             QString msg = tr( (f.first.toStdString() + "\nUnable to save the following:\n").c_str());
             msg.append( f.second.join("\n"));
-            QMessageBox::critical( static_cast<QWidget*>(parent()), tr("Unable to save file(s)!"), msg);
+            QMB::critical( static_cast<QWidget*>(parent()), tr("Unable to save file(s)!"), msg);
         }   // end for
         _fails.clear(); // Ensure the fail set is cleared
     }   // end else

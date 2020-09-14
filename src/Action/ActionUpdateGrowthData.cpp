@@ -24,7 +24,6 @@ using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
 using MM = FaceTools::Metric::MetricManager;
 
-
 bool ActionUpdateGrowthData::s_autoStats(true);
 
 
@@ -64,10 +63,6 @@ bool ActionUpdateGrowthData::setAutoStats( bool v)
 }   // end setAutoStats
 
 
-void ActionUpdateGrowthData::doAction( Event)
-{
-    setAutoStats( s_autoStats); // Just update compatability
-}   // end doAction
-
+void ActionUpdateGrowthData::doAction( Event) { setAutoStats( s_autoStats);} // Just update compatability
 
 Event ActionUpdateGrowthData::doAfterAction( Event) { return Event::STATS_CHANGE;}

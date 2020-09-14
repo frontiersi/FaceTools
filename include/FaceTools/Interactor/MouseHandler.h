@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,8 +21,12 @@
 #include <FaceTools/FaceTypes.h>
 #include <QTools/VtkMouseHandler.h>
 #include <vtkRenderWindow.h>
+#include <type_traits>
 
 namespace FaceTools { namespace Interactor {
+
+class GizmoHandler;
+class SelectNotifier;
 
 class FaceTools_EXPORT MouseHandler : public QTools::VMH
 {
@@ -30,47 +34,75 @@ public:
     MouseHandler();
     ~MouseHandler() override;
 
-    // Return the viewer the mouse pointer was last over (never returns null).
-    FMV* mouseViewer() const { return _vwr;}
+    void addViewer( FMV*, bool isDefault=false);
 
-protected:
-    // Called when the mouse has entered the parameter viewer (mouseViewer() returns parameter).
-    virtual void enterViewer( FMV*) {}
-    // Called when the mouse has left the parameter viewer.
-    virtual void leaveViewer( FMV*) {}
+    inline FMV* mouseViewer() const { return _vwr;}     // Viewer pointer was last over (never null).
+    inline const vtkProp *prop() const { return _pnow;} // Prop cursor is over (may be null).
 
-/*
-    // Override any of the following virtual functions to implement
-    // new behaviour on mouse input events. Returning true from any
-    // of these functions will prevent the input from being used in
-    // the standard camera/actor movement interactions.
-    virtual bool mouseMove( ){ return false;}  // Move mouse with no buttons depressed.
+    // Get notifier for connecting to model selection events.
+    inline SelectNotifier* selectNotifier() { return _snot;}
 
-    virtual bool leftButtonDown(){ return false;}  // Not called if leftDoubleClick
-    virtual bool leftButtonUp() { return false;}    // Not called if leftDoubleClick
-    virtual bool leftDoubleClick(){ return false;}
+    void refreshHandlers();
 
-    virtual bool middleButtonDown(){ return false;}
-    virtual bool middleButtonUp(){ return false;}
+    // Register a handler for mouse events and model/prop enter/leave events.
+    // The order of addition determines the order in which the registered handlers
+    // are called. If an earlier handler swallows the event (returns true from its
+    // respective event handling function), later handlers are ignored.
+    // Returns the index of the added handler.
+    int registerHandler( GizmoHandler*);
 
-    virtual bool rightButtonDown(){ return false;}
-    virtual bool rightButtonUp(){ return false;}
-    virtual bool rightDoubleClick() { return false;}
+    // Call after all handlers have been registered to call their respective postRegister functions.
+    void finishRegistration();
 
-    virtual bool leftDrag(){ return false;}   // Move mouse with left button depressed.
-    virtual bool rightDrag(){ return false;}  // Move mouse with right button depressed.
-    virtual bool middleDrag(){ return false;} // Move mouse with middle button depressed.
-
-    virtual bool mouseWheelForward(){ return false;}
-    virtual bool mouseWheelBackward(){ return false;}
-*/
+    template <class T>
+    T* handler() const
+    {
+        static_assert( std::is_base_of<GizmoHandler, T>::value, "Requested handler must derive from GizmoHandler!");
+        T *rgh = nullptr;
+        for ( GizmoHandler *gh : _gizmos)
+            if ( (rgh = qobject_cast<T*>(gh)))
+                break;
+        assert( rgh);
+        return rgh;
+    }   // end handler
 
 private:
-    void mouseEnter( const QTools::VtkActorViewer*) override;
-    void mouseLeave( const QTools::VtkActorViewer*) override;
-    std::unordered_map<const vtkRenderWindow*, FMV*> _vwrs;
-    FMV* _vwr;
+    bool mouseMove() override;
 
+    bool leftButtonDown() override; // Not called if leftDoubleClick
+    bool leftButtonUp() override;   // Not called if leftDoubleClick
+    bool leftDoubleClick() override;
+
+    bool middleButtonDown() override;
+    bool middleButtonUp() override;
+
+    bool rightButtonDown() override;
+    bool rightButtonUp() override;
+    bool rightDoubleClick() override;
+
+    bool leftDrag() override;  // Move mouse with left button depressed.
+    bool rightDrag() override; // Move mouse with right button depressed.
+    bool middleDrag() override;// Move mouse with middle button depressed.
+
+    bool mouseWheelForward() override;
+    bool mouseWheelBackward() override;
+
+    void mouseEnter( const QTools::VtkActorViewer*) override;
+    std::unordered_map<const vtkRenderWindow*, FMV*> _vwrs;
+
+    std::vector<GizmoHandler*> _gizmos;
+
+    SelectNotifier *_snot;
+    FMV *_vwr;
+    Vis::FV *_mnow;
+    Vis::FV *_mnxt;
+    const vtkProp *_pnow;
+    const vtkProp *_pnxt;
+  
+    void _setPointedAt();
+    void _testMouseCursor();
+    Vis::FV* _selectView( Vis::FV*) const;
+    bool _handleEvent( const std::function<bool(GizmoHandler*)>&) const;
     MouseHandler( const MouseHandler&) = delete;
     void operator=( const MouseHandler&) = delete;
 };  // end class

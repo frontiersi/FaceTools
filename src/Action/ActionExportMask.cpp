@@ -37,6 +37,7 @@ ActionExportMask::ActionExportMask( const QString& dn, const QIcon& ico, const Q
     : FaceAction(dn, ico, ks), _fdialog(nullptr), _filename(""), _savedOkay(false)
 {
     setAsync(true);
+    addRefreshEvent( Event::MASK_CHANGE);
 }   // end ctor
 
 

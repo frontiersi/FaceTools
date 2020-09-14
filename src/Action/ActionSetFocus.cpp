@@ -16,9 +16,10 @@
  ************************************************************************/
 
 #include <Action/ActionSetFocus.h>
+#include <Interactor/LandmarksHandler.h>
 #include <FaceModelViewer.h>
+#include <FaceModel.h>
 #include <Vis/FaceView.h>
-#include <algorithm>
 using FaceTools::Action::ActionSetFocus;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
@@ -28,52 +29,40 @@ using FaceTools::Vec3f;
 using MS = FaceTools::Action::ModelSelector;
 
 
-// public
-ActionSetFocus::ActionSetFocus( const QString& dn, const QIcon& icon, const QKeySequence& ks)
-    : FaceAction( dn, icon, ks)
-{
-}   // end ctor
+ActionSetFocus::ActionSetFocus( const QString& dn, const QIcon& ico, const QKeySequence& ks)
+    : FaceAction( dn, ico, ks) {}
 
 
-bool ActionSetFocus::isAllowed( Event)
-{
-    return MS::interactionMode() == IMode::CAMERA_INTERACTION;
-}   // end isAllowed
+void ActionSetFocus::setFocus( FMV* vwr, const Vec3f& v) { vwr->setCameraFocus( v);}
 
 
-void ActionSetFocus::setFocus( FMV* vwr, const Vec3f& v)
-{
-    vwr->setCameraFocus( v);
-}   // end setFocus
+bool ActionSetFocus::isAllowed( Event) { return MS::isViewSelected();}
 
 
 bool ActionSetFocus::doBeforeAction( Event)
 {
-    bool go = false;
-    if ( MS::isViewSelected())
+    const FV *fv = MS::selectedView();
+    QPoint mp = primedMousePos();
+    if ( mp.x() < 0)
+        mp = fv->viewer()->mouseCoords();
+
+    const bool go = fv->projectToSurface( mp, _vproj);
+
+    // If projects to surface, check overlap with landmarks
+    if ( go)
     {
-        QPoint mpos = primedMousePos();
-        if ( mpos.x() < 0)
-            mpos = MS::mousePos();
-        go = MS::selectedView()->isPointOnFace( mpos);
-    }   // end if
+        if (MS::handler<Interactor::LandmarksHandler>()->visualisation().isVisible(fv))
+        {
+            const float srng = fv->viewer()->snapRange();
+            _vproj = fv->data()->currentLandmarks().snapTo( _vproj, srng*srng);
+        }   // end if
+    }   // end go
+
     return go;
 }   // end doBeforeAction
 
 
-void ActionSetFocus::doAction( Event)
-{
-    FV* fv = MS::selectedView();
-    Vec3f nf;
-    QPoint mpos = primedMousePos();
-    if ( mpos.x() < 0)
-        mpos = MS::mousePos();
-    fv->projectToSurface( mpos, nf);
-    setFocus( fv->viewer(), nf);
-}   // end doAction
+void ActionSetFocus::doAction( Event) { setFocus( MS::selectedViewer(), _vproj);}
 
 
-Event ActionSetFocus::doAfterAction( Event)
-{
-    return Event::CAMERA_CHANGE;
-}   // end doAfterAction
+Event ActionSetFocus::doAfterAction( Event) { return Event::CAMERA_CHANGE;}

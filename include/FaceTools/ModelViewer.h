@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,11 +34,10 @@ public:
     ModelViewer( QWidget* parent=nullptr, bool useFloodLights=false);
     ~ModelViewer() override;
 
-    // Set/get interaction mode. Pass boolean true to denote that camera interaction should
-    // be used if in actor interaction mode but the cursor is not found to pick any actor.
-    void setInteractionMode( QTools::InteractionMode m, bool v) { _qviewer->setInteractionMode(m, v);}
+    void setCameraInteraction() { _qviewer->setCameraInteraction();}
+    void setActorInteraction( const vtkProp3D *p) { _qviewer->setActorInteraction(p);}
+
     QTools::InteractionMode interactionMode() const { return _qviewer->interactionMode();}
-    bool useCameraOffActor() const { return _qviewer->useCameraOffActor();}
 
     // Lock/unlock camera/actor interaction.
     int lockInteraction() { return _qviewer->lockInteraction();}
@@ -95,6 +94,10 @@ public:
 
     void setCameraPosition( const Vec3f&);
     Vec3f cameraPosition() const;
+
+    // Calculate and return "snapping" distance as a proportion p of the
+    // distance between the camera's position and focus.
+    float snapRange( float p=0.015f) const;
 
     void refreshClippingPlanes();
 

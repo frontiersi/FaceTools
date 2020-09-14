@@ -16,8 +16,7 @@
  ************************************************************************/
 
 #include <Action/ActionEditLandmarks.h>
-#include <Action/ActionUpdateMeasurements.h>
-#include <Action/ActionOrientCameraToFace.h>
+#include <Interactor/LandmarksHandler.h>
 #include <LndMrk/LandmarksManager.h>
 #include <Metric/MetricManager.h>
 using FaceTools::Action::ActionEditLandmarks;
@@ -25,7 +24,6 @@ using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Action::UndoState;
 using FaceTools::Vis::FV;
-using FaceTools::Interactor::LandmarksHandler;
 using FaceTools::Widget::LandmarksDialog;
 using FaceTools::FaceSide;
 using MS = FaceTools::Action::ModelSelector;
@@ -33,13 +31,11 @@ using LMAN = FaceTools::Landmark::LandmarksManager;
 
 
 ActionEditLandmarks::ActionEditLandmarks( const QString& dn, const QIcon& ico, const QKeySequence& ks)
-    : FaceAction( dn, ico, ks), _handler( LandmarksHandler::create()),
-        _dialog(nullptr),
-        _actShow(nullptr), _actAlign(nullptr), _actRestore(nullptr), _actShowLabels(nullptr),
-        _lmid(-1), _lat(MID), _egrp( Event::NONE)
+    : FaceAction( dn, ico, ks),
+      _dialog(nullptr), _actShow(nullptr), _actAlign(nullptr), _actRestore(nullptr), _actShowLabels(nullptr)
 {
     setCheckable( true, false);
-    addTriggerEvent( Event::MASK_CHANGE | Event::CLOSED_MODEL);
+    addTriggerEvent( Event::MASK_CHANGE | Event::RESTORE_CHANGE);
 }   // end ctor
 
 
@@ -56,97 +52,57 @@ void ActionEditLandmarks::postInit()
     _dialog->setRestoreAction( _actRestore);
     _dialog->setLabelsAction( _actShowLabels);
 
-    connect( &*_handler, &LandmarksHandler::onEnterLandmark, _dialog, &LandmarksDialog::setSelectedLandmark);
-    connect( &*_handler, &LandmarksHandler::onStartedDrag, this, &ActionEditLandmarks::_doOnStartedDrag);
-    connect( &*_handler, &LandmarksHandler::onDoingDrag, this, &ActionEditLandmarks::_doOnDoingDrag);
-    connect( &*_handler, &LandmarksHandler::onFinishedDrag, this, &ActionEditLandmarks::_doOnDoingDrag);
-    connect( _dialog, &LandmarksDialog::finished, this, &ActionEditLandmarks::_doOnClosedDialog);
+    connect( _dialog, &LandmarksDialog::finished, [this](){ this->setChecked(false);});
+
+    using Interactor::LandmarksHandler;
+    const LandmarksHandler *h = MS::handler<LandmarksHandler>();
+    assert( h);
+    connect( h, &LandmarksHandler::onEnterLandmark, _dialog, &LandmarksDialog::setSelectedLandmark);
+    connect( h, &LandmarksHandler::onStartedDrag, this, &ActionEditLandmarks::_doOnStartedDrag);
+    connect( h, &LandmarksHandler::onFinishedDrag, this, &ActionEditLandmarks::_doOnFinishedDrag);
 }   // end postInit
 
 
-bool ActionEditLandmarks::checkState( Event e)
+bool ActionEditLandmarks::isAllowed( Event e)
 {
     const FM *fm = MS::selectedModel();
-    _handler->refreshState();
-    return fm && (_dialog->isVisible() || (has(e, Event::MASK_CHANGE) && has(e, Event::LANDMARKS_CHANGE) && fm->hasLandmarks()));
-}   // end checkState
+    return fm && fm->hasLandmarks();
+}   // end isAllowed
 
 
-void ActionEditLandmarks::doAction( Event e)
+bool ActionEditLandmarks::update( Event e)
 {
-    if ( isChecked() && !_dialog->isVisible())
+    QString msg;
+    bool chk = isChecked();
+    const FV *fv = MS::selectedView();
+    if ( !fv || has( e, Event::CLOSED_MODEL))
+        chk = false;
+    else if ( isTriggerEvent(e))
     {
-        QString msg;
-        const FV *fv = MS::selectedView();
-
-        if ( fv)
+        if ( has(e, Event::LANDMARKS_CHANGE))
         {
-            MS::setLockSelected(true);
-            ActionOrientCameraToFace::orientToFace( fv, 1);
-            MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-            emit onEvent( Event::CAMERA_CHANGE);
+            chk = fv->data()->hasLandmarks();
             if ( has( e, Event::MASK_CHANGE) && fv->data()->hasMask())
-                msg = tr("Review and confirm landmark placement in the main viewer");
+                msg = tr("Confirm landmark placement in the main window");
+            else
+                msg = tr("Confirm restored landmark position(s)");
         }   // end if
+    }   // end else if
 
-        _dialog->setMessage( msg);
-
-        _lmid = -1;
-        _lat = MID;
-        for ( int id : LMAN::ids())
-            LMAN::landmark(id)->setLocked( false);
-
-        _dialog->show();
-    }   // end if
-    else if ( !isChecked())
-        _doOnClosedDialog();
-}   // end doAction
-
-
-void ActionEditLandmarks::_doOnClosedDialog()
-{
-    setChecked(false);
-    _dialog->hide();
+    _dialog->setMessage(msg);
+    _dialog->setVisible(chk);
+    MS::setLockSelected(chk);
     for ( int id : LMAN::ids())
-        LMAN::landmark(id)->setLocked( true);
-    MS::setLockSelected(false);
-}   // end _doOnClosedDialog
+        LMAN::landmark(id)->setLocked( !chk);
 
-
-void ActionEditLandmarks::saveState( UndoState &us) const
-{
-    us.setName( "Move Landmark");
-    us.setUserData( "LandmarkId", QVariant::fromValue(_lmid));
-    us.setUserData( "LandmarkLat", QVariant::fromValue(_lat));
-    const Vec3f &pos = us.model()->currentLandmarks().pos(_lmid, _lat);
-    us.setUserData( "LandmarkPos", QVariant::fromValue(pos));
-}   // end saveState
-
-
-void ActionEditLandmarks::restoreState( const UndoState &us)
-{
-    _lmid = us.userData("LandmarkId").value<int>();
-    _lat = us.userData("LandmarkLat").value<FaceSide>();
-    us.model()->setLandmarkPosition( _lmid, _lat, us.userData("LandmarkPos").value<Vec3f>());
-    if ( has( us.events(), Event::METRICS_CHANGE))
-        ActionUpdateMeasurements::updateMeasurementsForLandmark( us.model(), _lmid);
-}   // end restoreState
+    return chk;
+}   // end update
 
 
 void ActionEditLandmarks::_doOnStartedDrag( int lmid, FaceSide lat)
 {
-    _lmid = lmid;
-    _lat = lat;
-    _egrp = Event::LANDMARKS_CHANGE;
-    if ( !Metric::MetricManager::metricsForLandmark( lmid).empty())
-        _egrp |= Event::METRICS_CHANGE;
-    storeUndo( this, _egrp, false);
+    storeUndo( this, Event::LANDMARKS_CHANGE);
 }   // end _doOnStartedDrag
 
 
-void ActionEditLandmarks::_doOnDoingDrag( int lmid, FaceSide)
-{
-    // Update measurements related to the moved landmark
-    ActionUpdateMeasurements::updateMeasurementsForLandmark( MS::selectedModel(), lmid);
-    emit onEvent( _egrp);
-}   // end _doOnDoingDrag
+void ActionEditLandmarks::_doOnFinishedDrag( int lmid, FaceSide) { emit onEvent( Event::LANDMARKS_CHANGE);}

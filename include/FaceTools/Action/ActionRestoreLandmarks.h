@@ -20,19 +20,19 @@
 
 #include "FaceAction.h"
 #include <FaceTools/Widget/LandmarksCheckDialog.h>
-#include <FaceTools/Interactor/LandmarksHandler.h>
 
 namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionRestoreLandmarks : public FaceAction
 { Q_OBJECT
 public:
-    ActionRestoreLandmarks( const QString&, const QIcon&, Interactor::LandmarksHandler::Ptr);
-    QString toolTip() const override { return "Restore landmarks to their initially detected positions.";}
+    ActionRestoreLandmarks( const QString&, const QIcon&);
+    QString toolTip() const override { return "Restore landmarks to their initial positions.";}
 
     // Returns true iff given model has a mask and the landmarks were transferred.
     // Set ulmks specifies the ids of the landmarks to restore (function does nothing if empty).
-    static bool restoreLandmarks( FM*, const IntSet& ulmks);
+    // Also updates all visualisations on views of the given model if uvis is true.
+    static bool restoreLandmarks( FM*, const IntSet& ulmks, bool uvis=true);
 
 protected:
     void postInit() override;
@@ -43,7 +43,6 @@ protected:
 
 private:
     Widget::LandmarksCheckDialog *_cdialog;
-    Interactor::LandmarksHandler::Ptr _handler;
     IntSet _ulmks;
 };  // end class
 

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,53 +15,46 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <Action/ActionShowModelProperties.h>
+#include <Action/ActionShowMeshInfo.h>
 #include <FaceModel.h>
-using FaceTools::Action::ActionShowModelProperties;
+using FaceTools::Action::ActionShowMeshInfo;
 using FaceTools::Action::ActionDiscardManifold;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
-using FaceTools::Widget::ModelPropertiesDialog;
+using FaceTools::Widget::MeshInfoDialog;
 using FaceTools::FM;
 using MS = FaceTools::Action::ModelSelector;
 
 
-ActionShowModelProperties::ActionShowModelProperties( const QString& dname, const QIcon& icon, const QKeySequence& ks)
+ActionShowMeshInfo::ActionShowMeshInfo( const QString& dname, const QIcon& icon, const QKeySequence& ks)
     : FaceAction( dname, icon, ks), _dialog(nullptr)
 {
+    addRefreshEvent( Event::MESH_CHANGE);
 }   // end ctor
 
 
-void ActionShowModelProperties::postInit()
+void ActionShowMeshInfo::postInit()
 {
     QWidget* p = static_cast<QWidget*>(parent());
-    _dialog = new ModelPropertiesDialog(p);
+    _dialog = new MeshInfoDialog(p);
 }   // end postInit
 
 
-ActionShowModelProperties::~ActionShowModelProperties()
-{
-    delete _dialog;
-}   // end dtor
-
-
-bool ActionShowModelProperties::checkState( Event e)
-{
-    if ( has( e, Event::CLOSED_MODEL) && !MS::selectedModel())
-        _dialog->hide();
-    return !_dialog->isHidden();
-}   // end checkState
-
-
-bool ActionShowModelProperties::isAllowed( Event)
+bool ActionShowMeshInfo::update( Event e)
 {
     const FM* fm = MS::selectedModel();
-    _dialog->set( fm);
-    return fm != nullptr;
-}   // end isAllowed
+    if ( !fm || has( e, Event::CLOSED_MODEL))
+        _dialog->hide();
+    else
+        _dialog->set( fm);
+    return _dialog->isVisible();
+}   // end update
 
 
-void ActionShowModelProperties::doAction( Event)
+bool ActionShowMeshInfo::isAllowed( Event) { return MS::isViewSelected();}
+
+
+void ActionShowMeshInfo::doAction( Event)
 {
     _dialog->show();
     _dialog->raise();
@@ -69,8 +62,8 @@ void ActionShowModelProperties::doAction( Event)
 }   // end doAction
 
 
-Event ActionShowModelProperties::doAfterAction( Event)
+Event ActionShowMeshInfo::doAfterAction( Event)
 {
-    MS::showStatus( "Showing Model Properties", 5000);
+    MS::showStatus( "Showing Model Information", 5000);
     return Event::NONE;
 }   // end doAfterAction

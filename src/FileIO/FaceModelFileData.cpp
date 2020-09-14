@@ -123,9 +123,21 @@ std::string str2csv( const QString& v)
     return ("\"" + v.simplified().replace("\"","\"\"") + "\"").toStdString();
 }   // end str2csv
 
+
 std::string str2csv( const std::string& v) { return str2csv( QString::fromStdString(v));}
 
 }   // end namespace
+
+
+std::list<int> FaceModelFileData::_sortedMeasurementIds() const
+{
+    std::list<int> mids;
+    for ( int mid : MM::ids())
+        if ( hasMeasurement(mid))
+            mids.push_back(mid);
+    mids.sort();
+    return mids;
+}   // end _sortedMeasurementIds
 
 
 void FaceModelFileData::_clearHPOTerms()
@@ -236,12 +248,15 @@ FaceAssessment& FaceModelFileData::_setCurrentAssessment( const QString &nm)
 
 float FaceModelFileData::measurementValue( int mid, FaceSide lat, size_t d) const
 {
+    assert( hasMeasurement( mid));
     const MetricSet &mset = _fm->currentAssessment()->cmetrics(lat);
-    assert( mset.hasMetric(mid));
     const MetricValue &mv = mset.metric( mid);
     assert( d >= 0 && d < mv.ndims());
     return mv.value( d);
 }   // end measurementValue
+
+
+bool FaceModelFileData::hasMeasurement( int mid) const { return _fm->currentAssessment()->hasMetric(mid);}
 
 
 void FaceModelFileData::_printSummaryLine( std::ostream &os, Content content) const
@@ -271,12 +286,16 @@ void FaceModelFileData::_printSummaryLine( std::ostream &os, Content content) co
 void FaceModelFileData::_printSectionLine( std::ostream &os, Content content) const
 {
     size_t lcount = 0;
-    if ( (content & Content::LANDMARKS) != Content::EMPTY)
+    if ( !landmarks().empty() && (content & Content::LANDMARKS) != Content::EMPTY)
         lcount = 2*(LMAN::ids().size() - LMAN::medialIds().size()) + LMAN::medialIds().size();
 
     size_t mcount = 0;
     if ( (content & Content::MEASUREMENTS) != Content::EMPTY)
-        mcount = (MM::ids().size() - MM::bilateralIds().size()) + 2*MM::bilateralIds().size();
+    {
+        const std::list<int> mids = _sortedMeasurementIds();
+        for ( int mid : mids)
+            mcount += MM::bilateralIds().count(mid) + 1;
+    }   // end if
 
     size_t pcount = 0;
     if ( (content & Content::PATHS) != Content::EMPTY)
@@ -381,8 +400,7 @@ void FaceModelFileData::_landmarksToCSV( std::ostream &os) const
 
 void FaceModelFileData::_measurementsToCSV( std::ostream &os) const
 {
-    std::list<int> mids( MM::ids().begin(), MM::ids().end());
-    mids.sort();
+    const std::list<int> mids = _sortedMeasurementIds();
     for ( int mid : mids)
     {
         Metric::Metric::Ptr mc = MM::metric(mid);

@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <Action/ActionDeletePath.h>
+#include <Interactor/PathsHandler.h>
 #include <FaceModel.h>
 using FaceTools::Action::ActionDeletePath;
 using FaceTools::Action::FaceAction;
@@ -24,27 +25,31 @@ using FaceTools::Interactor::PathsHandler;
 using MS = FaceTools::Action::ModelSelector;
 
 
-ActionDeletePath::ActionDeletePath( const QString& dn, const QIcon& ico, PathsHandler::Ptr handler, const QKeySequence &ks)
-    : FaceAction( dn, ico, ks), _handler(handler)
+ActionDeletePath::ActionDeletePath( const QString& dn, const QIcon& ico, const QKeySequence &ks)
+    : FaceAction( dn, ico, ks)
 {
+    const PathsHandler *h = MS::handler<PathsHandler>();
+    connect( h, &PathsHandler::onEnterHandle, [this](){ this->refresh();});
+    connect( h, &PathsHandler::onLeaveHandle, [this](){ this->refresh();});
+    addRefreshEvent( Event::PATHS_CHANGE);
 }   // end ctor
 
 
 bool ActionDeletePath::isAllowed( Event)
 {
-    return MS::interactionMode() == IMode::CAMERA_INTERACTION && _handler->hoverPath();
+    const PathsHandler *h = MS::handler<PathsHandler>();
+    return MS::interactionMode() == IMode::CAMERA_INTERACTION && h->hoverPath();
 }   // end isAllowed
 
 
 void ActionDeletePath::doAction( Event)
 {
     storeUndo(this, Event::PATHS_CHANGE);
-
     FM *fm = MS::selectedModel();
-    assert( _handler->hoverPath());
-    const int pid = _handler->hoverPath()->pathId();
-    _handler->leavePath();
-    _handler->visualisation().erasePath( fm, pid);
+    PathsHandler *handler = MS::handler<PathsHandler>();
+    assert( handler->hoverPath());
+    const int pid = handler->leavePath();
+    handler->visualisation().erasePath( fm, pid);
     fm->lockForWrite();
     fm->removePath(pid);
     fm->unlock();
@@ -54,5 +59,5 @@ void ActionDeletePath::doAction( Event)
 Event ActionDeletePath::doAfterAction( Event)
 {
     MS::showStatus( "Measurement deleted!", 5000);
-    return Event::PATHS_CHANGE | Event::VIEW_CHANGE;
+    return Event::PATHS_CHANGE;
 }   // end doAfterAction

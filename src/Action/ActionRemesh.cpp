@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,10 +36,7 @@ ActionRemesh::ActionRemesh( const QString& dn, const QIcon& ico)
 }   // end ctor
 
 
-bool ActionRemesh::isAllowed( Event)
-{
-    return MS::isViewSelected();
-}   // end isAllowedd
+bool ActionRemesh::isAllowed( Event) { return MS::isViewSelected();}
 
 
 bool ActionRemesh::doBeforeAction( Event)

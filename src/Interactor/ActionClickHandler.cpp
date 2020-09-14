@@ -15,45 +15,42 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <Action/ActionSlice.h>
-#include <FaceModel.h>
-#include <r3d/Slicer.h>
-using FaceTools::Action::ActionSlice;
+#include <Interactor/ActionClickHandler.h>
+#include <Action/ModelSelector.h>
+#include <FaceModelViewer.h>
+using FaceTools::Interactor::ActionClickHandler;
 using FaceTools::Action::FaceAction;
-using FaceTools::Action::Event;
-using FaceTools::FVS;
-using FaceTools::FM;
-using FaceTools::Vec3f;
 using MS = FaceTools::Action::ModelSelector;
 
 
-ActionSlice::ActionSlice( const QString &dn, const QIcon& ico, const Vec3f& p, const Vec3f& n)
-    : FaceAction( dn, ico), _p(p), _n(n)
+ActionClickHandler::Ptr ActionClickHandler::create() { return Ptr( new ActionClickHandler);}
+
+
+void ActionClickHandler::refresh()
 {
-    setAsync(true);
-}   // end ctor
+    setEnabled( MS::selectedView());
+}   // end refresh
 
 
-bool ActionSlice::isAllowed( Event) { return MS::isViewSelected();}
+void ActionClickHandler::addLeftDoubleClickAction( FaceAction* a) { _actions.push_back(a);}
 
 
-void ActionSlice::doAction( Event)
+bool ActionClickHandler::doLeftDoubleClick()
 {
-    storeUndo( this, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE);
-    FM* fm = MS::selectedModel();
+    // Prime actions and return first ready
+    FaceAction *act = nullptr;
+    const QPoint mpos = MS::selectedViewer()->mouseCoords();
+    for ( FaceAction *a : _actions)
+    {
+        if (a->primeMousePos( mpos))
+        {
+            act = a;
+            break;
+        }   // end if
+    }   // end for
 
-    fm->lockForRead();
-    r3d::Mesh::Ptr nmod = r3d::Slicer( fm->mesh())( _p, _n);    // One half
-    fm->unlock();
+    if ( act)
+        act->execute( Action::Event::USER);
 
-    fm->lockForWrite();
-    fm->update( nmod, true, true);
-    fm->unlock();
-}   // end doAction
-
-
-Event ActionSlice::doAfterAction( Event)
-{
-    return Event::MESH_CHANGE | Event::LANDMARKS_CHANGE;
-}   // end doAfterAction
-
+    return act != nullptr;
+}   // end doLeftDoubleClick

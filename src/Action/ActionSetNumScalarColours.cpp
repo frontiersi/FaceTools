@@ -30,19 +30,33 @@ using MS = FaceTools::Action::ModelSelector;
 
 
 ActionSetNumScalarColours::ActionSetNumScalarColours( const QString& dname)
-    : FaceAction( dname), _spinBox(nullptr) {}
+    : FaceAction( dname), _spinBox(nullptr)
+{
+    addRefreshEvent( Event::VIEW_CHANGE);
+}   // end ctor
+
+
+QString ActionSetNumScalarColours::toolTip() const
+{
+    QStringList txt;
+    txt << "Set the number of distinct colour bands to use when";
+    txt << "mapping scalar visualisations to the model's surface.";
+    return txt.join(" ");
+}   // end toolTip
 
 
 void ActionSetNumScalarColours::postInit()
 {
     QWidget* p = static_cast<QWidget*>(parent());
     _spinBox = new QSpinBox(p);
+    _spinBox->setToolTip( toolTip());
     _spinBox->setAlignment( Qt::AlignRight);
     _spinBox->setRange( 1, 99);
     _spinBox->setSingleStep( 1);
     _spinBox->setButtonSymbols(QAbstractSpinBox::PlusMinus);
     _spinBox->setEnabled(false);
-    connect( _spinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &ActionSetNumScalarColours::_doOnValueChanged);
+    connect( _spinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &ActionSetNumScalarColours::_doOnValueChanged);
 }   // end postInit
 
 
@@ -53,7 +67,7 @@ bool ActionSetNumScalarColours::isAllowed( Event)
 }   // end isAllowed
 
 
-bool ActionSetNumScalarColours::checkState( Event)
+bool ActionSetNumScalarColours::update( Event)
 {
     const FV* fv = MS::selectedView();
     const ScalarVisualisation* svis = fv ? fv->activeScalars() : nullptr;
@@ -63,7 +77,7 @@ bool ActionSetNumScalarColours::checkState( Event)
     _spinBox->setValue( enabled ? static_cast<int>(svis->numColours()) : 0);
     _spinBox->setSingleStep( enabled ? static_cast<int>(svis->numStepSize()) : 1);
     return enabled;
-}   // end checkState
+}   // end update
 
 
 void ActionSetNumScalarColours::_doOnValueChanged( int v)

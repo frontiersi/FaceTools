@@ -33,6 +33,7 @@ ActionRemoveManifolds::ActionRemoveManifolds( const QString& dn, const QIcon& ic
     : FaceAction( dn, ico), _mid(-1)
 {
     setAsync(true);
+    addRefreshEvent( Event::MESH_CHANGE);
 }   // end ctor
 
 
@@ -92,7 +93,7 @@ bool ActionRemoveManifolds::doBeforeAction( Event)
     if ( _mid >= 0)
         MS::showStatus("Removing manifolds from selected model...");
 
-    storeUndo(this, Event::MESH_CHANGE | Event::CONNECTIVITY_CHANGE | Event::LANDMARKS_CHANGE);
+    storeUndo(this, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE);
     return _mid >= 0;
 }   // end doBeforeAction
 
@@ -117,6 +118,6 @@ void ActionRemoveManifolds::doAction( Event)
 Event ActionRemoveManifolds::doAfterAction( Event)
 {
     MS::showStatus("Finished removing manifolds.", 5000);
-    return Event::MESH_CHANGE | Event::CONNECTIVITY_CHANGE | Event::LANDMARKS_CHANGE;
+    return Event::MESH_CHANGE | Event::LANDMARKS_CHANGE;
 }   // end doAfterAction
 

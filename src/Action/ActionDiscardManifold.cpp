@@ -33,6 +33,7 @@ ActionDiscardManifold::ActionDiscardManifold( const QString& dn, const QIcon& ic
     : FaceAction( dn, ico), _mid(-1)
 {
     setAsync(true);
+    addRefreshEvent( Event::MESH_CHANGE);
 }   // end ctor
 
 
@@ -95,7 +96,7 @@ bool ActionDiscardManifold::doBeforeAction( Event)
 
 void ActionDiscardManifold::doAction( Event)
 {
-    storeUndo(this, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE | Event::CONNECTIVITY_CHANGE);
+    storeUndo(this, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE);
 
     FM* fm = MS::selectedModel();
     fm->lockForWrite();
@@ -116,5 +117,5 @@ void ActionDiscardManifold::doAction( Event)
 Event ActionDiscardManifold::doAfterAction( Event)
 {
     MS::showStatus( "Finished removing manifold.", 5000);
-    return Event::MESH_CHANGE | Event::LANDMARKS_CHANGE | Event::CONNECTIVITY_CHANGE;
+    return Event::MESH_CHANGE | Event::LANDMARKS_CHANGE;
 }   // end doAfterAction

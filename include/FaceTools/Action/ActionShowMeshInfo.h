@@ -15,25 +15,32 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_PROP_HANDLER_H
-#define FACE_TOOLS_PROP_HANDLER_H
+#ifndef FACE_TOOLS_ACTION_SHOW_MESH_INFO_H
+#define FACE_TOOLS_ACTION_SHOW_MESH_INFO_H
 
-#include "MouseHandler.h"
+#include "ActionDiscardManifold.h"
+#include <FaceTools/Widget/MeshInfoDialog.h>
 
-namespace FaceTools { namespace Interactor {
+namespace FaceTools { namespace Action {
 
-class FaceTools_EXPORT PropHandler : public QObject, public MouseHandler
+class FaceTools_EXPORT ActionShowMeshInfo : public FaceAction
 { Q_OBJECT
 public:
-    PropHandler();
+    ActionShowMeshInfo( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
 
-    virtual void refreshState(){}
+    QString toolTip() const override { return "Show information about the selected 3D mesh.";}
 
-protected slots:
-    virtual void doEnterProp( Vis::FV*, const vtkProp*){}
-    virtual void doLeaveProp( Vis::FV*, const vtkProp*){}
+protected:
+    void postInit() override;
+    bool update( Event) override;
+    bool isAllowed( Event) override;
+    void doAction( Event) override;
+    Event doAfterAction( Event) override;
+
+private:
+    Widget::MeshInfoDialog *_dialog;
 };  // end class
 
-}}   // end namespaces
+}}   // end namespace
 
 #endif

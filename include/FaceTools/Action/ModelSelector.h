@@ -20,7 +20,7 @@
 
 #include <FaceTools/FaceModelViewer.h>
 #include <FaceTools/Vis/BoundingVisualisation.h>
-#include <FaceTools/Interactor/SelectNotifier.h>
+#include <FaceTools/Interactor/MouseHandler.h>
 #include <QStatusBar>
 
 namespace FaceTools { namespace Action {
@@ -48,10 +48,23 @@ public:
     // Call AFTER using addViewer to add all required viewers since the
     // construction of a ModelViewerInteractor derived type will call
     // ModelSelector::viewers() in its constructor.
-    static const Interactor::SelectNotifier* selector();
+    static const Interactor::SelectNotifier* selectNotifier();
+
+    // Register an interaction handler (order of registration matters).
+    static void registerHandler( Interactor::GizmoHandler*);
+
+    // Call after all handlers have been registered (some may depend on others).
+    static void finishRegisteringHandlers() { me()->_mouseHandler->finishRegistration();}
+
+    // Return the first registered handler of the given type or null if not registered.
+    template <class T>
+    static T* handler() { return me()->_mouseHandler->handler<T>();}
+
+    // Cause handlers to refresh their own states.
+    static void refreshHandlers();
 
     // Set/get the interaction mode for the viewers (camera - default, or actor).
-    static void setInteractionMode( IMode, bool useCameraOffActor=false);
+    static void setInteractionMode( IMode);
     static IMode interactionMode();
 
     // Return the viewer that the mouse was last over. Never returns null.
@@ -59,13 +72,10 @@ public:
     static FMV* mouseViewer();
 
     // Return the prop the cursor is currently over (null if none).
-    static const vtkProp* cursorProp() { return sn().prop();}
+    static const vtkProp* cursorProp() { return me()->_mouseHandler->prop();}
 
     // Return the viewer that the selected model is currently in. May be null!
     static FMV* selectedViewer() { return isViewSelected() ? selectedView()->viewer() : nullptr;}
-
-    // Returns current mouse cursor position relative to the mouse viewer.
-    static QPoint mousePos() { return mouseViewer()->mouseCoords();}
 
     // Simply returns the default viewer (set from addViewer).
     static FMV* defaultViewer();
@@ -83,7 +93,7 @@ public:
     // Programmatically select the given FaceView.
     static void setSelected( Vis::FV*);
 
-    // Call with true to prevent changes to the selection.
+    // Call with true to prevent changes to currently selected FaceView (unlocked if setSelected called).
     static void setLockSelected( bool);
 
     static Vis::FV* add( FM*, FMV*);
@@ -101,7 +111,7 @@ public:
     // Synchronise all bounding cuboid actors to match the model's orientation bounds.
     static void syncBoundingVisualisation( const FM*);
 
-    // Provide a delegate function that will be executed on all open views and then updateRender (if set true).
+    // Provide a delegate that will be executed on all open views and then updateRender (if set true).
     static void updateAllViews( const std::function<void(Vis::FV*)>&, bool updateRender=false);
 
     // Update rendering across all viewers.
@@ -111,7 +121,7 @@ private:
     using Ptr = std::shared_ptr<ModelSelector>;
     static ModelSelector::Ptr _me;
     static Ptr me();
-    static Interactor::SelectNotifier& sn();
+    static Interactor::SelectNotifier* _selectNotifier();
 
     Vis::BoundingVisualisation _bvis;
     std::vector<FMV*> _viewers;
@@ -119,7 +129,8 @@ private:
     bool _autoFocus;
     bool _showBoxes;
     int _defv;  // Default viewer index
-    Interactor::SelectNotifier *_sn;
+    int _lockCount;
+    Interactor::MouseHandler *_mouseHandler;
 
     void _doOnSelected( Vis::FV*, bool);
     ModelSelector();

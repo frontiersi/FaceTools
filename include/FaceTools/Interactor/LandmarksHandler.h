@@ -18,47 +18,48 @@
 #ifndef FACE_TOOLS_LANDMARKS_HANDLER_H
 #define FACE_TOOLS_LANDMARKS_HANDLER_H
 
-#include "PropHandler.h"
+#include "GizmoHandler.h"
 #include <FaceTools/Vis/LandmarksVisualisation.h>
 
 namespace FaceTools { namespace Interactor {
 
-class FaceTools_EXPORT LandmarksHandler : public PropHandler
+class FaceTools_EXPORT LandmarksHandler : public GizmoHandler
 { Q_OBJECT
 public:
     using Ptr = std::shared_ptr<LandmarksHandler>;
     static Ptr create();
 
-    void refreshState() override;
+    void refresh() override;
 
     Vis::LandmarksVisualisation &visualisation() { return _vis;}
+    const Vis::LandmarksVisualisation &visualisation() const { return _vis;}
 
     // Return the ID of the landmark that's currently being moved
     // and set out parameter lat to the FaceSide of the landmark.
     int dragging( FaceSide& lat) const { lat = _lat; return _dragId;}
 
+    void setEmitOnDrag( bool v) { _emitDragUpdates = v;}
+
 signals:
-    void onStartedDrag( int, FaceSide);
-    void onDoingDrag( int, FaceSide);
-    void onFinishedDrag( int, FaceSide);
+    void onStartedDrag( int, FaceSide) const;
+    void onDoingDrag( int, FaceSide) const;
+    void onFinishedDrag( int, FaceSide) const;
 
-    void onEnterLandmark( int, FaceSide);
-    void onLeaveLandmark( int, FaceSide);
-
-private slots:
-    void doEnterProp( Vis::FV*, const vtkProp*) override;
-    void doLeaveProp( Vis::FV*, const vtkProp*) override;
+    void onEnterLandmark( int, FaceSide) const;
+    void onLeaveLandmark( int, FaceSide) const;
 
 private:
-    bool leftButtonDown() override;
-    bool leftButtonUp() override;
-    bool leftDrag() override;
+    bool doEnterProp() override;
+    bool doLeaveProp() override;
+    bool doLeftButtonDown() override;
+    bool doLeftButtonUp() override;
+    bool doLeftDrag() override;
 
     Vis::LandmarksVisualisation _vis;
-
     int _hoverId;
     int _dragId;
     FaceSide _lat;
+    bool _emitDragUpdates;
 
     void _leaveLandmark();
 

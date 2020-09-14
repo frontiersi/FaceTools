@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,9 +39,9 @@ public:
 
 protected:
     // Called when the mouse has entered the parameter viewer (mouseViewer() returns parameter).
-    virtual void enterViewer( FMV*) {}
+    //virtual void enterViewer( FMV*) {}
     // Called when the mouse has left the parameter viewer.
-    virtual void leaveViewer( FMV*) {}
+    //virtual void leaveViewer( FMV*) {}
 
 /*
     virtual void cameraStart(){}
@@ -63,7 +63,6 @@ protected:
 
 private:
     void mouseEnter( const QTools::VtkActorViewer*) override;
-    void mouseLeave( const QTools::VtkActorViewer*) override;
     std::unordered_map<const vtkRenderWindow*, FMV*> _vwrs;
     FMV* _vwr;
 

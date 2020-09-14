@@ -19,7 +19,6 @@
 #include <FileIO/FaceModelManager.h>
 #include <QFileInfo>
 #include <QMessageBox>
-#include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionSaveAsFaceModel;
 using FaceTools::Action::FaceAction;

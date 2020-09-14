@@ -18,30 +18,20 @@
 #ifndef FACE_TOOLS_ACTION_RADIAL_SELECT_H
 #define FACE_TOOLS_ACTION_RADIAL_SELECT_H
 
-/**
- * A visualisation with an internally constructed interactor to adjust
- * the radially visualised area on a set of views for a FaceModel.
- */
-
 #include "ActionVisualise.h"
-#include <FaceTools/Interactor/RadialSelectHandler.h>
 
 namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionRadialSelect : public ActionVisualise
 { Q_OBJECT
 public:
-    ActionRadialSelect( const QString&, const QIcon&, Interactor::RadialSelectHandler::Ptr);
+    ActionRadialSelect( const QString&, const QIcon&);
 
-    QString toolTip() const override { return "Select a radially bounded region of the model.";}
+    QString toolTip() const override { return "Select a radially bounded region.";}
 
 protected:
-    bool checkState( Event) override;
     void doAction( Event) override;
     Event doAfterAction( Event) override;
-
-private:
-    Interactor::RadialSelectHandler::Ptr _handler;
 };  // end class
 
 }}   // end namespace

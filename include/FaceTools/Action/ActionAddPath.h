@@ -19,24 +19,24 @@
 #define FACE_TOOLS_ACTION_ADD_PATH_H
 
 #include "FaceAction.h"
-#include <FaceTools/Interactor/PathsHandler.h>
 
 namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionAddPath : public FaceAction
 { Q_OBJECT
 public:
-    ActionAddPath( const QString&, const QIcon&, Interactor::PathsHandler::Ptr);
+    ActionAddPath( const QString&, const QIcon&, const QKeySequence &ks=QKeySequence());
 
     QString toolTip() const override { return "Make a new custom measurement over the selected model.";}
 
 protected:
     bool isAllowed( Event) override;
+    bool doBeforeAction( Event) override;
     void doAction( Event) override;
     Event doAfterAction( Event) override;
 
 private:
-    Interactor::PathsHandler::Ptr _handler;
+    Vec3f _vproj;
 };  // end class
 
 }}   // end namespace

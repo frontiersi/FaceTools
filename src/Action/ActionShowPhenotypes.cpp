@@ -29,10 +29,10 @@ ActionShowPhenotypes::ActionShowPhenotypes( const QString& dn, const QIcon& ico,
 }   // end ctor
 
 
-bool ActionShowPhenotypes::checkState( Event)
+bool ActionShowPhenotypes::update( Event)
 {
     return _dialog->isVisible();
-}   // end checkState
+}   // end update
 
 
 void ActionShowPhenotypes::postInit()

@@ -39,17 +39,17 @@ public:
     // Providing the parent widget is only necessary for the first (creating) call.
     // For calls where the singleton is already present, the parent parameter is ignored.
     static Ptr get( QWidget* parent=nullptr);
-
-    static QAction* registerAction( FaceAction*);       // Return added action's QAction if added okay (duplicates not allowed).
+       
+    // Return added action's QAction if added okay (duplicates not allowed).
+    static QAction* registerAction( FaceAction*);
 
     static void close( const FM*);
 
 public slots:
-    void doEvent( const Event &e=Event::NONE);
+    void doEvent( Event e=Event::NONE);
 
 signals:
-    void onRefresh();
-    void onUpdate( const FM*);
+    void onUpdateSelected();
     void onShowHelp( const QString&);
     void onRegisteredAction( FaceAction*);
 

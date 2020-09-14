@@ -38,7 +38,7 @@ signals:
     void updated( const FM*, const cv::Mat&);   // Emitted whenever a new thumbnail generated for the model.
 
 protected:
-    bool checkState( Event) override;
+    bool update( Event) override;
     bool isAllowed( Event) override;
     void doAction( Event) override;
     void purge( const FM*) override;

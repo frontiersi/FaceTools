@@ -18,19 +18,11 @@
 #ifndef FACE_TOOLS_SELECT_NOTIFIER_H
 #define FACE_TOOLS_SELECT_NOTIFIER_H
 
-/**
- * An interaction handler that allows the user to select a single
- * FaceView with onSelected fired for (de)selection events.
- * Select models with left or right clicks on a model, deselect
- * by double-left-clicking off a model.
- */
-
-#include "PropNotifier.h"
 #include <FaceTools/FaceViewSet.h>
 
 namespace FaceTools { namespace Interactor {
 
-class FaceTools_EXPORT SelectNotifier : public PropNotifier
+class FaceTools_EXPORT SelectNotifier : public QObject
 { Q_OBJECT
 public:
     SelectNotifier();
@@ -40,27 +32,21 @@ public:
     void setSelected( Vis::FV*, bool);  // Mark given model as (de)selected and fire onSelected.
     Vis::FV* selected() const { return _selected;}
 
+    // Locking the notifier prevents a different model from being selected
+    // and thus also prevents signal onSelected from being emitted.
     void setLocked( bool v) { _locked = v;}
     bool isLocked() const { return _locked;}
 
 signals:
-    void onSelected( Vis::FV*, bool);   // Fired selection / deselection of a model.
-    void onDoubleClickedSelected();     // Double clicked the selected model (fires after onSelected).
-    void onLeftButtonUp();
+    void onSelected( Vis::FV*, bool) const;   // Notify of model (de)selection.
 
 private:
-    bool leftButtonDown() override;
-    bool leftButtonUp() override;
-    bool rightButtonDown() override;
-    bool leftDoubleClick() override;
-    bool rightDoubleClick() override;
-
-    Vis::FV *_underPoint() const;
-    Vis::FV *_findSelected() const;
-
     bool _locked;
     Vis::FV* _selected;
     FVS _available;
+
+    SelectNotifier( const SelectNotifier&) = delete;
+    void operator=( const SelectNotifier&) = delete;
 };  // end class
 
 }}   // end namespace

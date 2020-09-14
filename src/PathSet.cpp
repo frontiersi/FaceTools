@@ -32,7 +32,10 @@ PathSet::~PathSet(){}
 void PathSet::update( const FM* fm)
 {
     for ( auto& p : _paths)
+    {
         p.second.update( fm);
+        p.second.updateMeasures();
+    }   // end for
 }   // end update
 
 

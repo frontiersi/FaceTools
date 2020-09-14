@@ -33,7 +33,8 @@ ActionMarquee::ActionMarquee( const QString& dn, const QIcon& ico)
 {
     setCheckable(true, false);
     for ( FMV* fmv : MS::viewers())
-        _workers.push_back( new CameraWorker( fmv));
+        _workers.push_back( new CW( fmv));
+    addRefreshEvent( Event::CAMERA_CHANGE);
 }   // end ctor
 
 
@@ -43,21 +44,19 @@ ActionMarquee::~ActionMarquee()
 }   // end dtor
 
 
-bool ActionMarquee::checkState( Event e)
+bool ActionMarquee::update( Event e)
 {
-    if ( isChecked() && has(e, Event::CAMERA_CHANGE))
+    bool chk = isChecked();
+    if ( chk && has(e, Event::CAMERA_CHANGE))
     {
         _stopCameras();
-        return false;
+        chk = false;
     }   // end if
-    return isChecked();
-}   // end checkState
+    return chk;
+}   // end update
 
 
-bool ActionMarquee::isAllowed( Event e)
-{
-    return MS::isViewSelected() && (has(e, Event::USER) || (isTriggerEvent(e) && _workers[0]->isStarted()));
-}   // end isAllowed
+bool ActionMarquee::isAllowed( Event e) { return MS::isViewSelected();}
 
 
 void ActionMarquee::doAction( Event e)
@@ -68,17 +67,9 @@ void ActionMarquee::doAction( Event e)
         _stopCameras();
 }   // end doAction
 
-
-void ActionMarquee::_startCameras()
-{
-    std::for_each( std::begin(_workers), std::end(_workers), [](CW* cw){cw->start();});
-}   // end _startCameras
-
-
-void ActionMarquee::_stopCameras()
-{
-    std::for_each( std::begin(_workers), std::end(_workers), [](CW* cw){cw->stop();});
-}   // end _stopCameras
-
-
 Event ActionMarquee::doAfterAction( Event) { return Event::CAMERA_CHANGE;}
+
+
+void ActionMarquee::_startCameras() { std::for_each( std::begin(_workers), std::end(_workers), [](CW* cw){cw->start();});}
+
+void ActionMarquee::_stopCameras() { std::for_each( std::begin(_workers), std::end(_workers), [](CW* cw){cw->stop();});}

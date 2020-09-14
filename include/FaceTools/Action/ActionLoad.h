@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_LOAD_FACE_MODELS_H
-#define FACE_TOOLS_ACTION_LOAD_FACE_MODELS_H
+#ifndef FACE_TOOLS_ACTION_LOAD_H
+#define FACE_TOOLS_ACTION_LOAD_H
 
 #include "FaceAction.h"
 #include <FaceTools/FileIO/LoadFaceModelsHelper.h>
@@ -24,16 +24,16 @@
 
 namespace FaceTools { namespace Action {
 
-class FaceTools_EXPORT ActionLoadFaceModels : public FaceAction
+class FaceTools_EXPORT ActionLoad : public FaceAction
 { Q_OBJECT
 public:
-    ActionLoadFaceModels( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence::Open);
-    ~ActionLoadFaceModels() override;
+    ActionLoad( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence::Open);
+    ~ActionLoad() override;
 
-    QString toolTip() const override { return "Load a model from file.";}
+    QString toolTip() const override { return "Load one or more models.";}
 
     // Load a single model returning true on success.
-    bool loadModel( const QString& filepath);
+    bool load( const QString& filepath);
 
 protected:
     void postInit() override;

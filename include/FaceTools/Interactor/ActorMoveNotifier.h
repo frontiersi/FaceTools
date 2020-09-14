@@ -38,6 +38,7 @@ protected:
 
 private:
     r3d::CameraParams _cam;
+    bool _isValidView( const vtkProp3D*) const;
 };  // end class
 
 }}   // end namespace

@@ -42,12 +42,12 @@ ActionUpdateThumbnail::~ActionUpdateThumbnail()
 }   // end dtor
 
 
-bool ActionUpdateThumbnail::checkState( Event)
+bool ActionUpdateThumbnail::update( Event)
 {
     QColor bgcol = MS::defaultViewer()->backgroundColour();
     _omv.setBackgroundColour( bgcol.redF(), bgcol.greenF(), bgcol.blueF());
     return true;
-}   // end checkState
+}   // end update
 
 
 const cv::Mat ActionUpdateThumbnail::thumbnail( const FM* fm)

@@ -34,112 +34,129 @@ using LMAN = FaceTools::Landmark::LandmarksManager;
 LandmarksHandler::Ptr LandmarksHandler::create() { return Ptr( new LandmarksHandler);}
 
 // private
-LandmarksHandler::LandmarksHandler()
-    : _hoverId(-1), _dragId(-1), _lat(MID) {}
+LandmarksHandler::LandmarksHandler() : _hoverId(-1), _dragId(-1), _lat(MID), _emitDragUpdates(false) {}
 
 
-void LandmarksHandler::refreshState()
+void LandmarksHandler::refresh()
 {
-    setEnabled( MS::isViewSelected() && MS::selectedView()->isApplied(&_vis));
-}   // end refreshState
+    const FV *fv = MS::selectedView();
+    setEnabled( fv && _vis.isVisible(fv));
+    if ( !isEnabled())
+        _leaveLandmark();
+}   // end refresh
 
 
-void LandmarksHandler::doEnterProp( FV *fv, const vtkProp *p)
+bool LandmarksHandler::doEnterProp()
 {
-    if ( fv == MS::selectedView())
+    const FV *fv = MS::selectedView();
+    const vtkProp *p = this->prop();
+    FaceSide lat;
+    const int hid = _vis.landmarkId( fv, p, lat);    // Sets _lat as an out parameter
+    bool swallowed = false;
+    if ( _dragId < 0 && hid >= 0) // Ignore other landmarks if dragging one already
     {
-        FaceSide lat;
-        const int hid = _vis.landmarkId( fv, p, lat);    // Sets _lat as an out parameter
-        if ( _dragId < 0 && hid >= 0) // Ignore other landmarks if dragging one already
-        {
-            _hoverId = hid;
-            _lat = lat;
-            _vis.setLabelVisible( fv, hid, _lat, true);
-            _vis.setLandmarkHighlighted( fv, hid, _lat, true);
-            const Vec3f& pos = fv->data()->currentLandmarks().pos( hid, _lat);
-            MS::showStatus( posString( LMAN::makeLandmarkString( hid, _lat), pos), 5000);
-            MS::setCursor( Qt::CursorShape::CrossCursor);
-            emit onEnterLandmark( hid, _lat);
-        }   // end if
+        swallowed = true;
+        _hoverId = hid;
+        _lat = lat;
+        _vis.setLabelVisible( fv, hid, _lat, true);
+        _vis.setLandmarkHighlighted( fv, hid, _lat, true);
+        const Vec3f& pos = fv->data()->currentLandmarks().pos( hid, _lat);
+        MS::showStatus( posString( LMAN::makeLandmarkString( hid, _lat), pos), 5000);
+        MS::setCursor( Qt::CursorShape::CrossCursor);
+        emit onEnterLandmark( hid, _lat);
     }   // end if
+    return swallowed;
 }   // end doEnterProp
 
 
-void LandmarksHandler::doLeaveProp( FV* fv, const vtkProp* p)
+bool LandmarksHandler::doLeaveProp()
 {
+    bool swallowed = false;
+    const FV *fv = MS::selectedView();
+    const vtkProp *p = this->prop();
     FaceSide lat;
     const int hid = _vis.landmarkId( fv, p, lat);
-    if ( _dragId < 0 && hid == _hoverId && lat == _lat)
+    if ( _dragId < 0 && hid >= 0)
+    {
+        swallowed = true;
         _leaveLandmark();
+    }   // end if
+    return swallowed;
 }   // end doLeaveProp
 
 
 void LandmarksHandler::_leaveLandmark()
 {
-    MS::restoreCursor();
     const FV *fv = MS::selectedView();
-    _vis.setLabelVisible( fv, _hoverId, _lat, false);
-    _vis.setLandmarkHighlighted( fv, _hoverId, _lat, false);
-    emit onLeaveLandmark( _hoverId, _lat); 
-    _hoverId = -1;
+    if ( fv && _hoverId >= 0)
+    {
+        MS::restoreCursor();
+        _vis.setLabelVisible( fv, _hoverId, _lat, false);
+        _vis.setLandmarkHighlighted( fv, _hoverId, _lat, false);
+        emit onLeaveLandmark( _hoverId, _lat); 
+    }   // end if
+    _dragId = _hoverId = -1;
     _lat = MID;
 }   // end _leaveLandmark
 
 
-bool LandmarksHandler::leftButtonDown()
+bool LandmarksHandler::doLeftButtonDown()
 {
+    bool swallowed = false;
     FaceSide lat;
-    const int lmid = _vis.landmarkId( MS::selectedView(), MS::cursorProp(), lat);
+    const int lmid = _vis.landmarkId( MS::selectedView(), this->prop(), lat);
     if ( lmid >= 0 && lmid == _hoverId && lat == _lat && !LMAN::landmark( lmid)->isLocked())
     {
+        swallowed = true;
         _dragId = lmid;
         emit onStartedDrag( _dragId, _lat);
     }   // end if
-    return _dragId >= 0;
-}   // end leftButtonDown
+    return swallowed;
+}   // end doLeftButtonDown
 
 
-bool LandmarksHandler::leftButtonUp()
+bool LandmarksHandler::doLeftButtonUp()
 {
     bool swallowed = false;
     if ( _dragId >= 0)
     {
+        swallowed = true;
         emit onFinishedDrag( _dragId, _lat);
         // Deal with the case where mouse button is released with cursor off the landmark
         // (because landmark was restricted in movement).
         FaceSide lat;
-        const int lmid = _vis.landmarkId( MS::selectedView(), MS::cursorProp(), lat);
+        const int lmid = _vis.landmarkId( MS::selectedView(), this->prop(), lat);
         if ( lmid < 0 && _hoverId >= 0)
             _leaveLandmark();
         _dragId = -1;
-        swallowed = true;
     }   // end if
     return swallowed;
-}   // end leftButtonUp
+}   // end doLeftButtonUp
 
 
-bool LandmarksHandler::leftDrag()
+bool LandmarksHandler::doLeftDrag()
 {
     bool swallowed = false;
     if ( _dragId >= 0)
     {
+        swallowed = true;
         // Get the position on the surface of the actor
         const FV *fv = MS::selectedView();
         Vec3f dpos;
         if ( fv->projectToSurface( fv->viewer()->mouseCoords(), dpos))
         {
             FM* fm = fv->data();
-            fm->lockForWrite();
             fm->setLandmarkPosition( _dragId, _lat, dpos);
-            for ( const auto& f : fm->fvs())
-                _vis.refreshLandmark( f, _dragId);
-            fm->unlock();
-
+            for ( const FV *f : fm->fvs())
+                _vis.refreshLandmarkPosition( f, _dragId, _lat);
+            // Update across all viewers if more than one view
+            if ( fm->fvs().size() > 1)
+                MS::updateRender();
+            if ( _emitDragUpdates)
+                emit onDoingDrag( _dragId, _lat);
             MS::showStatus( posString( LMAN::makeLandmarkString( _dragId, _lat), dpos), 5000);
             MS::setCursor( Qt::CursorShape::CrossCursor);
-            emit onDoingDrag( _dragId, _lat);
-            swallowed = true;
         }   // end if
     }   // end if
     return swallowed;
-}   // end leftDrag
+}   // end doLeftDrag

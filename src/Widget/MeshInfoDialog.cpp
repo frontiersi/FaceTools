@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <Widget/ModelPropertiesDialog.h>
-#include <ui_ModelPropertiesDialog.h>
+#include <Widget/MeshInfoDialog.h>
+#include <ui_MeshInfoDialog.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <QTools/QImageTools.h>
@@ -24,12 +24,12 @@
 #include <QSpinBox>
 #include <cmath>
 #include <cassert>
-using FaceTools::Widget::ModelPropertiesDialog;
+using FaceTools::Widget::MeshInfoDialog;
 using FaceTools::FM;
 
 
-ModelPropertiesDialog::ModelPropertiesDialog( QWidget *parent) :
-    QDialog(parent), _ui(new Ui::ModelPropertiesDialog),
+MeshInfoDialog::MeshInfoDialog( QWidget *parent) :
+    QDialog(parent), _ui(new Ui::MeshInfoDialog),
     _model(nullptr),
     _dialogRootTitle( parent->windowTitle() + " | Model Properties")
 {
@@ -37,18 +37,18 @@ ModelPropertiesDialog::ModelPropertiesDialog( QWidget *parent) :
     _ui->spatialGroupBox->setTitle( QString("Spatial Extents (%1)").arg( FM::LENGTH_UNITS));
     setWindowTitle( _dialogRootTitle);
     connect( _ui->manifoldSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
-                             this, &ModelPropertiesDialog::doOnManifoldIndexChanged);
+                             this, &MeshInfoDialog::doOnManifoldIndexChanged);
     reset();
 }   // end ctor
 
 
-ModelPropertiesDialog::~ModelPropertiesDialog()
+MeshInfoDialog::~MeshInfoDialog()
 {
     delete _ui;
 }   // end dtor
 
 
-void ModelPropertiesDialog::set( const FM* fm)
+void MeshInfoDialog::set( const FM* fm)
 {
     _model = fm;
     reset();
@@ -56,7 +56,7 @@ void ModelPropertiesDialog::set( const FM* fm)
 
 
 // private
-void ModelPropertiesDialog::reset()
+void MeshInfoDialog::reset()
 {
     setWindowTitle( _dialogRootTitle);
     _ui->textureMappedLabel->clear();
@@ -93,7 +93,7 @@ void ModelPropertiesDialog::reset()
 }   // end reset
 
 
-void ModelPropertiesDialog::doOnManifoldIndexChanged( int i)
+void MeshInfoDialog::doOnManifoldIndexChanged( int i)
 {
     _ui->manifoldPolygonsLabel->clear();
     _ui->manifoldVerticesLabel->clear();

@@ -16,7 +16,7 @@
  ************************************************************************/
 
 #include <Action/ActionRestoreLandmarks.h>
-#include "Action/ActionUpdateMeasurements.h"
+#include <Interactor/LandmarksHandler.h>
 #include <LndMrk/LandmarksManager.h>
 #include <MaskRegistration.h>
 #include <FaceModelViewer.h>
@@ -25,16 +25,16 @@
 using FaceTools::Action::ActionRestoreLandmarks;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
-using FaceTools::Interactor::LandmarksHandler;
 using FaceTools::FM;
 using FaceTools::Widget::LandmarksCheckDialog;
 using MS = FaceTools::Action::ModelSelector;
 using LMAN = FaceTools::Landmark::LandmarksManager;
 
 
-ActionRestoreLandmarks::ActionRestoreLandmarks( const QString& dn, const QIcon& icon, LandmarksHandler::Ptr handler)
-    : FaceAction(dn, icon), _cdialog(nullptr), _handler(handler)
+ActionRestoreLandmarks::ActionRestoreLandmarks( const QString& dn, const QIcon& icon)
+    : FaceAction(dn, icon), _cdialog(nullptr)
 {
+    addRefreshEvent( Event::LANDMARKS_CHANGE);
 }   // end ctor
 
 
@@ -64,14 +64,10 @@ bool ActionRestoreLandmarks::doBeforeAction( Event)
 
 void ActionRestoreLandmarks::doAction( Event)
 {
-    storeUndo( this, Event::LANDMARKS_CHANGE | Event::METRICS_CHANGE);
+    storeUndo( this, Event::LANDMARKS_CHANGE);
     FM *fm = MS::selectedModel();
     fm->lockForWrite();
     restoreLandmarks( fm, _ulmks);
-    for ( const Vis::FV *fv : fm->fvs())
-        for ( int lmid : _ulmks)
-            _handler->visualisation().refreshLandmark(fv, lmid);
-    ActionUpdateMeasurements::updateMeasurementsForLandmarks( fm, _ulmks);
     fm->unlock();
 }   // end doAction
 
@@ -79,11 +75,39 @@ void ActionRestoreLandmarks::doAction( Event)
 Event ActionRestoreLandmarks::doAfterAction( Event)
 {
     MS::showStatus("Landmark positions restored.", 5000);
-    return Event::LANDMARKS_CHANGE | Event::METRICS_CHANGE;
+    return Event::LANDMARKS_CHANGE;
 }   // end doAfterAction
 
 
-bool ActionRestoreLandmarks::restoreLandmarks( FM *fm, const IntSet &ulmks)
+namespace {
+
+void updateVisualisation( const FM *fm, const IntSet &ulmks)
+{
+    using namespace FaceTools;
+    Vis::LandmarksVisualisation &vis = MS::handler<Interactor::LandmarksHandler>()->visualisation();
+
+    for ( int lmid : ulmks)
+    {
+        if ( LMAN::isBilateral(lmid))
+        {
+            for ( const Vis::FV *fv : fm->fvs())
+            {
+                vis.refreshLandmarkPosition( fv, lmid, LEFT);
+                vis.refreshLandmarkPosition( fv, lmid, RIGHT);
+            }   // end for
+        }   // end if
+        else
+        {
+            for ( const Vis::FV *fv : fm->fvs())
+                vis.refreshLandmarkPosition( fv, lmid, MID);
+        }   // end else
+    }   // end for
+}   // end updateVisualisation
+
+}   // end namespace
+
+
+bool ActionRestoreLandmarks::restoreLandmarks( FM *fm, const IntSet &ulmks, bool uvis)
 {
     if ( !fm->hasMask())
         return false;
@@ -98,7 +122,6 @@ bool ActionRestoreLandmarks::restoreLandmarks( FM *fm, const IntSet &ulmks)
         {
             bcds = &mdata->lmksL.at(lmid);
             fm->setLandmarkPosition( lmid, LEFT, toSurface( kdt, msk.fromBarycentric( bcds->first, bcds->second)));
-
             bcds = &mdata->lmksR.at(lmid);
             fm->setLandmarkPosition( lmid, RIGHT, toSurface( kdt, msk.fromBarycentric( bcds->first, bcds->second)));
         }   // end if
@@ -108,5 +131,9 @@ bool ActionRestoreLandmarks::restoreLandmarks( FM *fm, const IntSet &ulmks)
             fm->setLandmarkPosition( lmid, MID, toSurface( kdt, msk.fromBarycentric( bcds->first, bcds->second)));
         }   // end else
     }   // end for
+
+    if ( uvis)
+        updateVisualisation( fm, ulmks);
+
     return true;
 }   // end restoreLandmarks

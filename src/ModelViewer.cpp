@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -178,6 +178,15 @@ Vec3f ModelViewer::cameraFocus() const { return camera().focus();}
 void ModelViewer::setCameraPosition( const Vec3f &pos) { setCamera( camera().focus(), pos);}
 
 Vec3f ModelViewer::cameraPosition() const { return camera().pos();}
+
+
+float ModelViewer::snapRange( float p) const
+{
+    const CameraParams cp = camera();
+    const Vec3f u = cp.pos() - cp.focus();
+    return p * u.norm();
+}   // end snapRange
+
 
 void ModelViewer::fitCamera( float r)
 {

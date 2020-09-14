@@ -28,14 +28,14 @@ class FaceTools_EXPORT ActionSetNumScalarColours : public FaceAction
 public:
     explicit ActionSetNumScalarColours( const QString&);
 
-    QString toolTip() const override { return "Set the number of colours to interpolate over when mapping scalar visualisations to a model's surface.";}
+    QString toolTip() const override;
 
     QWidget* widget() const override { return _spinBox;}
 
 protected:
     void postInit() override;
     bool isAllowed( Event) override;
-    bool checkState( Event) override;
+    bool update( Event) override;
 
 private slots:
     void _doOnValueChanged( int);

@@ -59,11 +59,11 @@ void MetricVisualiser::apply( const FV* fv, const QPoint*)
 }   // end apply
 
 
-void MetricVisualiser::refreshState( const FV* fv)
+void MetricVisualiser::refresh( const FV* fv)
 {
     assert( _fvs.count(fv) > 0);
     doRefresh(fv);
-}   // end refreshState
+}   // end refresh
 
 
 void MetricVisualiser::setVisible( FV *fv, bool v)

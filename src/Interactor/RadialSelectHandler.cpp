@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <Interactor/RadialSelectHandler.h>
+#include <Interactor/LandmarksHandler.h>
 #include <Action/ModelSelector.h>
 #include <MiscFunctions.h>
 #include <FaceModel.h>
@@ -39,7 +40,15 @@ RadialSelectHandler::RadialSelectHandler()
 }   // end ctor
 
 
-void RadialSelectHandler::init( const FM *fm, const Vec3f &tpos, float r)    // Provided p is the transformed point
+void RadialSelectHandler::postRegister()
+{
+    _lmkVis = &MS::handler<LandmarksHandler>()->visualisation();
+    assert(_lmkVis);
+}   // end postRegister
+
+
+// Provided p is the transformed point
+void RadialSelectHandler::init( const FM *fm, const Vec3f &tpos, float r)
 {
     fm->lockForRead();
     _rsel = r3d::RegionSelector::create( fm->mesh());
@@ -48,16 +57,17 @@ void RadialSelectHandler::init( const FM *fm, const Vec3f &tpos, float r)    // 
 }   // end init
 
 
-void RadialSelectHandler::refreshState()
+void RadialSelectHandler::refresh()
 {
-    if ( !_isRegionSelectorForModel(MS::selectedModel()))
+    const FV *fv = MS::selectedView();
+    setEnabled( fv && _vis.isVisible(fv));
+    if ( fv && !_isRegionSelectorForModel( fv->data()))
     {
         _fids.clear();
         _bnds.reset();
         _rsel = nullptr;
     }   // end if
-    setEnabled( MS::isViewSelected() && MS::selectedView()->isApplied(&_vis));
-}   // end refreshState
+}   // end refresh
 
 
 float RadialSelectHandler::radius() const { return _rsel ? _rsel->radius() : 0.0f;}
@@ -73,7 +83,8 @@ const std::list<int> &RadialSelectHandler::boundaryVertices() const
 
 void RadialSelectHandler::_update( Vec3f tpos, float r)
 {
-    const FM *fm = MS::selectedModel();
+    const FV *fv = MS::selectedView();
+    const FM *fm = fv->data();
     assert(fm);
     const r3d::Mesh &mesh = fm->mesh();
     assert( &_rsel->mesh() == &mesh);
@@ -82,10 +93,10 @@ void RadialSelectHandler::_update( Vec3f tpos, float r)
 
     const r3d::Manifolds &manifolds = fm->manifolds();  // Only extract from a single manifold
 
-    if ( _lmkVis && _lmkVis->isVisible( MS::selectedView()))
+    if ( _lmkVis->isVisible( fv))
     {
-        const float snapDist = 0.015f * (MS::selectedViewer()->camera().pos() - tpos).norm();
-        tpos = fm->currentLandmarks().snapToVisible( tpos, snapDist*snapDist);
+        const float snapDist = 0.015f * (fv->viewer()->camera().pos() - tpos).norm();
+        tpos = fm->currentLandmarks().snapTo( tpos, snapDist*snapDist);
     }   // end if
 
     const int sv = fm->findVertex(tpos);
@@ -109,10 +120,12 @@ void RadialSelectHandler::_update( Vec3f tpos, float r)
     _bnds.reset();
     _bnds.sort( mesh, mesh.pseudoBoundaries( _fids));
 
-    _vis.refreshState(MS::selectedView());
+    _vis.refresh(fv);
     _showHover();
     MS::showStatus( QString( "%1  with radius %2 %3").arg( posString( "Centre at:", tpos)).arg(r, 6, 'f', 2).arg(FM::LENGTH_UNITS), 5000);
-    MS::updateRender();
+    // Update across all viewers 
+    if ( fm->fvs().size() > 1)
+        MS::updateRender();
 }   // end _update
 
 
@@ -122,83 +135,84 @@ bool RadialSelectHandler::_isRegionSelectorForModel( const FM *fm) const
 }   // end _isRegionSelectorForModel
 
 
-void RadialSelectHandler::doEnterProp( FV* fv, const vtkProp* p)
+bool RadialSelectHandler::_testInProp( bool onRet)
 {
-    if ( _isRegionSelectorForModel(fv->data()) && _vis.belongs( p, fv))
+    bool swallowed = false;
+    const FV *fv = MS::selectedView();
+    const vtkProp *p = this->prop();
+    if ( _isRegionSelectorForModel( fv->data()) && _vis.belongs( p, fv))
     {
-        _onReticule = true;
+        swallowed = true;
+        _onReticule = onRet;
         _showHover();
     }   // end if
-}   // end doEnterProp
+    return swallowed;
+}   // end _testInProp
 
 
-void RadialSelectHandler::doLeaveProp( FV* fv, const vtkProp* p)
+bool RadialSelectHandler::doEnterProp() { return _testInProp( true);}
+bool RadialSelectHandler::doLeaveProp() { return _testInProp( false);}
+
+
+bool RadialSelectHandler::doLeftButtonDown()
 {
-    if ( _isRegionSelectorForModel(fv->data()) && _vis.belongs( p, fv))
+    bool swallowed = false;
+    if ( _onReticule)
     {
-        _onReticule = false;
-        _showHover();
+        swallowed = true;
+        _moving = _onReticule;
     }   // end if
-}   // end doLeaveProp
+    return swallowed;
+}   // end doLeftButtonDown
 
 
-bool RadialSelectHandler::leftButtonDown() { return (_moving = _onReticule);}
-
-
-bool RadialSelectHandler::leftButtonUp()
-{
-    const bool wasMoving = _moving;
-    _moving = false;
-    return wasMoving;
-}   // end leftButtonUp
-
-
-bool RadialSelectHandler::leftDrag()
+bool RadialSelectHandler::doLeftButtonUp()
 {
     bool swallowed = false;
     if ( _moving)
     {
+        swallowed = true;
+        _moving = false;
+    }   // end if
+    return swallowed;
+}   // end doLeftButtonUp
+
+
+bool RadialSelectHandler::doLeftDrag()
+{
+    bool swallowed = false;
+    if ( _moving)
+    {
+        swallowed = true;
         const FV *fv = MS::selectedView();
-        fv->data()->lockForRead();
+        const FM *fm = fv->data();
+        fm->lockForRead();
         Vec3f c;
         if ( fv->projectToSurface( fv->viewer()->mouseCoords(), c))  // Gets the transformed point
-        {
             _update( c, _rsel->radius());
-            swallowed = true;
-        }   // end if
+        fm->unlock();
+    }   // end if
+    return swallowed;
+}   // end doLeftDrag
+
+
+bool RadialSelectHandler::_changeRadius( float rchng)
+{
+    bool swallowed = false;
+    if ( _onReticule)
+    {
+        swallowed = true;
+        const FV *fv = MS::selectedView();
+        fv->data()->lockForRead();
+        _update( _rsel->centre(), std::max( _rsel->radius() + rchng, 0.0f));
         fv->data()->unlock();
     }   // end if
     return swallowed;
-}   // end leftDrag
+}   // end _changeRadius
 
 
-// Increase the radius
-bool RadialSelectHandler::mouseWheelForward()
-{
-    if ( _onReticule)
-    {
-        assert(_rsel);
-        const FM *fm = MS::selectedModel();
-        fm->lockForRead();
-        _update( _rsel->centre(), _rsel->radius() + _radiusChange);
-        fm->unlock();
-    }   // end if
-    return _onReticule;
-}   // end mouseWheelForward
-
-
-// Decrease the radius
-bool RadialSelectHandler::mouseWheelBackward()
-{
-    if ( _onReticule)
-    {
-        const FM *fm = MS::selectedModel();
-        fm->lockForRead();
-        _update( _rsel->centre(), std::max( _rsel->radius() - _radiusChange, 0.0f));
-        fm->unlock();
-    }   // end if
-    return _onReticule;
-}   // end mouseWheeBackward
+bool RadialSelectHandler::doMouseWheelForward() { return _changeRadius( +_radiusChange);}
+bool RadialSelectHandler::doMouseWheelBackward() { return _changeRadius( -_radiusChange);}
 
 
 void RadialSelectHandler::_showHover()

@@ -82,7 +82,7 @@ void RadialSelectVisualisation::syncWithViewTransform( const FV *fv)
 }   // end syncWithViewTransform
 
 
-void RadialSelectVisualisation::refreshState( const FV *fv)
+void RadialSelectVisualisation::refresh( const FV *fv)
 {
     assert(_handler);
     assert(fv);
@@ -100,7 +100,7 @@ void RadialSelectVisualisation::refreshState( const FV *fv)
     for ( const FV *f : fm->fvs())
         if ( _views.count(f) > 0)
             _views.at(f).update( upos, vvec);
-}   // end refreshState
+}   // end refresh
 
 
 void RadialSelectVisualisation::setHighlighted( const FV* fv, bool hval)

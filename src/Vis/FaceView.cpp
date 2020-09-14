@@ -273,7 +273,7 @@ void FaceView::apply( BV* vis, const QPoint* mc)
 void FaceView::_setVisible( BV *vis, bool v)
 {
     vis->setVisible( this, v);
-    vis->refreshState( this);
+    vis->refresh( this);
     vis->setVisible( this, v);
     vis->syncWithViewTransform( this);
 }   // end _setVisible
@@ -311,7 +311,7 @@ void FaceView::pokeTransform( const vtkMatrix4x4 *t)
 bool FaceView::isPointOnFace( const QPoint& p) const
 {
     assert(_viewer);
-    return _viewer && _actor && p.x() >= 0 ? _viewer->getPointedAt(p) == _actor : false;
+    return p.x() >= 0 ? _viewer->getPointedAt(p) == _actor : false;
 }   // end isPointOnFace
 
 

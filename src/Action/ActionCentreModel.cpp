@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,7 +31,10 @@ using MS = FaceTools::Action::ModelSelector;
 
 
 ActionCentreModel::ActionCentreModel( const QString &dn, const QIcon& ico, const QKeySequence& ks)
-    : FaceAction( dn, ico, ks) {}
+    : FaceAction( dn, ico, ks)
+{
+    addRefreshEvent( Event::AFFINE_CHANGE);
+}   // end ctor
 
 
 bool ActionCentreModel::isAllowed( Event)
@@ -39,9 +42,8 @@ bool ActionCentreModel::isAllowed( Event)
     if ( !MS::isViewSelected())
         return false;
     const FM* fm = MS::selectedModel();
-    const Vec3f centre = fm->bounds()[0]->centre();
-    return centre.squaredNorm() > 0.00001f;
-}   // end isAllowedd
+    return !fm->bounds()[0]->centre().isZero();
+}   // end isAllowed
 
 
 void ActionCentreModel::doAction( Event)
@@ -57,7 +59,7 @@ void ActionCentreModel::doAction( Event)
 Event ActionCentreModel::doAfterAction( Event)
 {
     MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-    ActionOrientCameraToFace::orientToFace( MS::selectedView());
+    ActionOrientCameraToFace::orientToFace( MS::selectedView(), 1);
     MS::showStatus("Centred model.", 5000);
     return Event::AFFINE_CHANGE | Event::CAMERA_CHANGE;
 }   // end doAfterAction

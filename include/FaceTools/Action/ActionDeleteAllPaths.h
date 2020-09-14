@@ -19,25 +19,21 @@
 #define FACE_TOOLS_ACTION_DELETE_ALL_PATHS_H
 
 #include "FaceAction.h"
-#include <FaceTools/Interactor/PathsHandler.h>
 
 namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionDeleteAllPaths : public FaceAction
 { Q_OBJECT
 public:
-    ActionDeleteAllPaths( const QString&, const QIcon&, Interactor::PathsHandler::Ptr);
+    ActionDeleteAllPaths( const QString&, const QIcon&);
 
-    QString toolTip() const override { return "Removes all measurements from the selected model's current assessment.";}
+    QString toolTip() const override { return "Deletes all custom measurements from the selected model's current assessment.";}
 
 protected:
     bool isAllowed( Event) override;
     bool doBeforeAction( Event) override;
     void doAction( Event) override;
     Event doAfterAction( Event) override;
-
-private:
-    Interactor::PathsHandler::Ptr _handler;
 };  // end class
 
 }}   // end namespace

@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <Action/ActionDeleteAllPaths.h>
+#include <Interactor/PathsHandler.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <QMessageBox>
@@ -27,18 +28,20 @@ using FaceTools::Interactor::PathsHandler;
 using MS = FaceTools::Action::ModelSelector;
 
 
-ActionDeleteAllPaths::ActionDeleteAllPaths( const QString& dn, const QIcon& ico, PathsHandler::Ptr h)
-    : FaceAction( dn, ico), _handler(h)
+ActionDeleteAllPaths::ActionDeleteAllPaths( const QString& dn, const QIcon& ico)
+    : FaceAction( dn, ico)
 {
+    addRefreshEvent( Event::PATHS_CHANGE);
 }   // end ctor
     
 
 bool ActionDeleteAllPaths::isAllowed( Event)
 {
+    PathsHandler *h = MS::handler<PathsHandler>();
     const Vis::FV* fv = MS::selectedView();
     return fv && MS::interactionMode() != IMode::ACTOR_INTERACTION
               && fv->data()->currentAssessment()->hasPaths()
-              && fv->isApplied( &_handler->visualisation());
+              && fv->isApplied( &h->visualisation());
 }   // end isAllowed
 
 
@@ -55,14 +58,20 @@ void ActionDeleteAllPaths::doAction( Event)
 {
     storeUndo(this, Event::PATHS_CHANGE);
     FM *fm = MS::selectedModel();
+
     fm->lockForWrite();
+
     const IntSet pids = fm->currentAssessment()->paths().ids(); // Copy out because altering
+    PathsHandler *handler = MS::handler<PathsHandler>();
     for ( int pid : pids)
     {
         fm->removePath(pid);
-        _handler->visualisation().erasePath( fm, pid);
+        handler->visualisation().erasePath( fm, pid);
     }   // end for
-    _handler->leavePath();
+
+    if ( handler->hoverPath())
+        handler->leavePath();
+
     fm->unlock();
 }   // end doAction
 
@@ -70,6 +79,6 @@ void ActionDeleteAllPaths::doAction( Event)
 Event ActionDeleteAllPaths::doAfterAction( Event)
 {
     MS::showStatus( "All measurements deleted!", 5000);
-    return Event::PATHS_CHANGE | Event::VIEW_CHANGE;
+    return Event::PATHS_CHANGE;
 }   // end doAfterAction
 

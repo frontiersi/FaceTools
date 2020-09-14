@@ -51,6 +51,7 @@ ActionExportPDF::ActionExportPDF( const QString& nm, const QIcon& icon, const QK
     //_tmpdir.setAutoRemove(false);    // Uncomment for debug purposes
     assert( _tmpdir.isValid());
     //setAsync(true);
+    addRefreshEvent( Event::CACHE);
 }   // end ctor
 
 

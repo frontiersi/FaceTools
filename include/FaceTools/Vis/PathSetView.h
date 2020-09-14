@@ -33,8 +33,8 @@ public:
     void setVisible( bool, ModelViewer*);               // Show/hide all paths (also sets current viewer)
     bool isVisible() const;
 
-    void setText( const Path&, int xpos, int ypos);
-    void setTextVisible( bool);
+    void setCaption( const Path&, int xpos, int ypos, const Mat3f&);
+    void setCaptionVisible( bool);
 
     void sync( const PathSet&);
     void addPath( const Path&);
@@ -54,7 +54,7 @@ private:
     std::unordered_map<int, PathView*> _views;
     std::unordered_map<const vtkProp*, PathView::Handle*> _handles;
     std::unordered_set<int> _visible;   // Which paths are visible
-    vtkNew<vtkTextActor> _text; // Bottom right text
+    vtkNew<vtkTextActor> _caption; // Bottom right text
 
     void _showPath( bool, int pathID);                   // Show/hide individual path
     PathSetView( const PathSetView&) = delete;

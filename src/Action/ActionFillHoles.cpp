@@ -31,6 +31,7 @@ ActionFillHoles::ActionFillHoles( const QString& dn, const QIcon& ico)
     : FaceAction(dn, ico)
 {
     setAsync(true);
+    addRefreshEvent( Event::MESH_CHANGE);
 }   // end ctor
 
 
@@ -60,7 +61,7 @@ bool ActionFillHoles::isAllowed( Event)
 bool ActionFillHoles::doBeforeAction( Event)
 {
     MS::showStatus( "Filling model holes...");
-    storeUndo( this, Event::MESH_CHANGE | Event::CONNECTIVITY_CHANGE);
+    storeUndo( this, Event::MESH_CHANGE);
     return true;
 }   // end doBeforeAction
 
@@ -148,6 +149,6 @@ Event ActionFillHoles::doAfterAction( Event)
 
     const size_t nh = getNumHoles( fm->manifolds());
     MS::showStatus( QString("Finished hole filling; %1 hole%2 remain%3.").arg(nh == 0 ? "no" : QString("%1").arg(nh)).arg( nh != 1 ? "s" : "").arg( nh == 1 ? "s" : ""), 5000);
-    return Event::MESH_CHANGE | Event::CONNECTIVITY_CHANGE;
+    return Event::MESH_CHANGE;
 }   // end doAfterAction
 

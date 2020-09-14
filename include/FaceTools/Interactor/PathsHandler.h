@@ -18,44 +18,48 @@
 #ifndef FACE_TOOLS_PATHS_HANDLER_H
 #define FACE_TOOLS_PATHS_HANDLER_H
 
-#include "PropHandler.h"
+#include "GizmoHandler.h"
 #include <FaceTools/Vis/PathSetVisualisation.h>
 
 namespace FaceTools { namespace Interactor {
 
-class FaceTools_EXPORT PathsHandler : public PropHandler
+class FaceTools_EXPORT PathsHandler : public GizmoHandler
 { Q_OBJECT
 public:
     using Ptr = std::shared_ptr<PathsHandler>;
     static Ptr create();
 
-    void refreshState() override;
-
-    // For snapping to visible landmarks.
-    void setLandmarksVisualisation( const Vis::BaseVisualisation *vis) { _lmkVis = vis;}
+    void postRegister() override;
+    void refresh() override;
 
     Vis::PathSetVisualisation &visualisation() { return _vis;}
+    const Vis::PathSetVisualisation &visualisation() const { return _vis;}
 
     // The path being hovered over (if any).
-    Vis::PathView::Handle* hoverPath() const { return _handle;}
+    inline Vis::PathView::Handle* hoverPath() const { return _handle;}
 
-    void addPath( const Vis::FV*, int pathId);
+    void addPath( int pathId);
 
-    void leavePath();
+    // Returns true iff a path was in the middle of being dragged otherwise does nothing.
+    bool endDragging();
+
+    inline bool isDragging() const { return _dragging;}
+
+    int leavePath();    // Returns id of path that was left (_handle->pathId())
 
 signals:
-    void onStartedDrag( Vis::PathView::Handle*);
-    void onFinishedDrag( Vis::PathView::Handle*);
-
-private slots:
-    void doEnterProp( Vis::FV*, const vtkProp*) override;
-    void doLeaveProp( Vis::FV*, const vtkProp*) override;
+    void onStartedDrag( int pid, int hid) const;
+    void onFinishedDrag( int pid, int hid) const;
+    void onEnterHandle( int pid, int hid) const;
+    void onLeaveHandle( int pid, int hid) const;
 
 private:
-    bool leftButtonDown() override;
-    bool leftButtonUp() override;
-    bool leftDrag() override;
-    bool mouseMove() override;
+    bool doEnterProp() override;
+    bool doLeaveProp() override;
+    bool doLeftButtonDown() override;
+    bool doLeftButtonUp() override;
+    bool doLeftDrag() override;
+    bool doMouseMove() override;
 
     Vis::PathSetVisualisation _vis;
 
@@ -64,7 +68,8 @@ private:
     bool _initPlacement;
     const Vis::BaseVisualisation *_lmkVis;
 
-    void _enterPath();
+    void _showPathInfo();
+    void _updateCaption();
 
     PathsHandler();
 };  // end class

@@ -79,8 +79,6 @@ std::ostream &FaceTools::Action::operator<<( std::ostream &os, const Event &e)
         nms.push_back("CLOSED_MODEL");
     if ( has( e, Event::MESH_CHANGE))
         nms.push_back("MESH_CHANGE");
-    if ( has( e, Event::CONNECTIVITY_CHANGE))
-        nms.push_back("CONNECTIVITY_CHANGE");
     if ( has( e, Event::AFFINE_CHANGE))
         nms.push_back("AFFINE_CHANGE");
     if ( has( e, Event::MASK_CHANGE))
@@ -116,12 +114,10 @@ std::ostream &FaceTools::Action::operator<<( std::ostream &os, const Event &e)
         nms.push_back("ALL_VIEWERS");
     if ( has( e, Event::MODEL_SELECT))
         nms.push_back("MODEL_SELECT");
-    if ( has( e, Event::START_MOVE))
-        nms.push_back("START_MOVE");
-    if ( has( e, Event::FINISH_MOVE))
-        nms.push_back("FINISH_MOVE");
-    if ( has( e, Event::CANCELLED))
-        nms.push_back("CANCELLED");
+    if ( has( e, Event::CACHE))
+        nms.push_back("CACHE");
+    if ( has( e, Event::CANCEL))
+        nms.push_back("CANCEL");
     if ( has( e, Event::ERR))
         nms.push_back("ERR");
 

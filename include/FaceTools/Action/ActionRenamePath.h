@@ -19,25 +19,33 @@
 #define FACE_TOOLS_ACTION_RENAME_PATH_H
 
 #include "FaceAction.h"
-#include <FaceTools/Interactor/PathsHandler.h>
+#include <QInputDialog>
 
 namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionRenamePath : public FaceAction
 { Q_OBJECT
 public:
-    ActionRenamePath( const QString&, const QIcon&, Interactor::PathsHandler::Ptr);
+    ActionRenamePath( const QString&, const QIcon&, const QKeySequence &ks=QKeySequence());
 
     QString toolTip() const override { return "Name or rename the selected measurement.";}
 
+    void setMaxLabelChars( size_t v) { _maxLabelChars = v;}
+
 protected:
+    void postInit() override;
     bool isAllowed( Event) override;
+    bool doBeforeAction( Event) override;
     void doAction( Event) override;
     Event doAfterAction( Event) override;
 
+private slots:
+    void _doOnTextValueChanged( const QString&);
+
 private:
-    Interactor::PathsHandler::Ptr _handler;
-    Event _e;
+    QInputDialog *_dialog;
+    size_t _maxLabelChars;
+    QString _label;
 };  // end class
 
 }}   // end namespace

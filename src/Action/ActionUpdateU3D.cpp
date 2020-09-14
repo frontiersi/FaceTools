@@ -55,5 +55,5 @@ Event ActionUpdateU3D::doAfterAction( Event)
 #ifndef NDEBUG
     std::cerr << "[INFO] FaceTools::Action::ActionUpdateU3D::doAfterAction: U3D cached at '" << fpath << "'" << std::endl;
 #endif
-    return Event::NONE;
+    return Event::CACHE;
 }   // end doAfterAction

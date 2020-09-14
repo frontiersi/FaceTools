@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,8 +25,10 @@ using MS = FaceTools::Action::ModelSelector;
 ActionRedo::ActionRedo( const QString &dn, const QIcon& ico, const QKeySequence& ks)
     : FaceAction( dn, ico, ks), _dname(dn)
 {
-    connect( &*UndoStates::get(), &UndoStates::onUpdated, [this](){ refreshState();});
+    connect( &*UndoStates::get(), &UndoStates::onUpdated, [this](){ refresh();});
+    addRefreshEvent( Event::SAVED_MODEL);
 }   // end ctor
+
 
 bool ActionRedo::isAllowed( Event)
 {

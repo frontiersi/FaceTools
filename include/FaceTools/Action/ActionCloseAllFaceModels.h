@@ -27,7 +27,7 @@ class FaceTools_EXPORT ActionCloseAllFaceModels : public FaceAction
 public:
     ActionCloseAllFaceModels( const QString&, const QIcon&, const QKeySequence& ks=(Qt::CTRL + Qt::SHIFT + Qt::Key_W));
 
-    QString toolTip() const override { return "Close all models.";}
+    QString toolTip() const override { return "Close all open models.";}
 
 protected:
     bool isAllowed( Event) override;

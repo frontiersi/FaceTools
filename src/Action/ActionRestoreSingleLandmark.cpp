@@ -16,8 +16,8 @@
  ************************************************************************/
 
 #include <Action/ActionRestoreSingleLandmark.h>
-#include "Action/ActionUpdateMeasurements.h"
 #include <Action/ActionRestoreLandmarks.h>
+#include <Interactor/LandmarksHandler.h>
 #include <LndMrk/LandmarksManager.h>
 #include <FaceModel.h>
 using FaceTools::Action::ActionRestoreSingleLandmark;
@@ -31,21 +31,23 @@ using MS = FaceTools::Action::ModelSelector;
 using LMAN = FaceTools::Landmark::LandmarksManager;
 
 
-ActionRestoreSingleLandmark::ActionRestoreSingleLandmark( const QString& dn, const QIcon& ico, LandmarksHandler::Ptr handler)
-    : FaceAction(dn, ico), _handler(handler), _lmid(-1)
+ActionRestoreSingleLandmark::ActionRestoreSingleLandmark( const QString& dn, const QIcon& ico)
+    : FaceAction(dn, ico), _lmid(-1)
 {
+    addRefreshEvent( Event::LANDMARKS_CHANGE);
 }   // end ctor
 
 
 int ActionRestoreSingleLandmark::_getLandmarkFromMousePos() const
 {
+    const LandmarksHandler *lmksHandler = MS::handler<LandmarksHandler>();
     int lmid = -1;
     const FV *fv = MS::selectedView();
     if ( fv)
     {
         FaceSide lat;
         const vtkProp *prop = fv->viewer()->getPointedAt( primedMousePos());
-        lmid = _handler->visualisation().landmarkId( fv, prop, lat);
+        lmid = lmksHandler->visualisation().landmarkId( fv, prop, lat);
     }   // end if
     return lmid;
 }   // end _getLandmarkFromMousePos
@@ -63,15 +65,12 @@ bool ActionRestoreSingleLandmark::isAllowed( Event)
 
 void ActionRestoreSingleLandmark::doAction( Event)
 {
-    storeUndo( this, Event::LANDMARKS_CHANGE | Event::METRICS_CHANGE);
+    storeUndo( this, Event::LANDMARKS_CHANGE);
     IntSet ulmks;
     ulmks.insert( _lmid);
     FM* fm = MS::selectedModel();
     fm->lockForWrite();
     ActionRestoreLandmarks::restoreLandmarks( fm, ulmks);
-    for ( const FV *fv : fm->fvs())
-        _handler->visualisation().refreshLandmark(fv, _lmid);
-    ActionUpdateMeasurements::updateMeasurementsForLandmark( fm, _lmid);
     fm->unlock();
 }   // end doAction
 
@@ -79,5 +78,5 @@ void ActionRestoreSingleLandmark::doAction( Event)
 Event ActionRestoreSingleLandmark::doAfterAction( Event)
 {
     MS::showStatus( QString("Restored %1 landmark(s).").arg( LMAN::landmark(_lmid)->name()), 5000);
-    return Event::LANDMARKS_CHANGE | Event::METRICS_CHANGE;
+    return Event::LANDMARKS_CHANGE;
 }   // end doAfterAction

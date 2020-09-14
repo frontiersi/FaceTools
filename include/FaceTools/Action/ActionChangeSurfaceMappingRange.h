@@ -30,12 +30,12 @@ public:
 
     QWidget* widget() const override { return _widget;}
 
-    QString toolTip() const override { return "Change the range over which the selected surface visualisation is applied.";}
+    QString toolTip() const override;
 
 protected:
     void postInit() override;
     bool isAllowed( Event) override;
-    bool checkState( Event) override;
+    bool update( Event) override;
 
 private slots:
     void _doOnWidgetValueChanged( float, float);

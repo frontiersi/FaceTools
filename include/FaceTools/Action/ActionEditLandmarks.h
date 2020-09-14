@@ -20,7 +20,6 @@
 
 #include "FaceAction.h"
 #include <FaceTools/Widget/LandmarksDialog.h>
-#include <FaceTools/Interactor/LandmarksHandler.h>
 
 namespace FaceTools { namespace Action {
 
@@ -29,10 +28,8 @@ class FaceTools_EXPORT ActionEditLandmarks : public FaceAction
 public:
     ActionEditLandmarks( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
 
-    QString toolTip() const override { return "Open the landmarks dialog to manually change landmark positions.";}
+    QString toolTip() const override { return "Open the landmarks browser to manually reposition landmarks.";}
     QWidget* widget() const override { return _dialog;}
-
-    Interactor::LandmarksHandler::Ptr handler() { return _handler;}
 
     // Set these before registering with the FaceActionManager
     void setShowLandmarksAction( FaceAction *act) { _actShow = act;}
@@ -47,27 +44,19 @@ signals:
 
 protected:
     void postInit() override;
-    bool checkState( Event) override;
-    void doAction( Event) override;
-
-    void saveState( UndoState&) const override;
-    void restoreState( const UndoState&) override;
+    bool isAllowed( Event) override;
+    bool update( Event) override;
 
 private slots:
-    void _doOnClosedDialog();
     void _doOnStartedDrag( int, FaceSide);
-    void _doOnDoingDrag( int, FaceSide);
+    void _doOnFinishedDrag( int, FaceSide);
 
 private:
-    Interactor::LandmarksHandler::Ptr _handler;
     Widget::LandmarksDialog *_dialog;
     FaceAction *_actShow;
     FaceAction *_actAlign;
     FaceAction *_actRestore;
     FaceAction *_actShowLabels;
-    int _lmid;
-    FaceSide _lat;
-    Event _egrp;
 };  // end class
 
 }}   // end namespace

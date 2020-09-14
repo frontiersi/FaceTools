@@ -173,19 +173,19 @@ FaceModelState::FaceModelState( FM* fm, Event egrp)
     _modelSaved = _fm->isModelSaved();
     _tmat = Mat4f::Identity();
 
-    if ( has( egrp, Event::MESH_CHANGE | Event::CONNECTIVITY_CHANGE))
+    if ( has( egrp, Event::MESH_CHANGE))
         _saveMesh();
 
-    if ( has( egrp, Event::MASK_CHANGE | Event::MESH_CHANGE | Event::CONNECTIVITY_CHANGE))
+    if ( has( egrp, Event::MASK_CHANGE | Event::MESH_CHANGE))
+    {
         _saveMask();
-
-    if ( has( egrp, Event::MESH_CHANGE | Event::MASK_CHANGE))
         _saveBounds();
+    }   // end if
 
     if ( has( egrp, Event::AFFINE_CHANGE))
         _tmat = _fm->mesh().transformMatrix();
 
-    if ( has( egrp, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE | Event::CONNECTIVITY_CHANGE | Event::ASSESSMENT_CHANGE | Event::PATHS_CHANGE))
+    if ( has( egrp, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE | Event::ASSESSMENT_CHANGE | Event::PATHS_CHANGE))
         _saveAssessments();
 
     if ( has( egrp, Event::CAMERA_CHANGE))
@@ -197,19 +197,19 @@ void FaceModelState::restore( const Event &egrp) const
 {
     _fm->lockForWrite();
 
-    if ( has( egrp, Event::MESH_CHANGE | Event::CONNECTIVITY_CHANGE))
+    if ( has( egrp, Event::MESH_CHANGE))
         _restoreMesh();
 
-    if ( has( egrp, Event::MASK_CHANGE | Event::MESH_CHANGE | Event::CONNECTIVITY_CHANGE))
+    if ( has( egrp, Event::MASK_CHANGE | Event::MESH_CHANGE))
+    {
         _restoreMask();
-
-    if ( has( egrp, Event::MESH_CHANGE | Event::MASK_CHANGE))
         _restoreBounds();
+    }   // end if
 
     if ( has( egrp, Event::AFFINE_CHANGE))
         _fm->addTransformMatrix( _tmat * _fm->mesh().inverseTransformMatrix());
     
-    if ( has( egrp, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE | Event::CONNECTIVITY_CHANGE | Event::ASSESSMENT_CHANGE | Event::PATHS_CHANGE))
+    if ( has( egrp, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE | Event::ASSESSMENT_CHANGE | Event::PATHS_CHANGE))
         _restoreAssessments();
 
     if ( has( egrp, Event::CAMERA_CHANGE))

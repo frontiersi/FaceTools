@@ -87,7 +87,7 @@ bool FaceAssessment::setLandmarks( const LandmarkSet &lmks)
 
 void FaceAssessment::transform( const Mat4f &T)
 {
-    _paths.transform(T);    // Transform paths first because parameter transform matrix may be from the landmarks!
+    _paths.transform(T);    // Transform paths first because parameter matrix may be from the landmarks!
     _landmarks.transform(T);
 }   // end transform
 

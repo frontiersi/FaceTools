@@ -33,11 +33,11 @@ public:
 protected:
     void purge( const FM*) override;
 
-    // checkState returns true iff a view is selected and the view currently
+    // update returns true iff a view is selected and the view currently
     // has this visualisation visible on it. If there are other factors than
     // can cause the visualisation to become visible, they should be checked
     // within an overridden version of this function.
-    bool checkState( Event) override;
+    bool update( Event) override;
 
     // isAllowed returns true iff isChecked() returns true or the
     // visualisation is available for the currently selected view.
@@ -49,6 +49,7 @@ protected:
 private:
     void _toggleVis( Vis::FV*, const QPoint*) const;
     bool _isVisAvailable( const Vis::FV*) const;
+    FVS _getWorkViews();
     Vis::BaseVisualisation *_vis; // The visualisation delegate
     Event _evg;
 };  // end class

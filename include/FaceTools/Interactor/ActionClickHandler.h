@@ -15,29 +15,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_FILE_IO_ASYNC_MODEL_LOADER_H
-#define FACE_TOOLS_FILE_IO_ASYNC_MODEL_LOADER_H
+#ifndef FACE_TOOLS_ACTION_CLICK_HANDLER_H
+#define FACE_TOOLS_ACTION_CLICK_HANDLER_H
 
-#include "FaceModelManager.h"
-#include <QThread>
+#include "GizmoHandler.h"
+#include <FaceTools/Action/FaceAction.h>
 
-namespace FaceTools { namespace FileIO {
+namespace FaceTools { namespace Interactor {
 
-class FaceTools_EXPORT AsyncModelLoader : public QThread
+class FaceTools_EXPORT ActionClickHandler : public GizmoHandler
 { Q_OBJECT
 public:
-    // Provide absolute filepath to model to load.
-    // Can be any format currently being accepted by the FaceModelManager.
-    explicit AsyncModelLoader( const QString& fpath);
+    using Ptr = std::shared_ptr<ActionClickHandler>;
+    static Ptr create();
 
-signals:
-    void loadedModel( FM*);
+    void refresh() override;
 
-protected:
-    void run() override;
+    void addLeftDoubleClickAction( Action::FaceAction*);
 
 private:
-    const QString _fpath;
+    bool doLeftDoubleClick() override;
+
+    std::vector<Action::FaceAction*> _actions;
+    ActionClickHandler(){}
 };  // end class
 
 }}   // end namespace

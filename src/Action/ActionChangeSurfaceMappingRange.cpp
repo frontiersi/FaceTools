@@ -29,13 +29,26 @@ using MS = FaceTools::Action::ModelSelector;
 
 
 ActionChangeSurfaceMappingRange::ActionChangeSurfaceMappingRange( const QString& dname)
-    : FaceAction( dname), _widget(nullptr) { }
+    : FaceAction( dname), _widget(nullptr)
+{
+    addRefreshEvent( Event::VIEW_CHANGE);
+}   // end ctor
+
+
+QString ActionChangeSurfaceMappingRange::toolTip() const
+{
+    QStringList txt;
+    txt << "Change the range over which the selected surface";
+    txt << "visualisation is applied.";
+    return txt.join(" ");
+}   // end toolTip
 
 
 void ActionChangeSurfaceMappingRange::postInit()
 {
     QWidget* p = static_cast<QWidget*>(parent());
     _widget = new QTools::RangeMinMax(p);
+    _widget->setToolTip( toolTip());
     _widget->setMinHidden(true);
     _widget->setRange( 0, 1);
     _widget->setMin( 0);
@@ -54,7 +67,7 @@ bool ActionChangeSurfaceMappingRange::isAllowed( Event)
 }   // end isAllowed
 
 
-bool ActionChangeSurfaceMappingRange::checkState( Event)
+bool ActionChangeSurfaceMappingRange::update( Event)
 {
     QSignalBlocker block(_widget);
     const FV* fv = MS::selectedView();
@@ -79,7 +92,7 @@ bool ActionChangeSurfaceMappingRange::checkState( Event)
     }   // end if
     _widget->setEnabled( isEnabled);
     return isEnabled;
-}   // end checkState
+}   // end update
 
 
 void ActionChangeSurfaceMappingRange::_doOnWidgetValueChanged( float minv, float maxv)

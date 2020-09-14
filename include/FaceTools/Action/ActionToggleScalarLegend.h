@@ -27,14 +27,13 @@ class FaceTools_EXPORT ActionToggleScalarLegend : public FaceAction
 { Q_OBJECT
 public:
     explicit ActionToggleScalarLegend( const QString&);
-    ~ActionToggleScalarLegend() override;
 
     QString toolTip() const override { return "Toggle the display of the legend for scalar colour mappings.";}
 
 protected:
     void postInit() override;
     bool isAllowed( Event) override;
-    bool checkState( Event) override;
+    bool update( Event) override;
 
 private:
     std::unordered_map<FMV*, r3dvis::ScalarLegend*> _legends;

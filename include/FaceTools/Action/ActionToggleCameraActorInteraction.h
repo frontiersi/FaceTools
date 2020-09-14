@@ -32,7 +32,7 @@ public:
     QString whatsThis() const override;
 
 protected:
-    bool checkState( Event) override;
+    bool update( Event) override;
     bool isAllowed( Event) override;
     void doAction( Event) override;
     Event doAfterAction( Event) override;

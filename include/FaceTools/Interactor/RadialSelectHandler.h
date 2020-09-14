@@ -18,26 +18,24 @@
 #ifndef FACE_TOOLS_RADIAL_SELECT_HANDLER_H
 #define FACE_TOOLS_RADIAL_SELECT_HANDLER_H
 
-#include "PropHandler.h"
+#include "GizmoHandler.h"
 #include <FaceTools/Vis/RadialSelectVisualisation.h>
 #include <r3d/RegionSelector.h>
 #include <r3d/Boundaries.h>
 
 namespace FaceTools { namespace Interactor {
 
-class FaceTools_EXPORT RadialSelectHandler : public PropHandler
+class FaceTools_EXPORT RadialSelectHandler : public GizmoHandler
 { Q_OBJECT
 public:
     using Ptr = std::shared_ptr<RadialSelectHandler>;
     static Ptr create();
 
-    // Allow self to enable/disable if region selector active (has been initialised).
-    void refreshState() override;
-
-    // For snapping to visible landmarks.
-    void setLandmarksVisualisation( const Vis::BaseVisualisation *vis) { _lmkVis = vis;}
+    void postRegister() override;
+    void refresh() override;
 
     Vis::BaseVisualisation &visualisation() { return _vis;}
+    const Vis::BaseVisualisation &visualisation() const { return _vis;}
 
     // Initialise the handler to work with the given view's model.
     void init( const FM*, const Vec3f& centre, float radius);
@@ -49,30 +47,31 @@ public:
     const IntSet& selectedFaces() const { return _fids;}
     const std::list<int> &boundaryVertices() const;
 
-private slots:
-    void doEnterProp( Vis::FV*, const vtkProp*) override;
-    void doLeaveProp( Vis::FV*, const vtkProp*) override;
-
 private:
-    bool leftButtonDown() override;
-    bool leftButtonUp() override;
-    bool leftDrag() override;
+    bool doEnterProp() override;
+    bool doLeaveProp() override;
 
-    bool mouseWheelForward() override;
-    bool mouseWheelBackward() override;
+    bool doLeftButtonDown() override;
+    bool doLeftButtonUp() override;
+    bool doLeftDrag() override;
+
+    bool doMouseWheelForward() override;
+    bool doMouseWheelBackward() override;
 
     Vis::RadialSelectVisualisation _vis;
     bool _onReticule;
     bool _moving;
     float _radiusChange;
     const Vis::BaseVisualisation *_lmkVis;
-    IntSet _fids;       // The currently selected faces
-    r3d::Boundaries _bnds;  // And the corresponding boundary vertex indices
+    IntSet _fids;           // The currently selected facets
+    r3d::Boundaries _bnds;  // And corresponding boundary vertices
     r3d::RegionSelector::Ptr _rsel;
 
     bool _isRegionSelectorForModel( const FM*) const;
     void _update( Vec3f, float);
     void _showHover();
+    bool _changeRadius( float);
+    bool _testInProp( bool);
 
     RadialSelectHandler();
 };  // end class

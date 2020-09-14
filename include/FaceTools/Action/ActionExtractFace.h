@@ -19,14 +19,13 @@
 #define FACE_TOOLS_ACTION_EXTRACT_FACE_H
 
 #include "FaceAction.h"
-#include <FaceTools/Interactor/RadialSelectHandler.h>
 
 namespace FaceTools { namespace Action {
 
 class FaceTools_EXPORT ActionExtractFace : public FaceAction
 { Q_OBJECT
 public:
-    ActionExtractFace( const QString&, const QIcon&, const Interactor::RadialSelectHandler&);
+    ActionExtractFace( const QString&, const QIcon&);
 
     QString toolTip() const override;
     QString whatsThis() const override;
@@ -46,7 +45,6 @@ protected:
     Event doAfterAction( Event) override;
 
 private:
-    const Interactor::RadialSelectHandler &_handler;
     Event _ev;
     static float s_cropRadius;
 };  // end class

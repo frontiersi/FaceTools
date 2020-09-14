@@ -126,27 +126,25 @@ enum struct Event : uint32_t
     SAVED_MODEL =              0x4, // A model was saved.
     CLOSED_MODEL =             0x8, // A model was closed.
     MESH_CHANGE =             0x10, // Change to the internal mesh of a FaceModel or fixing of its transform.
-    CONNECTIVITY_CHANGE =     0x20, // Emit together with GEOMETRY_CHANGE if connectivity has been altered.
-    AFFINE_CHANGE =           0x40, // Affine transform change to the model data.
-    MASK_CHANGE =             0x80, // When the model is registered against a different mask.
-    SURFACE_DATA_CHANGE =    0x100, // Change to some surface mapped data.
-    LANDMARKS_CHANGE =       0x200, // Change to landmark(s).
-    METRICS_CHANGE =         0x400, // Change to measurements.
-    STATS_CHANGE =           0x800, // Change of the current measurements statistics.
-    PATHS_CHANGE =          0x1000, // Change to drawn paths.
-    VIEW_CHANGE =           0x2000, // Changes to views of the data (visualisations etc) - NOT CAMERA.
-    VIEWER_CHANGE =         0x4000, // Changed viewer (or the viewer's state) in which view is shown.
-    CAMERA_CHANGE =         0x8000, // Changes to camera parameters within a viewer.
-    ACTOR_MOVE =           0x10000, // Change to the position of a visualisation actor through interaction.
-    ASSESSMENT_CHANGE =    0x20000, // Assessment change either in name, notes, landmarks, or path data.
-    RESTORE_CHANGE =       0x40000, // Emitted after restoring any undo.
-    ALL_VIEWS =            0x80000, // Specify that the event relates to all models in the selected viewer.
-    ALL_VIEWERS =         0x100000, // Specify that all viewers partake in the event.
-    MODEL_SELECT =        0x200000, // When a model has just been selected.
-    START_MOVE =          0x400000, // Starting to move some element.
-    FINISH_MOVE =         0x800000, // Finished moving some element.
-    CANCELLED =          0x1000000, // An action was cancelled from its doBeforeAction function.
-    ERR =                0x2000000  // Some error.
+    AFFINE_CHANGE =           0x20, // Affine transform change to the model data.
+    MASK_CHANGE =             0x40, // When the model is registered against a different mask.
+    SURFACE_DATA_CHANGE =     0x80, // Change to some surface mapped data.
+    LANDMARKS_CHANGE =       0x100, // Change to landmark(s).
+    METRICS_CHANGE =         0x200, // Change to measurements.
+    STATS_CHANGE =           0x400, // Change of the current measurements statistics.
+    PATHS_CHANGE =           0x800, // Change to drawn paths.
+    VIEW_CHANGE =           0x1000, // Changes to views of the data (visualisations etc) - NOT CAMERA.
+    VIEWER_CHANGE =         0x2000, // Changed viewer (or the viewer's state) in which view is shown.
+    CAMERA_CHANGE =         0x4000, // Changes to camera parameters within a viewer.
+    ACTOR_MOVE =            0x8000, // Change to the position of a visualisation actor through interaction.
+    ASSESSMENT_CHANGE =    0x10000, // Assessment change either in name, notes, landmarks, or path data.
+    RESTORE_CHANGE =       0x20000, // Emitted after restoring any undo.
+    ALL_VIEWS =            0x40000, // Specify that the event relates to all models in the selected viewer.
+    ALL_VIEWERS =          0x80000, // Specify that all viewers partake in the event.
+    MODEL_SELECT =        0x100000, // When a model has just been selected.
+    CACHE =               0x200000, // Some caching operation
+    CANCEL =              0x400000, // An action was cancelled from its doBeforeAction function.
+    ERR =                 0x800000  // Some error.
 };  // end enum
 
 
@@ -183,10 +181,6 @@ class MetricType;
 class Metric;
 
 }   // end namespace (Metric)
-
-namespace Interactor {
-class ContextMenu;
-}   // end namespace (Interactor)
 
 }   // end namespace (FaceTools)
 

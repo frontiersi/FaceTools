@@ -40,6 +40,7 @@ ActionToggleCameraActorInteraction::ActionToggleCameraActorInteraction( const QS
     connect( &_moveNotifier, &ActorMoveNotifier::onCameraStop,
             this, &ActionToggleCameraActorInteraction::_doOnCameraStop);
     setCheckable( true, false);
+    addRefreshEvent( Event::AFFINE_CHANGE | Event::MESH_CHANGE);
 }   // end ctor
 
 
@@ -62,17 +63,13 @@ QString ActionToggleCameraActorInteraction::whatsThis() const
 }   // end whatsThis
 
 
-bool ActionToggleCameraActorInteraction::checkState( Event)
+bool ActionToggleCameraActorInteraction::update( Event)
 {
     return MS::interactionMode() == IMode::ACTOR_INTERACTION;
-}   // end checkState
+}   // end update
 
 
-bool ActionToggleCameraActorInteraction::isAllowed( Event)
-{
-    const FM* fm = MS::selectedModel();
-    return fm || isChecked();
-}   // end isAllowedd
+bool ActionToggleCameraActorInteraction::isAllowed( Event) { return isChecked() || MS::isViewSelected();}
 
 
 void ActionToggleCameraActorInteraction::doAction( Event)
@@ -80,7 +77,7 @@ void ActionToggleCameraActorInteraction::doAction( Event)
     if ( isChecked())
     {
         MS::showStatus( "Model interaction ACTIVE");
-        MS::setInteractionMode( IMode::ACTOR_INTERACTION, true);
+        MS::setInteractionMode( IMode::ACTOR_INTERACTION);
     }   // end if
     else
     {
@@ -110,5 +107,7 @@ void ActionToggleCameraActorInteraction::_doOnActorStop()
 
 void ActionToggleCameraActorInteraction::_doOnCameraStop()
 {
-    setChecked(false);
+    // Always deactivate actor interaction mode on stopping the camera
+    if ( isChecked())
+        setChecked(false);
 }   // end _doOnCameraStop

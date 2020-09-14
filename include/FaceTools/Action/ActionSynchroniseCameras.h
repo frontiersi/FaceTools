@@ -32,7 +32,7 @@ public:
 
 protected:
     bool isAllowed( Event) override;
-    bool checkState( Event) override;
+    bool update( Event) override;
     void doAction( Event) override;
 
 private:

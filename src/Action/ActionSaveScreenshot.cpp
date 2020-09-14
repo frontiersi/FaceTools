@@ -63,10 +63,7 @@ bool hasValidExtension( const QString& fname)
 }   // end namespace
 
 
-bool ActionSaveScreenshot::isAllowed( Event)
-{
-    return MS::isViewSelected();
-}   // end isAllowed
+bool ActionSaveScreenshot::isAllowed( Event) { return MS::isViewSelected();}
 
 
 void ActionSaveScreenshot::doAction( Event)

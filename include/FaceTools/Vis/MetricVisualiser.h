@@ -54,7 +54,7 @@ public:
     void apply( const FV*, const QPoint*) override;
     void purge( const FV*) override;
 
-    void refreshState( const FV *fv) override;
+    void refresh( const FV *fv) override;
     void setVisible( FV *fv, bool v) override;
 
     virtual void setHighlighted( const FV*, bool) = 0;

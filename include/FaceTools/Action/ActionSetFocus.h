@@ -39,6 +39,7 @@ protected:
 
 private:
     QPoint _mpos;
+    Vec3f _vproj;
 };  // end class
 
 }}   // end namespace

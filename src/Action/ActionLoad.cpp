@@ -15,10 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <Action/ActionLoadFaceModels.h>
+#include <Action/ActionLoad.h>
+#include <Action/ActionOrientCameraToFace.h>
 #include <FileIO/FaceModelManager.h>
 #include <QFileInfo>
-using FaceTools::Action::ActionLoadFaceModels;
+using FaceTools::Action::ActionLoad;
 using FaceTools::Action::Event;
 using FaceTools::Action::FaceAction;
 using FaceTools::FileIO::LoadFaceModelsHelper;
@@ -28,24 +29,21 @@ using FMM = FaceTools::FileIO::FaceModelManager;
 using MS = FaceTools::Action::ModelSelector;
 
 
-ActionLoadFaceModels::ActionLoadFaceModels( const QString& dn, const QIcon& ico, const QKeySequence& ks)
+ActionLoad::ActionLoad( const QString& dn, const QIcon& ico, const QKeySequence& ks)
     : FaceAction( dn, ico, ks), _loadHelper(nullptr), _dialog(nullptr)
 {
     setAsync(true);
 }   // end ctor
 
 
-ActionLoadFaceModels::~ActionLoadFaceModels()
-{
-    delete _loadHelper;
-}   // end dtor
+ActionLoad::~ActionLoad() { delete _loadHelper;}
 
 
-void ActionLoadFaceModels::postInit()
+void ActionLoad::postInit()
 {
     QWidget* p = static_cast<QWidget*>(parent());
     _loadHelper = new LoadFaceModelsHelper(p);
-    _dialog = new QFileDialog(p, tr("Select model to load"));
+    _dialog = new QFileDialog(p, tr("Select model(s) to load"));
     QStringList filters = FMM::fileFormats().createImportFilters();
     filters.prepend( "Any file (*)");
     _dialog->setNameFilters(filters);
@@ -56,14 +54,11 @@ void ActionLoadFaceModels::postInit()
 }   // end postInit
 
 
-bool ActionLoadFaceModels::isAllowed( Event)
-{
-    return FMM::numOpen() < FMM::loadLimit();
-}   // end isAllowed
+bool ActionLoad::isAllowed( Event) { return FMM::numOpen() < FMM::loadLimit();}
 
 
 // public
-bool ActionLoadFaceModels::loadModel( const QString& fname)
+bool ActionLoad::load( const QString& fname)
 {
     bool loaded = false;
     if ( isAllowed(Event::NONE))
@@ -74,10 +69,10 @@ bool ActionLoadFaceModels::loadModel( const QString& fname)
             loaded = execute( Event::USER);
     }   // end if
     return loaded;
-}   // end loadModel
+}   // end load
 
 
-bool ActionLoadFaceModels::doBeforeAction( Event)
+bool ActionLoad::doBeforeAction( Event)
 {
     if ( _loadHelper->filenames().empty() && _dialog->exec())
         _loadHelper->setFilteredFilenames( _dialog->selectedFiles());
@@ -85,24 +80,26 @@ bool ActionLoadFaceModels::doBeforeAction( Event)
     const bool doLoad = _loadHelper->filenames().size() > 0;
     if ( doLoad)
     {
-        // Set directory for next load
         QFileInfo finfo( _loadHelper->filenames().first());
-        finfo.makeAbsolute();
-        _dialog->setDirectory( finfo.absolutePath());
-        MS::showStatus( QString("Loading %1 ...").arg(finfo.absoluteFilePath()));
+        _dialog->setDirectory( finfo.absolutePath()); // Set directory for next load
+        if ( _loadHelper->filenames().size() == 1)
+            MS::showStatus( QString("Loading %1 ...").arg(finfo.absoluteFilePath()));
+        else
+            MS::showStatus( "Loading models ...");
     }   // end if
     return doLoad;
 }   // end doBeforeAction
 
 
-void ActionLoadFaceModels::doAction( Event)
+void ActionLoad::doAction( Event)
 {
     _loadHelper->loadModels();
 }   // end doAction
 
 
-Event ActionLoadFaceModels::doAfterAction( Event)
+Event ActionLoad::doAfterAction( Event)
 {
+    MS::defaultViewer()->resetDefaultCamera();
     _loadHelper->showLoadErrors();
     const FMS& fms = _loadHelper->lastLoaded();
     FV *fv = nullptr;
@@ -113,8 +110,9 @@ Event ActionLoadFaceModels::doAfterAction( Event)
     if ( fv)
     {
         MS::setSelected( fv);
-        MS::showStatus( QString("Finished loading model."), 5000);
-        e = Event::LOADED_MODEL | Event::MESH_CHANGE;
+        ActionOrientCameraToFace::orientToFace( fv, 1);
+        MS::showStatus( "Finished loading.", 5000);
+        e = Event::LOADED_MODEL;
     }   // end if
     else
     {

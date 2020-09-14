@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2019 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,31 +15,42 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_SHOW_MODEL_PROPERTIES_H
-#define FACE_TOOLS_ACTION_SHOW_MODEL_PROPERTIES_H
+#ifndef FACE_TOOLS_ACTION_NEWER_VERSION_FINDER_H
+#define FACE_TOOLS_ACTION_NEWER_VERSION_FINDER_H
 
-#include "ActionDiscardManifold.h"
-#include <FaceTools/Widget/ModelPropertiesDialog.h>
+#include "FaceAction.h"
+#include <QTools/NetworkUpdater.h>
+#include <QUrl>
 
 namespace FaceTools { namespace Action {
 
-class FaceTools_EXPORT ActionShowModelProperties : public FaceAction
+class FaceTools_EXPORT ActionNewerVersionFinder : public FaceAction
 { Q_OBJECT
 public:
-    ActionShowModelProperties( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
-    ~ActionShowModelProperties() override;
+    ActionNewerVersionFinder( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
 
-    QString toolTip() const override { return "Show information about the selected model's 3D representation.";}
+    void setManifestUrl( const QUrl &mu) { _manifestUrl = mu;}
+    void setCurrentVersion( const QTools::VersionInfo &v) { _cvers = _uvers = v;}
+    const QTools::VersionInfo &updatedVersion() const { return _uvers;}
+
+    QString toolTip() const override { return "Check if a newer version is available to download.";}
+
+signals:
+    void onFoundNewerVersion( bool);
 
 protected:
     void postInit() override;
-    bool checkState( Event) override;
     bool isAllowed( Event) override;
     void doAction( Event) override;
     Event doAfterAction( Event) override;
 
+private slots:
+    void _doOnFinishedManifestDownload(bool);
+
 private:
-    Widget::ModelPropertiesDialog *_dialog;
+    QTools::NetworkUpdater *_updater;
+    QTools::VersionInfo _cvers, _uvers;
+    QUrl _manifestUrl;
 };  // end class
 
 }}   // end namespace

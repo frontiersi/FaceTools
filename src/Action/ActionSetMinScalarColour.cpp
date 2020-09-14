@@ -32,6 +32,7 @@ ActionSetMinScalarColour::ActionSetMinScalarColour( const QString& dname)
     : FaceAction( dname)
 {
     setIconColour( QColor(0,0,255));
+    addRefreshEvent( Event::VIEW_CHANGE);
 }   // end ctor
 
 

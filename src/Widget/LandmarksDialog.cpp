@@ -108,7 +108,7 @@ void LandmarksDialog::_triggerShow( bool c)
     for ( QAction *act : _ui->showButton->actions())
     {
         FaceAction *fact = qobject_cast<FaceAction*>( act->parent());
-        fact->setChecked(true);
+        fact->execute( Action::Event::USER);
     }   // end for
 }   // end _triggerShow
 

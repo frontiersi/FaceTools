@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <Action/ActionRadialSelect.h>
+#include <Interactor/RadialSelectHandler.h>
 #include <LndMrk/LandmarksManager.h>
 #include <FaceModel.h>
 using FaceTools::Action::ActionRadialSelect;
@@ -28,18 +29,11 @@ using MS = FaceTools::Action::ModelSelector;
 using LMAN = FaceTools::Landmark::LandmarksManager;
 
 
-ActionRadialSelect::ActionRadialSelect( const QString& dn, const QIcon& ico, RadialSelectHandler::Ptr handler)
-    : ActionVisualise( dn, ico, &handler->visualisation()), _handler(handler)
+ActionRadialSelect::ActionRadialSelect( const QString& dn, const QIcon& ico)
+    : ActionVisualise( dn, ico, &MS::handler<RadialSelectHandler>()->visualisation())
 {
     addPurgeEvent( Event::MESH_CHANGE);
 }   // end ctor
-
-
-bool ActionRadialSelect::checkState( Event e)
-{
-    _handler->refreshState();
-    return ActionVisualise::checkState( e);
-}   // end checkState
 
 
 void ActionRadialSelect::doAction( Event e)
@@ -59,15 +53,15 @@ void ActionRadialSelect::doAction( Event e)
         if ( !fv->projectToSurface( mpos, tpos) && lmks.has( LMAN::codeId(Landmark::PRN)))
             tpos = lmks.pos( Landmark::PRN);
 
-        float rad = _handler->radius();
+        RadialSelectHandler *handler = MS::handler<RadialSelectHandler>();
+        float rad = handler->radius();
         if ( fm->hasLandmarks())
             rad = sqrtf(fm->currentLandmarks().sqRadius());
         else if ( rad == 0.0f)
             rad = fm->bounds()[0]->diagonal()/4;
 
         fm->unlock();
-
-        _handler->init( fm, tpos, rad);
+        handler->init( fm, tpos, rad);
     }   // end isChecked
 
     ActionVisualise::doAction( e);

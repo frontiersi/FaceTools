@@ -87,19 +87,16 @@ ActionSynchroniseCameras::~ActionSynchroniseCameras()
 }   // end dtor
 
 
-bool ActionSynchroniseCameras::isAllowed(Event)
-{
-    return MS::isViewSelected();
-}   // end isAllowed
+bool ActionSynchroniseCameras::isAllowed(Event) { return MS::isViewSelected();}
 
 
-bool ActionSynchroniseCameras::checkState( Event e)
+bool ActionSynchroniseCameras::update( Event e)
 {
     const bool isOn = _camMover->isEnabled() && MS::isViewSelected();
     if ( isOn && has( e, Event::CAMERA_CHANGE))
         static_cast<CameraMoveHandler*>(_camMover)->update();
     return isOn;
-}   // end checkState
+}   // end update
 
 
 void ActionSynchroniseCameras::doAction( Event)

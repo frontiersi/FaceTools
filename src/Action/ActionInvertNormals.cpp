@@ -30,10 +30,7 @@ ActionInvertNormals::ActionInvertNormals( const QString& dn, const QIcon& ico)
 }   // end ctor
 
 
-bool ActionInvertNormals::isAllowed( Event)
-{
-    return MS::isViewSelected();
-}   // end isAllowed
+bool ActionInvertNormals::isAllowed( Event) { return MS::isViewSelected();}
 
 
 bool ActionInvertNormals::doBeforeAction( Event)

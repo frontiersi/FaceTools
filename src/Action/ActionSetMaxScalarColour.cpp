@@ -32,6 +32,7 @@ ActionSetMaxScalarColour::ActionSetMaxScalarColour( const QString& dname)
     : FaceAction( dname)
 {
     setIconColour( QColor(255,0,0));
+    addRefreshEvent( Event::VIEW_CHANGE);
 }   // end ctor
 
 
@@ -42,7 +43,7 @@ bool ActionSetMaxScalarColour::isAllowed( Event)
     if ( smapper)
         setIconColour( smapper->maxColour());
     return smapper != nullptr;
-}   // end isAllowedd
+}   // end isAllowed
 
 
 bool ActionSetMaxScalarColour::doBeforeAction( Event)

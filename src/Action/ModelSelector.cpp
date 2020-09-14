@@ -18,16 +18,18 @@
 #include <Action/ModelSelector.h>
 #include <Action/ActionOrientCameraToFace.h>
 #include <Action/FaceActionWorker.h>
+#include <Interactor/SelectNotifier.h>
 #include <Vis/BoundingVisualisation.h>
 #include <Vis/FaceView.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <vtkCamera.h>
-#include <QTimer>
+#include <QSignalBlocker>
 #include <cassert>
 using FaceTools::Action::ModelSelector;
 using FaceTools::Interactor::SelectNotifier;
 using FaceTools::Interactor::MouseHandler;
+using FaceTools::Interactor::GizmoHandler;
 using FaceTools::ModelViewer;
 using FaceTools::Vis::FV;
 using FaceTools::FMV;
@@ -40,9 +42,11 @@ ModelSelector::Ptr ModelSelector::_me;
 
 void ModelSelector::addViewer( FMV* fmv, bool setDefault)
 {
-    me()->_viewers.push_back(fmv);
+    ModelSelector::Ptr ms = me();
+    ms->_viewers.push_back(fmv);
+    ms->_mouseHandler->addViewer( fmv, setDefault);
     if ( setDefault)
-        me()->_defv = int(me()->_viewers.size()) - 1;
+        ms->_defv = int(me()->_viewers.size()) - 1;
 }   // end addViewer
 
 
@@ -92,14 +96,35 @@ void ModelSelector::restoreCursor()
 }   // end restoreCursor
 
 
-const SelectNotifier* ModelSelector::selector() { return &sn();}
+const SelectNotifier* ModelSelector::selectNotifier() { return _selectNotifier();}
 
-void ModelSelector::setInteractionMode(IMode m, bool v)
+
+void ModelSelector::registerHandler( GizmoHandler *gh) { me()->_mouseHandler->registerHandler(gh);}
+
+void ModelSelector::refreshHandlers() { me()->_mouseHandler->refreshHandlers();}
+
+
+void ModelSelector::setInteractionMode( IMode m)
 {
-    for ( ModelViewer* mv : viewers())
-        mv->setInteractionMode(m, v);
+    const FV *fv = selectedView();
+    if ( !fv || m == IMode::CAMERA_INTERACTION)
+    {
+        setLockSelected(false);
+        for ( ModelViewer* mv : viewers())
+            mv->setCameraInteraction();
+    }   // end if
+    else
+    {
+        setLockSelected(true);
+        // Note that this prop will only actually be on one of the viewers
+        // meaning that the other viewers will default to camera interaction.
+        const vtkProp3D *p = fv->actor();
+        for ( ModelViewer* mv : viewers())
+            mv->setActorInteraction( p);
+    }   // end else
     restoreCursor();
 }   // end setInteractionMode
+
 
 IMode ModelSelector::interactionMode()
 {
@@ -110,7 +135,7 @@ IMode ModelSelector::interactionMode()
 }   // end interactionMode
 
 
-FMV* ModelSelector::mouseViewer() { return static_cast<FMV*>(sn().mouseViewer());}
+FMV* ModelSelector::mouseViewer() { return static_cast<FMV*>(me()->_mouseHandler->mouseViewer());}
 
 FMV* ModelSelector::defaultViewer()
 {
@@ -132,44 +157,61 @@ void ModelSelector::setViewAngle( double v)
 }   // end setViewAngle
 
 
-FV* ModelSelector::selectedView() { return sn().selected();}
+FV* ModelSelector::selectedView() { return _selectNotifier()->selected();}
 
 
 FV* ModelSelector::add( FM *fm, FMV *tviewer)
 {
     FV *fv = new FV( fm, tviewer);
-    sn().add(fv);
+    _selectNotifier()->add(fv);
     return fv;
 }   // end add
 
 
 void ModelSelector::remove( FV* fv)
 {
-    sn().setSelected( fv, false);
-    sn().remove( fv);
+    // First ensure selection is unlocked
+    me()->_lockCount = 0;
+    setLockSelected(false);
+    _selectNotifier()->setSelected( fv, false);
+    _selectNotifier()->remove( fv);
     delete fv;  // Ensures all visualisations removed from the corresponding viewer
 }   // end remove
 
 
 void ModelSelector::remove( const FM* fm)
 {
+    QSignalBlocker blocker(_selectNotifier());
     while ( !fm->fvs().empty())
         remove( fm->fvs().first());
-    sn().testMouse();   // Force signals to be emitted with the updated absense of the FaceView's actor
 }   // end remove
 
 
 void ModelSelector::setSelected( FV* fv)
 {
+    // First ensure selection is unlocked
+    me()->_lockCount = 0;
+    setLockSelected(false);
+
     FV* sv = selectedView();
     if ( sv) // First deselect any currently selected view.
-        sn().setSelected( sv, false);
+        _selectNotifier()->setSelected( sv, false);
     if ( fv) // The select the given view.
-        sn().setSelected( fv, true);
+        _selectNotifier()->setSelected( fv, true);
 }   // end setSelected
 
 
-void ModelSelector::setLockSelected( bool v) { sn().setLocked(v);}
+void ModelSelector::setLockSelected( bool v)
+{
+    int lc = me()->_lockCount;
+    if ( v)
+        lc++;
+    else
+        lc = std::max<int>( lc - 1, 0);
+    me()->_lockCount = lc;
+    _selectNotifier()->setLocked( lc > 0);
+    //std::cerr << "Model select: (" << lc << ") " << (lc > 0 ? "LOCKED" : "UNLOCKED") << std::endl;
+}   // end setLockSelected
 
 
 void ModelSelector::setAutoFocusOnSelectEnabled( bool v) { me()->_autoFocus = v;}
@@ -179,8 +221,8 @@ void ModelSelector::setShowBoundingBoxesOnSelected( bool v)
 {
     me()->_showBoxes = v;
 
-    // Do nothing if the SelectNotifier is not yet constructed
-    if ( me()->_sn == nullptr)
+    // Do nothing if the MouseHandler is not yet constructed
+    if ( me()->_mouseHandler == nullptr)
         return;
 
     FV *fv = me()->selectedView();
@@ -231,21 +273,19 @@ ModelSelector::Ptr ModelSelector::me()
 
 
 // private static
-SelectNotifier& ModelSelector::sn()
-{
-    if ( !me()->_sn)
-    {
-        SelectNotifier* fvsi = me()->_sn = new SelectNotifier;
-        QObject::connect( fvsi, &SelectNotifier::onSelected, [](FV* fv, bool s){ me()->_doOnSelected( fv, s);});
-    }   // end if
-    return *me()->_sn;
-}   // end sn
+SelectNotifier* ModelSelector::_selectNotifier() { return me()->_mouseHandler->selectNotifier();}
 
 
 // private
-ModelSelector::ModelSelector() : _sbar(nullptr), _autoFocus(true), _showBoxes(true), _defv(-1), _sn(nullptr) {}
+ModelSelector::ModelSelector()
+    : _sbar(nullptr), _autoFocus(true), _showBoxes(true), _defv(-1), _lockCount(0), _mouseHandler( new MouseHandler)
+{
+    SelectNotifier *mn = _mouseHandler->selectNotifier();
+    QObject::connect( mn, &SelectNotifier::onSelected, [this](FV* fv, bool s){ _doOnSelected( fv, s);});
+}   // end ctor
 
 
+// private
 void ModelSelector::_doOnSelected( FV *fv, bool v)
 {
     if ( v && _showBoxes)

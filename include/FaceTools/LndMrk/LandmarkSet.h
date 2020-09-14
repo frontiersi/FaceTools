@@ -97,7 +97,7 @@ public:
 
     // Returns the position of a visible landmark closest to the given position
     // but only if it's within the given squared distance.
-    Vec3f snapToVisible( const Vec3f&, float snapSqDist) const;
+    Vec3f snapTo( const Vec3f&, float snapSqDist) const;
 
     // Get the ids of landmarks in this set.
     const IntSet& ids() const { return _ids;}
