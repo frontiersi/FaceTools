@@ -155,6 +155,14 @@ public slots:
     bool execute( Event e=Event::NONE);
 
     /**
+     * First calls update on self and sets the action's checked state to the returned value.
+     * Then calls isAllowed on self and sets the action's enabled state to the returned value.
+     * This function is called at the end of this action being executed just prior to the
+     * final onEvent signal being emitted. It can also be called internally at any point.
+     */
+    void refresh( Event e=Event::NONE);
+
+    /**
      * For asynchronous actions, this function is called if the action times out.
      * The action should stop what it's doing and finish immediately.
      */
@@ -200,14 +208,6 @@ protected:
      * in response to received events.
      */
     virtual bool isAllowed( Event) { return _unlocked;}
-
-    /**
-     * First calls update on self and sets the action's checked state to the returned value.
-     * Then calls isAllowed on self and sets the action's enabled state to the returned value.
-     * This function is called at the end of this action being executed just prior to the
-     * final onEvent signal being emitted. It can also be called internally at any point.
-     */
-    void refresh( Event e=Event::NONE);
 
     /**
      * doBeforeAction always occurs in the GUI thread so this is where to show dialogs etc in order to get

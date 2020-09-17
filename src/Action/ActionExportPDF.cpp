@@ -25,7 +25,6 @@
 #include <QDesktopServices>
 #include <QTemporaryDir>
 #include <QMessageBox>
-#include <QProcess>
 #include <QFile>
 
 #include <fstream>
@@ -39,6 +38,7 @@ using FaceTools::Vis::FV;
 using FaceTools::FM;
 using FMM = FaceTools::FileIO::FaceModelManager;
 using MS = FaceTools::Action::ModelSelector;
+using QMB = QMessageBox;
 
 // static members
 bool ActionExportPDF::_openOnSave(false);
@@ -126,7 +126,7 @@ Event ActionExportPDF::doAfterAction( Event)
     {
         std::cerr << _err.toStdString() << std::endl;
         MS::showStatus("Failed to generate report!", 5000);
-        QMessageBox::warning( static_cast<QWidget*>(parent()), tr("Report Creation Error!"), _err);
+        QMB::warning( static_cast<QWidget*>(parent()), tr("Report Creation Error!"), _err);
     }   // end if
     else
         saveGeneratedReport(_tmpfile, _fileDialog);
@@ -167,7 +167,7 @@ bool ActionExportPDF::saveGeneratedReport( const QString& tmpfile, QFileDialog *
             if ( !QFile::remove(outfile))
             {
                 static const QString err = "Unable to overwrite existing file! Is it already open?\nChoose a different filename or close the file.";
-                QMessageBox::warning( static_cast<QWidget*>(fdialog->parent()), tr("Report Save Error!"), err);
+                QMB::warning( static_cast<QWidget*>(fdialog->parent()), tr("Report Save Error!"), err);
                 docopy = false; // Try again!
             }   // end if
         }   // end if

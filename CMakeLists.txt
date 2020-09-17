@@ -72,6 +72,7 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionExportPDF.h"
     "${INCLUDE_ACTION_DIR}/ActionExtractFace.h"
     "${INCLUDE_ACTION_DIR}/ActionFillHoles.h"
+    "${INCLUDE_ACTION_DIR}/ActionFindUpdate.h"
     "${INCLUDE_ACTION_DIR}/ActionFixNormals.h"
     "${INCLUDE_ACTION_DIR}/ActionGetFaceManifold.h"
     "${INCLUDE_ACTION_DIR}/ActionImportMetaData.h"
@@ -82,7 +83,6 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionMapSymmetry.h"
     "${INCLUDE_ACTION_DIR}/ActionMarquee.h"
     "${INCLUDE_ACTION_DIR}/ActionMoveView.h"
-    "${INCLUDE_ACTION_DIR}/ActionNewerVersionFinder.h"
     "${INCLUDE_ACTION_DIR}/ActionOrientCameraToFace.h"
     "${INCLUDE_ACTION_DIR}/ActionRadialSelect.h"
     "${INCLUDE_ACTION_DIR}/ActionRedo.h"
@@ -299,6 +299,7 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/ActionExportPDF
     ${SRC_ACTION_DIR}/ActionExtractFace
     ${SRC_ACTION_DIR}/ActionFillHoles
+    ${SRC_ACTION_DIR}/ActionFindUpdate
     ${SRC_ACTION_DIR}/ActionFixNormals
     ${SRC_ACTION_DIR}/ActionGetFaceManifold
     ${SRC_ACTION_DIR}/ActionImportMetaData
@@ -309,7 +310,6 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/ActionMapSymmetry
     ${SRC_ACTION_DIR}/ActionMarquee
     ${SRC_ACTION_DIR}/ActionMoveView
-    ${SRC_ACTION_DIR}/ActionNewerVersionFinder
     ${SRC_ACTION_DIR}/ActionOrientCameraToFace
     ${SRC_ACTION_DIR}/ActionRadialSelect
     ${SRC_ACTION_DIR}/ActionRedo

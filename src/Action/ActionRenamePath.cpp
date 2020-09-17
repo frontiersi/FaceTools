@@ -56,7 +56,7 @@ void ActionRenamePath::_doOnTextValueChanged( const QString &txt)
     if ( txt.size() > _maxLabelChars)
     {
         QSignalBlocker blocker(_dialog);
-        _dialog->setTextValue( txt.left(int(_maxLabelChars)));
+        _dialog->setTextValue( txt.left(_maxLabelChars));
     }   // end if
 }   // end _doOnTextValueChanged
 

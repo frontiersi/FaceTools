@@ -15,42 +15,47 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_NEWER_VERSION_FINDER_H
-#define FACE_TOOLS_ACTION_NEWER_VERSION_FINDER_H
+#ifndef FACE_TOOLS_ACTION_FIND_UPDATE_H
+#define FACE_TOOLS_ACTION_FIND_UPDATE_H
 
 #include "FaceAction.h"
 #include <QTools/NetworkUpdater.h>
-#include <QUrl>
 
 namespace FaceTools { namespace Action {
 
-class FaceTools_EXPORT ActionNewerVersionFinder : public FaceAction
+class FaceTools_EXPORT ActionFindUpdate : public FaceAction
 { Q_OBJECT
 public:
-    ActionNewerVersionFinder( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
+    ActionFindUpdate( const QString&, const QIcon&, const QUrl &manifestUrl);
 
-    void setManifestUrl( const QUrl &mu) { _manifestUrl = mu;}
-    void setCurrentVersion( const QTools::VersionInfo &v) { _cvers = _uvers = v;}
-    const QTools::VersionInfo &updatedVersion() const { return _uvers;}
+    QString toolTip() const override { return "Check if an update is available to download.";}
 
-    QString toolTip() const override { return "Check if a newer version is available to download.";}
+    void setCurrentMeta( const QTools::UpdateMeta &v) { _cmeta = v;}
+    const QTools::UpdateMeta &updateMeta() const { return _updater->updateMeta();}
+    void downloadUpdate( const QString&);  // Download archive file to given location
 
 signals:
-    void onFoundNewerVersion( bool);
+    void onFoundUpdate( bool);    // Parameter is true iff an update is available
+    void onDownloadProgress( qint64, qint64);
+    void onUpdateDownloaded();
+    void onError( const QString&);      // On any download error
 
 protected:
-    void postInit() override;
     bool isAllowed( Event) override;
+    bool update( Event) override;
     void doAction( Event) override;
     Event doAfterAction( Event) override;
 
 private slots:
-    void _doOnFinishedManifestDownload(bool);
+    void _doOnReplyFinished(bool);
 
 private:
+    void _updateDownloadedManifest(bool);
     QTools::NetworkUpdater *_updater;
-    QTools::VersionInfo _cvers, _uvers;
-    QUrl _manifestUrl;
+    QTools::UpdateMeta _cmeta;
+    bool _isUpdate;
+    bool _canConnect;
+    void _handleError();
 };  // end class
 
 }}   // end namespace
