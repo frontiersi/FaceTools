@@ -96,7 +96,7 @@ void FaceAction::refresh( Event e)
         _action.setChecked( chk);
     }   // end if
 
-    _action.setEnabled( _unlocked && isAllowed( e));
+    _action.setEnabled( isUnlocked() && isAllowed( e));
     if ( widget())
         widget()->setEnabled( isEnabled());
 }   // end refresh
@@ -178,7 +178,7 @@ void FaceAction::_init( QWidget* parent) // Called by FaceActionManager after co
 
 bool FaceAction::execute( Event e)
 {
-    if ( !isAllowed(e))
+    if ( !isUnlocked() || !isAllowed(e))
         return false;
 
     _action.setEnabled(false);

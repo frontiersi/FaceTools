@@ -47,7 +47,8 @@ protected:
     Event doAfterAction( Event) override;
 
 private slots:
-    void _doOnReplyFinished(bool);
+    void _doOnDownloadProgress( qint64, qint64);
+    void _doOnReplyFinished( bool);
 
 private:
     void _updateDownloadedManifest(bool);

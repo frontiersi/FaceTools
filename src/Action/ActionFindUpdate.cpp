@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <Action/ActionFindUpdate.h>
+#include <QSslSocket>
 using FaceTools::Action::ActionFindUpdate;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
@@ -26,8 +27,10 @@ ActionFindUpdate::ActionFindUpdate( const QString& dname, const QIcon& icon, con
     : FaceAction( dname, icon), _updater(nullptr), _isUpdate(false), _canConnect(false)
 {
     _updater = new QTools::NetworkUpdater( url, 10000, 5);   // 10 second timeout, 5 redirects
-    connect( _updater, &QTools::NetworkUpdater::onDownloadProgress, this, &ActionFindUpdate::onDownloadProgress);
+    connect( _updater, &QTools::NetworkUpdater::onDownloadProgress, this, &ActionFindUpdate::_doOnDownloadProgress);
     connect( _updater, &QTools::NetworkUpdater::onReplyFinished, this, &ActionFindUpdate::_doOnReplyFinished);
+    const QString sslversion = QSslSocket::sslLibraryBuildVersionString();
+    std::cerr << sslversion.toStdString() << " " << std::boolalpha << QSslSocket::supportsSsl() << std::endl;
 }   // end ctor
 
 
@@ -49,6 +52,12 @@ void ActionFindUpdate::downloadUpdate( const QString &aname)
     else
         std::cerr << "Downloading update from " << _updater->updateMeta().updateUrl().toDisplayString().toStdString() << std::endl;
 }   // end downloadUpdate
+
+
+void ActionFindUpdate::_doOnDownloadProgress( qint64 br, qint64 bt)
+{
+    emit onDownloadProgress( br, bt);
+}   // end _doOnDownloadProgress
 
 
 void ActionFindUpdate::_doOnReplyFinished( bool v)
