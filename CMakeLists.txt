@@ -72,7 +72,6 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionExportPDF.h"
     "${INCLUDE_ACTION_DIR}/ActionExtractFace.h"
     "${INCLUDE_ACTION_DIR}/ActionFillHoles.h"
-    "${INCLUDE_ACTION_DIR}/ActionFindUpdate.h"
     "${INCLUDE_ACTION_DIR}/ActionFixNormals.h"
     "${INCLUDE_ACTION_DIR}/ActionGetFaceManifold.h"
     "${INCLUDE_ACTION_DIR}/ActionImportMetaData.h"
@@ -299,7 +298,6 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/ActionExportPDF
     ${SRC_ACTION_DIR}/ActionExtractFace
     ${SRC_ACTION_DIR}/ActionFillHoles
-    ${SRC_ACTION_DIR}/ActionFindUpdate
     ${SRC_ACTION_DIR}/ActionFixNormals
     ${SRC_ACTION_DIR}/ActionGetFaceManifold
     ${SRC_ACTION_DIR}/ActionImportMetaData
