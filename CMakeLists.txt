@@ -6,7 +6,6 @@ set(WITH_RIMG TRUE)
 set(WITH_R3DIO TRUE)
 set(WITH_QTOOLS TRUE)
 set(WITH_RNONRIGID TRUE)
-set(WITH_QUAZIP TRUE)
 set(WITH_LUA TRUE)
 include( "cmake/FindLibs.cmake")
 

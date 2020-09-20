@@ -10,12 +10,7 @@ The FaceTools library provides core functionality for the [Cliniface](../../../c
 - [r3dvis](https://github.com/richeytastic/r3dvis)
 - [rNonRigid](https://github.com/richeytastic/rNonRigid)
 - [QTools](https://github.com/richeytastic/qtools)
-- [QuaZip](https://github.com/stachenov/quazip)
-- [lua](https://www.lua.org)
 - [sol2](https://github.com/ThePhD/sol2)
-
-A version of QuaZip is included here (custom_quazip.zip) which uses customised CMake
-scripts that leverage the build scripts of [libbuild](https://github.com/richeytastic/libbuild)
-so that QuaZip can be easily found when building FaceTools.
+- [lua](https://www.lua.org)
 
 Download [libbuild](https://github.com/richeytastic/libbuild) for easy build and install of the FaceTools library.
