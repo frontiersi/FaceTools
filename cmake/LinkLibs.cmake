@@ -23,6 +23,5 @@ install( DIRECTORY "${INCLUDE_DIR}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
 install( FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}_Export.h" DESTINATION "include")
 
 install( FILES "${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME}Config.cmake" DESTINATION "lib/cmake")
-install( FILES "${PROJECT_SOURCE_DIR}/cmake/Macros.cmake" DESTINATION "lib/cmake")
 
 include("${CMAKE_CURRENT_LIST_DIR}/LinkTargets.cmake")

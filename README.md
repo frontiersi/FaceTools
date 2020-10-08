@@ -1,6 +1,8 @@
-## FaceTools
+# FaceTools
 
 The FaceTools library provides core functionality for the [Cliniface](../../../cliniface/) application.
+
+Download [libbuild](https://github.com/richeytastic/libbuild) for easy build and install of the FaceTools library.
 
 ## Prerequisites
 - [rlib](https://github.com/richeytastic/rlib)
@@ -13,4 +15,3 @@ The FaceTools library provides core functionality for the [Cliniface](../../../c
 - [sol2](https://github.com/ThePhD/sol2)
 - [lua](https://www.lua.org)
 
-Download [libbuild](https://github.com/richeytastic/libbuild) for easy build and install of the FaceTools library.
