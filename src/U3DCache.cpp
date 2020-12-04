@@ -75,7 +75,7 @@ bool U3DCache::refresh( const FM* fm, bool med9)
     QTemporaryFile tfile( QDir::tempPath() + "/XXXXXX.u3d");
     if ( tfile.open())
     {
-        r3dio::U3DExporter xptr( true, med9, ambv);
+        r3dio::U3DExporter xptr( true/*set true to delete IDTF file on destruction*/, med9, ambv);
         //std::cerr << QString( "Exporting U3D model to '%1'").arg( tfile.fileName()).toStdString() << std::endl;
         if ( xptr.save( *mesh, tfile.fileName().toLocal8Bit().toStdString()))
         {

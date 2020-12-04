@@ -43,8 +43,8 @@ void setTextProperties( vtkTextProperty* tp, const QColor& bg, const QColor& fg)
 {
     tp->SetFontFamilyToCourier();
     tp->SetFontSize(12);
-    tp->SetColor( fg.redF(), fg.greenF(), fg.blueF());
     tp->SetBackgroundColor( bg.redF(), bg.greenF(), bg.blueF());
+    tp->SetColor( fg.redF(), fg.greenF(), fg.blueF());
 }   // end setTextProperties
 
 
