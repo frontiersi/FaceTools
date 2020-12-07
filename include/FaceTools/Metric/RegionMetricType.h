@@ -36,7 +36,7 @@ public:
 
     QString category() const override { return "Region";}
     QString units() const override { return "perimeter^2/area";}
-    QString typeRemarks() const override { return "The perimeter of a region is the sum of the lengths of the individual line segments between an ordered list of landmarks. The area is defined according to the sum of the areas of the triangles composed by the landmarks.";}
+    QString typeRemarks() const override { return "The perimeter of a region is the sum of the lengths of line segments of an ordered list of landmarks. The area is defined by the sum of the areas of triangles (with corners as the landmarks) comprising the region.";}
     Vis::MetricVisualiser* visualiser() override { return &_vis;}
 
     bool fixedInPlane() const override { return false;}
