@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,22 +68,23 @@ public:
     QString metricsList() const;
 
     /**
-     * Returns true iff a match of the given sex is possible to every metric's
+     * Returns true iff a match of the given model's sex is possible to every metric's
      * statistics necessary to evaluate the presence of this phenotypic indication.
      */
-    bool isSexMatch( int8_t) const;
+    bool isSexMatch( const FM&) const;
 
     /**
-     * Returns true iff the given age is within bounds for all of the metric
+     * Returns true iff the given model's age is within bounds for all of the metric
      * statistics necessary to evaluate the presence of this phenotypic indication.
      */
-    bool isAgeMatch( float age) const;
+    bool isAgeMatch( const FM&) const;
 
     /**
      * Returns true iff a match of the given ethnicity is possible to every metric's
      * statistics necessary to evaluate the presence of this phenotypic indication.
      */
-    bool isEthnicityMatch( int) const;
+    bool isMaternalEthnicityMatch( const FM&) const;
+    bool isPaternalEthnicityMatch( const FM&) const;
 
     /**
      * Check if this phenotypic indication is present given the measurements
@@ -91,7 +92,7 @@ public:
      * data (landmarks). Uses the currently set assessment if assessId = -1.
      * Ignores demographic data about the model.
      */
-    bool isPresent( const FM*, int assessId=-1) const;
+    bool isPresent( const FM&, int assessId=-1) const;
 
     ~Phenotype(){}  // Public for Lua
 
@@ -113,7 +114,9 @@ private:
      * corresponding metrics used in the evaluation of the presence of
      * this phenotypic indication.
      */
-    bool _hasMeasurements( const FM*, int aid) const;
+    bool _hasMeasurements( const FM&, int aid) const;
+
+    bool _isEthnicityMatch( const FM&, int) const;
 
     Phenotype();
     Phenotype( const Phenotype&) = delete;

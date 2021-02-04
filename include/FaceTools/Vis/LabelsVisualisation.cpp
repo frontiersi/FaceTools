@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,44 +18,35 @@
 using FaceTools::Vis::FV;
 
 template <class T>
-LabelsVisualisation<T>::~LabelsVisualisation()
-{
-    while (!_views.empty())
-        purge( _views.begin()->first);
-}   // end dtor
-
-
-template <class T>
-bool LabelsVisualisation<T>::isAvailable( const FV *fv, const QPoint*) const
+bool LabelsVisualisation<T>::isAvailable( const FV *fv) const
 {
     return T().canCreateLabels( fv->data());
 }   // end isAvailable
 
 
 template <class T>
-void LabelsVisualisation<T>::apply( const FV* fv, const QPoint*)
+bool LabelsVisualisation<T>::applyToAllInViewer() const
 {
-    if ( _views.count(fv) == 0)
-        _views[fv].refresh( fv->data());
-}   // end apply
+    return T().applyToAllInViewer();
+}   // end applyToAllInViewer
 
 
 template <class T>
-void LabelsVisualisation<T>::purge( const FV* fv)
+bool LabelsVisualisation<T>::applyToAllViewers() const
 {
-    if (_views.count(fv) > 0)
-        _views.erase(fv);
-}   // end purge
+    return T().applyToAllViewers();
+}   // end applyToAllViewers
+
+
+template <class T>
+void LabelsVisualisation<T>::purge( const FV* fv) { _views.erase(fv);}
 
 
 template <class T>
 void LabelsVisualisation<T>::setVisible( FV* fv, bool v)
 {
-    if (_views.count(fv) > 0)
-    {
+    if ( _views.count(fv) > 0)
         _views.at(fv).setVisible( v, fv->viewer());
-        syncWithViewTransform( fv);
-    }   // end if
 }   // end setVisible
 
 
@@ -67,11 +58,26 @@ bool LabelsVisualisation<T>::isVisible( const FV* fv) const
 
 
 template <class T>
-void LabelsVisualisation<T>::syncWithViewTransform( const FV *fv)
+void LabelsVisualisation<T>::refresh( FV* fv)
 {
-    if ( _views.count(fv) > 0 && (_views.at(fv).isVisible() || _views.at(fv).moving()))
+    const QColor bg = fv->viewer()->backgroundColour();
+    const FM *fm = fv->data();
+    T& lv = _views[fv];
+    //const QColor fg = chooseContrasting(bg);
+    const QColor fg = Qt::blue;
+    lv.setColours( fg, bg);
+    lv.refresh( fv->data());
+    lv.transform( fm->transformMatrix());
+}   // end refresh
+
+
+template <class T>
+void LabelsVisualisation<T>::syncTransform( const FV *fv)
+{
+    T& lv = _views[fv];
+    if (lv.isVisible() || lv.moving())
     {
-        const Mat4f& dt = fv->data()->transformMatrix();  // Data transform
+        const Mat4f dt = fv->data()->transformMatrix();  // Data transform
         const Mat4f vt = r3dvis::toEigen( fv->transformMatrix());
 
         // If the data transform is different to the view transform we are in the middle
@@ -79,23 +85,13 @@ void LabelsVisualisation<T>::syncWithViewTransform( const FV *fv)
         // transform the visualisation to match the model's transform.
         if ( dt == vt)
         {
-            _views.at(fv).transform( dt);
-            _views.at(fv).setVisible( true, fv->viewer());
+            lv.transform( dt);
+            lv.setVisible( true, const_cast<FV*>(fv)->viewer());
         }   // end if
         else
         {
-            _views.at(fv).setVisible( false, fv->viewer());
-            _views.at(fv).setMoving( true);
+            lv.setVisible( false, const_cast<FV*>(fv)->viewer());
+            lv.setMoving( true);
         }   // end else
     }   // end if
-}   // end syncWithViewTransform
-
-
-template <class T>
-void LabelsVisualisation<T>::refresh( const FV *fv)
-{
-    const QColor bg = fv->viewer()->backgroundColour();
-    T& lv = _views.at(fv);
-    lv.setColours( chooseContrasting(bg), bg);
-    lv.refresh( fv->data());
-}   // end refresh
+}   // end syncTransform

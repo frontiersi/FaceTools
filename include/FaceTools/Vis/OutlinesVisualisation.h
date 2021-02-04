@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,21 +26,19 @@ namespace FaceTools { namespace Vis {
 class FaceTools_EXPORT OutlinesVisualisation : public BaseVisualisation
 {
 public:
-    const char* name() const override { return "OutlinesVisualisation";}
-
     bool applyToAllInViewer() const override { return false;}
     bool applyToAllViewers() const override { return false;}
 
-    void apply( const FV*, const QPoint* mc=nullptr) override;
+    void refresh( FV*) override;
     void purge( const FV*) override;
 
     void setVisible( FV*, bool) override;
     bool isVisible( const FV*) const override;
 
-    void syncWithViewTransform( const FV*) override;
+    void syncTransform( const FV*) override;
 
 private:
-    std::unordered_map<const FV*, std::vector<LoopView*> > _views;
+    std::unordered_map<const FV*, std::vector<LoopView> > _views;
 };  // end class
 
 }}   // end namespace

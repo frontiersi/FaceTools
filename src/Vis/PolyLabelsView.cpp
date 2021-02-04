@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,6 +44,7 @@ vtkSmartPointer<vtkPolyData> PolyLabelsView::createLabels( const FM* fm) const
         vlabels->SetValue( i, i);
 
         const int* fvidxs = model.fvidxs(i);
+        // Get mean of untransformed position
         Vec3f mpos = (model.uvtx(fvidxs[0]) +
                       model.uvtx(fvidxs[1]) +
                       model.uvtx(fvidxs[2])) / 3;

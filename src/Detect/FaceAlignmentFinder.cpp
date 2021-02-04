@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -171,29 +171,23 @@ float FaceAlignmentFinder::_findEyes( Vec3f &v0, Vec3f &v1)
     std::cerr << "Left at:  " << f0 << " --> " << v0.transpose() << std::endl;
     std::cerr << "Right at: " << f1 << " --> " << v1.transpose() << std::endl;
     */
-    return cv::norm(f1 - f0) * _dfact; // Detection range
+    return cv::norm(f1 - f0);
 }   // end _findEyes
 
 
-FaceAlignmentFinder::FaceAlignmentFinder( const r3d::KDTree &kdt, float orng, float dfact)
-    : _vwr( cv::Size(400,400), orng), _kdt(kdt), _orng(orng), _dfact(orng/dfact), _interEyeDist(0.0f)
+FaceAlignmentFinder::FaceAlignmentFinder() : _vwr( cv::Size(400,400)), _interEyeDist(0.0f) {}
+
+
+Mat4f FaceAlignmentFinder::find( const r3d::KDTree &kdt, const Vec3f &centre, float orng, float dfact)
 {
-    assert( isInit());
     _vwr.setModel( kdt.mesh());
-}   // end ctor
-
-
-Mat4f FaceAlignmentFinder::find( const Vec3f &centre)
-{
-    // Reset orientation and camera
-    _err = "";
-    Mat4f T = Mat4f::Identity();
 
     static const int MAX_OTRIES = 10;
     static const int MAX_OALIGN = 4;
     int otries = 0;
-    const float ostep = _orng / 70;
-    float orng = _orng - MAX_OTRIES * ostep;
+    const float ostep = orng / 70;
+    dfact = orng/dfact;
+    float rng = orng - MAX_OTRIES * ostep;
     float drng = -1;
     bool oriented = false;
 
@@ -201,21 +195,22 @@ Mat4f FaceAlignmentFinder::find( const Vec3f &centre)
     // since the model could be located anywhere and we need eye detection to work.
     Mat4f baseT = Mat4f::Identity();
     baseT.block<3,1>(0,3) = centre;
-    _vwr.setCamera( makeCameraParams( baseT, orng));
+    Mat4f T = baseT;
 
     Vec3f v0, v1;
     int i = 0;
     while ( i < MAX_OALIGN)  // Use max attempts to align at any particular detection range
     {
+        _vwr.setCamera( makeCameraParams( T, rng)); // Set camera to orientation range
         _err = "";
         oriented = false;
-        drng = _findEyes( v0, v1);   // (Re)detect 2D eyes and project to 3D points as _v0 (left) and _v1 (right)
+        drng = dfact * _findEyes( v0, v1);// (Re)detect 2D eyes and project to 3D as _v0 (left) and _v1 (right)
 
         if ( drng > 0)
         {
             oriented = true;
             i++;
-            T = estimateTransform( _kdt, v0, v1);
+            T = estimateTransform( kdt, v0, v1);
         }   // end if
         else    // Fail to detect?
         {
@@ -226,19 +221,14 @@ Mat4f FaceAlignmentFinder::find( const Vec3f &centre)
                 std::cerr << _err << std::endl;
                 break;
             }   // end if
-            else
-            {
-                otries++;
-                orng += ostep;  // Change the orientation range to try again
-                i = 0;  // Reset range attempts
-                T = baseT;
-            }   // end else
-        }   // end if
 
-        _vwr.setCamera( makeCameraParams( T, orng)); // Set camera to orientation range
+            otries++;
+            i = 0;  // Reset range attempts
+            T = baseT;
+            rng += ostep;  // Increase range for next try
+        }   // end else
     }   // end while
 
-    if ( oriented)
-        _interEyeDist = (v0-v1).norm();
+    _interEyeDist = oriented ? (v0-v1).norm() : 0.0f;
     return oriented ? T : Mat4f::Zero();
 }   // end find

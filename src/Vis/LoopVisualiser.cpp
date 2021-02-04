@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,15 +18,14 @@
 #include <Vis/LoopVisualiser.h>
 #include <FaceModelViewer.h>
 using FaceTools::Vis::LoopVisualiser;
-using FaceTools::Vis::LoopView;
 using FaceTools::Vis::FV;
 
 
 bool LoopVisualiser::belongs( const vtkProp* p, const FV *fv) const
 {
     if ( _views.count(fv) > 0)
-        for ( const LoopView *lview : _views.at(fv))
-            if ( lview->belongs(p))
+        for ( const LoopView &lview : _views.at(fv))
+            if ( lview.belongs(p))
                 return true;
     return false;
 }   // end belongs
@@ -34,37 +33,34 @@ bool LoopVisualiser::belongs( const vtkProp* p, const FV *fv) const
 
 bool LoopVisualiser::isVisible( const FV *fv) const
 {
-    return _views.count(fv) > 0 && _views.at(fv).at(0)->isVisible();
+    return _views.count(fv) > 0 && _views.at(fv).at(0).isVisible();
 }   // end isVisible
 
 
-void LoopVisualiser::syncWithViewTransform( const FV *fv)
+void LoopVisualiser::syncTransform( const FV *fv)
 {
     assert( _views.count(fv) > 0);
-    for ( LoopView *lv : _views.at(fv))
-        lv->pokeTransform( fv->transformMatrix());
-}   // end syncWithViewTransform
+    if ( _views.count(fv) > 0)
+        for ( LoopView &lv : _views.at(fv))
+            lv.pokeTransform( fv->transformMatrix());
+}   // end syncTransform
 
 
-void LoopVisualiser::setHighlighted( const FV* fv, bool v)
+void LoopVisualiser::setHighlighted( bool v)
 {
-    assert( _views.count(fv) > 0);
     const double lw = v ? 5.0 : 1.0;
-    for ( LoopView *lv : _views.at(fv))
-        lv->setLineWidth( lw);
+    for ( auto &p : _views)
+        for ( LoopView &lv : p.second)
+            lv.setLineWidth( lw);
 }   // end setHighlighted
 
 
-void LoopVisualiser::doPurge( const FV *fv)
-{
-    for ( LoopView *lv : _views.at(fv))
-        delete lv;
-    _views.erase(fv);
-}   // end doPurge
+void LoopVisualiser::purge( const FV *fv) { _views.erase(fv);}
 
 
-void LoopVisualiser::doSetVisible( const FV* fv, bool v)
+void LoopVisualiser::setVisible( FV* fv, bool v)
 {
-    for ( LoopView *lv : _views.at(fv))
-        lv->setVisible( v, fv->viewer());
-}   // end doSetVisible
+    if ( _views.count(fv) > 0)
+        for ( LoopView &lv : _views.at(fv))
+            lv.setVisible( v, fv->viewer());
+}   // end setVisible

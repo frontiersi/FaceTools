@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,25 +18,24 @@
 #include <Vis/FaceView.h>
 #include <Vis/BaseVisualisation.h>
 #include <Vis/MetricVisualiser.h>
-#include <Vis/ScalarVisualisation.h>
-#include <Vis/VectorVisualisation.h>
-#include <Action/ModelSelector.h>
-#include <FaceModelCurvature.h>
+#include <Vis/ColourVisualisation.h>
+#include <ModelSelect.h>
+#include <FaceModelCurvatureStore.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
+#include <vtkPointData.h>
 #include <vtkProperty.h>
 #include <r3dvis/VtkTools.h>
 #include <QColor>
 #include <iostream>
 #include <cassert>
 using FaceTools::Vis::FaceView;
-using FaceTools::Vis::ScalarVisualisation;
-using FaceTools::Vis::VectorVisualisation;
 using FaceTools::FMV;
 using FaceTools::FM;
 using FaceTools::Vec3f;
 using BV = FaceTools::Vis::BaseVisualisation;
-using MS = FaceTools::Action::ModelSelector;
+using CV = FaceTools::Vis::ColourVisualisation;
+using MS = FaceTools::ModelSelect;
 
 
 // static definitions
@@ -66,7 +65,7 @@ bool FaceView::interpolatedShading() { return s_interpolateShading;}
 
 FaceView::FaceView( FM* fm, FMV* viewer)
     : _data(fm), _actor(nullptr), _texture(nullptr), _nrms(nullptr), _viewer(nullptr), _pviewer(nullptr),
-      _smm(nullptr), _vmm(nullptr), _baseCol(FaceView::BASECOL), _xvis(nullptr)
+      _cv(nullptr), _baseCol(FaceView::BASECOL), _minAllowedOpacity(0.1f), _maxAllowedOpacity(1.0f)
 {
     assert(viewer);
     assert(fm);
@@ -76,20 +75,27 @@ FaceView::FaceView( FM* fm, FMV* viewer)
 }   // end ctor
 
 
-void FaceView::resetNormals() { _nrms = setNormals( _actor, _data);}
-
-
-void FaceView::copyFrom( const FaceView* fv)
+void FaceView::resetNormals()
 {
-    assert( _actor != fv->_actor);
-    assert( _viewer != fv->_viewer);
+    const auto &rptr = FaceModelCurvatureStore::rvals( *_data);
+    if ( rptr)
+    {
+        _nrms = rptr->normals();
+        r3dvis::getPolyData( _actor)->GetPointData()->SetNormals( _nrms);
+    }   // end if
+}   // end resetNormals
 
+
+void FaceView::copyFrom( const FaceView *fv)
+{
+    assert( fv);
     setBackfaceCulling( fv->backfaceCulling());
     setOpacity( fv->opacity());
     setColour( fv->colour());
 
+    // Only apply visualisations if visible on the source view and available on this one.
     for ( BaseVisualisation* vl : fv->visualisations())
-        if ( vl->isVisible(fv)) // Only apply on this view if visible on the source view
+        if ( vl->isVisible(fv) && vl->isAvailable(this))
             apply(vl);
 
     resetNormals();
@@ -110,18 +116,24 @@ void FaceView::setViewer( FMV* nviewer)
 {
     assert( nviewer != _viewer);
 
-    VisualisationLayers visLayers;
+    VisualisationLayers onSet, xtraOnSet;
     if ( _viewer)
     {
+        // Get the set of visualisations that are currently on
         for ( BV* vis : _vlayers)
-        {
             if ( vis->isVisible(this))
-            {
-                visLayers.insert( vis);
-                vis->setVisible( this, false);
-            }   // end if
-        }   // end for
-
+                onSet.insert(vis);
+        // Turn them all off on this viewer (will try to turn them back on again after changing viewer).
+        // Note that turning some visualisations off may turn others on so we'll need to add these too.
+        for ( BV* vis : onSet)
+            vis->setVisible( this, false);
+        for ( BV* vis : _vlayers)   // Get any newly turned on ones too
+            if ( vis->isVisible(this))
+                xtraOnSet.insert(vis);
+        // Purge all visualisations before reapplying the visible
+        // ones that are also available on the new viewer.
+        while ( !_vlayers.empty())
+            purge( *_vlayers.begin());
         _viewer->remove(_actor);
         _viewer->detach(this);
     }   // end if
@@ -133,8 +145,16 @@ void FaceView::setViewer( FMV* nviewer)
     {
         _viewer->add(_actor);
         _viewer->attach(this);
-        for ( BV* vis : visLayers)
-            _setVisible( vis, true);
+        // The default set of turned on visualisations will be the visualisations
+        // resulting from turning *off* the original set. If we can turn on ones in
+        // the original (onSet) set that caused these *off* visualisations to be on,
+        // they should be replaced.
+        for ( BV* vis : xtraOnSet)
+            if ( vis->isAvailable(this))
+                apply( vis);
+        for ( BV* vis : onSet)
+            if ( vis->isAvailable(this))
+                apply( vis);
     }   // end if
 }   // end setViewer
 
@@ -185,126 +205,51 @@ void FaceView::reset()
 }   // end reset
 
 
-#ifndef NDEBUG
-namespace {
-
-std::string viewerCode( const FMV *fmv)
-{
-    int vnum = -1;
-    const int N = int(MS::viewers().size());
-    for ( int i = 0; i < N; ++i)
-    {
-        if ( MS::viewers()[i] == fmv)
-        {
-            vnum = i;
-            break;
-        }   // end if
-    }   // end for
-
-    std::string vcode;
-    switch (vnum)
-    {
-        case 0:
-            vcode = "LEFT";
-            break;
-        case 1:
-            vcode = "MAIN";
-            break;
-        case 2:
-            vcode = "RGHT";
-            break;
-        default:
-            vcode = "ERROR!";
-    }   // end switch
-
-    return vcode;
-}   // end viewerCode
-
-}   // end namespace
-#endif
-
-
 void FaceView::purge( BV* vis)
 {
     if ( _vlayers.count(vis) == 0)
         return;
-
-#ifndef NDEBUG
-    std::cerr << " -- [" << viewerCode(_viewer) << "] : " << vis->name() << std::endl;
-#endif
-    assert(vis);
-    assert(_viewer);
     vis->setVisible( this, false);
     vis->purge( this);
     _vlayers.erase(vis);
-    if ( _xvis == vis)
-        _xvis = nullptr;
 }   // end purge
 
 
-void FaceView::apply( BV* vis, const QPoint* mc)
+void FaceView::apply( BV* vis)
 {
     assert( vis);
     assert(_actor);
     assert(_viewer);
-    assert( vis->isAvailable(this, mc));
-
-    // Is the passed in visualisation exclusive?
-    if ( !vis->isToggled())
-    {
-        if ( _xvis && _xvis != vis)
-            _xvis->setVisible( this, false);
-        _xvis = vis;
-    }   // end if
-
-    if ( _vlayers.count(vis) == 0)
-    {
-        _vlayers.insert(vis);
-#ifndef NDEBUG
-        std::cerr << " ++ [" << viewerCode(_viewer) << "] : " << vis->name() << std::endl;
-#endif
-        vis->apply( this, mc);
-    }   // end if
-
-    _setVisible( vis, true);
-}   // end apply
-
-
-void FaceView::_setVisible( BV *vis, bool v)
-{
-    vis->setVisible( this, v);
+    assert( vis->isAvailable(this));
+    _vlayers.insert(vis);
     vis->refresh( this);
-    vis->setVisible( this, v);
-    vis->syncWithViewTransform( this);
-}   // end _setVisible
+    vis->syncTransform( this);
+    vis->setVisible( this, true);
+}   // end apply
 
 
 bool FaceView::isApplied( const BV *vis) const { return _vlayers.count(const_cast<BV*>(vis)) > 0;}
 
 
-BV* FaceView::layer( const vtkProp* prop) const
+const BV* FaceView::layer( const vtkProp* prop) const { return _layer(prop);}
+BV* FaceView::layer( const vtkProp *prop) { return _layer(prop);}
+
+
+BV* FaceView::_layer( const vtkProp* prop) const
 {
-    BV* vis = nullptr;
     if ( prop && _actor != prop)
-    {
-        for ( BV* v : _vlayers)    // Test all the visualisation layers
-        {
-            if ( v->belongs( prop, this))
-            {
-                vis = v;
-                break;
-            }   // end if
-        }   // end for
-    }   // end if
-    return vis;
-}   // end layer
+        for ( BV *vis : _vlayers)
+            if ( vis->belongs( prop, this) && vis->isVisible( this))
+                return vis;
+    return nullptr;
+}   // end _layer
 
 
 void FaceView::pokeTransform( const vtkMatrix4x4 *t)
 {
     _actor->PokeMatrix( const_cast<vtkMatrix4x4*>(t));
     for ( BV* vis : _vlayers)
-        vis->syncWithViewTransform( this);
+        vis->syncTransform( this);
 }   // end pokeTransform
 
 
@@ -342,9 +287,10 @@ bool FaceView::overlaps() const
 
 float FaceView::minAllowedOpacity() const
 {
-    float opc = 0.1f;   // Absolute minimum level of opacity (prevent complete invisibility)
+    // Also check availability of visualisation since it may not have been removed yet
+    float opc = _minAllowedOpacity;
     for ( const BV* vis : _vlayers)
-        if ( vis->isVisible(this))
+        if ( vis->isVisible(this) && vis->isAvailable(this))
             opc = std::max<float>( opc, vis->minAllowedOpacity());
     return opc;
 }   // end minAllowedOpacity
@@ -352,12 +298,27 @@ float FaceView::minAllowedOpacity() const
 
 float FaceView::maxAllowedOpacity() const
 {
-    float opc = 1.0f;
+    // Also check availability of visualisation since it may not have been removed yet
+    float opc = _maxAllowedOpacity;
     for ( const BV* vis : _vlayers)
-        if ( vis->isVisible(this))
+        if ( vis->isVisible(this) && vis->isAvailable(this))
             opc = std::min<float>( opc, vis->maxAllowedOpacity());
     return opc;
 }   // end maxAllowedOpacity
+
+
+void FaceView::setMaxAllowedOpacity( float v)
+{
+    _maxAllowedOpacity = std::min( 1.0f, std::max( 0.0f, v));
+    _minAllowedOpacity = std::min( _minAllowedOpacity, _maxAllowedOpacity);
+}   // end setMaxAllowedOpacity
+
+
+void FaceView::setMinAllowedOpacity( float v)
+{
+    _minAllowedOpacity = std::min( 1.0f, std::max( 0.0f, v));
+    _maxAllowedOpacity = std::max( _minAllowedOpacity, _maxAllowedOpacity);
+}   // end setMinAllowedOpacity
 
 
 void FaceView::setOpacity( float v)
@@ -410,69 +371,62 @@ bool FaceView::wireframe() const
 }   // end wireframe
 
 
-void FaceView::setTextured( bool v)
-{
-    assert(_actor);
-    if ( v && _texture)
-        _actor->SetTexture( _texture);
-    else
-        _actor->SetTexture( nullptr);
-    setActiveScalars( nullptr);
-}   // end setTextured
-
 
 bool FaceView::textured() const { return _actor && _actor->GetTexture() != nullptr;}
 
-
 bool FaceView::canTexture() const { return _texture != nullptr;}
 
-
-void FaceView::setActiveScalars( ScalarVisualisation* s)
+void FaceView::setTextured( bool v)
 {
-    if ( _smm && _smm != s)
-    {
-        _smm->deactivate(this);
-        _smm = nullptr;
-    }   // end if
-
-    if ( s && _smm != s)
-    {
-        _smm = s;
-        _smm->activate(this);
-    }   // end if
-
-    if ( _smm)
+    if ( canTexture() && v)
+        _actor->SetTexture( _texture);
+    else
         _actor->SetTexture( nullptr);
-
-    setActiveVectors( _vmm);
-}   // end setActiveScalars
-
-
-ScalarVisualisation* FaceView::activeScalars() const { return _smm;}
-
-
-void FaceView::setActiveVectors( VectorVisualisation* v)
-{
-    if ( _vmm && _vmm != v)
-    {
-        _vmm->deactivate(this);
-        _vmm = nullptr;
-    }   // end if
-
-    if ( v && _vmm != v)
-    {
-        _vmm = v;
-        _vmm->activate(this);
-    }   // end if
-
-    if ( _vmm)
-        _vmm->setScalarMapping( this, _smm);
-
+    // Turning the texture on or off will always turn off the active cell/point
+    // surface mapping because we are toggling the texture with the plain surface.
     _updateSurfaceProperties();
-}   // end setActiveVectors
+}   // end setTextured
 
 
-VectorVisualisation* FaceView::activeVectors() const { return _vmm;}
+void FaceView::setActiveColours( CV* cv)
+{
+    _actor->GetMapper()->SetLookupTable(nullptr);
+
+    if ( cv != _cv)
+    {
+        if ( _cv)
+            _cv->deactivate(this);
+        _cv = cv;
+        if ( cv)
+            cv->activate(this);
+    }   // end if
+
+    if ( _cv)
+    {
+        vtkLookupTable *lut = const_cast<vtkLookupTable*>(_cv->lookupTable());
+        _actor->GetMapper()->SetLookupTable( lut);
+        refreshColourMap();
+    }   // end if
+    _updateSurfaceProperties();
+}   // end setActiveColours
+
+
+void FaceView::refreshColourMap()
+{
+    if ( _cv)
+    {
+        _cv->refreshColourMap(this);
+        _actor->GetMapper()->SetScalarRange( _cv->minVisible(), _cv->maxVisible());
+    }   // end if
+}   // end refreshColourMap
+
+
+void FaceView::addCellsArray( vtkFloatArray *arr) { CV::addCellsArray(_actor, arr);}
+void FaceView::addPointsArray( vtkFloatArray *arr) { CV::addPointsArray(_actor, arr);}
+void FaceView::setActiveCellScalars( const char *n) { CV::setActiveCellScalars(_actor, n);}
+void FaceView::setActiveCellVectors( const char *n) { CV::setActiveCellVectors(_actor, n);}
+void FaceView::setActivePointScalars( const char *n) { CV::setActivePointScalars(_actor, n);}
+void FaceView::setActivePointVectors( const char *n) { CV::setActivePointScalars(_actor, n);}
 
 
 void FaceView::_updateSurfaceProperties()
@@ -487,9 +441,8 @@ void FaceView::_updateSurfaceProperties()
     property->SetShading( false);
     property->SetMetallic( 0.0);
 
-    if ( textured() || _smm)
-        property->SetColor( 1, 1, 1);
-    else
+    property->SetColor( 1, 1, 1);
+    if ( !textured() && !_cv)
         property->SetColor( _baseCol.redF(), _baseCol.greenF(), _baseCol.blueF());
 
     property->SetAmbient( textured() ? 1.0 : 0.0);

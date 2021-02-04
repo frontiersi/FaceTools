@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ using FaceTools::Action::FaceActionWorker;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::UndoState;
 using FaceTools::Action::Event;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 FaceAction::FaceAction()
@@ -46,13 +46,14 @@ void FaceAction::_pinit()
 {
     _doasync = false;
     _isWorking = false;
-    _worker = nullptr;
+    _key = 0;
     _unlocked = true;
     _pevents = _tevents = _revents = Event::NONE;
     if ( _dname.isEmpty())
         _dname = QTools::PluginInterface::displayName();
     _debugName = "\"" + _dname.replace( "\n", " ").remove('&').toStdString() + "\"";
     _mpos = QPoint(-1,-1);
+    _isFinalised = false;
 }   // end _pinit
 
 
@@ -81,14 +82,14 @@ void FaceAction::setCheckable( bool b, bool ival)
 }   // end setCheckable
 
 
-void FaceAction::setChecked( bool b)
-{
-    _action.setChecked(b);
-}   // end setChecked
+void FaceAction::setChecked( bool b) { _action.setChecked(b);}
 
 
 void FaceAction::refresh( Event e)
 {
+#ifndef NDEBUG
+        //std::cerr << "  Refresh: " << debugName() << std::endl;
+#endif
     const bool chk = update( e);
     if ( _action.isCheckable() && _action.isChecked() != chk)
     {
@@ -122,12 +123,9 @@ bool FaceAction::primeMousePos( const QPoint &p)
 }   // end primeMousePos
 
 
-void FaceAction::addPurgeEvent( Event e) { _pevents |= e;}
-void FaceAction::addTriggerEvent( Event e) { _tevents |= e;}
-void FaceAction::addRefreshEvent( Event e) { _revents |= e;}
-bool FaceAction::isPurgeEvent( Event e) const { return (_pevents & e) != Event::NONE;}
-bool FaceAction::isTriggerEvent( Event e) const { return (_tevents & e) != Event::NONE;}
-bool FaceAction::isRefreshEvent( Event e) const { return (_revents & e) != Event::NONE;}
+void FaceAction::addPurgeEvent( Event e) { assert( !_isFinalised); _pevents |= e;}
+void FaceAction::addTriggerEvent( Event e) { assert( !_isFinalised); _tevents |= e;}
+void FaceAction::addRefreshEvent( Event e) { assert( !_isFinalised); _revents |= e;}
 
 
 // protected
@@ -156,7 +154,7 @@ void FaceAction::_init( QWidget* parent) // Called by FaceActionManager after co
     if ( widget())
     {
 #ifndef NDEBUG
-        std::cerr << debugName() << " initialising widget" << std::endl;
+        //std::cerr << debugName() << " initialising widget" << std::endl;
 #endif
         widget()->setToolTip( tooltip);
     }   // end if
@@ -173,55 +171,68 @@ void FaceAction::_init( QWidget* parent) // Called by FaceActionManager after co
 
     _action.setVisible(true);
     postInit();
+    _isFinalised = true;
 }   // end _init
+
+
+void FaceAction::_setDebugPrefix( const std::string &dp) { _dbgPrfx = dp;}
 
 
 bool FaceAction::execute( Event e)
 {
-    if ( !isUnlocked() || !isAllowed(e))
+    if ( !isUnlocked())
         return false;
 
+    // Note that this can be executing even if action is not allowed (due to trigger events)!
+    // This is why it is necessary for doBeforeAction to always check whether entering the
+    // action is okay - even if the action is in a disallowed state (for the user).
+
     _action.setEnabled(false);
-    bool enteredDoAction = false;
+
+#ifndef NDEBUG
+    std::cerr << _dbgPrfx << " Starting " << debugName();
+#endif
 
     if ( !doBeforeAction(e))  // Always in the GUI thread
     {
 #ifndef NDEBUG
-        std::cerr << "Cancelled: " << debugName() << std::endl;
+        std::cerr << " CANCELLED!" << std::endl;
 #endif
         refresh( e);
         emit onEvent( Event::CANCEL);
+        return false;
     }   // end if
+
+    _isWorking = true;
+
+#ifndef NDEBUG
+    static const bool ALLOW_ASYNC = false;
+#else
+    static const bool ALLOW_ASYNC = true;
+#endif
+
+    if ( ALLOW_ASYNC && isAsync())
+    {
+#ifndef NDEBUG
+        std::cerr << " <<<NEW THREAD>>>" << std::endl;
+#endif
+        if ( e == Event::USER)
+            _key = MS::lockSelect();
+        FaceActionWorker *worker = new FaceActionWorker( this, e);
+        connect( worker, &FaceActionWorker::onWorkFinished, this, &FaceAction::_endExecute);
+        connect( worker, &FaceActionWorker::finished, worker, &FaceActionWorker::deleteLater);
+        worker->start();   // Asynchronous start
+    }   // end else
     else
     {
-        _isWorking = true;
-        enteredDoAction = true;
-
 #ifndef NDEBUG
-        std::cerr << "  Started: " << debugName() << "  by event(s) " << e;
+        std::cerr << std::endl;
 #endif
-        if ( isAsync())
-        {
-#ifndef NDEBUG
-            std::cerr << " in new thread " << std::endl;
-#endif
-            if ( e == Event::USER)
-                MS::setLockSelected(true);
-            _worker = new FaceActionWorker( this, e);
-            connect( _worker, &FaceActionWorker::onWorkFinished, this, &FaceAction::_endExecute);
-            _worker->start();   // Asynchronous start
-        }   // end else
-        else
-        {
-#ifndef NDEBUG
-            std::cerr << std::endl;
-#endif
-            doAction(e);  // Blocks
-            _endExecute(e);
-        }   // end else
+        doAction(e);  // Blocks
+        _endExecute(e);
     }   // end else
 
-    return enteredDoAction;
+    return true;
 }   // end execute
 
 
@@ -235,7 +246,7 @@ Event FaceAction::doAfterAction( Event e)
 
 void FaceAction::endNow()
 {
-    std::cerr << "ENDING NOW" << std::endl;
+    std::cerr << _dbgPrfx << " ENDING NOW (TESTING)" << std::endl;
 }   // end endNow
 
 
@@ -243,19 +254,17 @@ void FaceAction::endNow()
 void FaceAction::_endExecute( Event e)   // Always in GUI thread
 {
     _isWorking = false;
-    if ( _worker)
+    if ( _key != 0)
     {
-        delete _worker;
-        _worker = nullptr;
+        MS::unlockSelect(_key); // Unlock ability to change selected view now that asynchronous action done
+        _key = 0;
     }   // end if
-
-    MS::setLockSelected(false);
     Event fev = doAfterAction( e);
     _mpos = QPoint(-1,-1);
 #ifndef NDEBUG
-    std::cerr << " Finished: " << debugName() << " did event(s) " << fev << std::endl;
+    std::cerr << _dbgPrfx << " Finished " << debugName() << " emits " << fev << std::endl;
 #endif
-    refresh( e);
+    refresh( fev);
     emit onEvent( fev);
 }   // end _endExecute
 

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,39 +28,42 @@ class FaceTools_EXPORT FaceAlignmentFinder
 public:
     static bool isInit();
 
-    // Detection uses the Viola and Jones HaarCascades detector to detect 2D features.
-    // Provide the initial detection range with d used to scale how closely the camera
-    // is positioned to the face based on the detected distance between the eyes e
-    // with the distance formula rng * e/d.
-    FaceAlignmentFinder( const r3d::KDTree&, float rng, float d=0.30f);
+    FaceAlignmentFinder();
 
-    // Provide the centre point of the model to focus on initially.
-    // Returns the matrix specifying how the model IS transformed from its "correct"
-    // detected orientation based on the detection of the eyes and the calculation of
-    // vertex position eigen vectors around the eyes to estimate facial orientation.
-    //
-    // This detected alignment is in addition to the model's current transform.
-    //
-    // If the zero matrix is returned, call error() to return the error msg.
-    // Note that the transformation point is set as the midpoint between
-    // the detected eyes (which is almost certainly behind the surface of
-    // the face. Call eyesSquareRadius to return the square of the radius
-    // from this midpoint to either eye.
-    r3d::Mat4f find( const Vec3f &focus);
+    /*********************************************************************************
+     * Detection uses the Viola and Jones HaarCascades detector to detect 2D features.
+     * Provide the initial detection range with d used to scale how closely the camera
+     * is positioned to the face based on the detected distance between the eyes e
+     * with the distance formula rng * e/d.
+     *
+     * Provide the centre point of the model to focus on initially.
+     * Returns the matrix specifying how the model IS transformed from its "correct"
+     * detected orientation based on the detection of the eyes and the calculation of
+     * vertex position eigen vectors around the eyes to estimate facial orientation.
+     *
+     * This detected alignment is in addition to the model's current transform.
+     *
+     * If the zero matrix is returned, call error() to return the error msg.
+     * Note that the transformation point is set as the midpoint between
+     * the detected eyes (which is almost certainly behind the surface of
+     * the face. Call eyesSquareRadius to return the square of the radius
+     * from this midpoint to either eye.
+     *********************************************************************************/
+    r3d::Mat4f find( const r3d::KDTree&, const Vec3f &focus, float rng, float d=0.30f);
 
-    // Returns distance between the detected eye points.
+    // Returns distance between the detected eye points from last call to find.
     inline float interEyeDist() const { return _interEyeDist;}
 
     inline const std::string& error() const { return _err;}
 
 private:
     r3dvis::OffscreenMeshViewer _vwr;
-    const r3d::KDTree &_kdt;
-    float _orng, _dfact;
     float _interEyeDist;
     std::string _err;
-
     float _findEyes( r3d::Vec3f&, r3d::Vec3f&);
+
+    FaceAlignmentFinder( const FaceAlignmentFinder&) = delete;
+    void operator=( const FaceAlignmentFinder&) = delete;
 };  // end class
 
 }}   // end namespace

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,14 +16,14 @@
  ************************************************************************/
 
 #include <Interactor/ContextMenuHandler.h>
-#include <Action/ModelSelector.h>
+#include <ModelSelect.h>
 #include <FaceModelViewer.h>
 #include <QApplication>
 #include <QTime>
 using FaceTools::Interactor::ContextMenuHandler;
 using FaceTools::Action::FaceAction;
 using FaceTools::Vis::FV;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ContextMenuHandler::Ptr ContextMenuHandler::create() { return Ptr( new ContextMenuHandler);}
@@ -61,7 +61,7 @@ bool ContextMenuHandler::doRightButtonDown()
     _rDownTime = 0;
     const vtkProp* prop = this->prop();
     const FV *fv = MS::selectedView();
-    if ( fv || (prop && const_cast<vtkProp*>(prop)->GetPickable()))
+    if (( fv && this->view() == fv) || (prop && const_cast<vtkProp*>(prop)->GetPickable()))
     {
         _rDownTime = QTime::currentTime().msecsSinceStartOfDay();
         _mDownPos = fv->viewer()->mouseCoords();
@@ -83,6 +83,7 @@ bool ContextMenuHandler::doRightButtonUp()
         bool foundEnabledAction = false;
         for ( FaceAction* a : _actions)
             foundEnabledAction |= a->primeMousePos( mpos);    // Also refreshes state
+        MS::updateRender();
         if ( foundEnabledAction)
             _cmenu.exec( QCursor::pos());
         for ( FaceAction* a : _actions) // Prime with null position

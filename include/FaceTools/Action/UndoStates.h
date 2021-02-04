@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ class FaceTools_EXPORT UndoStates : public QObject
 { Q_OBJECT
 public:
     // Undo/redo states per model cannot exceeed MAX_RESTORES.
-    static const size_t MAX_RESTORES = 10;
+    static const size_t MAX_RESTORES = 30;
 
     // Clear the undo/redo stacks for the given model (should happen on save/close).
     static void clear( const FM*);

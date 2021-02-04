@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,37 +24,26 @@ using FaceTools::Action::Event;
 using FaceTools::Action::UndoState;
 using FaceTools::Action::ActionVisualise;
 using FaceTools::Interactor::PathsHandler;
-using MS = FaceTools::Action::ModelSelector;
+using FaceTools::Vis::FV;
+using MS = FaceTools::ModelSelect;
 
 
 ActionEditPaths::ActionEditPaths( const QString& dn, const QIcon& ic, const QKeySequence& ks)
-    : ActionVisualise( dn, ic, &MS::handler<PathsHandler>()->visualisation(), ks), _tchanged(false)
+    : ActionVisualise( dn, ic, &MS::handler<PathsHandler>()->visualisation(), ks)
 {
     const PathsHandler *h = MS::handler<PathsHandler>();
     connect( h, &PathsHandler::onStartedDrag, this, &ActionEditPaths::_doOnStartedDrag);
     connect( h, &PathsHandler::onFinishedDrag, this, &ActionEditPaths::_doOnFinishedDrag);
     connect( h, &PathsHandler::onEnterHandle, this, &ActionEditPaths::_doOnEnterHandle);
     connect( h, &PathsHandler::onLeaveHandle, this, &ActionEditPaths::_doOnLeaveHandle);
-    addRefreshEvent( Event::PATHS_CHANGE);
-    addTriggerEvent( Event::RESTORE_CHANGE);
+    addTriggerEvent( Event::PATHS_CHANGE);
+    addRefreshEvent( Event::METADATA_CHANGE); // Need to refresh if the metadata (assessment) changed
 }   // end ctor
-
-
-bool ActionEditPaths::update( Event e)
-{
-    bool chk = isChecked();
-    const FM *fm = MS::selectedModel();
-    if ( fm && isTriggerEvent(e) && has( e, Event::PATHS_CHANGE))
-        chk = !fm->currentPaths().empty();
-    else
-        chk = ActionVisualise::update(e);
-    return chk;
-}   // end update
 
 
 Event ActionEditPaths::doAfterAction( Event e)
 {
-    if (!isTriggerEvent(e))
+    if ( e == Event::USER)
     {
         if ( isChecked())
             MS::showStatus( "Move path handles by left-clicking and dragging; right click to rename/delete.");
@@ -65,19 +54,33 @@ Event ActionEditPaths::doAfterAction( Event e)
 }   // end doAfterAction
 
 
-void ActionEditPaths::_setTempTransparency( bool enable)
+void ActionEditPaths::_changeTransparency( bool enable, FV *fv)
 {
-    FaceTools::Vis::FV *fv = MS::selectedView();
     if ( enable && fv->opacity() == 1.0f)
     {
         fv->setOpacity( 0.99f);
-        _tchanged = true;
+        _tchanged.insert(fv);
     }   // end if
-    else if ( !enable && _tchanged)
+    else if ( !enable && _tchanged.has(fv))
     {
+        _tchanged.erase(fv);
         fv->setOpacity( 1.00f);
-        _tchanged = false;
     }   // end else if
+}   // end _changeTransparency
+
+
+void ActionEditPaths::_setTempTransparency( bool enable)
+{
+    FV *fv = MS::selectedView();
+    if ( fv)
+    {
+        _changeTransparency( enable, fv);
+        FM::WPtr wfm = MS::otherModelScopedWrite();
+        if ( wfm)
+            for ( FV *f : wfm->fvs())
+                _changeTransparency( enable, f);
+        MS::updateRender();
+    }   // end if
 }   // end _setTempTransparency
 
 

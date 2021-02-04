@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ using FaceTools::Vec3f;
 using FaceTools::FM;
 
 
-DistanceMetricType::DistanceMetricType() : _inPlane(false)
+DistanceMetricType::DistanceMetricType()
 {
     _vis.setMetric(this);
 }   // end ctor
@@ -46,7 +46,7 @@ float DistanceMetricType::update( size_t k, const FM *fm, const std::vector<Vec3
     _distInfo[fm].resize( std::max( _distInfo[fm].size(), k+1));
     DistMeasure &dm = _distInfo[fm][k];
 
-    if ( _inPlane || inPlane)
+    if ( inPlane)
         setProjectedPoints( dm, pts, u);
     else
     {

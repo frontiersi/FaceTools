@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <FileIO/FaceModelXMLFileHandler.h>
+#include <Action/ActionUpdateThumbnail.h>
 #include <Metric/PhenotypeManager.h>
 #include <MaskRegistration.h>
 #include <FaceTools.h>
@@ -35,32 +36,32 @@ using FaceTools::Metric::Phenotype;
 using FaceTools::FM;
 
 
-void FaceTools::FileIO::exportMetaData( const FM* fm, bool withExtras, PTree& tnode)
+void FaceTools::FileIO::exportMetaData( const FM &fm, bool withExtras, PTree& tnode)
 {
     PTree& rnode = tnode.add("FaceModel","");
 
-    rnode.put( "Source", fm->source().toStdString());
-    rnode.put( "StudyId", fm->studyId().toStdString());
-    rnode.put( "SubjectId", fm->subjectId().toStdString());
-    rnode.put( "ImageId", fm->imageId().toStdString());
-    rnode.put( "DateOfBirth", fm->dateOfBirth().toString().toStdString());
-    rnode.put( "Sex", FaceTools::toSexString(fm->sex()).toStdString());
-    rnode.put( "MaternalEthnicity", fm->maternalEthnicity());
-    rnode.put( "PaternalEthnicity", fm->paternalEthnicity());
-    rnode.put( "CaptureDate", fm->captureDate().toString().toStdString());
-    if ( fm->hasMask())
+    rnode.put( "Source", fm.source().toStdString());
+    rnode.put( "StudyId", fm.studyId().toStdString());
+    rnode.put( "SubjectId", fm.subjectId().toStdString());
+    rnode.put( "ImageId", fm.imageId().toStdString());
+    rnode.put( "DateOfBirth", fm.dateOfBirth().toString().toStdString());
+    rnode.put( "Sex", FaceTools::toSexString(fm.sex()).toStdString());
+    rnode.put( "MaternalEthnicity", fm.maternalEthnicity());
+    rnode.put( "PaternalEthnicity", fm.paternalEthnicity());
+    rnode.put( "CaptureDate", fm.captureDate().toString().toStdString());
+    if ( fm.hasMask())
     {
         PTree &maskNode = rnode.put( "Mask", "");
-        maskNode.put( "Hash", fm->maskHash());
+        maskNode.put( "Hash", fm.maskHash());
     }   // end if
 
     PTree& anodes = rnode.put("Assessments", "");
-    anodes.put( "DefaultAssessment", fm->currentAssessment()->id());
-    const double age = fm->age();
-    const IntSet aids = fm->assessmentIds();
+    anodes.put( "DefaultAssessment", fm.currentAssessment()->id());
+    const double age = fm.age();
+    const IntSet aids = fm.assessmentIds();
     for ( int id : aids)
     {
-        FaceAssessment::CPtr ass = fm->assessment( id);
+        FaceAssessment::CPtr ass = fm.assessment( id);
 
         PTree& anode = anodes.add("Assessment", "");
         anode.put( "AssessmentId", id);
@@ -83,10 +84,10 @@ void FaceTools::FileIO::exportMetaData( const FM* fm, bool withExtras, PTree& tn
             pnode.put( "ID", PhenotypeManager::formattedId(hid).toStdString());
             pnode.put( "Name", hpo->name().toStdString());
             pnode.put( "Metrics", hpo->metricsList().toStdString());
-            pnode.put( "AgeMatch", hpo->isAgeMatch( age));
-            pnode.put( "SexMatch", hpo->isSexMatch( fm->sex()));
-            pnode.put( "MaternalEthnicityMatch", hpo->isEthnicityMatch(fm->maternalEthnicity()));
-            pnode.put( "PaternalEthnicityMatch", hpo->isEthnicityMatch(fm->paternalEthnicity()));
+            pnode.put( "AgeMatch", hpo->isAgeMatch( fm));
+            pnode.put( "SexMatch", hpo->isSexMatch( fm));
+            pnode.put( "MaternalEthnicityMatch", hpo->isMaternalEthnicityMatch(fm));
+            pnode.put( "PaternalEthnicityMatch", hpo->isPaternalEthnicityMatch(fm));
         }   // end for
     }   // end for
 }   // end exportMetaData
@@ -134,7 +135,7 @@ bool FaceModelXMLFileHandler::write( const FM* fm, const QString& fname)
         // Export metadata
         PTree tree;
         PTree& rnode = exportXMLHeader( tree);
-        exportMetaData( fm, false/*no extra data*/, rnode);
+        exportMetaData( *fm, false/*no extra data*/, rnode);
         boost::property_tree::write_xml( ofs, tree);
         ofs.close();
 
@@ -153,7 +154,7 @@ bool FaceModelXMLFileHandler::write( const FM* fm, const QString& fname)
         }   // end if
 
         // Export jpeg thumbnail of model.
-        const cv::Mat img = makeThumbnail( fm, cv::Size(256,256), 500);   // Generate thumbnail
+        const cv::Mat img = Action::ActionUpdateThumbnail::thumbnail( fm);
         cv::imwrite( tdir.filePath("thumb.jpg").toLocal8Bit().toStdString(), img);
 
         // Finally, zip up the contents of the directory into fname.
@@ -461,15 +462,18 @@ QString FaceTools::FileIO::loadData( FM &fm, const QTemporaryDir &tdir, const QS
             r3d::Mesh::Ptr mask = r3dio::loadMesh( tdir.filePath( maskfname).toLocal8Bit().toStdString());
             if ( mask)
             {
+                fm.setMask( mask);
                 assert( fm.maskHash() != 0);
-                // Always ensure that the model is loaded aligned if mask available (fixed for 5.0.2).
-                r3d::Mat4f T = MaskRegistration::calcMaskAlignment( *mask);
+                // Always ensure that the model is loaded aligned if mask available
+                const r3d::Mat4f T = MaskRegistration::calcMaskAlignment( *mask);
                 fm.addTransformMatrix( T.inverse());
                 fm.fixTransformMatrix();
             }   // end if
             else
+            {
                 std::cout << "Mask not loaded - setting null!" << std::endl;
-            fm.setMask( mask);
+                fm.setMask(nullptr);
+            }   // end else
         }   // end if
     }   // end try
     catch ( const std::exception& e)

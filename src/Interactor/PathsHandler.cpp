@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 #include <Interactor/PathsHandler.h>
 #include <Interactor/LandmarksHandler.h>
 #include <LndMrk/LandmarksManager.h>
-#include <Action/ModelSelector.h>
+#include <ModelSelect.h>
 #include <Vis/FaceView.h>
 #include <FaceModel.h>
 #include <MiscFunctions.h>
@@ -27,23 +27,15 @@ using FaceTools::Interactor::PathsHandler;
 using FaceTools::Vis::PathView;
 using FaceTools::Vis::FV;
 using FaceTools::Path;
-using FaceTools::FM;
 using FaceTools::Vec3f;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 using LMAN = FaceTools::Landmark::LandmarksManager;
 
 
 PathsHandler::Ptr PathsHandler::create() { return Ptr( new PathsHandler);}
 
 // private
-PathsHandler::PathsHandler() : _handle(nullptr), _dragging(false), _initPlacement(false), _lmkVis(nullptr) {}
-
-
-void PathsHandler::postRegister()
-{
-    _lmkVis = &MS::handler<LandmarksHandler>()->visualisation();
-    assert( _lmkVis);
-}   // end postRegister
+PathsHandler::PathsHandler() : _handle(nullptr), _dragging(false), _initPlacement(false) {}
 
 
 void PathsHandler::refresh()
@@ -52,16 +44,10 @@ void PathsHandler::refresh()
     setEnabled( fv && _vis.isVisible(fv));
 
     // Handle possibility of closed model or deleted paths
-    if ( !fv || fv->data()->currentAssessment()->paths().empty())
+    if ( !fv || fv->rdata()->currentPaths().empty())
         _handle = nullptr;
     else if ( isEnabled() && _handle)
-    {
-        const int pid = _handle->pathId();
-        FM *fm = fv->data();
-        fm->lockForRead();
         _updateCaption();
-        fm->unlock();
-    }   // end if
 }   // end refresh
 
 
@@ -71,15 +57,12 @@ bool PathsHandler::doEnterProp()
     const vtkProp *p = this->prop();
     bool swallowed = false;
     PathView::Handle* h = _vis.pathHandle( fv, p);
-    if ( !_dragging)
+    if ( !_dragging && h)
     {
         _handle = h;
-        if ( _handle)
-        {
-            swallowed = true;
-            _showPathInfo();
-            emit onEnterHandle( _handle->pathId(), _handle->handleId());
-        }   // end if
+        swallowed = true;
+        _showPathInfo();
+        emit onEnterHandle( h->pathId(), h->handleId());
     }   // end if
     return swallowed;
 }   // end doEnterProp
@@ -107,17 +90,17 @@ bool PathsHandler::doLeaveProp()
 }   // end doLeaveProp
 
 
-void PathsHandler::addPath( int pid)
+void PathsHandler::addPath( const Vec3f &v)
 {
-    const FV *fv = MS::selectedView();
-    _vis.addPath( fv->data(), pid);  // Adds PathView to all views of the model data
-    _handle = _vis.pathHandle0( fv, pid);
-    assert(_handle);
+    FM::WPtr fm = MS::selectedModelScopedWrite();
+    const int pid = fm->addPath( v);
     _dragging = true;
     _initPlacement = true;
-    for ( FV *f : fv->data()->fvs())
-        f->apply( &_vis, nullptr);
-    doLeftDrag();
+    for ( FV *fv : fm->fvs())
+        fv->apply( &_vis);
+    _handle = _vis.pathHandle0( MS::selectedView(), pid);
+    assert(_handle);
+    _execLeftDrag();
 }   // end addPath
 
 
@@ -198,36 +181,44 @@ Vec3f snapToPathHandle( int hpid, const FaceTools::PathSet &paths, const Vec3f &
 
 bool PathsHandler::doLeftDrag()
 {
+    FM::WPtr fm = MS::selectedModelScopedWrite();
+    const bool rv = _execLeftDrag();
+    MS::updateRender(); // Ensure render update happens across viewers
+    return rv;
+}   // end doLeftDrag
+
+
+bool PathsHandler::_execLeftDrag()
+{
     if ( !_dragging)
         return false;
 
     const int hid = _handle->handleId();
-    const FV *fv = MS::selectedView();
+    FV *fv = MS::selectedView();
     const FMV *fmv = fv->viewer();
     const QPoint mc = fmv->mouseCoords();   // NB current cursor coords according to Qt - NOT the interaction coords from VTK!
     FM *fm = fv->data();
-    fm->lockForWrite();
-    Path& path = fm->currentAssessment()->paths().path( _handle->pathId());
+    Path& path = fm->currentPaths().path( _handle->pathId());
 
     if ( hid != 2)
     {
+        // Calculate the orientation vector for the path
+        const r3d::CameraParams cp = fmv->camera();
+        path.setOrientation( cp.pos() - cp.focus());    // Will be normalized
+
         Vec3f v; // Get the new endpoint handle position on the face
         if ( !fv->projectToSurface( mc, v))
             v = path.handle( hid);
-
-        // Calculate the orientation vector for the path
-        const r3d::CameraParams cp = fmv->camera();
-
         // Check if can snap to endpoint of another path. If don't snap and landmarks are visible, snap to one.
         // Snap range scales with view distance for an apparently fixed distance no matter where camera is.
         const float sqRange = powf( fmv->snapRange(), 2);
         const Vec3f inv = v;
-        v = snapToPathHandle( _handle->pathId(), fm->currentAssessment()->paths(), v, sqRange);
-        if ( _lmkVis->isVisible(fv) && inv == v)
+        v = snapToPathHandle( _handle->pathId(), fm->currentPaths(), v, sqRange);
+        const Vis::BaseVisualisation *lmkVis = &MS::handler<LandmarksHandler>()->visualisation();
+        if ( lmkVis->isVisible(fv) && inv == v)
             v = fm->currentLandmarks().snapTo( v, sqRange);
-
-        path.setOrientation( cp.pos() - cp.focus());    // Will be normalized
         path.setHandle( hid, v);    // Handle position (transformed)
+
         path.update( fm);
     }   // end if
     else
@@ -246,16 +237,12 @@ bool PathsHandler::doLeftDrag()
 
     path.updateMeasures();
     fm->setMetaSaved( false);
-
-    _vis.updatePath( fm, _handle->pathId());
-    fm->unlock();
-
+    _vis.updatePath( *fm, _handle->pathId());
     _showPathInfo();
 
-    MS::updateRender(); // Ensure render update happens across viewers
-
     return true;
-}   // end doLeftDrag
+}   // end _execLeftDrag
+
 
 
 void PathsHandler::_showPathInfo()
@@ -266,50 +253,72 @@ void PathsHandler::_showPathInfo()
     _vis.showCaption( MS::selectedView());
     MS::showStatus( posString( "Handle", _handle->viewPos()), 5000);
     MS::setCursor( Qt::CursorShape::CrossCursor);
+    MS::updateRender();
 }   // end _showPathInfo
 
 
-void PathsHandler::_updateCaption()
+namespace {
+QString makeHandleCaption( const Path &path, int hid)
 {
-    const FV *fv = MS::selectedView();
-    assert(fv);
-    const FM *fm = fv->data();
-    assert(_handle);
-    const int pid = _handle->pathId();
-    const Path& path = fm->currentAssessment()->paths().path( pid);
-
     QString handleCaption;
     if ( !path.name().empty())
         handleCaption = QString::fromStdString( path.name()) + "\n";
-
     float val;
     QString valType;
-    if ( _handle->handleId() <= 1)
+    if ( hid <= 1)
     {
         val = path.euclideanDistance();
-        valType = "[Direct]";
+        valType = "(Direct)";
     }   // end if
     else
     {
         val = path.depth();
-        valType = "[Depth]";
+        valType = "(Depth)";
     }   // end else
+    handleCaption += QString("%1 %2\n%3").arg( val, 4, 'f', 2).arg(FaceTools::FaceModel::LENGTH_UNITS).arg(valType);
+    return handleCaption;
+}   // end makeHandleCaption
+}   // end namespace
 
-    handleCaption += QString("%1 %2 %3").arg( val, 4, 'f', 2).arg(FM::LENGTH_UNITS).arg(valType);
-    _handle->setCaption( handleCaption);
 
-    _vis.updateCaption( fm, pid, int( fv->viewer()->getWidth()) - 10, 10);    // Display caption at bottom right
+void PathsHandler::_updateCaption()
+{
+    assert(_handle);
+    const FV *fv = MS::selectedView();
+    const FM *fm = fv->data();
+    const int pid = _handle->pathId();
+    const int hid = _handle->handleId();
+    const Path& path = fm->currentPaths().path( pid);
+
+    _handle->setCaption( makeHandleCaption( path, hid));
+    _vis.updateCaption( *fm, path); // Display caption at bottom right of viewer
+
+    // Show the given path on the other model if the other model exists
+    // and has the same mask mapped as the given (selected) model does.
+    // Also show on other model if same mask used?
+    FM::RPtr ofm = MS::otherModelScopedRead();
+    if ( ofm && ofm->hasMask() && ofm->maskHash() == fm->maskHash())
+    {
+        const Path npath = path.mapSrcToDst( fm, ofm.get());
+        _vis.showTemporaryPath( *ofm, npath, hid, makeHandleCaption( npath, hid));
+        _vis.updateCaption( *ofm, npath);
+    }   // end if
 }   // end _updateCaption
 
 
 int PathsHandler::leavePath()
 {
-    assert(_handle);
-    _handle->showCaption(false);
-    const int pid = _handle->pathId();
-    emit onLeaveHandle( pid, _handle->handleId());
-    _vis.showCaption(nullptr);
-    _handle = nullptr;
-    MS::restoreCursor();
+    int pid = -1;
+    if ( _handle)
+    {
+        _handle->showCaption(false);
+        pid = _handle->pathId();
+        emit onLeaveHandle( pid, _handle->handleId());
+        _vis.clearTemporaryPath();
+        _vis.showCaption(nullptr);
+        _handle = nullptr;
+        MS::restoreCursor();
+        MS::updateRender();
+    }   // end if
     return pid;
 }   // end leavePath

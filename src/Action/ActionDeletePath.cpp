@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ using FaceTools::Action::ActionDeletePath;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Interactor::PathsHandler;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ActionDeletePath::ActionDeletePath( const QString& dn, const QIcon& ico, const QKeySequence &ks)
@@ -45,14 +45,15 @@ bool ActionDeletePath::isAllowed( Event)
 void ActionDeletePath::doAction( Event)
 {
     storeUndo(this, Event::PATHS_CHANGE);
-    FM *fm = MS::selectedModel();
     PathsHandler *handler = MS::handler<PathsHandler>();
     assert( handler->hoverPath());
     const int pid = handler->leavePath();
-    handler->visualisation().erasePath( fm, pid);
-    fm->lockForWrite();
-    fm->removePath(pid);
-    fm->unlock();
+    assert( pid >= 0);
+    if ( pid >= 0)
+    {
+        FM::WPtr fm = MS::selectedModelScopedWrite();
+        fm->removePath(pid);
+    }   // end if
 }   // end doAction
 
 

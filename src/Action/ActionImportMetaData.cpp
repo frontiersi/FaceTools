@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ using FaceTools::Action::ActionImportMetaData;
 using FaceTools::Action::Event;
 using FaceTools::FM;
 using FMM = FaceTools::FileIO::FaceModelManager;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 using QMB = QMessageBox;
 
 
@@ -63,7 +63,7 @@ QString ActionImportMetaData::toolTip() const
 bool ActionImportMetaData::isAllowed( Event) { return MS::isViewSelected();}
 
 
-QString ActionImportMetaData::_getFilePath( const FM* fm)
+QString ActionImportMetaData::_getFilePath( const FM &fm)
 {
     const auto &filter = _fdialog->selectedMimeTypeFilter();
     const QFileInfo fpath( FMM::filepath(fm));
@@ -88,17 +88,18 @@ bool ActionImportMetaData::doBeforeAction( Event)
     QWidget* prnt = static_cast<QWidget*>(parent());
 
     // If the selected model has meta data already, warn about overwriting
-    const FM* fm = MS::selectedModel();
+    FM::RPtr fm = MS::selectedModelScopedRead();
     if ( fm->hasMetaData())
     {
-        const QString fname = QFileInfo( FMM::filepath(fm)).fileName();
-        const QString msg = tr( ("Model \"" + fname.toLocal8Bit().toStdString() + "\" already has meta data! Overwrite all?").c_str());
-        bool doImport = QMB::Yes == QMB::question( prnt, tr("Overwrite existing data?"), msg, QMB::Yes | QMB::No, QMB::No);
+        const QString fname = QFileInfo( FMM::filepath(*fm)).fileName();
+        const QString msg = tr( ("Model \"" + fname.toLocal8Bit().toStdString() + "\" already has metadata! Overwrite all?").c_str());
+        const bool doImport = QMB::Yes == QMB::question( prnt, tr("Overwrite Metadata?"),
+                QString("<p align='center'>%1</p>").arg(msg), QMB::Yes | QMB::No, QMB::No);
         if ( !doImport)
             return false;
     }   // end if
 
-    const QString fp = _getFilePath( fm);
+    const QString fp = _getFilePath( *fm);
     if ( fp.isEmpty())
         return false;
 
@@ -106,7 +107,7 @@ bool ActionImportMetaData::doBeforeAction( Event)
     if ( !_ifs.is_open())
     {
         const QString msg = tr( ("Unable to open \'" + fp.toLocal8Bit().toStdString() + "' for reading!").c_str());
-        QMB::critical( prnt, tr("Import write error!"), msg);
+        QMB::critical( prnt, tr("Import write error!"), QString("<p align='center'>%1</p>").arg(msg));
         return false;
     }   // end if
 
@@ -118,7 +119,7 @@ bool ActionImportMetaData::doBeforeAction( Event)
 
 void ActionImportMetaData::doAction( Event)
 {
-    storeUndo( this, Event::ASSESSMENT_CHANGE | Event::LANDMARKS_CHANGE | Event::PATHS_CHANGE);
+    storeUndo( this, Event::METADATA_CHANGE | Event::LANDMARKS_CHANGE | Event::PATHS_CHANGE);
 
     QMimeType mtype = _mimeDB.mimeTypeForFile(QFileInfo(_filepath));
     assert(mtype.isValid());
@@ -138,22 +139,17 @@ void ActionImportMetaData::doAction( Event)
         }   // end if
     }   // end for
 
-    FM* fm = MS::selectedModel();
-    fm->lockForWrite();
+    FM::WPtr fm = MS::selectedModelScopedWrite();
 
     _err = false;
     double fversion;
     if ( FileIO::importMetaData( *fm, tree, fversion))
-    {
         fm->moveToSurface();
-        fm->unlock();
-    }   // end if
     else
     {
         _err = true;
-        scrapLastUndo( fm);
+        scrapLastUndo( fm.get());
     }   // end else
-
     _ifs.close();
 }   // end doAction
 
@@ -166,7 +162,7 @@ Event ActionImportMetaData::doAfterAction( Event)
     else
     {
         MS::showStatus( QString("Imported meta data from '%1'.").arg(_filepath), 5000);
-        ev = Event::ASSESSMENT_CHANGE | Event::LANDMARKS_CHANGE | Event::PATHS_CHANGE;
+        ev = Event::METADATA_CHANGE | Event::LANDMARKS_CHANGE | Event::PATHS_CHANGE;
     }   // end else
     return ev;
 }   // end doAfterAction

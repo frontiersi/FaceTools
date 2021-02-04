@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,6 +82,15 @@ public:
      * Defaults to the first (and possibly only) dimension for the metric.
      */
     float measurementValue( int mid, FaceSide, size_t dim=0) const;
+
+    /**
+     * Returns true iff the measurement was taken projected into one of the
+     * standard facial planes (usually the coronal or median plane). Some
+     * measurements are always taken in one of these planes (e.g. angles)
+     * while others (e.g. distance measurements) can be taken projected
+     * into the plane or directly from their spatial coordinates.
+     */
+    bool measurementInPlane( int mid, FaceSide) const;
 
     /**
      * Returns true iff the given measurement exists.

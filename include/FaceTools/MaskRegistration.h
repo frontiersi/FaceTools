@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -61,8 +61,8 @@ public:
         std::unordered_map<int, std::pair<int, Vec3f> > lmksR;
 
         std::unordered_map<int, int> oppVtxs;  // Map of laterally opposite vertex IDs
-        IntSet medialVtxs;  // Medial (centreline) vertices
-        IntSet q0, q1, q2, q3;  // Quadrant vertices (top left lateral, top right lateral, bottom right, bottom left)
+        IntSet medialVtxs;      // Medial (centreline) vertices
+        IntSet q0, q1, q2, q3;  // Quadrant vertices (top left, top right, bottom right, bottom left)
     };  // end struct
 
     using MaskPtr = std::shared_ptr<const MaskData>;
@@ -94,7 +94,7 @@ public:
 
     // Register the currently set mask against the given face model and return it.
     // The model must have first been brought into reasonable rigid alignment with the mask.
-    static r3d::Mesh::Ptr registerMask( const FM*);
+    static r3d::Mesh::Ptr registerMask( const r3d::Mesh &targetMesh);
 
     // Given a deformed version of the loaded mask, run procrustes superimposition
     // on it and return its transform from the currently loaded mask.

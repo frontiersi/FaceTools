@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,12 +62,9 @@ public:
     const QString &remarks() const { return _prms.remarks;}
     const QString &normal() const { return _prms.normal;}   // "x", "y", "z"
 
-    // Return whether or not this metric is calculated in-plane.
-    // Metrics that can be set out-of-plane too must override these functions.
-    // Note that angle and asymmetry metrics are always in-plane.
+    // Return whether or not this metric is always calculated in-plane.
+    // Measurements are assumed to be fixed in plane by default.
     virtual bool fixedInPlane() const { return true;}
-    virtual void setInPlane( bool) {/*no-op*/}
-    virtual bool inPlane() const { return true;}
 
     // Return plane projection normal for given model's current assessment.
     Vec3f normal( const FM*) const;
@@ -75,24 +72,27 @@ public:
     // Return the set of landmarks used (their IDs).
     const IntSet &landmarkIds() const { return _lmids;}
 
-    // Measure against the given model for its current assessment.
-    // Output values are placed into out parameter results (with as many entries as there
-    // are dimensions for this measurement).
+    // Measure against the given model for its current assessment. Output values are placed
+    // into out parameter results with as many entries as there are measurement dimensions.
+    // The inPlane option is only considered if this metric is not fixedInPlane().
     void measure( std::vector<float> &results, const FM*, bool swapSide, bool inPlane);
 
     // Get this list of points for dimension i. Use swapped=true if this is a bilateral metric
     // and want the points defined for the subject's right face lateral.
     const std::vector<Landmark::LmkList>& points( size_t i, bool swapped=false) const;
 
+    // Returns true iff measurement recorded for the given model.
+    virtual bool hasMeasurement( const FM*) const = 0;
+
     // Purge this metric of any data cached for the given model.
     virtual void purge( const FM*) {}
 
 protected:
-    // From the given model and points, projection plane vector, and flag saying whether or not
-    // to project (may be ignored by some metric types), calculate and return the single
-    // dimension measurement value. Child classes should update cache of measurements for
-    // the given model if need be. If swapped is true, then this is a bilateral metric and the
-    // measurement needed is for the other side of the face.
+    // From the given model and points, projection plane vector, and flag saying whether or not to
+    // project (ignored if fixedInPlane()), calculate and return the measurement value for dimension
+    // dim. Child classes should update cache of measurements for the given model if need be. If
+    // swapped is true, then this is a bilateral metric and the measurement needed is for the other
+    // side of the face.
     virtual float update( size_t dim, const FM*, const std::vector<Vec3f>&, Vec3f, Vec3f, bool, bool) = 0;
 
 private:

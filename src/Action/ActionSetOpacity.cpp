@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,21 +18,22 @@
 #include <Action/ActionSetOpacity.h>
 #include <FaceModelViewer.h>
 #include <Vis/FaceView.h>
+#include <QSignalBlocker>
 using FaceTools::Action::ActionSetOpacity;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::FMV;
 using FaceTools::Vis::FV;
-using MS = FaceTools::Action::ModelSelector;
-
-float ActionSetOpacity::s_opacityReduction(0.0f);
-void ActionSetOpacity::setOverlapOpacityReduction( float v) { s_opacityReduction = v;}
+using MS = FaceTools::ModelSelect;
 
 
 ActionSetOpacity::ActionSetOpacity( const QString& dname)
     : FaceAction( dname), _opacitySpinBox(nullptr)
 {
-    addRefreshEvent( Event::VIEWER_CHANGE | Event::AFFINE_CHANGE | Event::VIEW_CHANGE);
+    // Event MODEL_SELECT allows the widget to be updated.
+    // Event VIEW_CHANGE must be present to allow visualisations that bound
+    // a view's min/max opacity to be propagated to the surface.
+    addRefreshEvent( Event::VIEWER_CHANGE | Event::AFFINE_CHANGE | Event::VIEW_CHANGE | Event::MODEL_SELECT);
 }   // end ctor
 
 
@@ -55,53 +56,76 @@ void ActionSetOpacity::_doOnValueChanged()
     FV *fv = MS::selectedView();
     if ( fv)
     {
-        _setOpacity( fv);
+        _setViewOpacity( fv);
         emit onEvent( Event::NONE);
     }   // end if
 }   // end _doOnValueChanged
 
 
-void ActionSetOpacity::_setOpacity( FV *fv)
-{
-    const float maxIfOverlap = fv->overlaps() ? 1.0f - s_opacityReduction : 1.0f;
-    // maxPoss is the maximum given overlap and the visualisations on the view.
-    const float maxPoss = std::min<float>( maxIfOverlap, fv->maxAllowedOpacity());
-    // Get the possible range that opacity can be set within
-    const float minPoss = std::min<float>( fv->minAllowedOpacity(), maxPoss);
+bool ActionSetOpacity::isAllowed( Event e) { return MS::isViewSelected();}
 
-    const double uiRange = _opacitySpinBox->maximum() - _opacitySpinBox->minimum();
-    const float vprop = (_opacitySpinBox->value() - _opacitySpinBox->minimum()) / uiRange;
-    const float v = float( vprop * (maxPoss - minPoss) + minPoss);
-    fv->setOpacity( v);
-}   // end _setOpacity
+
+void ActionSetOpacity::_setViewOpacity( FV *fv)
+{
+    // Get the base opacity value either directly from the widget (if this is the
+    // currently selected view), or as the existing value but accounting for whether
+    // or not the value was already reduced from having been found to overlap.
+    float v = fv->opacity();
+    if ( MS::selectedView() == fv)
+        v = _opacitySpinBox->value();
+    else if ( _olaps.count(fv) > 0)
+        v = _olaps.at(fv);
+
+    // Add back in any old applied visualisation bounding that might no longer apply.
+    v = std::min( 1.0f, v + _vbnds[fv]);
+
+    _olaps.erase(fv); // Limit opacity due to overlap
+    static const float MAX_OLAP_OPACITY = 0.99f;
+    if ( fv->overlaps() && v > MAX_OLAP_OPACITY)
+    {
+        _olaps[fv] = v;
+        v = MAX_OLAP_OPACITY;
+    }   // end if
+
+    const float ov = v;
+    // Bound the opacity value in consideration of the applied visualisations
+    const float maxPoss = std::min<float>( 1.0f, fv->maxAllowedOpacity());
+    const float minPoss = std::min<float>( fv->minAllowedOpacity(), maxPoss);
+    v = std::min( maxPoss, std::max( v, minPoss));
+    _vbnds[fv] = ov - v; // Opacity difference due to visualisations
+
+    fv->setOpacity(v);  // Finally update the applied opacity
+}   // end _setViewOpacity
 
 
 void ActionSetOpacity::_updateOpacities( const FMV *fmv)
 {
     for ( FV *fv : fmv->attached())
-        _setOpacity( fv);
+        _setViewOpacity( fv);
 }   // end _updateOpacities
 
 
 bool ActionSetOpacity::update( Event e)
 {
+    QSignalBlocker blocker( _opacitySpinBox);
     const FV *fv = MS::selectedView();
     if ( fv)
     {
         if ( has(e, Event::ALL_VIEWERS))
         {
             for ( const FMV *fmv : MS::viewers())
-                for ( FV *f : fmv->attached())
-                    _setOpacity(f);
+                _updateOpacities( fmv);
         }   // end if
         else
         {
             // Update opacity values on FaceViews in the previous viewer if the viewer was changed
             if ( has( e, Event::VIEWER_CHANGE) && fv->pviewer())
                 _updateOpacities( fv->pviewer());
-            if ( has( e, Event::VIEWER_CHANGE | Event::AFFINE_CHANGE | Event::VIEW_CHANGE))
+            if ( any( e, Event::VIEWER_CHANGE | Event::AFFINE_CHANGE | Event::VIEW_CHANGE))
                 _updateOpacities( fv->viewer());
         }   // end else
+
+        _opacitySpinBox->setValue( _olaps.count(fv) > 0 ? _olaps.at(fv) : fv->opacity());
     }   // end if
     else
         _opacitySpinBox->setValue(1.0);
@@ -109,4 +133,11 @@ bool ActionSetOpacity::update( Event e)
 }   // end update
 
 
-bool ActionSetOpacity::isAllowed( Event) { return MS::isViewSelected();}
+void ActionSetOpacity::purge( const FM *fm)
+{
+    for ( const FV *fv : fm->fvs())
+    {
+        _olaps.erase(fv);
+        _vbnds.erase(fv);
+    }   // end for
+}   // end purge

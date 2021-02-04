@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,8 +18,8 @@
 #ifndef FACE_TOOLS_ACTION_FACE_ACTION_H
 #define FACE_TOOLS_ACTION_FACE_ACTION_H
 
+#include <FaceTools/ModelSelect.h>
 #include "UndoStates.h"
-#include "ModelSelector.h"
 #include "FaceActionWorker.h"
 #include <QTools/PluginInterface.h>
 #include <QAction>
@@ -112,19 +112,21 @@ public:
     bool primeMousePos( const QPoint& p=QPoint(-1,-1));
 
     /**
-     * Derived types can specify the events that they wish to be purged for, triggered, and/or refreshed by.
-     * For any event, purging comes before refreshing (checking state/enable) which comes before triggering.
+     * Derived types can specify the events that they wish to be purged, refreshed, or triggered by.
+     * Purge always happens first. If a trigger for event A is defined, this is then executed regardless
+     * of whether event A is a refresh event (trigger events take precedence). Note that on completion
+     * of the triggered event, refresh is called anyway immediately afterwards. Extra refresh events
+     * should be avoided where possible. Note that events can only be added *prior* to all registered
+     * actions being finalised by FaceActionManager (i.e. events to respond to cannot be dynamically
+     * changed).
     */
     void addPurgeEvent( Event);
-    bool isPurgeEvent( Event) const;
     Event purgeEvents() const { return _pevents;}
 
     void addTriggerEvent( Event);
-    bool isTriggerEvent( Event) const;
     Event triggerEvents() const { return _tevents;}
 
     void addRefreshEvent( Event);
-    bool isRefreshEvent( Event) const;
     Event refreshEvents() const { return _revents;}
 
 signals:
@@ -219,14 +221,14 @@ protected:
     /**
      * Implement the action; execute() decides whether it runs asynchronously or not (or at all).
      * If doAction runs asynchronously, defer all GUI updates etc to doAfterAction(). In particular,
-     * do NOT emit doEvent signals from a non-GUI thread - defer until within doAfterAction.
+     * do NOT emit onEvent signals from a non-GUI thread - defer until within doAfterAction.
      */
     virtual void doAction( Event){}
 
     /**
      * Called within the GUI thread immediately on the completion of doAction. This is where GUI
      * elements (dialogs etc) shown in doBeforeAction should be hidden or rendering updates made.
-     * For asynchronous actions, emit doEvent if necessary from within this function.
+     * For asynchronous actions, emit onEvent if necessary from within this function.
      * By default, this function just displays the name of this action in the status bar for two seconds
      * if the action is not asynchronous, and for five seconds and prefixed with "Finished " if the
      * action is asynchronous. Return the event(s) to emit as a result of performing the action.
@@ -266,12 +268,14 @@ private:
     const QKeySequence _keys;
     bool _doasync;
     bool _isWorking;
-    FaceActionWorker *_worker;
+    int _key;
     bool _unlocked; // If true, this action is enabled (true by default)
     Event _pevents; // Purge events
     Event _tevents; // Trigger events
     Event _revents; // Refresh events
     QPoint _mpos;   // The primed mouse position
+    bool _isFinalised;
+    std::string _dbgPrfx;
 
     void _pinit();
 
@@ -281,7 +285,9 @@ private:
      * It also adds the text to the action as getDisplayName(). If unhappy with any of this, make adjustments in
      * postInit() which is called at the end of _init().
      */
-    void _init( QWidget* parent=nullptr);
+    void _init( QWidget* parent);
+
+    void _setDebugPrefix( const std::string&);
 
     friend class FaceActionWorker;
     friend class FaceActionManager;

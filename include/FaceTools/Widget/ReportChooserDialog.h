@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 #define FACETOOLS_WIDGET_REPORT_CHOOSER_DIALOG_H
 
 #include <FaceTools/FaceTypes.h>
+#include <FaceTools/FaceModel.h>
 #include <QDialog>
 
 namespace Ui { class ReportChooserDialog;}
@@ -33,11 +34,10 @@ public:
 
     QString selectedReportName() const;
 
-    bool show( const FM*);
+    bool show();
 
 private:
     Ui::ReportChooserDialog *_ui;
-    //void setRowShown( int, bool);
 };  // end class
 
 }}  // end namespaces

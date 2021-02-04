@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,6 +67,7 @@ const std::vector<LmkList>& MetricType::points( size_t i, bool swapped) const
 
 void MetricType::measure( std::vector<float> &results, const FM *fm, bool swapSide, bool inPlane)
 {
+    const bool doInPlane = fixedInPlane() || inPlane;
     const Mat4f &T = fm->transformMatrix();
     const Mat4f &iT = fm->inverseTransformMatrix();
     const LandmarkSet &lmks = fm->currentLandmarks();
@@ -83,6 +84,6 @@ void MetricType::measure( std::vector<float> &results, const FM *fm, bool swapSi
         std::vector<Vec3f> vpts( npoints);
         for ( size_t j = 0; j < npoints; ++j)
             vpts[j] = lmks.toPoint( lpts[j], T, iT);
-        results[i] = update( k++, fm, vpts, mp, nv, swapSide, inPlane);
+        results[i] = update( k++, fm, vpts, mp, nv, swapSide, doInPlane);
     }   // end for
 }   // end measure

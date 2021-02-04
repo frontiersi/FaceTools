@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,16 +17,15 @@
 
 #include <Interactor/RadialSelectHandler.h>
 #include <Interactor/LandmarksHandler.h>
-#include <Action/ModelSelector.h>
+#include <ModelSelect.h>
 #include <MiscFunctions.h>
-#include <FaceModel.h>
 #include <cassert>
 using FaceTools::Interactor::RadialSelectHandler;
 using FaceTools::Vis::RadialSelectVisualisation;
 using FaceTools::Vis::FV;
 using FaceTools::Vec3f;
 using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 RadialSelectHandler::Ptr RadialSelectHandler::create() { return Ptr( new RadialSelectHandler);}
@@ -34,17 +33,10 @@ RadialSelectHandler::Ptr RadialSelectHandler::create() { return Ptr( new RadialS
 
 // private
 RadialSelectHandler::RadialSelectHandler()
-    : _onReticule(false), _moving(false), _radiusChange(0), _lmkVis(nullptr)
+    : _onReticule(false), _moving(false), _radiusChange(0)
 {
     _vis.setHandler(this);
 }   // end ctor
-
-
-void RadialSelectHandler::postRegister()
-{
-    _lmkVis = &MS::handler<LandmarksHandler>()->visualisation();
-    assert(_lmkVis);
-}   // end postRegister
 
 
 // Provided p is the transformed point
@@ -57,16 +49,23 @@ void RadialSelectHandler::init( const FM *fm, const Vec3f &tpos, float r)
 }   // end init
 
 
+bool RadialSelectHandler::isForModel( const FM *fm) const
+{
+    return _rsel && fm && &fm->mesh() == &_rsel->mesh();
+}   // end isForModel
+
+
 void RadialSelectHandler::refresh()
 {
     const FV *fv = MS::selectedView();
-    setEnabled( fv && _vis.isVisible(fv));
-    if ( fv && !_isRegionSelectorForModel( fv->data()))
+    if ( !fv || !isForModel( fv->data()))
     {
         _fids.clear();
         _bnds.reset();
         _rsel = nullptr;
+        _vis.purgeAll();
     }   // end if
+    setEnabled( !!_rsel);   // Teehee ;D
 }   // end refresh
 
 
@@ -85,7 +84,6 @@ void RadialSelectHandler::_update( Vec3f tpos, float r)
 {
     const FV *fv = MS::selectedView();
     const FM *fm = fv->data();
-    assert(fm);
     const r3d::Mesh &mesh = fm->mesh();
     assert( &_rsel->mesh() == &mesh);
 
@@ -93,46 +91,43 @@ void RadialSelectHandler::_update( Vec3f tpos, float r)
 
     const r3d::Manifolds &manifolds = fm->manifolds();  // Only extract from a single manifold
 
-    if ( _lmkVis->isVisible( fv))
+    const Vis::BaseVisualisation *lmkVis = &MS::handler<LandmarksHandler>()->visualisation();
+    if ( lmkVis->isVisible( fv))
     {
         const float snapDist = 0.015f * (fv->viewer()->camera().pos() - tpos).norm();
         tpos = fm->currentLandmarks().snapTo( tpos, snapDist*snapDist);
     }   // end if
 
+    // Find the vertex and face tpos is at on the mesh
     const int sv = fm->findVertex(tpos);
-    // Get the manifold having this vertex
-    const r3d::Manifold& man = manifolds[manifolds.fromFaceId( *mesh.faces(sv).begin())];
+    int cfid = -1;
+    for ( int fid : mesh.faces(sv))
+    {
+        const Vec3f ppos = mesh.projectToFacePlane(fid, tpos);
+        if ( mesh.isVertexInsideFace( fid, ppos))
+        {
+            cfid = fid;
+            break;
+        }   // end if
+    }   // end for
+    if ( cfid < 0)
+        cfid = *mesh.faces(sv).begin();
 
-    _rsel->update( sv, tpos, r);
+    // Get the manifold having this face
+    const r3d::Manifold& man = manifolds[manifolds.fromFaceId( cfid)];
+
+    _rsel->update( cfid, tpos, r);
     _fids.clear();
     _rsel->selectedFaces( _fids, &man.faces());
-    // If there are no selected faces, get the face that the centre point is inside
-    if ( _fids.empty())
-    {
-        for ( int fid : mesh.faces(sv))
-        {
-            const Vec3f ppos = mesh.projectToFacePlane(fid, tpos);
-            if ( mesh.isVertexInsideFace( fid, ppos))
-                _fids.insert(fid);
-        }   // end for
-    }   // end if
-
     _bnds.reset();
     _bnds.sort( mesh, mesh.pseudoBoundaries( _fids));
 
-    _vis.refresh(fv);
     _showHover();
     MS::showStatus( QString( "%1  with radius %2 %3").arg( posString( "Centre at:", tpos)).arg(r, 6, 'f', 2).arg(FM::LENGTH_UNITS), 5000);
     // Update across all viewers 
-    if ( fm->fvs().size() > 1)
-        MS::updateRender();
+    _vis.update(fm);
+    MS::updateRender();
 }   // end _update
-
-
-bool RadialSelectHandler::_isRegionSelectorForModel( const FM *fm) const
-{
-    return _rsel && fm && &fm->mesh() == &_rsel->mesh();
-}   // end _isRegionSelectorForModel
 
 
 bool RadialSelectHandler::_testInProp( bool onRet)
@@ -140,7 +135,7 @@ bool RadialSelectHandler::_testInProp( bool onRet)
     bool swallowed = false;
     const FV *fv = MS::selectedView();
     const vtkProp *p = this->prop();
-    if ( _isRegionSelectorForModel( fv->data()) && _vis.belongs( p, fv))
+    if ( isForModel( fv->data()) && _vis.belongs( p, fv))
     {
         swallowed = true;
         _onReticule = onRet;
@@ -185,12 +180,10 @@ bool RadialSelectHandler::doLeftDrag()
     {
         swallowed = true;
         const FV *fv = MS::selectedView();
-        const FM *fm = fv->data();
-        fm->lockForRead();
+        FM::RPtr fm = fv->rdata();
         Vec3f c;
         if ( fv->projectToSurface( fv->viewer()->mouseCoords(), c))  // Gets the transformed point
             _update( c, _rsel->radius());
-        fm->unlock();
     }   // end if
     return swallowed;
 }   // end doLeftDrag
@@ -202,10 +195,8 @@ bool RadialSelectHandler::_changeRadius( float rchng)
     if ( _onReticule)
     {
         swallowed = true;
-        const FV *fv = MS::selectedView();
-        fv->data()->lockForRead();
+        FM::RPtr fm = MS::selectedModelScopedRead();
         _update( _rsel->centre(), std::max( _rsel->radius() + rchng, 0.0f));
-        fv->data()->unlock();
     }   // end if
     return swallowed;
 }   // end _changeRadius

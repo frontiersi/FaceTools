@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,28 +33,30 @@ class FaceTools_EXPORT RadialSelectVisualisation : public BaseVisualisation
 {
 public:
     RadialSelectVisualisation();
-    ~RadialSelectVisualisation() override;
 
     void setHandler( const Interactor::RadialSelectHandler *h) { _handler = h;}
 
-    const char* name() const override { return "RadialSelectVisualisation";}
-
     bool applyToAllInViewer() const override { return false;}
     bool applyToAllViewers() const override { return true;}
-    bool isAvailable( const FV*, const QPoint*) const override;
     bool belongs( const vtkProp*, const FV*) const override;
 
-    void apply( const FV*, const QPoint* mc=nullptr) override;
+    bool isAvailable( const FV*) const override;
+
+    void refresh( FV*) override;
     void purge( const FV*) override;
 
     void setVisible( FV*, bool) override;
     bool isVisible( const FV*) const override;
 
-    void refresh( const FV*) override;
-    void syncWithViewTransform( const FV*) override;
+    void syncTransform( const FV*) override;
 
-    // Set whether the visualisation is highlighted or not.
+    // Used by the interactor to highlight the actors associated with the given view.
     void setHighlighted( const FV*, bool);
+
+    // Used by the interactor to update the view actors
+    void update( const FM*);
+
+    void purgeAll();    // Used by the parent handler
 
 private:
     const Interactor::RadialSelectHandler *_handler;

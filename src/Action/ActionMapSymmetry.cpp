@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,15 +16,13 @@
  ************************************************************************/
 
 #include <Action/ActionMapSymmetry.h>
-#include <FaceModelSymmetry.h>
+#include <FaceModelSymmetryStore.h>
+#include <MaskRegistration.h>
 #include <FaceModel.h>
-#include <algorithm>
-#include <cassert>
 using FaceTools::Action::ActionMapSymmetry;
 using FaceTools::Action::Event;
 using FaceTools::FM;
-using FaceTools::Vis::FV;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ActionMapSymmetry::ActionMapSymmetry() : FaceAction( "Map Symmetry")
@@ -35,24 +33,24 @@ ActionMapSymmetry::ActionMapSymmetry() : FaceAction( "Map Symmetry")
 }   // end ctor
 
 
-bool ActionMapSymmetry::isAllowed( Event)
+bool ActionMapSymmetry::doBeforeAction( Event)
 {
-    const FM *fm = MS::selectedModel();
-    return fm && fm->hasMask();
-}   // end isAllowed
+    FM::RPtr fm = MS::selectedModelScopedRead();
+    return fm && fm->maskHash() == MaskRegistration::maskData()->hash;
+}   // end doBeforeAction
 
 
 void ActionMapSymmetry::doAction( Event)
 {
-    const FM* fm = MS::selectedModel();
-    fm->lockForRead();
-    FaceModelSymmetry::purge( fm);
-    FaceModelSymmetry::add( fm);
-    fm->unlock();
+    FM::RPtr fm = MS::selectedModelScopedRead();
+    FaceModelSymmetryStore::add( fm.get());
 }   // end doAction
 
 
-Event ActionMapSymmetry::doAfterAction( Event) { return Event::SURFACE_DATA_CHANGE;}
+Event ActionMapSymmetry::doAfterAction( Event)
+{
+    return Event::SURFACE_DATA_CHANGE;
+}   // end doAfterAction
 
 
-void ActionMapSymmetry::purge( const FM* fm) { FaceModelSymmetry::purge(fm);}
+void ActionMapSymmetry::purge( const FM* fm) { FaceModelSymmetryStore::purge(fm);}

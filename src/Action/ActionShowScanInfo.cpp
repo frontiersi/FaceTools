@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,23 +23,24 @@ using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Widget::ScanInfoDialog;
 using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ActionShowScanInfo::ActionShowScanInfo( const QString& dname, const QIcon& icon, const QKeySequence& ks)
     : FaceAction( dname, icon, ks), _tupdater(nullptr), _dialog(nullptr)
 {
     setCheckable( true, false);
+    addRefreshEvent( Event::METRICS_CHANGE | Event::MODEL_SELECT);
     addTriggerEvent( Event::MASK_CHANGE);
-    addRefreshEvent( Event::METRICS_CHANGE);
 }   // end ctor
 
 
 void ActionShowScanInfo::postInit()
 {
     QWidget* p = static_cast<QWidget*>(parent());
+    assert(p);
     _dialog = new ScanInfoDialog(p);
-    connect( _dialog, &ScanInfoDialog::onAssessmentChanged, [this](){ emit onEvent(Event::ASSESSMENT_CHANGE);});
+    connect( _dialog, &ScanInfoDialog::onInfoChanged, [this](){ emit onEvent(Event::METADATA_CHANGE);});
     connect( _dialog, &ScanInfoDialog::finished, [this](){ setChecked(false);});
 }   // end postInit
 
@@ -47,48 +48,39 @@ void ActionShowScanInfo::postInit()
 void ActionShowScanInfo::setThumbnailUpdater( ActionUpdateThumbnail* act)
 {
     _tupdater = act;
-    const QSize dims = _dialog->thumbDims();
-    _tupdater->setThumbnailSize( dims.width(), dims.height());
-    connect( act, &ActionUpdateThumbnail::updated, this, &ActionShowScanInfo::doOnUpdatedThumbnail);
+    _tupdater->setThumbnailSize( _dialog->thumbDims());
+    connect( act, &ActionUpdateThumbnail::updated, [=](){ _dialog->setThumbnail( act->thumbnail());});
 }   // end setThumbnailUpdater
 
 
 bool ActionShowScanInfo::update( Event e)
 {
-    bool chk = false;
-    FM *fm = MS::selectedModel();
-    if ( !fm || has( e, Event::CLOSED_MODEL))
+    const FM *fm = MS::selectedModel();
+    if ( !fm)
         _dialog->hide();
-    else
+    else if ( has( e, Event::MODEL_SELECT))
     {
         _dialog->refresh();
-        // Set check if a change of AM occurred with the setting of landmarks and the date of birth is the same
-        // as the capture date. This equivalency ensures that this this dialog appears even for old files.
-        chk = _dialog->isVisible() || (isTriggerEvent( e) && fm->hasLandmarks() && fm->dateOfBirth() == fm->captureDate());
-    }   // end else
-    return chk;
+        _dialog->setThumbnail( _tupdater->thumbnail());
+    }   // end else if
+    else if ( has( e, Event::METRICS_CHANGE))
+        _dialog->refreshAssessment();
+    return _dialog->isVisible();
 }   // end update
 
 
 bool ActionShowScanInfo::isAllowed( Event) { return MS::isViewSelected();}
 
+bool ActionShowScanInfo::doBeforeAction( Event e) { return MS::isViewSelected();}
 
-void ActionShowScanInfo::doOnUpdatedThumbnail( const FM* fm, const cv::Mat& img) { _dialog->setThumbnail(img);}
-
-
-void ActionShowScanInfo::doAction( Event)
+void ActionShowScanInfo::doAction( Event e)
 {
-    if ( isChecked())
-    {
-        FM *fm = MS::selectedModel();
-        assert(fm);
-        if ( _tupdater)
-            _dialog->setThumbnail( _tupdater->thumbnail(fm));
-        _dialog->show();
-        _dialog->raise();
-        _dialog->activateWindow();
-    }   // end if
+    const FM *fm = MS::selectedModel();
+    // Set check if a change of AM occurred with the setting of landmarks and the date of birth is the same
+    // as the capture date. This equivalency ensures that this this dialog appears even for old 3DF file versions.
+    const bool chk = isChecked() || (any( triggerEvents(), e) && fm->hasLandmarks() && fm->dateOfBirth() == fm->captureDate());
+    if ( chk)
+        _dialog->refresh();
+    _dialog->setVisible( chk);
 }   // end doAction
 
-
-Event ActionShowScanInfo::doAfterAction( Event) { return Event::NONE;}

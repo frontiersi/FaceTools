@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,6 +81,7 @@ bool MouseHandler::_handleEvent( const std::function<bool( GizmoHandler*)> &func
         GizmoHandler *gh = _gizmos.at(i);
         gh->_setViewer(_vwr);
         gh->_setProp(_pnow);
+        gh->_setView(_mnow);
     }   // end for
 
     // Execute handler functions in order of handler addition.
@@ -99,6 +100,7 @@ bool MouseHandler::_handleEvent( const std::function<bool( GizmoHandler*)> &func
 
 FV* MouseHandler::_selectView( FV *nfv) const
 {
+    nfv = nullptr;  // Delete this line if desire selecting face views by clicking on them
     if ( !nfv)
     {
         const FV *sfv = _snot->selected();  // The currently selected FV

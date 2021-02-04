@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 #include <ui_ScanInfoDialog.h>
 #include <Metric/PhenotypeManager.h>
 #include <FileIO/FaceModelManager.h>
-#include <Action/ModelSelector.h>
+#include <ModelSelect.h>
 #include <Ethnicities.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
@@ -33,10 +33,10 @@
 #include <cmath>
 #include <cassert>
 using FaceTools::Widget::ScanInfoDialog;
-using FaceTools::Metric::PhenotypeManager;
+using FaceTools::Ethnicities;
 using FaceTools::FM;
 using FMM = FaceTools::FileIO::FaceModelManager;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 using QMB = QMessageBox;
 
 /*
@@ -52,14 +52,13 @@ namespace {
 
 void _setEthnicityComboBox( QComboBox* cb, int ecode=0)
 {
-    QSignalBlocker blocker( cb);
     static const IntSet EMPTY_INT_SET;
 
     std::list<int> path;  // Will be path from root to leaf (ecode)
     path.push_front(ecode);
 
     // Progressively work backwards to the broadest category setting the discovered path:
-    const IntSet* pcodes = &FaceTools::Ethnicities::parentCodes(ecode);
+    const IntSet* pcodes = &Ethnicities::parentCodes(ecode);
     while ( !pcodes->empty())
     {
         // Find the non-mixed parent.
@@ -67,7 +66,7 @@ void _setEthnicityComboBox( QComboBox* cb, int ecode=0)
         for ( int pcode : *pcodes)
         {
             // There's only 1 non-mixed parent per ethnic code
-            if ( !FaceTools::Ethnicities::isMixed(pcode))
+            if ( !Ethnicities::isMixed(pcode))
             {
                 nmp = pcode;
                 break;
@@ -79,7 +78,7 @@ void _setEthnicityComboBox( QComboBox* cb, int ecode=0)
         {
             path.push_front( nmp);
             // Will return empty when the code at the front is of the "broad" category.
-            pcodes = &FaceTools::Ethnicities::parentCodes( nmp);
+            pcodes = &Ethnicities::parentCodes( nmp);
         }   // end if
     }   // end while
 
@@ -91,7 +90,7 @@ void _setEthnicityComboBox( QComboBox* cb, int ecode=0)
     {
         for ( int ec : path)
         {
-            const QString& ename = FaceTools::Ethnicities::name(ec);
+            const QString &ename = Ethnicities::name(ec);
             rowIdx = cb->findData( ename, Qt::DisplayRole);
             if ( ec != ecode)
             {
@@ -114,18 +113,18 @@ QTools::TreeModel* createEthnicityComboBoxModel()
     QTools::TreeItem *cbroad = nullptr; // Current broad node
     QTools::TreeItem *cnrrow = nullptr; // Current narrow node
 
-    for ( int ethn : FaceTools::Ethnicities::codes())
+    for ( int ethn : Ethnicities::codes())
     {
         if ( ethn <= 0)
             continue;
 
-        const QString ename = FaceTools::Ethnicities::name(ethn);
+        const QString ename = Ethnicities::name(ethn);
 
-        if ( FaceTools::Ethnicities::isMixed( ethn))
+        if ( Ethnicities::isMixed( ethn))
             root->appendChild( new QTools::TreeItem( {ename}));
-        else if ( FaceTools::Ethnicities::isBroad(ethn))    // 1000, 2000, 3000 etc
+        else if ( Ethnicities::isBroad(ethn))    // 1000, 2000, 3000 etc
             cbroad = new QTools::TreeItem( {ename}, root);
-        else if ( FaceTools::Ethnicities::isNarrow(ethn))  // 1100, 1200, 1300 etc
+        else if ( Ethnicities::isNarrow(ethn))  // 1100, 1200, 1300 etc
         {
             assert( cbroad != nullptr);
             cnrrow = new QTools::TreeItem( {ename}, cbroad);
@@ -144,24 +143,23 @@ QTools::TreeModel* createEthnicityComboBoxModel()
 
 
 ScanInfoDialog::ScanInfoDialog( QWidget *parent) :
-    QDialog(parent), _ui(new Ui::ScanInfoDialog), _dialogRootTitle( parent->windowTitle() + " | Assessment Information")
+    QDialog(parent), _ui(new Ui::ScanInfoDialog),
+    _dialogRootTitle( parent->windowTitle() + " | Assessment Information"),
+    _focusOutSignaller( QEvent::FocusOut, false)
 {
     _ui->setupUi(this);
-    // Can't get splitter to stay the correct height! Investigate again later...
-    //_ui->splitter->setStretchFactor( 0, 2);
-    //_ui->splitter->setStretchFactor( 1, 1);
-    //_ui->notesTextEdit->setMaximumHeight(252);
-    //_ui->hpoTermsTextBrowser->setMaximumHeight(252);
-
     _ui->hpoTermsTextBrowser->setOpenExternalLinks(true);
-    layout()->setSizeConstraint( QLayout::SetFixedSize);
+    setFixedSize( geometry().width(), geometry().height());
     setSizeGripEnabled( false);
 
     setWindowTitle( _dialogRootTitle);
     connect( _ui->buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked, this, &ScanInfoDialog::_apply);
 
-    connect( _ui->maternalEthnicityComboBox, QOverload<int>::of(&QComboBox::activated), this, &ScanInfoDialog::_doOnChangedMaternalEthnicity);
-    connect( _ui->paternalEthnicityComboBox, QOverload<int>::of(&QComboBox::activated), this, &ScanInfoDialog::_doOnChangedPaternalEthnicity);
+    // Use currentIndexChanged because of selection mechanics of the tree model.
+    connect( _ui->maternalEthnicityComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                                       this, &ScanInfoDialog::_doOnChangedMaternalEthnicity);
+    connect( _ui->paternalEthnicityComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                                       this, &ScanInfoDialog::_doOnChangedPaternalEthnicity);
     connect( _ui->sexComboBox, QOverload<int>::of(&QComboBox::activated), this, &ScanInfoDialog::_doOnSexChanged);
 
     connect( _ui->dobDateEdit, &QDateEdit::dateChanged, this, &ScanInfoDialog::_doOnDOBChanged);
@@ -173,11 +171,16 @@ ScanInfoDialog::ScanInfoDialog( QWidget *parent) :
     connect( _ui->subjectIdLineEdit, &QLineEdit::textEdited, this, &ScanInfoDialog::_doOnSubjectIdChanged);
 
     connect( _ui->notesTextEdit, &QPlainTextEdit::textChanged, this, &ScanInfoDialog::_doOnNotesChanged);
-    connect( _ui->assessorComboBox, QOverload<int>::of(&QComboBox::activated), this, &ScanInfoDialog::_doOnAssessorChanged);
-    connect( _ui->assessorComboBox, &QComboBox::currentTextChanged, this, &ScanInfoDialog::_doOnEditedAssessorText);
+
+    connect( _ui->assessorComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                            this, &ScanInfoDialog::_doOnAssessorChanged);
+    _focusOutSignaller.install( _ui->assessorComboBox);
+    connect( &_focusOutSignaller, &QTools::EventSignaller::onEvent, [this](){ _checkEnableApply();});
+
     _ui->assessorComboBox->setInsertPolicy( QComboBox::NoInsert);
 
-    const QRegularExpression re( "\\b[^\\d\\W]+(\\b\\s?[^\\d\\W]*)*");  // One or more words separated by single spaces
+    // One or more words separated by single spaces
+    const QRegularExpression re( "\\b[^\\d\\W]+(\\b\\s?[^\\d\\W]*)*");
     QRegularExpressionValidator *nameValidator = new QRegularExpressionValidator( re);
     _ui->assessorComboBox->setValidator( nameValidator);
 
@@ -195,6 +198,7 @@ ScanInfoDialog::ScanInfoDialog( QWidget *parent) :
 
     refresh();
 }   // end ctor
+
 
 
 ScanInfoDialog::~ScanInfoDialog()
@@ -216,6 +220,8 @@ void ScanInfoDialog::refresh()
     QSignalBlocker b7( _ui->subjectIdLineEdit);
     QSignalBlocker b8( _ui->imageIdLineEdit);
     QSignalBlocker b9( _ui->assessorComboBox);
+    QSignalBlocker b10( _ui->maternalEthnicityComboBox);
+    QSignalBlocker b11( _ui->paternalEthnicityComboBox);
 
     _ui->dobDateEdit->setDate( QDate::currentDate());
     _ui->sexComboBox->setCurrentIndex( _ui->sexComboBox->findData( UNKNOWN_SEX));
@@ -230,10 +236,10 @@ void ScanInfoDialog::refresh()
     _ui->imageIdLineEdit->clear();
     _ui->assessorComboBox->clear();
 
-    const FM *fm = MS::selectedModel();
+    FM::RPtr fm = MS::selectedModelScopedRead();
     if (fm)
     {
-        const QString fpath = FMM::filepath(fm);
+        const QString fpath = FMM::filepath(*fm);
         setWindowTitle( _dialogRootTitle + " | " + fpath);
 
         _ui->dobDateEdit->setDate( fm->dateOfBirth());
@@ -260,7 +266,7 @@ void ScanInfoDialog::refresh()
     _ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled( fm != nullptr);
     }   // end signal blocking scope
 
-    _refreshCurrentAssessment();
+    refreshAssessment();
 }   // end refresh
 
 
@@ -340,7 +346,7 @@ void ScanInfoDialog::_apply()
 
     if ( !isSaved)
     {
-        emit onAssessmentChanged();
+        emit onInfoChanged();
         refresh();
     }   // end if
 
@@ -350,7 +356,7 @@ void ScanInfoDialog::_apply()
 
 bool ScanInfoDialog::_isDifferentToCurrent() const
 {
-    const FM *fm = MS::selectedModel();
+    FM::RPtr fm = MS::selectedModelScopedRead();
     if ( !fm)
         return false;
 
@@ -400,6 +406,12 @@ void ScanInfoDialog::_checkEnableApply()
 }   // end _checkEnableApply
 
 
+bool ScanInfoDialog::isApplyEnabled() const
+{
+    return _ui->buttonBox->button( QDialogButtonBox::Apply)->isEnabled();
+}   // end isApplyEnabled
+
+
 void ScanInfoDialog::_doOnDOBChanged()
 {
     const QDate capDate = _ui->captureDateEdit->date();
@@ -438,7 +450,7 @@ void ScanInfoDialog::_doOnStudyIdChanged() { _checkEnableApply();}
 void ScanInfoDialog::_doOnSubjectIdChanged() { _checkEnableApply();}
 void ScanInfoDialog::_doOnImageIdChanged() { _checkEnableApply();}
 void ScanInfoDialog::_doOnNotesChanged() { _checkEnableApply();}
-void ScanInfoDialog::_doOnEditedAssessorText() { _checkEnableApply();}
+//void ScanInfoDialog::_doOnEditedAssessorText() { std::cerr << "Edited" << std::endl; _checkEnableApply();}
 
 
 void ScanInfoDialog::_doOnAssessorChanged()
@@ -447,9 +459,11 @@ void ScanInfoDialog::_doOnAssessorChanged()
     const int ai = _ui->assessorComboBox->currentData().toInt();
     if ( fm && ai != fm->currentAssessment()->id())
     {
+        fm->lockForWrite();
         fm->setCurrentAssessment(ai);
-        _refreshCurrentAssessment();
-        emit onAssessmentChanged();
+        fm->unlock();
+        refreshAssessment();
+        emit onInfoChanged();
     }   // end if
 }   // end _doOnAssessorChanged
 
@@ -469,7 +483,7 @@ void ScanInfoDialog::reject()
 }   // end reject
 
 
-void ScanInfoDialog::_refreshCurrentAssessment()
+void ScanInfoDialog::refreshAssessment()
 {
     QSignalBlocker b0( _ui->notesTextEdit);
     QSignalBlocker b1( _ui->assessorComboBox);
@@ -479,46 +493,52 @@ void ScanInfoDialog::_refreshCurrentAssessment()
     _ui->removeAssessmentButton->setEnabled(false);
     _ui->copyLandmarksButton->setEnabled(false);
 
-    QString msg;
-    const FM *fm = MS::selectedModel();
+    FM::RPtr fm = MS::selectedModelScopedRead();
     if ( fm)
     {
         FaceAssessment::CPtr cass = fm->currentAssessment();
-        assert(cass);
         _ui->assessorComboBox->setCurrentIndex( _ui->assessorComboBox->findData( cass->id()));
         _ui->notesTextEdit->setPlainText( cass->notes());
         _ui->notesTextEdit->moveCursor( QTextCursor::Start);
         _ui->addAssessmentButton->setEnabled( true);
         _ui->removeAssessmentButton->setEnabled( fm->assessmentsCount() > 1);
         _ui->copyLandmarksButton->setEnabled( !cass->landmarks().empty() && fm->assessmentsCount() > 1);
-
-        if ( !fm->hasLandmarks())
-            msg = tr("<center><b>Detect face for morphological assessment</b></center>");
-        else
-        {
-            const IntSet ptypes = PhenotypeManager::discover( fm, cass->id());
-
-            QStringList lterms;
-            for ( int hid : ptypes)
-                lterms << PhenotypeManager::htmlLinkString(hid);
-            lterms.sort();  // Sort into alphanumeric order
-
-            if ( !lterms.isEmpty())
-                msg = tr("<b>Notable morphology: </b><ul type=\"disc\"><li>") + lterms.join("<li>") + "</ul>";
-            else
-                msg = tr("<b>No notable morphology found.</b>");
-        }   // end else
+        refreshNotableHPOs();
     }   // end if
+}   // end refreshAssessment
 
+
+void ScanInfoDialog::refreshNotableHPOs()
+{
+    const FM *fm = MS::selectedModel();
+    QString msg;
+    if ( !fm)
+        msg = tr("<center><b>No model loaded!</b></center>");
+    else if ( !fm->hasLandmarks())
+        msg = tr("<center><b>Detect face for phenotypic assessment</b></center>");
+    else
+    {
+        const IntSet hids = Metric::PhenotypeManager::discover( *fm, fm->currentAssessment()->id());
+        QStringList lterms;
+        for ( int hid : hids)
+            lterms << Metric::PhenotypeManager::htmlLinkString(hid);
+        lterms.sort();  // Sort into alphanumeric order
+
+        if ( !lterms.isEmpty())
+            msg = tr("<b>Noted phenotypic traits: </b><ul type=\"disc\"><li>") + lterms.join("<li>") + "</ul>";
+        else
+            msg = tr("<b>No noted phenotypic traits found.</b>");
+    }   // end else
     _ui->hpoTermsTextBrowser->document()->setHtml(msg);
     _ui->hpoTermsTextBrowser->moveCursor( QTextCursor::Start);
-}   // end _refreshCurrentAssessment
+}   // end refreshNotableHPOs
 
 
 void ScanInfoDialog::_doOnCopyAssessment()
 {
     FM *fm = MS::selectedModel();
     assert(fm);
+    fm->lockForRead();
 
     // Get the new assessment ID to be one higher than all existing
     int naid = 0;
@@ -549,22 +569,25 @@ void ScanInfoDialog::_doOnCopyAssessment()
             notes += " and c";
         else
             notes += "C";
-        notes += "ustom calliper measurements";
+        notes += "alliper measurements";
     }   // end if
 
     // Set the notes on the new assessment to say that these data were copied over.
     if ( !notes.empty())
-        notes += " copied over from " + prevAssessorName + "'s assessment.";
+        notes += " copied over from assessment " + prevAssessorName + ".";
     nass->setNotes( tr(notes.c_str()));
 
+    fm->unlock();
+    fm->lockForWrite();
     // Change model and refresh
     fm->setAssessment(nass);
     fm->setCurrentAssessment(nass->id());
     fm->setMetaSaved(false);
-    _refreshCurrentAssessment();
+    fm->unlock();
+    refreshAssessment();
     // Set focus to the assessor's name which the user will want to change
     _ui->assessorComboBox->setFocus();
-    emit onAssessmentChanged();
+    emit onInfoChanged();
 }   // end _doOnCopyAssessment
 
 
@@ -572,6 +595,7 @@ void ScanInfoDialog::_doOnDeleteAssessment()
 {
     FM *fm = MS::selectedModel();
     assert(fm);
+    fm->lockForRead();
 
     const int ai = _ui->assessorComboBox->currentData().toInt();
     assert( ai >= 0);
@@ -583,20 +607,25 @@ void ScanInfoDialog::_doOnDeleteAssessment()
     // Warn about deletion if the assessment has notes, paths, or landmarks defined.
     if ( ass->hasLandmarks() || ass->hasPaths() || ass->hasNotes())
     {
-        static const QString msg = tr("This action will erase this assessment's landmarks, custom paths, and notes! Really delete?");
-        dodel = QMB::Yes == QMB::warning( this, tr("Delete Assessment?"), msg, QMB::Yes | QMB::No, QMB::No);
+        static const QString msg = tr("Are you sure you want to erase this assessment's landmarks, calliper measurements, and notes? This action cannot be undone!");
+        dodel = QMB::Yes == QMB::warning( this, tr("Delete Assessment?"),
+                QString("<p align='center'>%1</p>").arg(msg), QMB::Yes | QMB::No, QMB::No);
     }   // end if
+    fm->unlock();
 
     if ( dodel)
     {
+        fm->lockForWrite();
         // Remove from the combo box
+        QSignalBlocker blk(_ui->assessorComboBox);
         _ui->assessorComboBox->removeItem(_ui->assessorComboBox->currentIndex());   // Changes current index
         // Change model and refresh
         fm->eraseAssessment(ai);
         fm->setCurrentAssessment( _ui->assessorComboBox->currentData().toInt());
         fm->setMetaSaved(false);
-        _refreshCurrentAssessment();
-        emit onAssessmentChanged();
+        fm->unlock();
+        refreshAssessment();
+        emit onInfoChanged();
     }   // end if
 }   // end _doOnDeleteAssessment
 
@@ -605,6 +634,7 @@ void ScanInfoDialog::_doOnCopyLandmarks()
 {
     FM *fm = MS::selectedModel();
     assert(fm);
+    fm->lockForRead();
     const int ai = _ui->assessorComboBox->currentData().toInt();
     FaceAssessment::CPtr sass = fm->assessment(ai);
     assert( ai >= 0);
@@ -625,12 +655,16 @@ void ScanInfoDialog::_doOnCopyLandmarks()
     bool docopy = true;
     if ( dowarn)
     {
-        static const QString msg = tr("This action will overwrite existing landmarks for other assessments! Really overwrite?");
-        docopy = QMB::Yes == QMB::warning( this, tr("Overwrite Landmarks?"), msg, QMB::Yes | QMB::No, QMB::No);
+        static const QString msg = tr("Are you sure you want to overwrite the landmarks of other assessments? This action cannot be undone!");
+        docopy = QMB::Yes == QMB::warning( this, tr("Overwrite Landmarks?"),
+                                QString("<p align='center'>%1</p>").arg(msg), QMB::Yes | QMB::No, QMB::No);
     }   // end if
+
+    fm->unlock();
 
     if ( docopy)
     {
+        fm->lockForWrite();
         for ( int aid : fm->assessmentIds())
         {
             if ( ai != aid)
@@ -641,6 +675,7 @@ void ScanInfoDialog::_doOnCopyLandmarks()
         }   // end for
 
         fm->setMetaSaved(false);
-        emit onAssessmentChanged();
+        fm->unlock();
+        emit onInfoChanged();
     }   // end if
 }   // end _doOnCopyLandmarks

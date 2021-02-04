@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,10 +22,11 @@
 
 #include <LndMrk/LandmarksManager.h>
 #include <LndMrk/LandmarkSet.h>
-#include <Action/ModelSelector.h>
+#include <MiscFunctions.h>
+#include <ModelSelect.h>
 #include <FaceModel.h>
 using FaceTools::Action::FaceAction;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 #include <QHeaderView>
 #include <QToolTip>
@@ -139,6 +140,9 @@ void LandmarksDialog::setMessage( const QString &msg)
 }   // end setMessage
 
 
+QString LandmarksDialog::message() const { return _ui->msgLabel->text();}
+
+
 void LandmarksDialog::show()
 {
     QDialog::show();
@@ -149,6 +153,13 @@ void LandmarksDialog::show()
 
 
 void LandmarksDialog::setSelectedLandmark( int lmid) { _doOnSetTableRow( _idRows[lmid]);}
+
+
+void LandmarksDialog::showEvent( QShowEvent *e)
+{
+    positionWidgetToSideOfParent(this);
+    QDialog::showEvent(e);
+}   // end showEvent
 
 
 void LandmarksDialog::closeEvent( QCloseEvent* e)

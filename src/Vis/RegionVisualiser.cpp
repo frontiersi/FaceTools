@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,27 +22,15 @@ using FaceTools::Vis::RegionVisualiser;
 using FaceTools::Vis::FV;
 
 
-void RegionVisualiser::doApply( const FV *fv)
+void RegionVisualiser::refresh( FV *fv)
 {
     const Metric::RegionMetricType *rmetric = static_cast<const Metric::RegionMetricType*>(metric());
     const std::vector<Metric::RegionMeasure> &rinfo = rmetric->regionInfo(fv->data());
+    std::vector<LoopView> &views = _views[fv];
+    views.resize(rinfo.size());
     for ( size_t i = 0; i < rinfo.size(); ++i)
     {
-        LoopView *lv = new LoopView;
-        lv->setColour( 0.5, 0.1, 0.5);
-        _views[fv].push_back(lv);
+        views[i].setColour( 0.5, 0.1, 0.5);
+        views[i].update( rinfo.at(i).points);
     }   // end for
-}   // end doApply
-
-
-void RegionVisualiser::doRefresh( const FV *fv)
-{
-    const std::vector<LoopView*> &lviews = _views.at(fv);
-    const Metric::RegionMetricType *rmetric = static_cast<const Metric::RegionMetricType*>(metric());
-    const std::vector<Metric::RegionMeasure> &rinfo = rmetric->regionInfo(fv->data());
-    for ( size_t i = 0; i < rinfo.size(); ++i)
-    {
-        const Metric::RegionMeasure &rm = rinfo.at(i);
-        lviews[i]->update( rm.points);
-    }   // end for
-}   // end doRefresh
+}   // end refresh

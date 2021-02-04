@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,8 +44,9 @@ signals:
 
 protected:
     void postInit() override;
-    bool isAllowed( Event) override;
     bool update( Event) override;
+    bool isAllowed( Event) override;
+    void doAction( Event) override;
 
 private slots:
     void _doOnStartedDrag( int, FaceSide);
@@ -53,10 +54,13 @@ private slots:
 
 private:
     Widget::LandmarksDialog *_dialog;
+    int _key;
     FaceAction *_actShow;
     FaceAction *_actAlign;
     FaceAction *_actRestore;
     FaceAction *_actShowLabels;
+    void _closeDialog();
+    void _openDialog();
 };  // end class
 
 }}   // end namespace

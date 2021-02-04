@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -96,6 +96,7 @@ MetricSet readMetricSet( const PTree &msetNode)
 
         const int mid = mv.get<int>( "id");
         const size_t ndims = mv.get<size_t>( "ndims");
+        const bool planar = mv.get<bool>( "planar");
         std::vector<float> dvals( ndims);
 
         const PTree &stats = mv.get_child("stats");
@@ -109,9 +110,7 @@ MetricSet readMetricSet( const PTree &msetNode)
             dvals[d] = dv.get<float>( "value");
         }   // end for
 
-        MetricValue tmv( mid);
-        tmv.setValues( dvals);
-        mset.set( tmv);
+        mset.set( MetricValue( mid, nullptr, dvals, planar));
     }   // end for
 
     return mset;
@@ -178,7 +177,7 @@ FaceModelFileData::~FaceModelFileData()
 FaceModelFileData::FaceModelFileData( const FM &fm)
     : _fm( &fm)
 {
-    const IntSet hids = PhenotypeManager::discover( &fm, fm.currentAssessment()->id());
+    const IntSet hids = PhenotypeManager::discover( fm, fm.currentAssessment()->id());
     for ( int hid : hids)
     {
         const Phenotype::Ptr p = PhenotypeManager::phenotype(hid);
@@ -186,10 +185,10 @@ FaceModelFileData::FaceModelFileData( const FM &fm)
         hpo->id = PhenotypeManager::formattedId(hid).toStdString();
         hpo->name = p->name().toStdString();
         hpo->metrics = p->metricsList().toStdString();
-        hpo->ageMatch = p->isAgeMatch( fm.age());
-        hpo->sexMatch = p->isSexMatch( fm.sex());
-        hpo->mEthMatch = p->isEthnicityMatch( fm.maternalEthnicity());
-        hpo->pEthMatch = p->isEthnicityMatch( fm.paternalEthnicity());
+        hpo->ageMatch = p->isAgeMatch( fm);
+        hpo->sexMatch = p->isSexMatch( fm);
+        hpo->mEthMatch = p->isMaternalEthnicityMatch( fm);
+        hpo->pEthMatch = p->isPaternalEthnicityMatch( fm);
         _hpos.push_back(hpo);
     }   // end for
 }   // end ctor
@@ -254,6 +253,14 @@ float FaceModelFileData::measurementValue( int mid, FaceSide lat, size_t d) cons
     assert( d >= 0 && d < mv.ndims());
     return mv.value( d);
 }   // end measurementValue
+
+
+bool FaceModelFileData::measurementInPlane( int mid, FaceSide lat) const
+{
+    assert( hasMeasurement( mid));
+    const MetricSet &mset = _fm->currentAssessment()->cmetrics(lat);
+    return mset.metric(mid).planar();
+}   // end measurementInPlane
 
 
 bool FaceModelFileData::hasMeasurement( int mid) const { return _fm->currentAssessment()->hasMetric(mid);}
@@ -372,7 +379,8 @@ void FaceModelFileData::_printLandmark( int lid, FaceSide lat, const std::string
 
 void FaceModelFileData::_printMeasurement( int mid, FaceSide lat, const std::string &nm, size_t ndims, std::ostream &os) const
 {
-    os << mid << "," << nm << "," << getLateralChar( lat) << "," << ndims;
+    const bool planar = measurementInPlane( mid, lat);
+    os << mid << "," << nm << "," << getLateralChar( lat) << "," << std::boolalpha << planar << "," << ndims;
     for ( size_t i = 0; i < ndims; ++i)
         os << "," << std::fixed << std::setprecision(2) << measurementValue( mid, lat, i);
     os << std::endl;

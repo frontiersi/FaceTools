@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,9 +18,10 @@
 #ifndef FACE_TOOLS_VIS_RADIAL_SELECT_VIEW_H
 #define FACE_TOOLS_VIS_RADIAL_SELECT_VIEW_H
 
+#include <r3d/Mesh.h>
+#include "SphereView.h"
 #include "SimpleView.h"
 #include <vtkPolyLineSource.h>
-#include <vtkSphereSource.h>
 
 namespace FaceTools { namespace Vis {
 
@@ -28,17 +29,19 @@ class FaceTools_EXPORT RadialSelectView : public SimpleView
 {
 public:
     RadialSelectView();
+    ~RadialSelectView() override;
 
+    void setVisible( bool, ModelViewer*) override;
     bool belongs( const vtkProp*) const override;
+    void pokeTransform( const vtkMatrix4x4*) override;
 
     void setColour( double r, double g, double b, double a) override;
 
-    void update( const Vec3f &p, const std::vector<const Vec3f*>&);
+    void update( const Vec3f &c, const r3d::Mesh&, const std::list<int>&);
 
 private:
-    vtkNew<vtkSphereSource> _centre;
+    SphereView *_centre;
     vtkNew<vtkPolyLineSource> _loop;
-    vtkActor *_centreActor;
     vtkActor *_loopActor;
 };  // end class
 

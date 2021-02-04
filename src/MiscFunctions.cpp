@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,9 @@
 #include <MiscFunctions.h>
 #include <rimg/FeatureUtils.h>
 #include <r3d/AStarSearch.h>
+#include <QApplication>
 #include <QTextStream>
+#include <QScreen>
 #include <QString>
 #include <QFile>
 #include <algorithm>
@@ -118,7 +120,7 @@ QString FaceTools::posString( const QString prefix, const Vec3f& pos, int fw)
 {
     const char rep = 'f';
     const int dp = 2;
-    return QString( "%1 (XYZ): %2 %3 %4").arg(prefix).arg( pos[0], fw, rep, dp).arg( pos[1], fw, rep, dp).arg( pos[2], fw, rep, dp);
+    return QString( "%1 position: %2 X, %3 Y, %4 Z").arg(prefix).arg( pos[0], fw, rep, dp).arg( pos[1], fw, rep, dp).arg( pos[2], fw, rep, dp);
 }   // end posString
 
 
@@ -592,3 +594,16 @@ QString FaceTools::getRmLine( std::istringstream& is, bool lower)
     return qln;
 }   // end getRmLine
 
+
+void FaceTools::positionWidgetToSideOfParent( QWidget *w)
+{
+    assert( w->parentWidget());
+    QRect prct = w->parentWidget()->geometry();
+    QRect rct = w->geometry();
+    const int swidth = qApp->primaryScreen()->geometry().width();
+    const bool moreSpaceOnRight = prct.x() < (swidth - prct.x() - prct.width());
+    const int newLPos = std::max( 0, prct.x() - rct.width());
+    const int newRPos = std::min( swidth - rct.width(), prct.x() + prct.width());
+    rct.moveTo( QPoint( moreSpaceOnRight ? newRPos : newLPos, prct.y()));
+    w->setGeometry( rct);
+}   // end positionWidgetToSideOfParent

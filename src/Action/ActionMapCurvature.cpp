@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,46 +16,40 @@
  ************************************************************************/
 
 #include <Action/ActionMapCurvature.h>
-#include <FaceModelCurvature.h>
-#include <FaceModel.h>
-#include <algorithm>
-#include <cassert>
+#include <FaceModelCurvatureStore.h>
 using FaceTools::Action::ActionMapCurvature;
 using FaceTools::Action::Event;
 using FaceTools::FM;
 using FaceTools::Vis::FV;
-using MS = FaceTools::Action::ModelSelector;
-using FMC = FaceTools::FaceModelCurvature;
+using MS = FaceTools::ModelSelect;
 
 
 ActionMapCurvature::ActionMapCurvature() : FaceAction( "Map Curvature")
 {
     addPurgeEvent( Event::MESH_CHANGE);
     addTriggerEvent( Event::MESH_CHANGE);
+#ifdef NDEBUG
     setAsync(true);
+#endif
 }   // end ctor
 
 
-bool ActionMapCurvature::isAllowed( Event) { return MS::selectedModel();}
+bool ActionMapCurvature::doBeforeAction( Event) { return true;}
 
 
 void ActionMapCurvature::doAction( Event e)
 {
-    const FM* fm = MS::selectedModel();
-    fm->lockForRead();
-    FMC::purge(fm);
-    FMC::add(fm);
-    fm->unlock();
+    FM::RPtr fm = MS::selectedModelScopedRead();
+    FaceModelCurvatureStore::add( *fm);
+    for ( FV *fv : fm->fvs())
+        fv->resetNormals();
 }   // end doAction
 
 
 Event ActionMapCurvature::doAfterAction( Event)
 {
-    const FM *fm = MS::selectedModel();
-    for ( FV *fv : fm->fvs())
-        fv->resetNormals();
     return Event::SURFACE_DATA_CHANGE;
 }   // end doAfterAction
 
 
-void ActionMapCurvature::purge( const FM* fm) { FMC::purge(fm);}
+void ActionMapCurvature::purge( const FM* fm) { FaceModelCurvatureStore::purge(*fm);}

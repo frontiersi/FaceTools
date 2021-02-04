@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,10 +36,10 @@ public:
     // the report will be opened in the user's default PDF reader after saving.
     static void setOpenOnSave( bool v) { _openOnSave = v;}
 
-    // Returns true iff report generation (in general) is available for the given model.
-    // Checks that the U3D cache has a filepath for the given model and that
-    // ReportManager::isAvailable returns true.
-    static bool isAvailable( const FM*);
+    // Returns true iff report generation (in general) is available.
+    // Checks that the U3D cache has a filepath for the loaded model(s)
+    // and that ReportManager::isAvailable returns true.
+    static bool isAvailable();
 
     // Ask user where to save a report generated at the given temporary file location.
     // Before returning true, if the PDF viewer is set to open generated reports automatically,

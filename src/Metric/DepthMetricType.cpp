@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,10 +24,7 @@ using FaceTools::Vec3f;
 using FaceTools::FM;
 
 
-DepthMetricType::DepthMetricType() : _inPlane(false)
-{
-    _vis.setMetric(this);
-}   // end ctor
+DepthMetricType::DepthMetricType() { _vis.setMetric(this);}
 
 
 float DepthMetricType::update( size_t k, const FM *fm, const std::vector<Vec3f>& pts, Vec3f, Vec3f nv, bool, bool inPlane)
@@ -37,7 +34,7 @@ float DepthMetricType::update( size_t k, const FM *fm, const std::vector<Vec3f>&
 
     // nv is always positive
     Vec3f dvec; // Direction vector to take depth measurement in
-    if ( _inPlane || inPlane || pts.size() == 1)
+    if ( inPlane || pts.size() == 1)
         dvec = -nv;
     else
     {

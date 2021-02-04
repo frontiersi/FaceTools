@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 #define FACETOOLS_WIDGET_LANDMARKS_CHECK_DIALOG_H
 
 #include <FaceTools/FaceTypes.h>
+#include <FaceTools/FaceModel.h>
 #include <QTableWidgetItem>
 #include <QDialog>
 
@@ -35,7 +36,7 @@ public:
     // Ids of last accepted landmarks checked off.
     const IntSet& landmarks() const { return _landmarks;}
 
-    bool open( const FM*);
+    bool open( const FM&);
 
 private slots:
     void _doOnSetAllChecked( bool);

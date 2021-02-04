@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,21 +29,13 @@ MaskVisualisation::~MaskVisualisation()
 }   // end dtor
 
 
-bool MaskVisualisation::isAvailable( const FV *fv, const QPoint*) const { return fv->data()->hasMask();}
-
-
-void MaskVisualisation::apply( const FV* fv, const QPoint*)
-{
-    if ( _views.count(fv) == 0)
-        _views[fv] = new MaskView( *fv->data()->mask());
-}   // end apply
+bool MaskVisualisation::isAvailable( const FV *fv) const { return fv->rdata()->hasMask();}
 
 
 void MaskVisualisation::purge( const FV *fv)
 {
     if ( _views.count(fv) > 0)
     {
-        _views.at(fv)->setVisible( false, fv->viewer());
         delete _views.at(fv);
         _views.erase(fv);
     }   // end if
@@ -63,15 +55,16 @@ bool MaskVisualisation::isVisible( const FV *fv) const
 }   // end isVisible
 
 
-void MaskVisualisation::refresh( const FV *fv)
+void MaskVisualisation::refresh( FV *fv)
 {
-    if ( _views.count(fv) > 0)
-        _views.at(fv)->refresh( fv);
+    if ( _views.count(fv) == 0)
+        _views[fv] = new MaskView( fv->rdata()->mask());
+    _views.at(fv)->refresh( fv);
 }   // end refresh
 
 
-void MaskVisualisation::syncWithViewTransform( const FV *fv)
+void MaskVisualisation::syncTransform( const FV *fv)
 {
     if ( _views.count(fv) > 0)
         _views.at(fv)->pokeTransform(fv->transformMatrix());
-}   // end syncWithViewTransform
+}   // end syncTransform

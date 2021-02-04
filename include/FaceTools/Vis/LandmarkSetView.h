@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,13 +26,14 @@ namespace FaceTools { namespace Vis {
 class FaceTools_EXPORT LandmarkSetView
 {
 public:
-    explicit LandmarkSetView( double radius=1.2);
+    LandmarkSetView();
     virtual ~LandmarkSetView();
 
-    void setLandmarkRadius( double);
     double landmarkRadius() const { return _lmrad;}
 
     void setSelectedColour( bool);
+
+    void setPickable( bool);
 
     void setVisible( bool, ModelViewer*);
     bool isVisible() const { return _visible;}
@@ -65,7 +66,6 @@ private:
     PropMap _lprops, _mprops, _rprops;
 
     void _remove( int, SphereMap&, PropMap&);
-    void _set( int, FaceSide, SphereMap&, PropMap&, const Vec3f&);
     void _setLandmarkColour( const Vec3f&, int, FaceSide);
     LandmarkSetView( const LandmarkSetView&) = delete;
     void operator=( const LandmarkSetView&) = delete;

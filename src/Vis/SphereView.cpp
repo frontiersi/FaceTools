@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,43 +29,35 @@ using FaceTools::Vis::SphereView;
 using FaceTools::ModelViewer;
 using FaceTools::Vec3f;
 
-void SphereView::_init( const Vec3f& c, float r, bool p, bool fixed)
+SphereView::SphereView( const Vec3f& c, double r, bool p, bool fixed)
+    : _vwr(nullptr), _visible(false), _actor(nullptr)
 {
-    if ( _actor)
-        delete _actor;
     _actor = new VtkScalingActor( _source.Get());
-
     setCentre(c);
-    setRadius(r);
+    _source->SetRadius(r);
     setPickable(p);
     setFixedScale(fixed);
     setVisible( _visible, _vwr);
 
     _caption->BorderOff();
-    _caption->GetCaptionTextProperty()->BoldOff();
+    _caption->LeaderOff();
+    _caption->GetCaptionTextProperty()->BoldOn();
     _caption->GetCaptionTextProperty()->ItalicOff();
-    _caption->GetCaptionTextProperty()->ShadowOn();
+    _caption->GetCaptionTextProperty()->ShadowOff();
     _caption->GetCaptionTextProperty()->SetFontFamilyToCourier();
-    _caption->GetCaptionTextProperty()->SetFontSize(21);
-    setCaptionColour( Qt::GlobalColor::white);
+    _caption->GetCaptionTextProperty()->SetFontSize(15);
+    _caption->GetCaptionTextProperty()->SetBackgroundOpacity(0.5);
+    setCaptionColour( Qt::white, Qt::black);
     _caption->GetCaptionTextProperty()->SetUseTightBoundingBox(true);
     _caption->SetVisibility(false);
     _caption->SetPickable(false);
     _caption->GetTextActor()->SetTextScaleModeToNone();
-}   // end _init
-
-
-SphereView::SphereView( const Vec3f& c, float r, bool p, bool fixed)
-    : _vwr(nullptr), _visible(false), _actor(nullptr)
-{
-    _init( c, r, p, fixed);
+    _caption->SetPosition( 20, 0);
+    _caption->SetPosition2( 0.2, 0.05);
 }   // end ctor
 
 
-SphereView::~SphereView()
-{
-    delete _actor;
-}   // end dtor
+SphereView::~SphereView() { delete _actor;}
 
 
 void SphereView::setResolution( int t)
@@ -83,9 +75,6 @@ bool SphereView::pickable() const { return _actor->pickable();}
 void SphereView::setFixedScale( bool v) { _actor->setFixedScale(v);}
 bool SphereView::fixedScale() const { return _actor->fixedScale();}
 
-void SphereView::setScaleFactor( float v) { _actor->setScaleFactor(v);}
-float SphereView::scaleFactor() const { return _actor->scaleFactor();}
-
 void SphereView::setCentre( const Vec3f& pos)
 {
     //r3d::Vec3d dpos = pos.cast<double>();
@@ -96,8 +85,7 @@ void SphereView::setCentre( const Vec3f& pos)
 
 const Vec3f& SphereView::centre() const { return _actor->position();}
 
-void SphereView::setRadius( float r) { _source->SetRadius(r);}
-float SphereView::radius() const { return _source->GetRadius();}
+double SphereView::radius() const { return _source->GetRadius();}
 
 float SphereView::opacity() const { return _actor->opacity();}
 
@@ -118,10 +106,11 @@ std::string SphereView::caption() const
     return cap == nullptr ? "" : cap;
 }   // end caption
 
-void SphereView::setCaptionColour( const QColor& tcol)
+void SphereView::setCaptionColour( const QColor &fg, const QColor &bg)
 {
     assert(_caption != nullptr);
-    _caption->GetCaptionTextProperty()->SetColor( tcol.redF(), tcol.greenF(), tcol.blueF());
+    _caption->GetCaptionTextProperty()->SetColor( fg.redF(), fg.greenF(), fg.blueF());
+    _caption->GetCaptionTextProperty()->SetBackgroundColor( bg.redF(), bg.greenF(), bg.blueF());
 }   // end setCaptionColour
 
 void SphereView::showCaption( bool v)
@@ -129,8 +118,6 @@ void SphereView::showCaption( bool v)
     _caption->SetVisibility( v);
     _updateCaptionPosition();
 }   // end showCaption
-
-//bool SphereView::highlighted() const { return static_cast<bool>(_caption->GetVisibility());}
 
 const vtkProp* SphereView::prop() const { return _actor->prop();}
 
@@ -169,8 +156,7 @@ bool SphereView::belongs( const vtkProp *prop) const { return prop == _actor->pr
 
 void SphereView::pokeTransform( const vtkMatrix4x4* d)
 {
-    vtkMatrix4x4* vm = const_cast<vtkMatrix4x4*>(d);
-    _actor->pokeTransform( vm);
+    _actor->pokeTransform( const_cast<vtkMatrix4x4*>(d));
     _updateCaptionPosition();
 }   // end pokeTransform
 

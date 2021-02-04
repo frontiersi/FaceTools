@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,18 +22,17 @@
 using FaceTools::Action::ActionRemoveManifolds;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
-using FaceTools::FVS;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
-using FaceTools::Landmark::LandmarkSet;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
+using QMB = QMessageBox;
 
 
 ActionRemoveManifolds::ActionRemoveManifolds( const QString& dn, const QIcon& ico)
     : FaceAction( dn, ico), _mid(-1)
 {
-    setAsync(true);
     addRefreshEvent( Event::MESH_CHANGE);
+    setAsync(true);
 }   // end ctor
 
 
@@ -82,18 +81,20 @@ bool ActionRemoveManifolds::doBeforeAction( Event)
 
     if ( numFaceRemove > 0)
     {
-        const int rv = QMessageBox::question( qobject_cast<QWidget*>(parent()),
-                              tr("Removing Other Manifolds"),
-                              QString("%1 triangles from %2 manifolds will be removed. Continue?").arg(numFaceRemove).arg(numManRemove),
-                              QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
-        if ( rv == QMessageBox::No)
+        const QString msg = tr("%1 triangles from %2 manifolds will be removed. Do you want to continue?").arg(numFaceRemove).arg(numManRemove);
+        const int rv = QMB::question( qobject_cast<QWidget*>(parent()),
+                              tr("Remove Other Manifolds?"), QString("<p align='center'>%1</p>").arg(msg),
+                              QMB::Yes | QMB::No, QMB::No);
+        if ( rv == QMB::No)
             _mid = -1;
     }   // end if
 
     if ( _mid >= 0)
+    {
         MS::showStatus("Removing manifolds from selected model...");
+        storeUndo(this, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE);
+    }   // end if
 
-    storeUndo(this, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE);
     return _mid >= 0;
 }   // end doBeforeAction
 
@@ -102,14 +103,11 @@ void ActionRemoveManifolds::doAction( Event)
 {
     FM* fm = MS::selectedModel();
     fm->lockForWrite();
-
     r3d::Copier copier( fm->mesh());
     const IntSet& fids = fm->manifolds()[_mid].faces();
     for ( int fid : fids)
         copier.add(fid);
     r3d::Mesh::Ptr mobj = copier.copiedMesh();
-
-    _mid = -1;
     fm->update( mobj, true, true);
     fm->unlock();
 }   // end doAction
@@ -117,6 +115,7 @@ void ActionRemoveManifolds::doAction( Event)
 
 Event ActionRemoveManifolds::doAfterAction( Event)
 {
+    _mid = -1;
     MS::showStatus("Finished removing manifolds.", 5000);
     return Event::MESH_CHANGE | Event::LANDMARKS_CHANGE;
 }   // end doAfterAction

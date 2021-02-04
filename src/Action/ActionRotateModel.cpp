@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ using FaceTools::Action::Event;
 using FaceTools::FVS;
 using FaceTools::FM;
 using FaceTools::Vec3f;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ActionRotateModel::ActionRotateModel( const QString &dn, const QIcon& ico, const Vec3f& raxis, float degs)
@@ -46,9 +46,7 @@ bool ActionRotateModel::isAllowed( Event) { return MS::isViewSelected();}
 void ActionRotateModel::doAction( Event)
 {
     storeUndo( this, Event::AFFINE_CHANGE);
-    FM* fm = MS::selectedModel();
-    fm->lockForWrite();
-
+    FM::WPtr fm = MS::selectedModelScopedWrite();
     Mat4f rmat;
     // If the model has alignment defined, rotate with respect to that
     // otherwise simply rotate about the defined axis.
@@ -56,9 +54,7 @@ void ActionRotateModel::doAction( Event)
         rmat = fm->transformMatrix() * _rmat * fm->inverseTransformMatrix();
     else
         rmat = _rmat;
-
     fm->addTransformMatrix(rmat);
-    fm->unlock();
 }   // end doAction
 
 

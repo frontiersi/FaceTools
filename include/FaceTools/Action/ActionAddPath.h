@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@ class FaceTools_EXPORT ActionAddPath : public FaceAction
 public:
     ActionAddPath( const QString&, const QIcon&, const QKeySequence &ks=QKeySequence());
 
-    QString toolTip() const override { return "Make a new custom measurement over the selected model.";}
+    QString toolTip() const override { return "Place a new calliper measurement on the surface.";}
 
 protected:
     bool isAllowed( Event) override;

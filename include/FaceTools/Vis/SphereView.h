@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ namespace FaceTools { namespace Vis {
 class FaceTools_EXPORT SphereView : public ViewInterface
 {
 public:
-    SphereView( const Vec3f& centre=Vec3f(0,0,0), float radius=1.0, bool pickable=true, bool fixedScale=false);
+    SphereView( const Vec3f& centre=Vec3f(0,0,0), double radius=1.0, bool pickable=true, bool fixedScale=false);
     virtual ~SphereView();
 
     void setResolution( int);   // Default 8
@@ -40,28 +40,24 @@ public:
     void setFixedScale( bool);
     bool fixedScale() const;
 
-    void setScaleFactor( float);
-    float scaleFactor() const;
-
     void setCentre( const Vec3f&);
     const Vec3f& centre() const;
 
-    void setRadius( float);                            // Set radius
-    float radius() const;                              // Get radius
-
+    double radius() const;
     float opacity() const;
 
     void setCaption( const std::string&);               // Set caption used when highlighting.
     void setCaption( const QString&);
     std::string caption() const;
 
-    void setCaptionColour( const QColor&);
+    void setCaptionColour( const QColor &fg, const QColor &bg);
     void showCaption( bool);
 
     const vtkProp* prop() const;     
     const double* colour() const;                       // Return a 3-tuple array for the rgb components.
 
-    void setColour( double r, double g, double b, double a) override;
+    void setColour( double r, double g, double b, double a);
+
     void setVisible( bool, ModelViewer*) override;
     bool isVisible() const override { return _visible;}
     bool belongs( const vtkProp*) const override;
@@ -75,7 +71,6 @@ private:
     r3dvis::VtkScalingActor* _actor;
     vtkNew<vtkSphereSource> _source;
     vtkNew<vtkCaptionActor2D> _caption;
-    void _init( const Vec3f&, float, bool, bool);
     void _updateCaptionPosition();
 };  // end class
 

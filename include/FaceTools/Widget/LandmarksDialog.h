@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,6 +39,7 @@ public:
     void setRestoreAction( Action::FaceAction*);
 
     void setMessage( const QString&);
+    QString message() const;
 
 signals:
     void onShowLandmarkLabels( bool);
@@ -50,6 +51,7 @@ public slots:
     void setSelectedLandmark( int);
 
 protected:
+    void showEvent( QShowEvent*) override;
     void closeEvent( QCloseEvent*) override;
 
 private slots:

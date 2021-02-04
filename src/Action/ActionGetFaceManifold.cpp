@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,14 +26,15 @@ using FaceTools::FVS;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
 using FaceTools::Landmark::LandmarkSet;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
+using QMB = QMessageBox;
 
 
 ActionGetFaceManifold::ActionGetFaceManifold( const QString& dn, const QIcon& ico)
     : FaceAction( dn, ico)
 {
-    setAsync(true);
     addRefreshEvent( Event::MESH_CHANGE);
+    setAsync(true);
 }   // end ctor
 
 
@@ -42,7 +43,6 @@ bool ActionGetFaceManifold::removeNonFaceManifolds( FM* fm)
 {
     assert(fm);
     r3d::Mesh::Ptr mobj;
-    fm->lockForWrite();
     const int mid = fm->faceManifoldId();
     if ( mid >= 0)
     {
@@ -53,7 +53,6 @@ bool ActionGetFaceManifold::removeNonFaceManifolds( FM* fm)
         mobj = copier.copiedMesh();
     }   // end if
     fm->update( mobj, true, true);
-    fm->unlock();
     return mid >= 0;
 }   // end removeNonFaceManifolds
 
@@ -63,34 +62,32 @@ bool ActionGetFaceManifold::isAllowed( Event)
     const FM* fm = MS::selectedModel();
     if ( !fm)
         return false;
-    fm->lockForRead();
     const LandmarkSet& lmks = fm->currentAssessment()->landmarks();
-    const bool rval = !lmks.empty() && fm->manifolds().count() > 1;
-    fm->unlock();
-    return rval;
+    return !lmks.empty() && fm->manifolds().count() > 1;
 }   // end isAllowed
 
 
 bool ActionGetFaceManifold::doBeforeAction( Event)
 {
     const FM* fm = MS::selectedModel();
-    fm->lockForRead();
     const int mid = fm->faceManifoldId();
     const size_t numManRemove = fm->manifolds().count() - 1;
     const size_t numFaceRemove = size_t(fm->mesh().numFaces()) - fm->manifolds()[mid].faces().size();
-    fm->unlock();
-
-    return QMessageBox::question( qobject_cast<QWidget*>(parent()),
+    const bool doAct = QMB::question( qobject_cast<QWidget*>(parent()),
                                   tr("Removing Non-Face Manifolds"),
-                                  QString("%1 triangles from %2 manifolds will be removed. Continue?").arg(numFaceRemove).arg(numManRemove),
-                                  QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes;
+                                  QString("<p align='center'>%1 triangles from %2 manifolds will be removed. Continue?</p>").arg(numFaceRemove).arg(numManRemove),
+                                  QMB::Yes | QMB::No, QMB::No) == QMB::Yes;
+    if ( doAct)
+        storeUndo(this, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE);
+    return doAct;
 }   // end doBeforeAction
 
 
 void ActionGetFaceManifold::doAction( Event)
 {
-    storeUndo(this, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE);
+    MS::selectedModel()->lockForWrite();
     removeNonFaceManifolds( MS::selectedModel());
+    MS::selectedModel()->unlock();
 }   // end doAction
 
 
@@ -99,4 +96,3 @@ Event ActionGetFaceManifold::doAfterAction( Event)
     MS::showStatus("Finished removing non-face manifolds.", 5000);
     return Event::MESH_CHANGE | Event::LANDMARKS_CHANGE;
 }   // end doAfterAction
-

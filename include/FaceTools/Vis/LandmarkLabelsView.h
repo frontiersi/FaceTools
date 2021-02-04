@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,9 @@ namespace FaceTools { namespace Vis {
 class FaceTools_EXPORT LandmarkLabelsView : public LabelsView
 {
 public:
-    LandmarkLabelsView() : LabelsView( 14, false) {}
+    LandmarkLabelsView() : LabelsView( 13, false) {}
+
+    bool applyToAllViewers() const override { return true;}
 
     bool canCreateLabels( const FM*) const override;
 

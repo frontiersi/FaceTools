@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionAlignLandmarks;
 using FaceTools::Action::Event;
 using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 using LMAN = FaceTools::Landmark::LandmarksManager;
 
 
@@ -58,9 +58,9 @@ QString ActionAlignLandmarks::whatsThis() const
 
 bool ActionAlignLandmarks::isAllowed( Event)
 {
-    const FM* fm = MS::selectedModel();
+    FM::RPtr fm = MS::selectedModelScopedRead();
     return fm && fm->hasLandmarks() && fm->isAligned();
-}   // end isAllowedd
+}   // end isAllowed
 
 
 bool ActionAlignLandmarks::doBeforeAction( Event)
@@ -75,21 +75,21 @@ namespace {
 
 using namespace FaceTools;
 
-void updateLandmark( FM *fm, int lmid, FaceSide fs, const Vec3f &pos)
+void updateLandmark( FM &fm, int lmid, FaceSide fs, const Vec3f &pos)
 {
-    fm->setLandmarkPosition( lmid, fs, pos);
+    fm.setLandmarkPosition( lmid, fs, pos);
     Vis::LandmarksVisualisation &vis = MS::handler<Interactor::LandmarksHandler>()->visualisation();
-    for ( const Vis::FV *fv : fm->fvs())
+    for ( const Vis::FV *fv : fm.fvs())
         vis.refreshLandmarkPosition( fv, lmid, fs);
 }   // end updateLandmark
 
 
-void centreMedialLandmarks( FM *fm)
+void centreMedialLandmarks( FM &fm)
 {
     // Set all the medial landmark positions to be at X=0 and iteratively reposition
     // them until change in the x position is <= MAX_XPOS_DIFF.
-    const r3d::KDTree &kdt = fm->kdtree();
-    const Landmark::LandmarkSet &lmks = fm->currentLandmarks();
+    const r3d::KDTree &kdt = fm.kdtree();
+    const Landmark::LandmarkSet &lmks = fm.currentLandmarks();
     static const float MAX_XPOS_DIFF = 1.0e-8f;
     static const size_t MAX_ITERATIONS = 10;
     const std::unordered_map<int, r3d::Vec3f>& mlmks = lmks.lateral( MID);
@@ -109,9 +109,9 @@ void centreMedialLandmarks( FM *fm)
 }   // end centreMedialLandmarks
 
 
-void reflectLateralLandmarks( FM *fm)
+void reflectLateralLandmarks( FM &fm)
 {
-    const std::unordered_map<int, r3d::Vec3f>& lmks = fm->currentLandmarks().lateral( LEFT);
+    const std::unordered_map<int, r3d::Vec3f>& lmks = fm.currentLandmarks().lateral( LEFT);
     for ( const auto &p : lmks)
     {
         r3d::Vec3f pos = p.second;
@@ -125,11 +125,9 @@ void reflectLateralLandmarks( FM *fm)
 
 void ActionAlignLandmarks::doAction( Event)
 {
-    FM *fm = MS::selectedModel();
-    fm->lockForWrite();
-    centreMedialLandmarks( fm);
-    reflectLateralLandmarks( fm);
-    fm->unlock();
+    FM::WPtr fm = MS::selectedModelScopedWrite();
+    centreMedialLandmarks( *fm);
+    reflectLateralLandmarks( *fm);
 }   // end doAction
 
 

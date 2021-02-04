@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@
 #include <FaceModel.h>
 #include <cassert>
 using FaceTools::Vis::PlaneVisualisation;
-using FaceTools::Vis::PlaneView;
 using FaceTools::Vis::FV;
 
 
@@ -32,56 +31,40 @@ PlaneVisualisation::PlaneVisualisation( int axis)
 }   // end axis
 
 
-PlaneVisualisation::~PlaneVisualisation()
+bool PlaneVisualisation::isAvailable( const FV *fv) const { return fv->data()->hasLandmarks();}
+
+
+void PlaneVisualisation::refresh( FV* fv)
 {
-    while (!_views.empty())
-        purge( _views.begin()->first);
-}   // end dtor
-
-
-bool PlaneVisualisation::isAvailable( const FV *fv, const QPoint*) const { return fv->data()->hasLandmarks();}
-
-
-void PlaneVisualisation::apply( const FV* fv, const QPoint*)
-{
-    if ( _views.count(fv) == 0)
-    {
-        PlaneView *plane = _views[fv] = new PlaneView;
-        plane->setColour( _col[0], _col[1], _col[2], 0.5);
-        const Mat4f I = Mat4f::Identity();
-        const Vec3f centre = I.block<3,1>(0,3);
-        const Vec3f normal = I.block<3,1>(0,_axis);
-        plane->update( centre, normal);
-    }   // end if
-}   // end apply
+    PlaneView &plane = _views[fv];
+    plane.setColour( _col[0], _col[1], _col[2], 0.5);
+    const Mat4f I = Mat4f::Identity();
+    const Vec3f centre = I.block<3,1>(0,3);
+    const Vec3f normal = I.block<3,1>(0,_axis);
+    plane.update( centre, normal);
+}   // end refresh
 
 
 void PlaneVisualisation::purge( const FV* fv)
 {
     if (_views.count(fv) > 0)
-    {
-        _views.at(fv)->setVisible( false, fv->viewer());
-        delete _views.at(fv);
         _views.erase(fv);
-    }   // end if
 }   // end purge
 
 
 void PlaneVisualisation::setVisible( FV* fv, bool v)
 {
-    if (_views.count(fv) > 0)
-        _views.at(fv)->setVisible( v, fv->viewer());
+    _views[fv].setVisible( v, fv->viewer());
 }   // end setVisible
 
 
 bool PlaneVisualisation::isVisible( const FV* fv) const
 {
-    return _views.count(fv) > 0 && _views.at(fv)->isVisible();
+    return _views.count(fv) > 0 && _views.at(fv).isVisible();
 }   // end isVisible
 
 
-void PlaneVisualisation::syncWithViewTransform( const FV* fv)
+void PlaneVisualisation::syncTransform( const FV* fv)
 {
-    if ( _views.count(fv) > 0)
-        _views.at(fv)->pokeTransform(fv->transformMatrix());
-}   // end syncWithViewTransform
+    _views[fv].pokeTransform(fv->transformMatrix());
+}   // end syncTransform

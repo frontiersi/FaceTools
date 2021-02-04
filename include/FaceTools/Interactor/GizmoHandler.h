@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,14 +65,17 @@ protected:
 
     inline FMV* viewer() const { return _vwr;}
     inline const vtkProp* prop() const { return _prop;}
+    inline const Vis::FV* view() const { return _view;}
 
 private:
     bool _enabled;
     FMV *_vwr;
     const vtkProp *_prop;
+    const Vis::FV *_view;
 
     inline void _setViewer( FMV *fmv) { _vwr = fmv;}
     inline void _setProp( const vtkProp *p) { _prop = p;}
+    inline void _setView( const Vis::FV *f) { _view = f;}
 
     friend class MouseHandler;
 

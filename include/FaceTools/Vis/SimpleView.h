@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,15 +34,15 @@ public:
     SimpleView();
     virtual ~SimpleView();
 
-    void setLineStipplingEnabled( bool);    // off by default
-
-    void setColour( double r, double g, double b, double a=-1) override;
     void setVisible( bool, ModelViewer*) override;
     bool isVisible() const override { return _visible;}
     bool belongs( const vtkProp*) const override;
     void pokeTransform( const vtkMatrix4x4*) override;
 
-    void setLineWidth( double);
+    virtual void setColour( double r, double g, double b, double a=-1);
+    virtual void setLineWidth( double);
+
+    void setLineStipplingEnabled( bool);    // off by default
 
     const std::vector<vtkSmartPointer<vtkActor> >& actors() const { return _actors;}
 
@@ -53,7 +53,6 @@ protected:
     vtkProperty* initActor( vtkSmartPointer<vtkActor>);
     void pokeTransform( vtkActor*, const Mat4f&);
     virtual void pokeTransform( vtkActor*, const vtkMatrix4x4*);
-
     std::vector<vtkSmartPointer<vtkActor> > _actors;
 
 private:
@@ -63,9 +62,6 @@ private:
 
     void _setStippleTextureCoords( vtkActor*);
     vtkSmartPointer<vtkTexture> _stippleTexture();
-
-    SimpleView( const SimpleView&) = delete;
-    void operator=( const SimpleView&) = delete;
 };  // end class
 
 }}   // end namespaces

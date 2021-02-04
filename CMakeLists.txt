@@ -56,9 +56,9 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionAlignModel.h"
     "${INCLUDE_ACTION_DIR}/ActionBackfaceCulling.h"
     "${INCLUDE_ACTION_DIR}/ActionCentreModel.h"
-    "${INCLUDE_ACTION_DIR}/ActionChangeSurfaceMappingRange.h"
-    "${INCLUDE_ACTION_DIR}/ActionCloseAllFaceModels.h"
-    "${INCLUDE_ACTION_DIR}/ActionCloseFaceModel.h"
+    "${INCLUDE_ACTION_DIR}/ActionChangeColourMappingRange.h"
+    "${INCLUDE_ACTION_DIR}/ActionCloseAll.h"
+    "${INCLUDE_ACTION_DIR}/ActionClose.h"
     "${INCLUDE_ACTION_DIR}/ActionCopyView.h"
     "${INCLUDE_ACTION_DIR}/ActionDeleteAllPaths.h"
     "${INCLUDE_ACTION_DIR}/ActionDeletePath.h"
@@ -78,13 +78,14 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionLoad.h"
     "${INCLUDE_ACTION_DIR}/ActionMakeHalfFace.h"
     "${INCLUDE_ACTION_DIR}/ActionMapCurvature.h"
+    "${INCLUDE_ACTION_DIR}/ActionMapDelta.h"
     "${INCLUDE_ACTION_DIR}/ActionMapSymmetry.h"
     "${INCLUDE_ACTION_DIR}/ActionMarquee.h"
     "${INCLUDE_ACTION_DIR}/ActionMoveView.h"
-    "${INCLUDE_ACTION_DIR}/ActionOrientCameraToFace.h"
+    "${INCLUDE_ACTION_DIR}/ActionOrientCamera.h"
     "${INCLUDE_ACTION_DIR}/ActionRadialSelect.h"
     "${INCLUDE_ACTION_DIR}/ActionRedo.h"
-    "${INCLUDE_ACTION_DIR}/ActionReflect.h"
+    "${INCLUDE_ACTION_DIR}/ActionReflectModel.h"
     #"${INCLUDE_ACTION_DIR}/ActionRemesh.h"
     "${INCLUDE_ACTION_DIR}/ActionRemoveManifolds.h"
     "${INCLUDE_ACTION_DIR}/ActionRenamePath.h"
@@ -92,10 +93,11 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionRestoreLandmarks.h"
     "${INCLUDE_ACTION_DIR}/ActionRestoreSingleLandmark.h"
     "${INCLUDE_ACTION_DIR}/ActionRotateModel.h"
-    "${INCLUDE_ACTION_DIR}/ActionSaveAsFaceModel.h"
-    "${INCLUDE_ACTION_DIR}/ActionSaveFaceModel.h"
+    "${INCLUDE_ACTION_DIR}/ActionSaveAs.h"
+    "${INCLUDE_ACTION_DIR}/ActionSave.h"
     "${INCLUDE_ACTION_DIR}/ActionSaveScreenshot.h"
     "${INCLUDE_ACTION_DIR}/ActionScaleModel.h"
+    "${INCLUDE_ACTION_DIR}/ActionSelect.h"
     "${INCLUDE_ACTION_DIR}/ActionSetFocus.h"
     "${INCLUDE_ACTION_DIR}/ActionSetMaxScalarColour.h"
     "${INCLUDE_ACTION_DIR}/ActionSetMinScalarColour.h"
@@ -113,11 +115,11 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionToggleAxes.h"
     "${INCLUDE_ACTION_DIR}/ActionToggleCameraActorInteraction.h"
     "${INCLUDE_ACTION_DIR}/ActionToggleMask.h"
-    "${INCLUDE_ACTION_DIR}/ActionToggleScalarLegend.h"
-    "${INCLUDE_ACTION_DIR}/ActionToggleStereoRendering.h"
+    "${INCLUDE_ACTION_DIR}/ActionToggleLegend.h"
+    "${INCLUDE_ACTION_DIR}/ActionToggleStereo.h"
     "${INCLUDE_ACTION_DIR}/ActionUndo.h"
-    "${INCLUDE_ACTION_DIR}/ActionUpdateGrowthData.h"
     "${INCLUDE_ACTION_DIR}/ActionUpdateMeasurements.h"
+    "${INCLUDE_ACTION_DIR}/ActionUpdateStats.h"
     "${INCLUDE_ACTION_DIR}/ActionUpdateThumbnail.h"
     "${INCLUDE_ACTION_DIR}/ActionUpdateU3D.h"
     "${INCLUDE_ACTION_DIR}/ActionVisualise.h"
@@ -140,8 +142,9 @@ set( QOBJECTS
     "${INCLUDE_INT_DIR}/LandmarksHandler.h"
     "${INCLUDE_INT_DIR}/MovementNotifier.h"
     "${INCLUDE_INT_DIR}/PathsHandler.h"
-    "${INCLUDE_INT_DIR}/SelectNotifier.h"
     "${INCLUDE_INT_DIR}/RadialSelectHandler.h"
+    "${INCLUDE_INT_DIR}/SelectNotifier.h"
+    "${INCLUDE_INT_DIR}/SurfaceValueHandler.h"
 
     "${INCLUDE_WIDGET_DIR}/ChartDialog.h"
     "${INCLUDE_WIDGET_DIR}/CheckAllTableHeader.h"
@@ -166,7 +169,6 @@ set( INCLUDE_FILES
     "${INCLUDE_F}.h"
 
     "${INCLUDE_ACTION_DIR}/FaceModelState.h"
-    "${INCLUDE_ACTION_DIR}/ModelSelector.h"
     "${INCLUDE_ACTION_DIR}/UndoState.h"
 
     "${INCLUDE_DETECT_DIR}/FaceAlignmentFinder.h"
@@ -205,7 +207,7 @@ set( INCLUDE_FILES
     "${INCLUDE_METRIC_DIR}/MetricValue.h"
     "${INCLUDE_METRIC_DIR}/Phenotype.h"
     "${INCLUDE_METRIC_DIR}/PhenotypeManager.h"
-    "${INCLUDE_METRIC_DIR}/StatisticsManager.h"
+    "${INCLUDE_METRIC_DIR}/StatsManager.h"
     "${INCLUDE_METRIC_DIR}/Syndrome.h"
     "${INCLUDE_METRIC_DIR}/SyndromeManager.h"
     "${INCLUDE_METRIC_DIR}/AngleMetricType.h"
@@ -225,6 +227,7 @@ set( INCLUDE_FILES
     "${INCLUDE_VIS_DIR}/BaseVisualisation.h"
     "${INCLUDE_VIS_DIR}/BoundingView.h"
     "${INCLUDE_VIS_DIR}/BoundingVisualisation.h"
+    "${INCLUDE_VIS_DIR}/ColourVisualisation.h"
     "${INCLUDE_VIS_DIR}/DepthVisualiser.h"
     "${INCLUDE_VIS_DIR}/DistanceVisualiser.h"
     "${INCLUDE_VIS_DIR}/FaceView.h"
@@ -251,13 +254,12 @@ set( INCLUDE_FILES
     "${INCLUDE_VIS_DIR}/RadialSelectView.h"
     "${INCLUDE_VIS_DIR}/RadialSelectVisualisation.h"
     "${INCLUDE_VIS_DIR}/RegionVisualiser.h"
-    "${INCLUDE_VIS_DIR}/ScalarVisualisation.h"
     "${INCLUDE_VIS_DIR}/SimpleView.h"
     "${INCLUDE_VIS_DIR}/SphereView.h"
-    "${INCLUDE_VIS_DIR}/SurfaceVisualisation.h"
-    "${INCLUDE_VIS_DIR}/VectorVisualisation.h"
+    "${INCLUDE_VIS_DIR}/TextureVisualisation.h"
     "${INCLUDE_VIS_DIR}/ViewInterface.h"
     "${INCLUDE_VIS_DIR}/VertexLabelsView.h"
+    "${INCLUDE_VIS_DIR}/WireframeVisualisation.h"
 
     "${INCLUDE_WIDGET_DIR}/IntTableWidgetItem.h"
 
@@ -265,10 +267,15 @@ set( INCLUDE_FILES
     "${INCLUDE_F}/FaceAssessment.h"
     "${INCLUDE_F}/FaceModel.h"
     "${INCLUDE_F}/FaceModelCurvature.h"
+    "${INCLUDE_F}/FaceModelCurvatureStore.h"
+    "${INCLUDE_F}/FaceModelDelta.h"
+    "${INCLUDE_F}/FaceModelDeltaStore.h"
     "${INCLUDE_F}/FaceModelSymmetry.h"
+    "${INCLUDE_F}/FaceModelSymmetryStore.h"
     "${INCLUDE_F}/FaceViewSet.h"
     "${INCLUDE_F}/MaskRegistration.h"
     "${INCLUDE_F}/MiscFunctions.h"
+    "${INCLUDE_F}/ModelSelect.h"
     "${INCLUDE_F}/Path.h"
     "${INCLUDE_F}/PathSet.h"
     "${INCLUDE_F}/U3DCache.h"
@@ -282,9 +289,9 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/ActionAlignModel
     ${SRC_ACTION_DIR}/ActionBackfaceCulling
     ${SRC_ACTION_DIR}/ActionCentreModel
-    ${SRC_ACTION_DIR}/ActionChangeSurfaceMappingRange
-    ${SRC_ACTION_DIR}/ActionCloseAllFaceModels
-    ${SRC_ACTION_DIR}/ActionCloseFaceModel
+    ${SRC_ACTION_DIR}/ActionChangeColourMappingRange
+    ${SRC_ACTION_DIR}/ActionCloseAll
+    ${SRC_ACTION_DIR}/ActionClose
     ${SRC_ACTION_DIR}/ActionCopyView
     ${SRC_ACTION_DIR}/ActionDeleteAllPaths
     ${SRC_ACTION_DIR}/ActionDeletePath
@@ -304,13 +311,14 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/ActionLoad
     ${SRC_ACTION_DIR}/ActionMakeHalfFace
     ${SRC_ACTION_DIR}/ActionMapCurvature
+    ${SRC_ACTION_DIR}/ActionMapDelta
     ${SRC_ACTION_DIR}/ActionMapSymmetry
     ${SRC_ACTION_DIR}/ActionMarquee
     ${SRC_ACTION_DIR}/ActionMoveView
-    ${SRC_ACTION_DIR}/ActionOrientCameraToFace
+    ${SRC_ACTION_DIR}/ActionOrientCamera
     ${SRC_ACTION_DIR}/ActionRadialSelect
     ${SRC_ACTION_DIR}/ActionRedo
-    ${SRC_ACTION_DIR}/ActionReflect
+    ${SRC_ACTION_DIR}/ActionReflectModel
     #${SRC_ACTION_DIR}/ActionRemesh
     ${SRC_ACTION_DIR}/ActionRemoveManifolds
     ${SRC_ACTION_DIR}/ActionRenamePath
@@ -318,10 +326,11 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/ActionRestoreLandmarks
     ${SRC_ACTION_DIR}/ActionRestoreSingleLandmark
     ${SRC_ACTION_DIR}/ActionRotateModel
-    ${SRC_ACTION_DIR}/ActionSaveAsFaceModel
-    ${SRC_ACTION_DIR}/ActionSaveFaceModel
+    ${SRC_ACTION_DIR}/ActionSaveAs
+    ${SRC_ACTION_DIR}/ActionSave
     ${SRC_ACTION_DIR}/ActionSaveScreenshot
     ${SRC_ACTION_DIR}/ActionScaleModel
+    ${SRC_ACTION_DIR}/ActionSelect
     ${SRC_ACTION_DIR}/ActionSetFocus
     ${SRC_ACTION_DIR}/ActionSetMaxScalarColour
     ${SRC_ACTION_DIR}/ActionSetMinScalarColour
@@ -339,11 +348,11 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/ActionToggleAxes
     ${SRC_ACTION_DIR}/ActionToggleCameraActorInteraction
     ${SRC_ACTION_DIR}/ActionToggleMask
-    ${SRC_ACTION_DIR}/ActionToggleScalarLegend
-    ${SRC_ACTION_DIR}/ActionToggleStereoRendering
+    ${SRC_ACTION_DIR}/ActionToggleLegend
+    ${SRC_ACTION_DIR}/ActionToggleStereo
     ${SRC_ACTION_DIR}/ActionUndo
-    ${SRC_ACTION_DIR}/ActionUpdateGrowthData
     ${SRC_ACTION_DIR}/ActionUpdateMeasurements
+    ${SRC_ACTION_DIR}/ActionUpdateStats
     ${SRC_ACTION_DIR}/ActionUpdateThumbnail
     ${SRC_ACTION_DIR}/ActionUpdateU3D
     ${SRC_ACTION_DIR}/ActionVisualise
@@ -352,7 +361,6 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/FaceActionManager
     ${SRC_ACTION_DIR}/FaceActionWorker
     ${SRC_ACTION_DIR}/FaceModelState
-    ${SRC_ACTION_DIR}/ModelSelector
     ${SRC_ACTION_DIR}/UndoState
     ${SRC_ACTION_DIR}/UndoStates
 
@@ -386,6 +394,7 @@ set( SRC_FILES
     ${SRC_INT_DIR}/PathsHandler
     ${SRC_INT_DIR}/RadialSelectHandler
     ${SRC_INT_DIR}/SelectNotifier
+    ${SRC_INT_DIR}/SurfaceValueHandler
     ${SRC_INT_DIR}/ViewerNotifier
 
     ${SRC_LNDMRK_DIR}/Landmark
@@ -410,7 +419,7 @@ set( SRC_FILES
     ${SRC_METRIC_DIR}/Phenotype
     ${SRC_METRIC_DIR}/PhenotypeManager
     ${SRC_METRIC_DIR}/RegionMetricType
-    ${SRC_METRIC_DIR}/StatisticsManager
+    ${SRC_METRIC_DIR}/StatsManager
     ${SRC_METRIC_DIR}/Syndrome
     ${SRC_METRIC_DIR}/SyndromeManager
 
@@ -423,6 +432,7 @@ set( SRC_FILES
     ${SRC_VIS_DIR}/AsymmetryVisualiser
     ${SRC_VIS_DIR}/BoundingView
     ${SRC_VIS_DIR}/BoundingVisualisation
+    ${SRC_VIS_DIR}/ColourVisualisation
     ${SRC_VIS_DIR}/DepthVisualiser
     ${SRC_VIS_DIR}/DistanceVisualiser
     ${SRC_VIS_DIR}/FaceView
@@ -448,10 +458,8 @@ set( SRC_FILES
     ${SRC_VIS_DIR}/RadialSelectView
     ${SRC_VIS_DIR}/RadialSelectVisualisation
     ${SRC_VIS_DIR}/RegionVisualiser
-    ${SRC_VIS_DIR}/ScalarVisualisation
     ${SRC_VIS_DIR}/SimpleView
     ${SRC_VIS_DIR}/SphereView
-    ${SRC_VIS_DIR}/VectorVisualisation
     ${SRC_VIS_DIR}/VertexLabelsView
 
     ${SRC_WIDGET_DIR}/ChartDialog
@@ -470,12 +478,17 @@ set( SRC_FILES
     ${SRC_DIR}/FaceAssessment
     ${SRC_DIR}/FaceModel
     ${SRC_DIR}/FaceModelCurvature
+    ${SRC_DIR}/FaceModelCurvatureStore
+    ${SRC_DIR}/FaceModelDelta
+    ${SRC_DIR}/FaceModelDeltaStore
     ${SRC_DIR}/FaceModelSymmetry
+    ${SRC_DIR}/FaceModelSymmetryStore
     ${SRC_DIR}/FaceModelViewer
     ${SRC_DIR}/FaceTypes
     ${SRC_DIR}/FaceViewSet
     ${SRC_DIR}/MaskRegistration
     ${SRC_DIR}/MiscFunctions
+    ${SRC_DIR}/ModelSelect
     ${SRC_DIR}/ModelViewer
     ${SRC_DIR}/ModelViewerAnnotator
     ${SRC_DIR}/MultiFaceModelViewer

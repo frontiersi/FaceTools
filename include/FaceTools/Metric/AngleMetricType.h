@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,9 +40,12 @@ public:
 
     QString category() const override { return "Angle";}
     QString units() const override { return "degrees";}
-    QString typeRemarks() const override { return "Angles are always measured \"in-plane\".";}
+    QString typeRemarks() const override
+    { return "Angles are always measured within an anatomical plane - typically either the median or the coronal plane.";}
+
     Vis::MetricVisualiser* visualiser() override { return &_vis;}
 
+    bool hasMeasurement( const FM *fm) const override { return _angleInfo.count(fm) > 0;}
     void purge( const FM *fm) override { _angleInfo.erase(fm);}
     const std::vector<AngleMeasure> &angleInfo( const FM *fm) const { return _angleInfo.at(fm);}
 

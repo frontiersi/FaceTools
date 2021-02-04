@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,7 +44,7 @@ public:
     static const IntSet& bilateralIds() { return _bids;}
 
     // Returns all metrics only for the given landmark (may return empty set).
-    static const MCSet& metricsForLandmark( int lmid);
+    static const IntSet& metricsForLandmark( int lmid);
 
     // Returns only those metrics with visualisations defined.
     static const MCSet& visMetrics() { return _vmset;}
@@ -55,13 +55,8 @@ public:
     // Return the metric with given id or null if it doesn't exist.
     static MC::Ptr metric( int);
 
-    // Return the currently selected metric (null if none yet loaded).
-    static MC::Ptr currentMetric();
-
-    // Set the current metric and return it.
-    static MC::Ptr setCurrentMetric( int mid);
-
-    static void setInPlane( bool);
+    // Return the const metric with given id or null if it doesn't exist.
+    static const MC *cmetric( int);
 
     // Purge all metrics associated of data associated with the given model.
     static void purge( const FM*);
@@ -70,12 +65,11 @@ private:
     static IntSet _ids;
     static IntSet _bids;
     static std::unordered_map<int, MC::Ptr> _metrics;
-    static std::unordered_map<int, MCSet> _lmMetrics;   // Metrics keyed by landmark
+    static std::unordered_map<int, IntSet> _lmMetrics;  // Metrics keyed by landmark
     static std::unordered_map<QString, int> _nMetrics;  // Metric IDs keyed by name
     static MCSet _mset;
     static MCSet _vmset;
     static QStringList _names;
-    static int _cmid;
 };  // end class
 
 }}  // end namespaces

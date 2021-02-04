@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 #define FACE_TOOLS_ACTION_VISUALISE_H
 
 #include "FaceAction.h"
-#include <FaceTools/Vis/BaseVisualisation.h>
+#include <FaceTools/Vis/ColourVisualisation.h>
 
 namespace FaceTools { namespace Action {
 
@@ -47,12 +47,29 @@ protected:
     Event doAfterAction( Event) override;
 
 private:
-    void _toggleVis( Vis::FV*, const QPoint*) const;
-    bool _isVisAvailable( const Vis::FV*) const;
-    FVS _getWorkViews();
+    FVS _getWorkViews( Event);
     Vis::BaseVisualisation *_vis; // The visualisation delegate
     Event _evg;
 };  // end class
+
+
+class ActionColourVis : public ActionVisualise
+{
+public:
+    ActionColourVis( Vis::ColourVisualisation *sv, const QIcon& i, const QString &menuName="", const QString &tbName="")
+        : ActionVisualise( sv->label(), i, sv), _menuName(menuName), _toolbarName(tbName)
+    {
+        addPurgeEvent( Event::MESH_CHANGE | Event::MASK_CHANGE);
+        addRefreshEvent( Event::SURFACE_DATA_CHANGE);
+    }   // end ctor
+
+    QString attachToMenu() override { return _menuName;}
+    QString attachToToolBar() override { return _toolbarName;}
+
+private:
+    const QString _menuName;
+    const QString _toolbarName;
+};  // end VisAction
 
 }}   // end namespaces
 

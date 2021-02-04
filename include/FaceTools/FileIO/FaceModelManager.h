@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,15 +25,12 @@ namespace FaceTools { namespace FileIO {
 class FaceTools_EXPORT FaceModelManager
 {
 public:
-    // The loadLimit specifies the maximum number of models that can be open at once (initially zero).
-    static void setLoadLimit( size_t loadLimit);
-
     // Add file formats (forwards to FaceModelFileHandlerMap).
     // The first added file format is the preferred file format.
     static void add( FaceModelFileHandler*);
 
     // Returns true iff given model is currently saved in the preferred file format (according to FaceModelFileHandlerMap).
-    static bool hasPreferredFileFormat( const FM*);
+    static bool hasPreferredFileFormat( const FM&);
 
     // Does the given filename have the extension of the preferred file format?
     static bool isPreferredFileFormat( const QString&);
@@ -45,7 +42,7 @@ public:
     // If fpath empty, try to save using the currently stored file path, and copy into fpath on return.
     // If fpath non-empty, try to save to this new location and update the model's stored file path.
     // Generates and stores the model hash upon success.
-    static bool write( const FM*, QString &fpath);
+    static bool write( const FM&, QString &fpath);
 
     // Returns true iff the file at given path can be read in.
     static bool canRead( const QString&);
@@ -70,13 +67,17 @@ public:
     static const QString& error() { return _err;}
 
     // Return the filepath for the model.
-    static const QString& filepath( const FM*);
+    static const QString& filepath( const FM&);
 
     // Return the open model for the given filepath or null if not open.
     static FM* model( const QString&);
 
+    // Return the other loaded model or null if none other loaded.
+    // This requires a load limit of 2.
+    static FM* other( const FM&);
+
     // Close given model and release memory (client must check if saved!).
-    static void close( const FM*);
+    static void close( const FM&);
 
     // Returns the number of models currently open.
     static size_t numOpen() { return _mdata.size();}
@@ -94,7 +95,7 @@ private:
     static std::unordered_map<FM*, QString> _mdata;
     static std::unordered_map<QString, FM*> _mfiles;    // Lookup models by current filepath
     static QString _err;
-    static void _setModelFilepath( const FM*, const QString&);
+    static void _setModelFilepath( const FM&, const QString&);
 };  // end class
 
 }}   // end namespaces

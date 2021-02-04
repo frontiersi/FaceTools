@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,6 @@
  ************************************************************************/
 
 #include <U3DCache.h>
-#include <FaceModel.h>
 #include <r3dio/U3DExporter.h>
 #include <QTemporaryFile>
 #include <QTools/QImageTools.h>
@@ -25,38 +24,38 @@ using FaceTools::U3DCache;
 using FaceTools::FM;
 
 QTemporaryDir U3DCache::_tmpdir;
-QReadWriteLock U3DCache::_cacheLock;
+QReadWriteLock U3DCache::_rwLock;
 std::unordered_set<const FM*> U3DCache::_cache;
 
 
-U3DCache::Filepath U3DCache::u3dfilepath( const FM* fm)
+U3DCache::Filepath U3DCache::u3dfilepath( const FM &fm)
 {
     QString fname;
-    _cacheLock.lockForRead();
-    if ( _cache.count(fm) > 0)
-        fname = makeFilePath(fm);
-    return Filepath( new QString( fname), []( QString* s){ delete s; _cacheLock.unlock();});
-}   // end lock
+    if ( !_rwLock.tryLockForRead())
+        return nullptr;
+    if ( _cache.count(&fm) > 0)
+        fname = _makeFilePath(fm);
+    return Filepath( new QString( fname), []( QString* s){ delete s; _rwLock.unlock();});
+}   // end u3dfilepath
 
 
 bool U3DCache::isAvailable()
 {
     bool avail = false;
-    if ( _cacheLock.tryLockForRead())
+    if ( _rwLock.tryLockForRead())
     {
         avail = r3dio::U3DExporter::isAvailable();
-        _cacheLock.unlock();
+        _rwLock.unlock();
     }   // end if
     return avail;
 }   // end isAvailable
 
 
-bool U3DCache::refresh( const FM* fm, bool med9)
+bool U3DCache::refresh( const FM &fm, bool med9)
 {
-    // Copy out model
-    fm->lockForRead();
-    r3d::Mesh::Ptr mesh = fm->mesh().deepCopy();
-    fm->unlock();
+    fm.lockForRead();
+    r3d::Mesh::Ptr mesh = fm.mesh().deepCopy();
+    fm.unlock();
 
     // Add a texture if none present
     float ambv = 1.0f;
@@ -71,18 +70,20 @@ bool U3DCache::refresh( const FM* fm, bool med9)
     }   // end if
 
     bool refreshed = false;
-    _cacheLock.lockForWrite();
     QTemporaryFile tfile( QDir::tempPath() + "/XXXXXX.u3d");
     if ( tfile.open())
     {
-        r3dio::U3DExporter xptr( true/*set true to delete IDTF file on destruction*/, med9, ambv);
+        //r3dio::U3DExporter xptr( false, med9, ambv);  // For debug
+        r3dio::U3DExporter xptr( true, med9, ambv);
         //std::cerr << QString( "Exporting U3D model to '%1'").arg( tfile.fileName()).toStdString() << std::endl;
         if ( xptr.save( *mesh, tfile.fileName().toLocal8Bit().toStdString()))
         {
+            const QString cacheFileName = _makeFilePath(fm);
+            _rwLock.lockForWrite();
             // Copy U3D model exported to the temporary location to the cache location
-            const QString cacheFileName = makeFilePath(fm);
             QFile::copy( tfile.fileName(), cacheFileName);
-            _cache.insert(fm);
+            _cache.insert(&fm);
+            _rwLock.unlock();
             QFile::remove( tfile.fileName());
             refreshed = true;
         }   // end if
@@ -91,30 +92,28 @@ bool U3DCache::refresh( const FM* fm, bool med9)
     }   // end if
     else
         std::cerr << "[ERROR] FaceTools::U3DCache::refresh: Couldn't open temporary file for exporting U3D!" << std::endl;
-    _cacheLock.unlock();
 
     return refreshed;
 }   // end refresh
 
 
-void U3DCache::purge( const FM* fm)
+void U3DCache::purge( const FM &fm)
 {
-    _cacheLock.lockForWrite();
-    if ( _cache.count(fm) > 0)
+    _rwLock.lockForWrite();
+    if ( _cache.count(&fm) > 0)
     {
-        QFile::remove( makeFilePath(fm));
-        _cache.erase(fm);
+        QFile::remove( _makeFilePath(fm));
+        _cache.erase(&fm);
     }   // end if
-    _cacheLock.unlock();
+    _rwLock.unlock();
 }   // end purge
 
 
-// private
-QString U3DCache::makeFilePath( const FM* fm)
+QString U3DCache::_makeFilePath( const FM &fm)
 {
     QString fname;
     QTextStream os(&fname);
-    os << "obj_" << Qt::hex << fm << ".u3d";
+    os << "obj_" << Qt::hex << &fm << ".u3d";
     fname = _tmpdir.filePath( fname);   // The filename to save to
     return fname;
-}   // end makeFilePath
+}   // end _makeFilePath

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,20 +17,35 @@
 
 #include <Metric/MetricValue.h>
 #include <Metric/MetricManager.h>
+#include <Metric/StatsManager.h>
 #include <Ethnicities.h>
 #include <rlib/Round.h>
 #include <cassert>
 using FaceTools::Metric::MetricValue;
+using FaceTools::Metric::GrowthData;
 using MM = FaceTools::Metric::MetricManager;
+using SM = FaceTools::Metric::StatsManager;
+
+MetricValue::MetricValue() : _id(-1), _fm(nullptr), _planar(false) {}
+
+MetricValue::MetricValue( int id, const FM *fm) : _id(id), _fm(fm), _planar(false) {}
 
 
-MetricValue::MetricValue( int id) : _id(id) {}
+MetricValue::MetricValue( int id, const FM *fm, const std::vector<float> &dvals, bool p)
+    : _id(id), _fm(fm), _values(dvals), _planar(p) {}
+
+
+void MetricValue::setValues( const std::vector<float> &dvals, bool p)
+{
+    _values = dvals;
+    _planar = p;
+}   // end setValues
 
 
 float MetricValue::zscore( float age, size_t i) const
 {
     float zs = 0;
-    const GrowthData *gd = MM::metric(_id)->growthData().current();
+    SM::RPtr gd = SM::stats( _id, _fm);
     if ( gd)
     {
         rlib::RSD::CPtr rsd = gd->rsd(i);
@@ -45,7 +60,7 @@ float MetricValue::zscore( float age, size_t i) const
 float MetricValue::mean( float age, size_t i) const
 {
     float mn = 0;
-    const GrowthData *gd = MM::metric(_id)->growthData().current();
+    SM::RPtr gd = SM::stats( _id, _fm);
     if ( gd)
     {
         rlib::RSD::CPtr rsd = gd->rsd(i);
@@ -70,12 +85,12 @@ void MetricValue::write( PTree& pnode, float age) const
     const int ndps = static_cast<int>(mc->numDecimals());
     const size_t dims = mc->dims();
     mnode.put( "ndims", dims);
-
-    const GrowthData *gd = mc->growthData().current();
+    mnode.put( "planar", _planar);
 
     // Output the statistics for the metric
     PTree& snode = mnode.put( "stats", "");
 
+    SM::RPtr gd = SM::stats( _id, _fm);
     if ( gd)
     {
         snode.put( "sex", FaceTools::toLongSexString( gd->sex()).toStdString());

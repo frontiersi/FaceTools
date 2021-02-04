@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@ using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Widget::MeshInfoDialog;
 using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ActionShowMeshInfo::ActionShowMeshInfo( const QString& dname, const QIcon& icon, const QKeySequence& ks)
@@ -43,7 +43,7 @@ void ActionShowMeshInfo::postInit()
 bool ActionShowMeshInfo::update( Event e)
 {
     const FM* fm = MS::selectedModel();
-    if ( !fm || has( e, Event::CLOSED_MODEL))
+    if ( !fm)
         _dialog->hide();
     else
         _dialog->set( fm);

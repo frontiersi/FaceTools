@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,8 @@
 
 #include <MultiFaceModelViewer.h>
 #include <FileIO/FaceModelManager.h>
-#include <Action/ModelSelector.h>
+#include <ModelSelect.h>
+#include <Action/FaceActionManager.h>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 using FaceTools::MultiFaceModelViewer;
@@ -25,7 +26,7 @@ using FaceTools::FaceModelViewer;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
 using FMM = FaceTools::FileIO::FaceModelManager;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 namespace {
 
@@ -51,7 +52,7 @@ QToolButton* makeButton()
 
 QString currentModelName( const FM* fm)
 {
-    QString cname = FMM::filepath(fm);
+    QString cname = FMM::filepath(*fm);
     if ( !fm->isSaved())
         cname += " (*)";
     return cname;
@@ -62,13 +63,14 @@ QString currentModelName( const FM* fm)
 
 MultiFaceModelViewer::MultiFaceModelViewer( QWidget *parent) : QWidget(parent)
 {
-    for ( size_t i = 0; i < 3; ++i) // Left (0), middle (1), and right (2) viewers
+    for ( int i = 0; i < 3; ++i) // Left (0), middle (1), and right (2) viewers
     {
         _fmvs.push_back( new FMV(this));
         connect( _fmvs[i], &FMV::onAttached, [=]( FV* fv){ _doOnViewerChanged( i, fv);});
         connect( _fmvs[i], &FMV::onDetached, [=]( FV* fv){ _doOnViewerChanged( i, fv);});
         _modelLists.push_back( new QComboBox(this));
-        connect( _modelLists[i], &QComboBox::textActivated, [=](const QString &txt){ _doOnComboBoxChanged( i, txt);});
+        connect( _modelLists[i], &QComboBox::textActivated,
+                        [=](const QString &txt){ _doOnComboBoxChanged( i, txt);});
     }   // end for
 
     QVBoxLayout* v0layout = new QVBoxLayout;
@@ -157,30 +159,23 @@ void MultiFaceModelViewer::setMoveRightToCentreAction( QAction *action) { _moveB
 void MultiFaceModelViewer::setCopyRightToCentreAction( QAction *action) { _copyButton[3]->setDefaultAction(action);}
 
 
-// private
-void MultiFaceModelViewer::_setViewerVisible( size_t idx, bool visible)
+void MultiFaceModelViewer::_setViewerVisible( int i, bool visible)
 {
-    assert(idx == 0 || idx == 2);
     setUpdatesEnabled(false);   // Pause widget update to lessen appearance of flicker
     QList<int> widths = _splitter->sizes();
-    const int i = int(idx);
-
     if ( visible && widths[i] == 0)
         widths[i] = widths[1];
-    else if ( !visible && widths[i] > 0)
-        widths[i] = 0;
     _splitter->setSizes( widths);
     _splitter->widget( i)->setVisible(visible);
-
     setUpdatesEnabled(true);
 }   // end _setViewerVisible
 
 
-void MultiFaceModelViewer::_doOnViewerChanged( size_t idx, const FV *fv)
+void MultiFaceModelViewer::_doOnViewerChanged( int idx, const FV *fv)
 {
     _updateModelLists( fv->data());
     if ( idx != 1)
-        _setViewerVisible( idx, !_fmvs.at(idx)->attached().empty());
+        _setViewerVisible( idx, !_fmvs.at(idx)->empty());
 }   // end _doOnViewerChanged
 
 
@@ -223,7 +218,7 @@ void MultiFaceModelViewer::_updateModelLists( const FM *fm)
 }   // end _updateModelLists
 
 
-void MultiFaceModelViewer::_doOnComboBoxChanged( size_t i, const QString &txt)
+void MultiFaceModelViewer::_doOnComboBoxChanged( int i, const QString &txt)
 {
     const QString fname = txt.split( " (*)")[0]; // Strip "(*)" if present
     FM* fm = FMM::model( fname);
@@ -231,4 +226,5 @@ void MultiFaceModelViewer::_doOnComboBoxChanged( size_t i, const QString &txt)
     FV* fv = _fmvs[i]->get(fm);
     assert(fv);
     MS::setSelected(fv);
+    Action::FaceActionManager::raise( Action::Event::MODEL_SELECT);
 }   // end _doOnComboBoxChanged

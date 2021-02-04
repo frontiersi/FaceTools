@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,6 +42,7 @@ public:
 
     Vis::MetricVisualiser* visualiser() override { return &_vis;}
 
+    bool hasMeasurement( const FM *fm) const override { return _asymmInfo.count(fm) > 0;}
     void purge( const FM *fm) override { _asymmInfo.erase(fm);}
     const std::vector<AsymmetryMeasure> &asymmetryInfo( const FM *fm) const { return _asymmInfo.at(fm);}
 

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@ using FaceTools::U3DCache;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
 using FMM = FaceTools::FileIO::FaceModelManager;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 using QMB = QMessageBox;
 
 // static members
@@ -50,8 +50,8 @@ ActionExportPDF::ActionExportPDF( const QString& nm, const QIcon& icon, const QK
 {
     //_tmpdir.setAutoRemove(false);    // Uncomment for debug purposes
     assert( _tmpdir.isValid());
-    //setAsync(true);
     addRefreshEvent( Event::CACHE);
+    //setAsync(true);
 }   // end ctor
 
 
@@ -67,7 +67,7 @@ void ActionExportPDF::postInit()
 QFileDialog* ActionExportPDF::createSaveDialog( QWidget *prnt)
 {
     QFileDialog *fd = new QFileDialog( prnt);
-    fd->setWindowTitle( tr("Save Generated Report"));
+    fd->setWindowTitle( tr("Save Report"));
     fd->setFileMode( QFileDialog::AnyFile);
     fd->setViewMode( QFileDialog::Detail);
     fd->setNameFilter( "Portable Document Format (*.pdf)");
@@ -78,28 +78,29 @@ QFileDialog* ActionExportPDF::createSaveDialog( QWidget *prnt)
 }   // end createSaveDialog
 
 
-bool ActionExportPDF::isAvailable( const FM* fm)
+bool ActionExportPDF::isAvailable()
 {
-    return fm && U3DCache::isAvailable() && !U3DCache::u3dfilepath(fm)->isEmpty() && ReportManager::isAvailable();
+    if ( !ReportManager::isAvailable() || !U3DCache::isAvailable())
+        return false;
+
+    const FM *fm0 = MS::selectedModel();
+    const FM *fm1 = MS::nonSelectedModel();
+    const bool v = fm0 && !U3DCache::u3dfilepath(*fm0)->isEmpty();
+    return v && (!fm1 || !U3DCache::u3dfilepath(*fm1)->isEmpty());
 }   // end isAvailable
 
 
-bool ActionExportPDF::isAllowed( Event) { return isAvailable(MS::selectedModel());}
+bool ActionExportPDF::isAllowed( Event) { return isAvailable();}
 
 
 // Get the save filepath for the report
 bool ActionExportPDF::doBeforeAction( Event)
 {
-    const FM* fm = MS::selectedModel();
     _report = nullptr;
     _tmpfile = "";
     _err = "";
-    if ( _dialog->show(fm))
-    {
-        const QString rname = _dialog->selectedReportName();
-        _report = ReportManager::report(rname);
-    }   // end if
-
+    if ( _dialog->show())
+        _report = ReportManager::report(_dialog->selectedReportName());
     const bool doAct = _report != nullptr;
     if ( doAct)
         MS::showStatus( "Generating report...", 10000);
@@ -110,13 +111,10 @@ bool ActionExportPDF::doBeforeAction( Event)
 void ActionExportPDF::doAction( Event)
 {
     _err = "";
-    const FM* fm = MS::selectedModel();
-    const U3DCache::Filepath u3dfile = U3DCache::u3dfilepath(fm);
-    _report->setModelFile( *u3dfile);
     _tmpfile = _tmpdir.filePath( "report.pdf");
-    const bool genok = _report->generate( fm, _tmpfile);   // May take time - make asynchronous?
+    const bool genok = _report->generate( _tmpfile);
     if ( !genok)
-        _err = "Failed to generate report PDF!";
+        _err = _report->errorMsg();
 }   // end doAction
 
 
@@ -126,7 +124,8 @@ Event ActionExportPDF::doAfterAction( Event)
     {
         std::cerr << _err.toStdString() << std::endl;
         MS::showStatus("Failed to generate report!", 5000);
-        QMB::warning( static_cast<QWidget*>(parent()), tr("Report Creation Error!"), _err);
+        QMB::warning( static_cast<QWidget*>(parent()), tr("Report Creation Error!"),
+                      QString("<p align='center'>%1</p>").arg(_err));
     }   // end if
     else
         saveGeneratedReport(_tmpfile, _fileDialog);
@@ -138,8 +137,8 @@ Event ActionExportPDF::doAfterAction( Event)
 bool ActionExportPDF::saveGeneratedReport( const QString& tmpfile, QFileDialog *fdialog)
 {
     assert( fdialog);
-    const FM* fm = MS::selectedModel();
-    const QFileInfo outpath( FMM::filepath(fm));
+    const FM *fm = MS::selectedModel();
+    const QFileInfo outpath( FMM::filepath(*fm));
 
     fdialog->setDirectory( outpath.path());
     QString outfile = outpath.path() + "/" + outpath.baseName() + ".pdf";
@@ -166,8 +165,9 @@ bool ActionExportPDF::saveGeneratedReport( const QString& tmpfile, QFileDialog *
         {
             if ( !QFile::remove(outfile))
             {
-                static const QString err = "Unable to overwrite existing file! Is it already open?\nChoose a different filename or close the file.";
-                QMB::warning( static_cast<QWidget*>(fdialog->parent()), tr("Report Save Error!"), err);
+                static const QString err = tr("Unable to overwrite existing file! Is it already open?<br>Choose a different filename or close the file.");
+                QMB::warning( static_cast<QWidget*>(fdialog->parent()), tr("Report Save Error!"),
+                              QString("<p align='center'>%1</p>").arg(err));
                 docopy = false; // Try again!
             }   // end if
         }   // end if
@@ -188,4 +188,4 @@ bool ActionExportPDF::saveGeneratedReport( const QString& tmpfile, QFileDialog *
     }   // end if
 
     return success;
-}   // end doAfterAction
+}   // end saveGeneratedReport

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,27 +22,16 @@ using FaceTools::Vis::DistanceVisualiser;
 using FaceTools::Vis::FV;
 
 
-void DistanceVisualiser::doApply( const FV *fv)
+void DistanceVisualiser::refresh( FV *fv)
 {
     const Metric::DistanceMetricType *dmetric = static_cast<const Metric::DistanceMetricType*>(metric());
     const std::vector<Metric::DistMeasure> &dinfo = dmetric->distInfo(fv->data());
-    for ( size_t i = 0; i < dinfo.size(); ++i)
-    {
-        LineView *lv = new LineView;
-        lv->setColour( 0.7, 0.0, 0.1);
-        _views[fv].push_back(lv);
-    }   // end for
-}   // end doApply
-
-
-void DistanceVisualiser::doRefresh( const FV *fv)
-{
-    const std::vector<LineView*> &lviews = _views.at(fv);
-    const Metric::DistanceMetricType *dmetric = static_cast<const Metric::DistanceMetricType*>(metric());
-    const std::vector<Metric::DistMeasure> &dinfo = dmetric->distInfo(fv->data());
+    std::vector<LineView> &views = _views[fv];
+    views.resize( dinfo.size());
     for ( size_t i = 0; i < dinfo.size(); ++i)
     {
         const Metric::DistMeasure &dm = dinfo.at(i);
-        lviews[i]->update( dm.point0, dm.point1);
+        views[i].setColour( 0.7, 0.0, 0.1);
+        views[i].update( dm.point0, dm.point1);
     }   // end for
-}   // end doRefresh
+}   // end refresh

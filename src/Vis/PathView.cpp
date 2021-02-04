@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,9 +43,9 @@ PathView::PathView( int id)
     _h1->_sv->setColour( 0.8, 0.2, 0.0, 0.99);
     _g->_sv->setColour( 0.6, 0.6, 0.0, 0.99);
 
-    _h0->_sv->setCaptionColour( Qt::GlobalColor::blue);
-    _h1->_sv->setCaptionColour( Qt::GlobalColor::blue);
-    _g->_sv->setCaptionColour( Qt::GlobalColor::blue);
+    _h0->_sv->setCaptionColour( Qt::white, Qt::black);
+    _h1->_sv->setCaptionColour( Qt::white, Qt::black);
+    _g->_sv->setCaptionColour( Qt::white, Qt::black);
 
     _aview.setLineWidth(2.0);
 }   // end ctor
@@ -216,16 +216,22 @@ void PathView::update( const Path &path)
 
 void PathView::updateColours()
 {
-    if ( _viewer)
-    {
-        QColor fg = chooseContrasting(_viewer->backgroundColour());
-        _h0->_sv->setCaptionColour( fg);
-        _h1->_sv->setCaptionColour( fg);
-        _g->_sv->setCaptionColour( fg);
-        //vtkProperty* property = _sprop->GetProperty();
-        //property->SetColor( fg.redF(), fg.greenF(), fg.blueF());
-    }   // end if
+    const QColor bg = _viewer ? _viewer->backgroundColour() : Qt::black;
+    const QColor fg = chooseContrasting(bg);
+    _h0->_sv->setCaptionColour( fg, bg);
+    _h1->_sv->setCaptionColour( fg, bg);
+    _g->_sv->setCaptionColour( fg, bg);
+    //vtkProperty* property = _sprop->GetProperty();
+    //property->SetColor( fg.redF(), fg.greenF(), fg.blueF());
 }   // end updateColours
+
+
+void PathView::setPickable( bool v)
+{
+    _h0->_sv->setPickable(v);
+    _h1->_sv->setPickable(v);
+    _g->_sv->setPickable(v);
+}   // end setPickable
 
 
 void PathView::pokeTransform( const vtkMatrix4x4* vm)
@@ -252,6 +258,18 @@ PathView::Handle::Handle( int hid, int pid, const Vec3f& c, double r)
 
 // private
 PathView::Handle::~Handle() { delete _sv;}
+
+
+PathView::Handle *PathView::handle( int hid)
+{
+    assert( hid >= 0 && hid <= 2);
+    Handle *h = _g;
+    if ( hid == 0)
+        h = _h0;
+    else if ( hid == 1)
+        h = _h1;
+    return h;
+}   // end handle
 
 
 Vec3f PathView::Handle::viewPos() const

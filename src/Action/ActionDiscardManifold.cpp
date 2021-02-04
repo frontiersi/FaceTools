@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,14 +26,15 @@ using FaceTools::FVS;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
 using FaceTools::Landmark::LandmarkSet;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
+using QMB = QMessageBox;
 
 
 ActionDiscardManifold::ActionDiscardManifold( const QString& dn, const QIcon& ico)
     : FaceAction( dn, ico), _mid(-1)
 {
-    setAsync(true);
     addRefreshEvent( Event::MESH_CHANGE);
+    setAsync(true);
 }   // end ctor
 
 
@@ -81,23 +82,25 @@ bool ActionDiscardManifold::doBeforeAction( Event)
     bool goOk = false;
     if ( numFaceRemove > 0)
     {
-        const int rv = QMessageBox::question( static_cast<QWidget*>(parent()),
-                              tr("Discard Manifold"),
-                              QString("%1 triangles from manifold %2 will be removed. Continue?").arg(numFaceRemove).arg(1+_mid),
-                              QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
-        goOk = rv == QMessageBox::Yes;
+        const QString msg = tr("%1 triangles from manifold %2 will be removed. Do you want to continue?").arg(numFaceRemove).arg(1+_mid);
+        const int rv = QMB::question( static_cast<QWidget*>(parent()),
+                              tr("Discard Manifold?"), QString("<p align='center'>%1</p>").arg(msg),
+                              QMB::Yes | QMB::No, QMB::No);
+        goOk = rv == QMB::Yes;
     }   // end if
 
     if ( goOk)
+    {
         MS::showStatus("Removing manifold...");
+        storeUndo(this, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE);
+    }   // end if
+
     return goOk;
 }   // end doBeforeAction
 
 
 void ActionDiscardManifold::doAction( Event)
 {
-    storeUndo(this, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE);
-
     FM* fm = MS::selectedModel();
     fm->lockForWrite();
     r3d::Mesh::Ptr mobj = fm->mesh().deepCopy();

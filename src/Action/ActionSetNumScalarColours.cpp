@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  ************************************************************************/
 
 #include <Action/ActionSetNumScalarColours.h>
-#include <Vis/ScalarVisualisation.h>
+#include <Vis/ColourVisualisation.h>
 #include <Vis/FaceView.h>
 #include <QSignalBlocker>
 #include <cassert>
@@ -25,8 +25,8 @@ using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::FVS;
 using FaceTools::Vis::FV;
-using FaceTools::Vis::ScalarVisualisation;
-using MS = FaceTools::Action::ModelSelector;
+using FaceTools::Vis::ColourVisualisation;
+using MS = FaceTools::ModelSelect;
 
 
 ActionSetNumScalarColours::ActionSetNumScalarColours( const QString& dname)
@@ -51,29 +51,29 @@ void ActionSetNumScalarColours::postInit()
     _spinBox = new QSpinBox(p);
     _spinBox->setToolTip( toolTip());
     _spinBox->setAlignment( Qt::AlignRight);
-    _spinBox->setRange( 1, 99);
+    _spinBox->setRange( 2, 99);
     _spinBox->setSingleStep( 1);
     _spinBox->setButtonSymbols(QAbstractSpinBox::PlusMinus);
     _spinBox->setEnabled(false);
     connect( _spinBox, QOverload<int>::of(&QSpinBox::valueChanged),
-            this, &ActionSetNumScalarColours::_doOnValueChanged);
+                 this, &ActionSetNumScalarColours::_doOnValueChanged);
 }   // end postInit
 
 
 bool ActionSetNumScalarColours::isAllowed( Event)
 {
     const FV* fv = MS::selectedView();
-    return fv && fv->activeScalars();
+    return fv && fv->activeColours();
 }   // end isAllowed
 
 
 bool ActionSetNumScalarColours::update( Event)
 {
+    QSignalBlocker blocker( _spinBox);
     const FV* fv = MS::selectedView();
-    const ScalarVisualisation* svis = fv ? fv->activeScalars() : nullptr;
+    const ColourVisualisation* svis = fv ? fv->activeColours() : nullptr;
     const bool enabled = svis != nullptr;
     _spinBox->setEnabled( enabled);
-    QSignalBlocker blocker( _spinBox);
     _spinBox->setValue( enabled ? static_cast<int>(svis->numColours()) : 0);
     _spinBox->setSingleStep( enabled ? static_cast<int>(svis->numStepSize()) : 1);
     return enabled;
@@ -85,11 +85,10 @@ void ActionSetNumScalarColours::_doOnValueChanged( int v)
     assert( isEnabled());
     FV* fv = MS::selectedView();
     assert(fv);
-    ScalarVisualisation* svis = fv->activeScalars();
-    assert(svis);
+    assert(fv->activeColours());
+    ColourVisualisation* svis = fv->activeColours();
     svis->setNumColours( static_cast<size_t>(v));
-    svis->rebuild();
-    fv->setActiveScalars( svis);
+    svis->rebuildColourMapping();
     emit onEvent( Event::VIEW_CHANGE);
 }   // end _doOnValueChanged
 

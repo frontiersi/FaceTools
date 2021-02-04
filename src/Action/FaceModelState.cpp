@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,12 @@
  ************************************************************************/
 
 #include <Action/FaceModelState.h>
-#include <Action/ModelSelector.h>
+#include <ModelSelect.h>
 #include <FaceModel.h>
 using FaceTools::Action::FaceModelState;
 using FaceTools::Action::Event;
 using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 FaceModelState::Ptr FaceModelState::create( FM* fm, Event e)
@@ -176,7 +176,7 @@ FaceModelState::FaceModelState( FM* fm, Event egrp)
     if ( has( egrp, Event::MESH_CHANGE))
         _saveMesh();
 
-    if ( has( egrp, Event::MASK_CHANGE | Event::MESH_CHANGE))
+    if ( any( egrp, Event::MASK_CHANGE | Event::MESH_CHANGE))
     {
         _saveMask();
         _saveBounds();
@@ -185,7 +185,7 @@ FaceModelState::FaceModelState( FM* fm, Event egrp)
     if ( has( egrp, Event::AFFINE_CHANGE))
         _tmat = _fm->mesh().transformMatrix();
 
-    if ( has( egrp, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE | Event::ASSESSMENT_CHANGE | Event::PATHS_CHANGE))
+    if ( any( egrp, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE | Event::METADATA_CHANGE | Event::PATHS_CHANGE))
         _saveAssessments();
 
     if ( has( egrp, Event::CAMERA_CHANGE))
@@ -200,7 +200,7 @@ void FaceModelState::restore( const Event &egrp) const
     if ( has( egrp, Event::MESH_CHANGE))
         _restoreMesh();
 
-    if ( has( egrp, Event::MASK_CHANGE | Event::MESH_CHANGE))
+    if ( any( egrp, Event::MASK_CHANGE | Event::MESH_CHANGE))
     {
         _restoreMask();
         _restoreBounds();
@@ -209,7 +209,7 @@ void FaceModelState::restore( const Event &egrp) const
     if ( has( egrp, Event::AFFINE_CHANGE))
         _fm->addTransformMatrix( _tmat * _fm->mesh().inverseTransformMatrix());
     
-    if ( has( egrp, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE | Event::ASSESSMENT_CHANGE | Event::PATHS_CHANGE))
+    if ( any( egrp, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE | Event::METADATA_CHANGE | Event::PATHS_CHANGE))
         _restoreAssessments();
 
     if ( has( egrp, Event::CAMERA_CHANGE))

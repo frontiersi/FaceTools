@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,7 +45,7 @@ private:
     std::ifstream _ifs;
     QMimeDatabase _mimeDB;
     QStringList _mimefilters;
-    QString _getFilePath( const FM*);
+    QString _getFilePath( const FM&);
 };  // end class
 
 }}   // end namespace

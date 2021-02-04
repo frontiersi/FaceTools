@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,15 +27,15 @@ using FaceTools::Metric::MetricValue;
 using MM = FaceTools::Metric::MetricManager;
 
 
-GrowthData::Ptr GrowthData::create( int mid, size_t ndims, int8_t sex, int ethn)
+GrowthData::Ptr GrowthData::create( int mid, size_t ndims, int8_t sex, int ethn, bool inPlane)
 {
-    return Ptr( new GrowthData( mid, ndims, sex, ethn), [](GrowthData* x){ delete x;});
+    return Ptr( new GrowthData( mid, ndims, sex, ethn, inPlane), [](GrowthData* x){ delete x;});
 }   // end create
 
 
 // private
-GrowthData::GrowthData( int mid, size_t ndims, int8_t sex, int ethn)
-    : _id(-1), _mid(mid), _sex(sex), _ethn(ethn), _n(0), _inplane(false), _rsds(ndims)
+GrowthData::GrowthData( int mid, size_t ndims, int8_t sex, int ethn, bool inp)
+    : _id(-1), _mid(mid), _sex(sex), _ethn(ethn), _n(0), _inplane(inp), _rsds(ndims)
 {
 }   // end ctor
 
@@ -187,12 +187,11 @@ GrowthData::Ptr GrowthData::create( const std::vector<const GrowthData*>& gds)
     }   // end if
 
     // Create the combination GrowthData object
-    GrowthData::Ptr gc = create( mid, nd, sex, ethn);
+    GrowthData::Ptr gc = create( mid, nd, sex, ethn, inplane);
     srcs.sort();
     gc->setSource( QString( "%1.").arg(srcs.join("; ")));
     gc->setNote( notes.join(" ").trimmed());
     gc->setN( std::max( 0, nsmps));
-    gc->setInPlane( inplane);
     // Combine the distributions over each dimension
     std::vector<rlib::RSD::Ptr>& nrsds = gc->_rsds;
     nrsds.resize(nd);
@@ -382,10 +381,9 @@ bool GrowthData::load( const QString &fpath)
             continue;
         }   // end if
 
-        GrowthData::Ptr gd = GrowthData::create( mid, mc->dims(), fromSexString(sexs), ethn);
+        GrowthData::Ptr gd = GrowthData::create( mid, mc->dims(), fromSexString(sexs), ethn, inpl);
         gd->setSource( srcs);
         gd->setN( nsmp);
-        gd->setInPlane( inpl);
         gd->setNote( note);
         gd->setLongNote( lnote);
 
@@ -409,7 +407,7 @@ bool GrowthData::load( const QString &fpath)
             if ( rsds.at(j))
                 gd->setRSD( j, rsds.at(j));
 
-        mc->growthData().add( gd);
+        mc->_addGrowthData( gd);
     }   // end for
 
     return true;

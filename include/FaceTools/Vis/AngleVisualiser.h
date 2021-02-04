@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,21 +26,16 @@ namespace FaceTools { namespace Vis {
 class FaceTools_EXPORT AngleVisualiser : public MetricVisualiser
 {
 public:
-    const char* name() const override { return "AngleVisualiser";}
     bool belongs( const vtkProp*, const FV*) const override;
     bool isVisible( const FV*) const override;
-    void syncWithViewTransform( const FV*) override;
-
-    void setHighlighted( const FV*, bool) override; // virtual from MetricVisualiser
-
-protected:
-    void doApply( const FV*) override;
-    void doPurge( const FV*) override;
-    void doRefresh( const FV*) override;
-    void doSetVisible( const FV*, bool) override;
+    void syncTransform( const FV*) override;
+    void setVisible( FV*, bool) override;
+    void purge( const FV*) override;
+    void setHighlighted( bool) override;
+    void refresh( FV*) override;
 
 private:
-    std::unordered_map<const FV*, std::vector<AngleView*> > _angles;
+    std::unordered_map<const FV*, std::vector<AngleView> > _angles;
 };  // end class
 
 }}   // end namespaces

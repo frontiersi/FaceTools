@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,75 +16,42 @@
  ************************************************************************/
 
 #include <FaceModelCurvature.h>
-#include <FaceModel.h>
-#include <r3dvis/VtkTools.h>
-#include <vtkPointData.h>
-#include <cassert>
+#include <r3dvis/SurfaceMapper.h>
+#include <r3dvis/VtkTools.h>    // makeNormals
+#include <r3d/CurvatureMetrics.h>
 using FaceTools::FaceModelCurvature;
-using FaceTools::FM;
-
-std::unordered_map<const FM*, r3d::Curvature::Ptr> FaceModelCurvature::_metrics;
-QReadWriteLock FaceModelCurvature::_lock;
 
 
-FaceModelCurvature::RPtr FaceModelCurvature::rmetrics( const FM *fm)
+FaceModelCurvature::Ptr FaceModelCurvature::create( const r3d::Mesh &mesh)
 {
-    _lock.lockForRead();
-
-    const r3d::Curvature *cm = _metrics.count(fm) > 0 ?  _metrics.at(fm).get() : nullptr;
-    if ( !cm)
-    {
-        _lock.unlock();
-        return nullptr;
-    }   // end if
-
-    return RPtr( cm, []( const r3d::Curvature*){ _lock.unlock();});
-}   // end rmetrics
+    return Ptr( new FaceModelCurvature(mesh), []( FaceModelCurvature* d){ delete d;});
+}   // end create
 
 
-FaceModelCurvature::WPtr FaceModelCurvature::wmetrics( const FM *fm)
+// private
+FaceModelCurvature::FaceModelCurvature( const r3d::Mesh &mesh)
+    : _cmap( r3d::Curvature::create( mesh))
 {
-    _lock.lockForWrite();
+    updateArrays();
+}   // end ctor
 
-    r3d::Curvature *cm = _metrics.count(fm) > 0 ?  _metrics.at(fm).get() : nullptr;
-    if ( !cm)
-    {
-        _lock.unlock();
-        return nullptr;
-    }   // end if
-
-    return WPtr( cm, []( r3d::Curvature*){ _lock.unlock(); });
-}   // end wmetrics
+// private
+FaceModelCurvature::~FaceModelCurvature(){}
 
 
-void FaceModelCurvature::purge( const FM *fm)
+void FaceModelCurvature::updateArrays()
 {
-    _lock.lockForWrite();
-    _metrics.erase(fm);
-    _lock.unlock();
-}   // end purge
-
-
-void FaceModelCurvature::add( const FM *fm)
-{
-    r3d::Curvature::Ptr cmap = r3d::Curvature::create( fm->mesh());  // Blocks
-    _lock.lockForWrite();
-    assert( _metrics.count(fm) == 0);
-    _metrics[fm] = cmap;
-    _lock.unlock();
-}   // end add
-
-
-vtkSmartPointer<vtkFloatArray> FaceTools::setNormals( vtkActor *actor, const FM *fm)
-{
-    vtkSmartPointer<vtkFloatArray> nrms;
-    FaceModelCurvature::RPtr cmap = FaceModelCurvature::rmetrics( fm);  // May be null if not yet processed curvature
-    if ( cmap)
-    {
-        nrms = r3dvis::makeNormals( *cmap);
-        nrms->SetName("Normals");
-        vtkPolyData *pd = r3dvis::getPolyData( actor);
-        pd->GetPointData()->SetNormals( nrms);
-    }   // end if
-    return nrms;
-}   // end setNormals
+    const r3d::Mesh &mesh = _cmap->mesh();
+    _nrms = r3dvis::makeNormals( *_cmap);
+    _nrms->SetName("Normals");
+    const r3d::CurvatureMetrics cm( *_cmap);
+    const auto meanCurvFn = [&]( int i, size_t)
+            { return 90.0f * (cm.vertexKP1FirstOrder(i) + cm.vertexKP2FirstOrder(i))/2;};
+    const auto absCurvFn = [&]( int i, size_t)
+            { return 45.0f * (fabsf(cm.vertexKP1FirstOrder(i)) + fabsf(cm.vertexKP2FirstOrder(i)));};
+    const auto d2CurvFn = [&]( int i, size_t) { return cm.vertexDeterminant(i);};
+    using VSM = r3dvis::VertexSurfaceMapper;
+    _mcrv = VSM( meanCurvFn, 1).makeArray( mesh, "FaceModelCurvature_Mean");
+    _acrv = VSM(  absCurvFn, 1).makeArray( mesh, "FaceModelCurvature_Abs");
+    _dcrv = VSM(   d2CurvFn, 1).makeArray( mesh, "FaceModelCurvature_D2");
+}   // end updateArrays

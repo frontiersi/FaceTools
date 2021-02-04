@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,19 +25,18 @@ using GD = FaceTools::Metric::GrowthData;
 using FaceTools::FM;
 
 
-GrowthDataRanker::GrowthDataRanker() : _gids(0), _cgd(nullptr) {}
+GrowthDataRanker::GrowthDataRanker() : _gids(0) {}
 
 
 void GrowthDataRanker::add( GD::Ptr gdptr)
 {
-    const GD *gd = &*gdptr;
+    const GD *gd = gdptr.get();
+    _all.insert(gd);
     _sdata[gd->sex()].insert(gd);
     _gdata[gd->sex()][gd->ethnicity()].insert(gd);
-    _compat.insert(gd);
-    _all.insert(gd);
-    _allptrs.insert(gdptr);
     _stats[_gids] = gd;
     gdptr->setId( _gids++);
+    _allptrs.insert(gdptr); // Just to keep alive
 }   // end add
 
 
@@ -105,7 +104,7 @@ void GrowthDataRanker::combineSexes()
     }   // end for
 }   // end combineSexes
 
-
+/*
 // Ethnic combinations are found from across different sources
 void GrowthDataRanker::combineEthnicities()
 {
@@ -140,32 +139,35 @@ void GrowthDataRanker::combineEthnicities()
         }   // end for
     }   // end for
 }   // end combineEthnicities
+*/
 
 
 #ifndef NDEBUG
 #include <Metric/MetricManager.h>
 #endif
 
-const GD* GrowthDataRanker::findBestMatch( const FM *fm) const
+// static
+const GD* GrowthDataRanker::bestMatch( const GDS &gds, const FM *fm)
 {
     if ( !fm)
         return nullptr;
-
     const int8_t sex = fm->sex();
     const int meth = fm->maternalEthnicity();
     const int peth = fm->paternalEthnicity();
     const float age = fm->age();
-    return _findBestMatch( sex, meth, peth, age);
-}   // end findBestMatch
+    return bestMatch( gds, sex, meth, peth, age);
+}   // end bestMatch
 
 
-const GD* GrowthDataRanker::findBestMatch( int8_t sex, int ethn) const
+// static
+const GD* GrowthDataRanker::bestMatch( const GDS &gds, int8_t sex, int ethn)
 {
-    return _findBestMatch( sex, ethn, ethn, FLT_MAX);
-}   // end findBestMatch
+    return bestMatch( gds, sex, ethn, ethn, FLT_MAX);
+}   // end bestMatch
 
 
-const GD* GrowthDataRanker::_findBestMatch( int8_t sex, int meth, int peth, float age) const
+// static
+const GD* GrowthDataRanker::bestMatch( const GDS &gds, int8_t sex, int meth, int peth, float age)
 {
     static const int WORST_ETH_SCORE = 5;
     const GD *bgd = nullptr;
@@ -176,7 +178,7 @@ const GD* GrowthDataRanker::_findBestMatch( int8_t sex, int meth, int peth, floa
 #ifndef NDEBUG
     int mid = -1;
 #endif
-    for ( const GD *gd : _compat)
+    for ( const GD *gd : gds)
     {
 #ifndef NDEBUG
         mid = gd->metricId();
@@ -220,20 +222,14 @@ const GD* GrowthDataRanker::_findBestMatch( int8_t sex, int meth, int peth, floa
 #endif
 
     return bgd;
-}   // end _findBestMatch
-
-
-void GrowthDataRanker::setCurrent( const GD* gd) { _cgd = gd;}
+}   // end bestMatch
 
 
 // Compatibility by sex, ethnicity, then age.
-void GrowthDataRanker::setCompatible( const FM* fm)
+GDS GrowthDataRanker::compatible( const FM* fm) const
 {
     if ( !fm)
-    {
-        _compat = _all;
-        return;
-    }   // end if
+        return _all;
 
     GDS gds;
 
@@ -244,19 +240,19 @@ void GrowthDataRanker::setCompatible( const FM* fm)
     // Get data matching the mother's ethnicity
     if ( fm->maternalEthnicity() != 0)
     {
-        GDS m = _findMatching( sex, meth);
+        GDS m = _compatible( sex, meth);
         gds.insert( m.begin(), m.end());
     }   // end if
 
     // Is father's ethnicity different?
     if ( peth != meth && peth != 0)
     {
-        GDS m = _findMatching( sex, peth);
+        GDS m = _compatible( sex, peth);
         gds.insert( m.begin(), m.end());
         const int mcode = Ethnicities::codeMix( {meth, peth});
         if ( mcode != 0) // Since ethnicities are different, get the mixed ethnic code data too.
         {
-            GDS m = _findMatching( sex, mcode);
+            GDS m = _compatible( sex, mcode);
             gds.insert( m.begin(), m.end());
         }   // end if
     }   // end if
@@ -272,18 +268,29 @@ void GrowthDataRanker::setCompatible( const FM* fm)
             gds = _all;
     }   // end if
 
-    _compat.clear();
+    GDS ogds;
 
     // Finally, check by age - just want the stats with matching age range
     const float age = fm->age();
     for ( const GD *gd : gds)
         if ( gd->isWithinAgeRange( age))
-            _compat.insert(gd);
+            ogds.insert(gd);
 
     // If there were no matching age ranges, then just use all
-    if ( _compat.empty())
-        _compat = gds;
-}   // end setCompatible
+    if ( ogds.empty())
+        ogds = gds;
+
+    return ogds;
+}   // end compatible
+
+
+GDS GrowthDataRanker::compatible( int8_t sex, int ethn) const
+{
+    GDS gds;
+    if ( _gdata.count(sex) > 0 && _gdata.at(sex).count(ethn) > 0)
+        gds = _gdata.at(sex).at(ethn);
+    return gds;
+}   // end compatible
 
 
 // static
@@ -299,26 +306,14 @@ QStringList GrowthDataRanker::sources( const GDS &gds)
 }   // end sources
 
 
-GDS GrowthDataRanker::lookup( int8_t sex, int ethn) const
+const GD* GrowthDataRanker::matching( int8_t sex, int ethn, const QString& src) const
 {
-    GDS gds;
-    if ( _gdata.count(sex) > 0 && _gdata.at(sex).count(ethn) > 0)
-        gds = _gdata.at(sex).at(ethn);
-    return gds;
-}   // end lookup
-
-
-bool GrowthDataRanker::hasData( int8_t sex, int ethn) const { return !lookup( sex, ethn).empty();}
-
-
-const GD* GrowthDataRanker::lookup( int8_t sex, int ethn, const QString& src) const
-{
-    const GDS gds = lookup(sex, ethn);
+    const GDS gds = compatible(sex, ethn);
     for ( const GD *gd : gds)
         if ( gd->source() == src)
             return gd;
     return nullptr;
-}   // end lookup
+}   // end matching
 
 
 const GD* GrowthDataRanker::stats( int gid) const
@@ -327,17 +322,17 @@ const GD* GrowthDataRanker::stats( int gid) const
 }   // end stats
 
 
-GDS GrowthDataRanker::_findMatching( int8_t sex, int ethn) const
+GDS GrowthDataRanker::_compatible( int8_t sex, int ethn) const
 {
     GDS mgds;
-    _findMatching( sex, ethn, mgds);
+    _compatible( sex, ethn, mgds);
     if ( sex != UNKNOWN_SEX)
-        _findMatching( UNKNOWN_SEX, ethn, mgds);
+        _compatible( UNKNOWN_SEX, ethn, mgds);
     return mgds;
-}   // end _findMatching
+}   // end _compatible
 
 
-void GrowthDataRanker::_findMatching( int8_t sex, int ethn, GDS& mgds) const
+void GrowthDataRanker::_compatible( int8_t sex, int ethn, GDS& mgds) const
 {
     if ( _sdata.count(sex) == 0)
         return;
@@ -351,4 +346,4 @@ void GrowthDataRanker::_findMatching( int8_t sex, int ethn, GDS& mgds) const
             if ( FaceTools::Ethnicities::belongs( gd->ethnicity(), ethn))
                 mgds.insert( gd);
     }   // end else
-}   // end _findMatching
+}   // end _compatible

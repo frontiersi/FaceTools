@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,80 +18,48 @@
 #include <Action/ActionUpdateMeasurements.h>
 #include <Interactor/LandmarksHandler.h>
 #include <Metric/MetricManager.h>
-#include <FaceModel.h>
 using FaceTools::Action::ActionUpdateMeasurements;
 using FaceTools::Action::Event;
 using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 using MM = FaceTools::Metric::MetricManager;
+using MC = FaceTools::Metric::Metric;
 
 
-ActionUpdateMeasurements::ActionUpdateMeasurements()
-    : FaceAction("Update Measurements"), _ev(Event::NONE)
+ActionUpdateMeasurements::ActionUpdateMeasurements() : FaceAction("Update Measurements")
 {
-    addTriggerEvent( Event::MESH_CHANGE
-                   | Event::AFFINE_CHANGE   // needed for rescaling!
-                   | Event::RESTORE_CHANGE
-                   | Event::STATS_CHANGE);
+    addTriggerEvent( Event::LANDMARKS_CHANGE | Event::STATS_CHANGE);
+#ifdef NDEBUG
+    setAsync(true);
+#endif
 }   // end ctor
 
 
-void ActionUpdateMeasurements::postInit()
+bool ActionUpdateMeasurements::updateMeasurement( FM *fm , int mid)
 {
-    using Interactor::LandmarksHandler;
-    const LandmarksHandler *h = MS::handler<LandmarksHandler>();
-    if ( h)
-    {
-        std::function<void( int, FaceSide)> fn =
-            [this]( int lmid, FaceSide fs)
-            {
-                if ( updateMeasurementsForLandmark( MS::selectedModel(), lmid))
-                    emit this->onEvent( Event::METRICS_CHANGE);
-            };
-        connect( h, &LandmarksHandler::onDoingDrag, fn);
-        connect( h, &LandmarksHandler::onFinishedDrag, fn);
-    }   // end if
-}   // end postInit
+    const MC *m = MM::cmetric(mid);
+    return m->_canMeasure( fm) && m->_measure(fm);
+}   // end updateMeasurement
 
 
 bool ActionUpdateMeasurements::updateAllMeasurements( FM *fm)
 {
     bool updated = false;
     if ( fm)
-        for ( Metric::MC::Ptr mc : MM::metrics())
-            if ( mc->canMeasure(fm) && mc->measure(fm))
-                updated = true;
+        for ( int mid : MM::ids())
+            updated |= updateMeasurement( fm, mid);
     return updated;
 }   // end updateAllMeasurements
 
 
-bool ActionUpdateMeasurements::updateMeasurementsForLandmark( FM *fm, int lmid)
-{
-    bool updated = false;
-    const Metric::MCSet &mset = MM::metricsForLandmark( lmid);
-    for ( const auto &m : mset)
-        if ( m->canMeasure( fm) && m->measure(fm))
-            updated = true;
-    return updated;
-}   // end updateMeasurementsForLandmark
-
-
-bool ActionUpdateMeasurements::updateMeasurementsForLandmarks( FM *fm, const IntSet &lmids)
-{
-    bool updated = false;
-    for ( int lmid : lmids)
-        updated |= updateMeasurementsForLandmark( fm, lmid);
-    return updated;
-}   // end updateMeasurementsForLandmarks
+bool ActionUpdateMeasurements::doBeforeAction( Event e) { return true;}
 
 
 void ActionUpdateMeasurements::doAction( Event e)
 {
-    FM *fm = MS::selectedModel();
-    _ev = Event::NONE;
-    if ( isTriggerEvent(e) && fm)
-    {
-        updateAllMeasurements( fm);
-        _ev = Event::METRICS_CHANGE;
-    }   // end if
+    FM::WPtr fm = MS::selectedModelScopedWrite();
+    updateAllMeasurements( fm.get());
 }   // end doAction
+
+
+Event ActionUpdateMeasurements::doAfterAction( Event e) { return Event::METRICS_CHANGE;}

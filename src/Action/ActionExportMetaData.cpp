@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +29,8 @@ using FaceTools::Action::ActionExportMetaData;
 using FaceTools::Action::Event;
 using FaceTools::FM;
 using FMM = FaceTools::FileIO::FaceModelManager;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
+using QMB = QMessageBox;
 
 
 ActionExportMetaData::ActionExportMetaData( const QString& dn, const QIcon& ico)
@@ -71,13 +72,13 @@ QString ActionExportMetaData::_createFilePath( const QString &fname) const
 }   // end _createFilePath
 
 
-QString ActionExportMetaData::_createFilePath( const FM *fm) const
+QString ActionExportMetaData::_createFilePath( const FM &fm) const
 {
     return _createFilePath( FMM::filepath( fm));
 }   // end _createFilePath
 
 
-QString ActionExportMetaData::_getFilePath( const FM* fm)
+QString ActionExportMetaData::_getFilePath( const FM &fm)
 {
     QString fp = _createFilePath(fm);
 
@@ -120,16 +121,16 @@ QString ActionExportMetaData::_getFilePath( const FM* fm)
 
 bool ActionExportMetaData::doBeforeAction( Event)
 {
-    const QString fp = _getFilePath( MS::selectedModel());
+    const QString fp = _getFilePath( *MS::selectedModelScopedRead());
     if ( fp.isEmpty())
         return false;
 
     _ofs.open( fp.toLocal8Bit().toStdString());
     if ( !_ofs.is_open())
     {
-        const QString msg = tr( ("Unable to open \'" + fp.toLocal8Bit().toStdString() + "' for writing!").c_str());
+        const QString msg = tr( ("Cannot open \'" + fp.toLocal8Bit().toStdString() + "' for writing!").c_str());
         QWidget* prnt = static_cast<QWidget*>(parent());
-        QMessageBox::critical( prnt, tr("Export write error!"), msg);
+        QMB::critical( prnt, tr("Export Write Error!"), QString("<p align='center'>%1</p>").arg(msg));
         return false;
     }   // end if
 
@@ -140,11 +141,9 @@ bool ActionExportMetaData::doBeforeAction( Event)
 
 void ActionExportMetaData::doAction( Event)
 {
-    FM* fm = MS::selectedModel();
-    fm->lockForRead();
+    FM::RPtr fm = MS::selectedModelScopedRead();
     PTree tree;
-    FileIO::exportMetaData( fm, true/* export path metrics*/, tree);
-    fm->unlock();
+    FileIO::exportMetaData( *fm, true/* export path metrics*/, tree);
 
     QMimeType mtype = _mimeDB.mimeTypeForFile( QFileInfo(_filepath));
     assert(mtype.isValid());

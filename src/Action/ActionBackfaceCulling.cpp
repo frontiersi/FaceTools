@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,44 +23,33 @@ using FaceTools::Action::ActionBackfaceCulling;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ActionBackfaceCulling::ActionBackfaceCulling( const QString& dn, const QIcon& ico, const QKeySequence& ks)
     : FaceAction( dn, ico, ks)
 {
-    setCheckable( true, true);
+    setCheckable( true, false);
     addTriggerEvent( Event::LOADED_MODEL);
 }   // end ctor
 
 
-bool ActionBackfaceCulling::update( Event e)
+bool ActionBackfaceCulling::update( Event)
 {
-    bool rval = false;
     const FV* fv = MS::selectedView();
-    if ( fv)
-    {
-        rval = true;
-        if ( !fv->backfaceCulling())
-            rval = false;
-    }   // end if
-    return rval;
+    return fv && fv->backfaceCulling();
 }   // end update
 
 
 bool ActionBackfaceCulling::isAllowed( Event) { return MS::isViewSelected();}   // end isAllowed
 
 
-void ActionBackfaceCulling::doAction( Event)
+void ActionBackfaceCulling::doAction( Event e)
 {
-    const bool ischecked = isChecked();
-    const FV *sfv = MS::selectedView();
-    for ( FV* fv : sfv->data()->fvs()) // All views of this model
-        fv->setBackfaceCulling( ischecked);
+    const bool turnOn = has( e, Event::LOADED_MODEL);
+    FV *fv = MS::selectedView();
+    fv->setBackfaceCulling( turnOn || !fv->backfaceCulling());
 }   // end doAction
 
 
-Event ActionBackfaceCulling::doAfterAction( Event)
-{
-    return Event::VIEW_CHANGE;
-}   // end doAfterAction
+Event ActionBackfaceCulling::doAfterAction( Event) { return Event::VIEW_CHANGE;}

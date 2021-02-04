@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@ public:
     void refresh( const FM*);
 
     void setVisible( bool, ModelViewer*);
-    bool isVisible() const { return _visible;}
+    inline bool isVisible() const { return _visible;}
 
     // Transforming the view also sets moving to false.
     void transform( const Mat4f&);
@@ -43,10 +43,13 @@ public:
     // Set moving to true only when the parent model's view transform doesn't agree with its model transform.
     void setMoving( bool v) { _moving = v;}
 
-    bool moving() const { return _moving;}
+    inline bool moving() const { return _moving;}
 
     virtual bool canCreateLabels( const FM*) const { return true;}
     virtual void setColours( const QColor& fg, const QColor& bg);
+
+    virtual bool applyToAllInViewer() const { return false;}
+    virtual bool applyToAllViewers() const { return false;}
 
 protected:
     virtual vtkSmartPointer<vtkPolyData> createLabels( const FM*) const = 0;

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Interactor::RadialSelectHandler;
 using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 float ActionExtractFace::s_cropRadius(110.0f);
@@ -73,6 +73,8 @@ bool ActionExtractFace::doBeforeAction( Event)
     else
         MS::showStatus("Extracting facial region...");
     _ev = Event::MESH_CHANGE | Event::AFFINE_CHANGE;
+    if ( MS::selectedModelScopedRead()->hasLandmarks())
+        _ev |= Event::LANDMARKS_CHANGE;
     storeUndo( this, _ev);
     return true;
 }   // end doBeforeAction
@@ -95,30 +97,30 @@ r3d::Mesh::Ptr cropRegion( const r3d::Mesh &mesh, const IntSet &cfids)
 }   // end cropRegion
 
 
-r3d::Mesh::Ptr extractFacialRegion( const FM *fm, r3d::Vec3f pos, float sqd)
+r3d::Mesh::Ptr extractFacialRegion( const FM &fm, r3d::Vec3f pos, float sqd)
 {
     std::vector<std::pair<size_t, float> > vtxs;
-    fm->kdtree().findr( pos, sqd, vtxs);  // Points within d cm of the given position
+    fm.kdtree().findr( pos, sqd, vtxs);  // Points within d cm of the given position
     IntSet vidxs;
     for ( const auto &p : vtxs)
         vidxs.insert(int(p.first));
-    r3d::Mesh::Ptr face = fm->mesh().extractVerticesSubset( vidxs, 0, true);
-    face->copyInMaterials( fm->mesh());
+    r3d::Mesh::Ptr face = fm.mesh().extractVerticesSubset( vidxs, 0, true);
+    face->copyInMaterials( fm.mesh());
     return face;
 }   // end extractFacialRegion
 }   // end namespace
 
 
-r3d::Mesh::Ptr ActionExtractFace::extract( FM *fm)
+r3d::Mesh::Ptr ActionExtractFace::extract( FM &fm)
 {
     float sqrad = 0.0f;
     Vec3f pos = Vec3f::Zero();
 
     // Calculate the maximum squared radius and the mean position from all assessments
     int count = 0;
-    for ( int aid : fm->assessmentIds())
+    for ( int aid : fm.assessmentIds())
     {
-        const Landmark::LandmarkSet &lmks = fm->assessment( aid)->landmarks();
+        const Landmark::LandmarkSet &lmks = fm.assessment( aid)->landmarks();
         if ( !lmks.empty())
         {
             sqrad = std::max( sqrad, lmks.sqRadius());
@@ -131,7 +133,7 @@ r3d::Mesh::Ptr ActionExtractFace::extract( FM *fm)
     {
         sqrad = cropRadius() * cropRadius();
         ActionAlignModel::align( fm);
-        fm->fixTransformMatrix();
+        fm.fixTransformMatrix();
     }   // end else
     else
         pos /= count;
@@ -142,23 +144,19 @@ r3d::Mesh::Ptr ActionExtractFace::extract( FM *fm)
 
 void ActionExtractFace::doAction( Event)
 {
-    FM *fm = MS::selectedModel();
-    fm->lockForWrite();
-
+    FM::WPtr fm = MS::selectedModelScopedWrite();
     r3d::Mesh::Ptr nmod;
 
     const RadialSelectHandler *h = MS::handler<RadialSelectHandler>();
     if ( h->isEnabled())
         nmod = cropRegion( fm->mesh(), h->selectedFaces());
     else
-        nmod = extract( fm);
+        nmod = extract( *fm);
 
     if ( nmod && nmod->numFaces() < fm->mesh().numFaces())
         fm->update( nmod, true, true, 1);    // Keep just one manifold
     else
         _ev = Event::NONE;
-
-    fm->unlock();
 }   // end doAction
 
 

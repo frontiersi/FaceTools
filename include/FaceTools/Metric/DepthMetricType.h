@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,9 +41,8 @@ public:
     Vis::MetricVisualiser* visualiser() override { return &_vis;}
 
     bool fixedInPlane() const override { return false;}
-    void setInPlane( bool v) override { _inPlane = v;}
-    bool inPlane() const override { return _inPlane;}
 
+    bool hasMeasurement( const FM *fm) const override { return _depthInfo.count(fm) > 0;}
     void purge( const FM *fm) override { _depthInfo.erase(fm);}
 
     const std::vector<DepthMeasure> &depthInfo( const FM *fm) const { return _depthInfo.at(fm);}
@@ -53,7 +52,6 @@ protected:
 
 private:
     Vis::DepthVisualiser _vis;
-    bool _inPlane;
     std::unordered_map<const FM*, std::vector<DepthMeasure> > _depthInfo;
 };  // end class
 

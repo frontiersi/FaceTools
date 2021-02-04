@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,15 +29,15 @@ using FaceTools::Action::UndoState;
 using FaceTools::Action::Event;
 using FaceTools::FM;
 using FMM = FaceTools::FileIO::FaceModelManager;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 using QMB = QMessageBox;
 
 
 ActionExportMask::ActionExportMask( const QString& dn, const QIcon& ico, const QKeySequence &ks)
     : FaceAction(dn, ico, ks), _fdialog(nullptr), _filename(""), _savedOkay(false)
 {
-    setAsync(true);
     addRefreshEvent( Event::MASK_CHANGE);
+    setAsync(true);
 }   // end ctor
 
 
@@ -62,7 +62,7 @@ QString ActionExportMask::whatsThis() const
 
 bool ActionExportMask::isAllowed( Event)
 {
-    const FM *fm = MS::selectedModel();
+    FM::RPtr fm = MS::selectedModelScopedRead();
     return fm && fm->hasMask();
 }   // end isAllowedd
 
@@ -73,7 +73,7 @@ bool ActionExportMask::doBeforeAction( Event)
     exts.erase( FMM::fileFormats().preferredExt());
     _fdialog->setNameFilters( FMM::fileFormats().createExportFilters( exts));
 
-    const QFileInfo origfile( FMM::filepath(MS::selectedModel()));
+    const QFileInfo origfile( FMM::filepath( *MS::selectedModelScopedRead()));
     const QString outpath = origfile.path() + "/" + origfile.baseName() + "_am_corr.ply";
 
     _fdialog->setDirectory( origfile.path());
@@ -97,7 +97,7 @@ bool ActionExportMask::doBeforeAction( Event)
             if ( exts.count(ext) == 0)
             {
                 static const QString msg = tr("Invalid format for mesh export; choose from one of those listed.");
-                QMB::information( prnt, tr("Invalid File Format"), msg);
+                QMB::information( prnt, tr("Invalid File Format"), QString("<p align='center'>%1</p>").arg(msg));
                 _filename = "";
                 continue;
             }   // end if
@@ -129,11 +129,8 @@ bool ActionExportMask::doBeforeAction( Event)
 
 void ActionExportMask::doAction( Event)
 {
-    const FM *fm = MS::selectedModel();
-    assert( !_filename.isEmpty());
-    fm->lockForRead();
+    FM::RPtr fm = MS::selectedModelScopedRead();
     _savedOkay = r3dio::saveMesh( fm->mask(), _filename.toLocal8Bit().toStdString());
-    fm->unlock();
 }   // end doAction
 
 
@@ -143,9 +140,10 @@ Event ActionExportMask::doAfterAction( Event)
         MS::showStatus( QString("Saved mask to '%1'").arg(_filename), 5000);
     else
     {
-        const QString msg = tr("Failed saving mask to '%1'!").arg(_filename);
+        const QString msg = tr("Failed to export mask to '%1'!").arg(_filename);
         MS::showStatus( msg, 10000);
-        QMB::critical( static_cast<QWidget*>(parent()), tr("Failed to save mesh!"), msg);
+        QMB::critical( static_cast<QWidget*>(parent()), tr("Export Error!"),
+                        QString("<p align='center'>%1</p>").arg(msg));
     }   // end else
 
     _filename = "";

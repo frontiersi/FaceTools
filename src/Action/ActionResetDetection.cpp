@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 using FaceTools::Action::ActionResetDetection;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 using QMB = QMessageBox;
 
 
@@ -42,8 +42,9 @@ bool ActionResetDetection::isAllowed( Event)
 bool ActionResetDetection::doBeforeAction( Event)
 {
     QWidget* prnt = static_cast<QWidget*>(parent());
-    static const QString msg = tr("Really remove the correspondence mask and landmarks? This will affect all assessments!");
-    return QMB::Yes == QMB::question( prnt, displayName(), msg, QMB::Yes | QMB::No, QMB::No);
+    static const QString msg = tr("Really reset the detection? This will affect all assessments!");
+    return QMB::Yes == QMB::warning( prnt, displayName(), QString("<p align='center'>%1</p>").arg(msg),
+                                      QMB::Yes | QMB::No, QMB::No);
 }   // end doBeforeAction
 
 

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,10 +24,7 @@ using FaceTools::Vec3f;
 using FaceTools::FM;
 
 
-RegionMetricType::RegionMetricType() : _inPlane(false)
-{
-    _vis.setMetric(this);
-}   // end ctor
+RegionMetricType::RegionMetricType() { _vis.setMetric(this);}
 
 
 namespace {
@@ -54,7 +51,7 @@ float RegionMetricType::update( size_t k, const FM *fm, const std::vector<Vec3f>
     assert( ipts.size() % 3 == 0);
     const std::vector<Vec3f> *cpts = &ipts;
     std::vector<Vec3f> ppts;
-    if ( _inPlane || inPlane)
+    if ( inPlane)
     {
         projectToPlane( ppts, ipts, nrm);
         cpts = &ppts;

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -125,29 +125,20 @@ void FaceModel::remakeBounds()
 {
     assert(_manifolds);
     const Mat4f T = transformMatrix();
-    const Mat4f iT = inverseTransformMatrix();
-
     const size_t nm = _manifolds->count();
     _bnds.resize(nm+1);
     for ( size_t i = 0; i < nm; ++i)
     {
         const IntSet& mvidxs = _manifolds->at(int(i)).vertices();
-        // Providing the current alignment in the creation of the bounds means that the bounds
-        // are created with this transform in mind so that when the inverse of the given transform
+        // Providing current alignment in creation of bounds means they are
+        // created with this transform in mind so when inverse of the transform
         // is applied, the bounds will be upright and in standard position.
         _bnds[i+1] = r3d::Bounds::create( *_mesh, T, &mvidxs);
     }   // end for
 
-    // If no landmarks, make the bounds entry at zero the union of the manifold bounding cuboids
-    // otherwise the bounds at zero represents a box around the head of the model.
-    if ( hasLandmarks())
-        _bnds[0] = currentLandmarks().makeBounds( T, iT);
-    else
-    {
-        _bnds[0] = _bnds[1]->deepCopy();
-        for ( size_t i = 2; i < nm+1; ++i)
-            _bnds[0]->encompass(*_bnds[i]);
-    }   // end else
+    _bnds[0] = _bnds[1]->deepCopy();
+    for ( size_t i = 2; i < nm+1; ++i)
+        _bnds[0]->encompass(*_bnds[i]);
 
     setMetaSaved( false);
     setModelSaved( false);
@@ -210,6 +201,20 @@ void FaceModel::lockForRead() const { _mutex.lockForRead();}
 void FaceModel::unlock() const { _mutex.unlock();}
 
 
+FaceModel::RPtr FaceModel::scopedReadLock() const
+{
+    _mutex.lockForRead();
+    return RPtr( this, []( const FaceModel *fm){ fm->_mutex.unlock();});
+}   // end scopedReadLock
+
+
+FaceModel::WPtr FaceModel::scopedWriteLock()
+{
+    _mutex.lockForWrite();
+    return WPtr( this, []( FaceModel *fm){ fm->_mutex.unlock();});
+}   // end scopedWriteLock
+
+
 void FaceModel::setSource( const QString& s)
 {
     if ( _source != s)
@@ -258,6 +263,14 @@ void FaceModel::setDateOfBirth( const QDate& d)
         setMetaSaved(false);
     }   // end if
 }   // end setDateOfBirth
+
+
+bool FaceModel::isSubjectMatch( const FM *fm) const
+{
+    return subjectId() == fm->subjectId()
+        && dateOfBirth() == fm->dateOfBirth()
+        && maskHash() == fm->maskHash();
+}   // end isSubjectMatch
 
 
 void FaceModel::setMaternalEthnicity( int t)
@@ -460,6 +473,9 @@ IntSet FaceModel::assessmentIds() const
 const LandmarkSet& FaceModel::currentLandmarks() const { return _cass->landmarks();}
 
 const PathSet& FaceModel::currentPaths() const { return _cass->paths();}
+PathSet& FaceModel::currentPaths() { return _cass->paths();}
+
+bool FaceModel::hasPaths() const { return !currentPaths().empty();}
 
 
 void FaceModel::setLandmarks( const LandmarkSet &lmks)

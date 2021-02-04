@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 
 #include <Metric/Chart.h>
 #include <Metric/MetricManager.h>
+#include <Metric/StatsManager.h>
 #include <Ethnicities.h>
 #include <FaceModel.h>
 #include <QtCharts/QSplineSeries>
@@ -31,18 +32,6 @@ using namespace QtCharts;
 
 
 namespace {
-
-QAbstractSeries* createMetricPoint( double age, double val, const QString& title, const QColor& c)
-{
-    QScatterSeries *dpoints = new QScatterSeries;
-    dpoints->setName( title);
-    dpoints->setMarkerShape( QScatterSeries::MarkerShapeCircle);
-    dpoints->setMarkerSize(10);
-    dpoints->setColor(c);
-    dpoints->append( age, val);
-    return dpoints;
-}   // end createMetricPoint
-
 
 void updateAxisRange( QValueAxis& axis, int mi, int ma, int maxTicks=16)
 {
@@ -80,51 +69,45 @@ void updateAxisRange( QValueAxis& axis, int mi, int ma, int maxTicks=16)
 }   // end namespace
 
 
-Chart::Ptr Chart::create( const GrowthData *gd, size_t d, const FM* fm)
-{
-    return Ptr( new Chart( gd, d, fm));
-}   // end create
-
-
 Chart::Ptr Chart::create( int mid, size_t d, const FM* fm)
 {
     assert(MM::metric(mid) != nullptr);
-    const GrowthData *gd = MM::metric(mid)->growthData().current();
-    return Ptr( new Chart( gd, d, fm));
+    return Ptr( new Chart( mid, d, fm));
 }   // end create
 
 
-Chart::Chart( const GrowthData *gd, size_t d, const FM* fm) : _gdata(gd), _dim(d)
+Chart::Chart( int mid, size_t d, const FM *fm)
+    : _mid(mid), _dim(d), _gdata(nullptr),
+    _ymin(FLT_MAX), _ymax(-FLT_MAX), _xmin(0), _xmax(0),
+    _ageOutOfBounds(false)
 {
-    float xmin, xmax, ymin, ymax;
-    xmin = ymin = FLT_MAX;
-    xmax = ymax = -FLT_MAX;
+    StatsManager::RPtr gd = StatsManager::stats( mid, fm);
+    _gdata = gd.get();
+
+    rlib::RSD::CPtr rd = _gdata->rsd(_dim);
+    // The min and max age (X) range is defined by the age range of the growth data
+    _xmin = int(floorf(rd->tmin()));
+    _xmax = int(ceilf(rd->tmax()));
 
     if ( fm)
     {
-        _addDataPoints( fm, ymin, ymax);
-        xmin = floorf(fm->age());
-        xmax = ceilf(fm->age());
+        _addDataPoints( fm);
+        _ageOutOfBounds = !gd->isWithinAgeRange(fm->age());
     }   // end if
-
-    _addSeriesToChart( xmin, xmax, ymin, ymax);
-    xmin = floorf(xmin);
-    xmax = ceilf(xmax);
-    ymin = floorf(ymin);
-    ymax = ceilf(ymax);
+    _addSeriesToChart();
 
     createDefaultAxes();
 
     QValueAxis* xaxis = static_cast<QValueAxis*>(this->axes(Qt::Horizontal).first());
     xaxis->setLabelFormat( "%d");
     xaxis->setTitleText(tr("Age (years)"));
-    updateAxisRange( *xaxis, int(xmin), int(xmax));
+    updateAxisRange( *xaxis, _xmin, _xmax);
 
     QValueAxis* yaxis = static_cast<QValueAxis*>(this->axes(Qt::Vertical).first());
     yaxis->setLabelFormat( "%d");
-    MC::Ptr metric = MM::metric(gd->metricId());
+    MC::Ptr metric = MM::metric(mid);
     yaxis->setTitleText( tr("%1 (%2)").arg(metric->category()).arg(metric->units()));
-    updateAxisRange( *yaxis, int(ymin), int(ymax));
+    updateAxisRange( *yaxis, int(floorf(_ymin)), int(ceilf(_ymax)));
 
     this->legend()->setAlignment(Qt::AlignRight);
     this->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
@@ -160,7 +143,7 @@ QString makeDemographicString( const GrowthData *gd, bool asLatex)
 }   // end makeDemographicString
 
 
-QString makeSourceString( const GrowthData *gd, const QString& lb)
+QString makeSourceString( const GrowthData *gd, bool ageOutOfBounds, const QString& lb)
 {
     // Get the source and any note on the same line, with long notes underneath.
     QString src = gd->source();
@@ -168,6 +151,8 @@ QString makeSourceString( const GrowthData *gd, const QString& lb)
         src += " " + gd->note();
     if ( !gd->longNote().isEmpty())
         src += lb + gd->longNote();
+    if ( ageOutOfBounds)
+        src += lb + "[Age Outside Inferential Domain!]";
     return src;
 }   // end makeSourceString
 }   // end namespace
@@ -177,7 +162,7 @@ QString Chart::makeRichTextTitleString() const
 {
     const QString title = makeTitleString( _gdata, _dim);
     const QString demog = makeDemographicString( _gdata, false);
-    const QString src = makeSourceString( _gdata, "<br>");
+    const QString src = makeSourceString( _gdata, _ageOutOfBounds, "<br>");
     return QString("<center><big><b>%1</b> (%2)</big><br><em>%3</em></center>").arg( title, demog, src);
 }   // end makeRichTextTitleString
 
@@ -188,7 +173,7 @@ QString Chart::makeLatexTitleString( int fnm) const
     const QString demog = makeDemographicString( _gdata, true);
     if ( fnm > 0)
         return QString("\\textbf{%1}\\\\ \\small{(%2) \\footnotemark[%3]}").arg( title, demog).arg(fnm);
-    const QString src = makeSourceString( _gdata, "\\\\");
+    const QString src = makeSourceString( _gdata, _ageOutOfBounds, "\\\\");
     return QString("\\textbf{%1}\\\\ \\small{(%2)}\\\\ \\scriptsize{\\textit{%3}}").arg( title, demog, src);
 }   // end makeLatexTitleString
 
@@ -196,40 +181,57 @@ QString Chart::makeLatexTitleString( int fnm) const
 void Chart::addTitle() { this->setTitle( makeRichTextTitleString());}
 
 
-void Chart::_addDataPoints( const FM* fm, float &ymin, float &ymax)
+namespace {
+QAbstractSeries* createMetricPoint( double age, double val, const QString& title, const QColor& c, bool outBounds)
 {
-    const GrowthData *gd = _gdata;
-    const int mid = gd->metricId();
-    const float age = fm->age();
-    FaceAssessment::CPtr ass = fm->currentAssessment();
+    QScatterSeries *dpoints = new QScatterSeries;
+    dpoints->setName( title);
+    if ( outBounds)
+        dpoints->setMarkerShape( QScatterSeries::MarkerShapeRectangle);
+    else
+        dpoints->setMarkerShape( QScatterSeries::MarkerShapeCircle);
+    dpoints->setMarkerSize(10);
+    dpoints->setColor(c);
+    dpoints->append( age, val);
+    return dpoints;
+}   // end createMetricPoint
+}   // end namespace
 
-    if ( MM::metric(mid)->isBilateral())
+
+void Chart::_addDataPoints( const FM* fm)
+{
+    float age = fm->age();
+    const bool isOutOfBounds = !_gdata->isWithinAgeRange(age);
+    age = std::max<float>( _xmin, std::min<float>( age, _xmax));
+
+    FaceAssessment::CPtr ass = fm->currentAssessment();
+    if ( MM::metric(_mid)->isBilateral())
     {
-        if ( ass->cmetrics(LEFT).has(mid))
+        if ( ass->cmetrics(LEFT).has(_mid))
         {
-            assert( ass->cmetrics(RIGHT).has(mid));
-            const MetricValue& mvl = ass->cmetrics(LEFT).metric( mid);
-            const MetricValue& mvr = ass->cmetrics(RIGHT).metric( mid);
+            assert( ass->cmetrics(RIGHT).has(_mid));
+            const MetricValue& mvl = ass->cmetrics(LEFT).metric( _mid);
+            const MetricValue& mvr = ass->cmetrics(RIGHT).metric( _mid);
             const float val = 0.5f * (mvl.value(_dim) + mvr.value(_dim));
 
-            this->addSeries( createMetricPoint( age, mvl.value(_dim), "Left", Qt::blue));
-            this->addSeries( createMetricPoint( age, mvr.value(_dim), "Right", Qt::darkGreen));
-            this->addSeries( createMetricPoint( age, val, "Mean", Qt::red));
+            this->addSeries( createMetricPoint( age, mvl.value(_dim), "Left", Qt::blue, isOutOfBounds));
+            this->addSeries( createMetricPoint( age, mvr.value(_dim), "Right", Qt::darkGreen, isOutOfBounds));
+            this->addSeries( createMetricPoint( age, val, "Mean", Qt::red, isOutOfBounds));
 
-            ymin = std::min( mvl.value(_dim), mvr.value(_dim));
-            ymax = std::max( mvl.value(_dim), mvr.value(_dim));
+            _ymin = std::min( mvl.value(_dim), mvr.value(_dim));
+            _ymax = std::max( mvl.value(_dim), mvr.value(_dim));
         }   // end if
     }   // end if
-    else if ( ass->cmetrics(MID).has(mid))
+    else if ( ass->cmetrics(MID).has(_mid))
     {
-        const MetricValue &mv = ass->cmetrics(MID).metric( mid);
-        this->addSeries( createMetricPoint( age, mv.value(_dim), "Subject", Qt::red));
-        ymin = ymax = mv.value(_dim);
+        const MetricValue &mv = ass->cmetrics(MID).metric( _mid);
+        this->addSeries( createMetricPoint( age, mv.value(_dim), "Subject", Qt::red, isOutOfBounds));
+        _ymin = _ymax = mv.value(_dim);
     }   // end else if
 }   // end _addDataPoints
 
 
-void Chart::_addSeriesToChart( float &x0, float &x1, float &y0, float &y1)
+void Chart::_addSeriesToChart()
 {
     QLineSeries *mseries = new QSplineSeries;
     QLineSeries *z1pseries = new QSplineSeries;
@@ -239,12 +241,7 @@ void Chart::_addSeriesToChart( float &x0, float &x1, float &y0, float &y1)
 
     assert( _gdata);
     rlib::RSD::CPtr rd = _gdata->rsd(_dim);
-    const int minx = int(floorf(rd->tmin()));
-    const int maxx = int(ceilf(rd->tmax()));
-    x0 = minx;
-    x1 = maxx;
-
-    for ( int i = minx; i <= maxx; ++i)
+    for ( int i = _xmin; i <= _xmax; ++i)
     {
         float a = i;
         float m = rd->mval(a);
@@ -256,8 +253,8 @@ void Chart::_addSeriesToChart( float &x0, float &x1, float &y0, float &y1)
         z1nseries->append( a, m - z);
         z2nseries->append( a, m - 2*z);
 
-        y0 = std::min( y0, m - 2*z);
-        y1 = std::max( y1, m + 2*z);
+        _ymin = std::min( _ymin, m - 2*z);
+        _ymax = std::max( _ymax, m + 2*z);
     }   // end for
 
     z2pseries->setName("+2SD");

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,11 +19,9 @@
 #include <ui_LandmarksCheckDialog.h>
 #include <Widget/CheckAllTableHeader.h>
 #include <Widget/IntTableWidgetItem.h>
-
 #include <LndMrk/LandmarksManager.h>
 #include <LndMrk/LandmarkSet.h>
 
-#include <FaceModel.h>
 using FaceTools::Widget::LandmarksCheckDialog;
 using FaceTools::Widget::CheckAllTableHeader;
 using FaceTools::Widget::IntTableWidgetItem;
@@ -76,10 +74,7 @@ LandmarksCheckDialog::LandmarksCheckDialog(QWidget *parent) :
 }   // end ctor
 
 
-LandmarksCheckDialog::~LandmarksCheckDialog()
-{
-    delete _ui;
-}   // end dtor
+LandmarksCheckDialog::~LandmarksCheckDialog() { delete _ui;}
 
 
 void LandmarksCheckDialog::_doOnItemChanged( QTableWidgetItem* m)
@@ -95,7 +90,7 @@ void LandmarksCheckDialog::_doOnItemChanged( QTableWidgetItem* m)
 }   // end _doOnItemChanged
 
 
-bool LandmarksCheckDialog::open( const FM* fm)
+bool LandmarksCheckDialog::open( const FM &fm)
 {
     CheckAllTableHeader *header = static_cast<CheckAllTableHeader*>(_ui->table->horizontalHeader());
     header->setAllChecked(true);
@@ -105,7 +100,7 @@ bool LandmarksCheckDialog::open( const FM* fm)
         const int id = _ui->table->item( i, IDNT_COL)->text().toInt();
         // If the model doesn't have the landmark already set, disable the check button.
         Qt::ItemFlags flags = Qt::ItemIsUserCheckable;
-        if ( fm->currentAssessment()->landmarks().has(id))
+        if ( fm.currentAssessment()->landmarks().has(id))
             flags |= Qt::ItemIsEnabled;
 
         auto* item = _ui->table->item(i, SHOW_COL);

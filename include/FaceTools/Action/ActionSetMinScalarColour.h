@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,12 +27,13 @@ class FaceTools_EXPORT ActionSetMinScalarColour : public FaceAction
 public:
     explicit ActionSetMinScalarColour( const QString&);
 
-    QString toolTip() const override { return "Set the colour to represent the minimum value for scalar colour mapping of model surfaces.";}
+    QString toolTip() const override { return "Set the min value colour when colour mapping surfaces.";}
 
 protected:
     bool isAllowed( Event) override;
     bool doBeforeAction( Event) override;
     void doAction( Event) override;
+    Event doAfterAction( Event) override { return Event::VIEW_CHANGE;}
 
 private:
     QColor _curColour;

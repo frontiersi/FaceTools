@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,7 +31,6 @@ public:
     using Ptr = std::shared_ptr<RadialSelectHandler>;
     static Ptr create();
 
-    void postRegister() override;
     void refresh() override;
 
     Vis::BaseVisualisation &visualisation() { return _vis;}
@@ -39,6 +38,9 @@ public:
 
     // Initialise the handler to work with the given view's model.
     void init( const FM*, const Vec3f& centre, float radius);
+
+    // Returns true iff the currently set data are associated with the given model.
+    bool isForModel( const FM*) const;
 
     float radius() const;
     Vec3f centre() const;   // Returns transformed point
@@ -62,12 +64,10 @@ private:
     bool _onReticule;
     bool _moving;
     float _radiusChange;
-    const Vis::BaseVisualisation *_lmkVis;
     IntSet _fids;           // The currently selected facets
     r3d::Boundaries _bnds;  // And corresponding boundary vertices
     r3d::RegionSelector::Ptr _rsel;
 
-    bool _isRegionSelectorForModel( const FM*) const;
     void _update( Vec3f, float);
     void _showHover();
     bool _changeRadius( float);

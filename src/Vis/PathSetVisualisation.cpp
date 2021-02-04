@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,15 +19,11 @@
 #include <Vis/FaceView.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <algorithm>
 #include <cassert>
-#include <vtkProperty.h>
 using FaceTools::Vis::PathSetVisualisation;
 using FaceTools::Vis::BaseVisualisation;
-using FaceTools::Vis::PathSetView;
 using FaceTools::Vis::PathView;
 using FaceTools::Vis::FV;
-using FaceTools::FMV;
 using FaceTools::FM;
 using FaceTools::Path;
 
@@ -35,14 +31,7 @@ using FaceTools::Path;
 PathSetVisualisation::PathSetVisualisation() : _maxOpacity(1.0f) {}
 
 
-PathSetVisualisation::~PathSetVisualisation()
-{
-    while (!_views.empty())
-        purge( _views.begin()->first);
-}   // end dtor
-
-
-bool PathSetVisualisation::isAvailable( const FV *fv, const QPoint*) const
+bool PathSetVisualisation::isAvailable( const FV *fv) const
 {
     return !fv->data()->currentPaths().empty();
 }   // end isAvailable
@@ -60,121 +49,131 @@ void PathSetVisualisation::setMaxAllowedOpacity( float v)
 }   // end setMaxAllowedOpacity
 
 
-void PathSetVisualisation::apply( const FV* fv, const QPoint*)
+void PathSetVisualisation::refresh( FV *fv)
 {
-    assert(fv);
-    if ( !_hasView(fv))
+    const FM *fm = fv->data();
+    PathSet pset = fm->currentPaths();  // Copy out
+    pset.transform( fm->inverseTransformMatrix());  // Transform paths for visualising
+    vtkSmartPointer<vtkMatrix4x4> tmat = r3dvis::toVTK( fm->transformMatrix());
+    for ( FV *f : fm->fvs())
     {
-        _views[fv] = new PathSetView;
-        PathSet pset = fv->data()->currentPaths();  // Copy out
-        pset.transform( fv->data()->inverseTransformMatrix());  // Transform paths for visualising
-        _views.at(fv)->sync( pset);
-    }   // end if
-}   // end apply
+        _views[f].sync(pset);
+        _views.at(f).pokeTransform( tmat);
+        _views.at(f).updateTextColours();
+        _views.at(f).setVisible( true, f->viewer());
+    }   // end for
+}   // end refresh
 
 
 void PathSetVisualisation::purge( const FV* fv)
 {
     if ( _hasView(fv))
-    {
-        _views.at(fv)->setVisible( false, fv->viewer());
-        delete _views.at(fv);
         _views.erase(fv);
-    }   // end if
 }   // end purge
 
 
 void PathSetVisualisation::setVisible( FV* fv, bool v)
 {
     if ( _hasView(fv))
-        _views.at(fv)->setVisible( v, fv->viewer());
+    {
+        _views.at(fv).setVisible( v, fv->viewer());
+        _views.at(fv).updateTextColours();
+    }   // end if
 }   // end setVisible
+
+
+void PathSetVisualisation::setPickable( const FV* fv, bool v)
+{
+    if ( _hasView(fv))
+        _views.at(fv).setPickable( v);
+}   // end setPickable
 
 
 bool PathSetVisualisation::isVisible( const FV* fv) const
 {
-    return _hasView(fv) && _views.at(fv)->isVisible();
+    return _hasView(fv) && _views.at(fv).isVisible();
 }   // end isVisible
 
 
-void PathSetVisualisation::addPath( const FM* fm, int pathId)
+void PathSetVisualisation::updatePath( const FM &fm, int pathId)
 {
-    Path path = fm->currentPaths().path(pathId);  // Copy out
-    path.transform( fm->inverseTransformMatrix());  // Transform for visualising
-    for ( FV* fv : fm->fvs())
+    Path path = fm.currentPaths().path(pathId);
+    path.transform( fm.inverseTransformMatrix());
+    vtkSmartPointer<vtkMatrix4x4> tmat = r3dvis::toVTK( fm.transformMatrix());
+    for ( const FV* fv : fm.fvs())
     {
-        if ( !_hasView(fv))
-            apply( fv, nullptr);
-        else
-            _views[fv]->addPath( path);
-        _views.at(fv)->pokeTransform( r3dvis::toVTK( fm->transformMatrix()));
-    }   // end for
-}   // end addPath
-
-
-void PathSetVisualisation::updatePath( const FM* fm, int pathId)
-{
-    Path path = fm->currentPaths().path(pathId);
-    path.transform( fm->inverseTransformMatrix());
-    for ( FV* fv : fm->fvs())
-    {
-        if ( _hasView(fv))
-        {
-            _views.at(fv)->updatePath( path);
-            _views.at(fv)->pokeTransform( r3dvis::toVTK( fm->transformMatrix()));
-        }   // end if
+        assert( _hasView(fv));
+        _views.at(fv).sync( path);
+        _views.at(fv).pokeTransform( tmat);
     }   // end for
 }   // end updatePath
 
 
-void PathSetVisualisation::erasePath( const FM* fm, int pathId)
+void PathSetVisualisation::erasePath( const FM &fm, int pathId)
 {
-    for ( FV* fv : fm->fvs())
-        if ( _hasView(fv))
-            _views.at(fv)->erasePath(pathId);
+    for ( const FV* fv : fm.fvs())
+    {
+        assert( _hasView(fv));
+        _views.at(fv).erasePath(pathId);
+    }   // end for
 }   // end erasePath
 
 
-void PathSetVisualisation::syncPaths( const FM* fm)
+void PathSetVisualisation::showTemporaryPath( const FM &fm, const Path &inPath,
+                                                int hid, const QString &hcap)
 {
-    if ( !fm)
-        return;
-
-    PathSet pset = fm->currentPaths();
-    pset.transform( fm->inverseTransformMatrix());
-    for ( FV* fv : fm->fvs())
+    Path path = inPath;
+    path.transform( fm.inverseTransformMatrix());
+    vtkSmartPointer<vtkMatrix4x4> tmat = r3dvis::toVTK( fm.transformMatrix());
+    for ( FV *f : fm.fvs())
     {
-        if ( _hasView(fv))
-        {
-            _views.at(fv)->sync( pset);
-            _views.at(fv)->pokeTransform( r3dvis::toVTK( fm->transformMatrix()));
-        }   // end if
+        PathSetView &psv = _tviews[f];
+        psv.sync(path);
+        psv.pokeTransform( tmat);
+        psv.pathView(path.id())->handle(hid)->setCaption(hcap);
+        psv.pathView(path.id())->handle(hid)->showCaption(true);
+        psv.setVisible( true, f->viewer());
+        psv.setCaptionVisible( true);
+        psv.updateTextColours();
     }   // end for
-}   // end syncPaths
+}   // end showTemporaryPath
 
 
-void PathSetVisualisation::updateCaption( const FM* fm, int pid, int xpos, int ypos)
+void PathSetVisualisation::clearTemporaryPath()
 {
-    const Mat3f iR = fm->inverseTransformMatrix().block<3,3>(0,0);
-    const Path& path = fm->currentPaths().path(pid);
-    for ( FV* fv : fm->fvs())
-        if ( _hasView(fv))
-            _views.at(fv)->setCaption( path, xpos, ypos, iR);
+    for ( auto &p : _tviews)
+        p.second.setVisible( false, p.first->viewer());
+    _tviews.clear();
+}   // end clearTemporaryPath
+
+
+void PathSetVisualisation::updateCaption( const FM &fm, const Path &path)
+{
+    static const int ypos = 10;
+    const Mat3f iR = fm.inverseTransformMatrix().block<3,3>(0,0);
+    for ( FV *fv : fm.fvs())
+    {
+        const int xpos = int(fv->viewer()->getWidth()) - 10;
+        if ( _views.count(fv) > 0)
+            _views.at(fv).setCaption( path, xpos, ypos, iR);
+        else if ( _tviews.count(fv) > 0)
+            _tviews.at(fv).setCaption( path, xpos, ypos, iR);
+    }   // end for
 }   // end updateCaption
 
 
 void PathSetVisualisation::showCaption( const FV *fv)
 {
     for ( auto& p : _views)
-        p.second->setCaptionVisible(false);
+        p.second.setCaptionVisible(false);
     if ( _hasView(fv))
-        _views.at(fv)->setCaptionVisible(true);
+        _views.at(fv).setCaptionVisible(true);
 }   // end showCaption
 
 
 PathView::Handle* PathSetVisualisation::pathHandle( const FV* fv, const vtkProp* prop) const
 {
-    return _hasView(fv) ? _views.at(fv)->handle( prop) : nullptr;
+    return _hasView(fv) ? _views.at(fv).handle( prop) : nullptr;
 }   // end pathHandle
 
 
@@ -183,7 +182,7 @@ PathView::Handle* PathSetVisualisation::pathHandle0( const FV* fv, int pid) cons
     PathView::Handle* h = nullptr;
     if ( _hasView(fv))
     {
-        PathView* pv = _views.at(fv)->pathView(pid);
+        PathView* pv = _views.at(fv).pathView(pid);
         if ( pv)
             h = pv->handle0();
     }   // end if
@@ -191,18 +190,11 @@ PathView::Handle* PathSetVisualisation::pathHandle0( const FV* fv, int pid) cons
 }   // end pathHandle0
 
 
-void PathSetVisualisation::syncWithViewTransform( const FV* fv)
+void PathSetVisualisation::syncTransform( const FV* fv)
 {
     if ( _hasView(fv))
-        _views.at(fv)->pokeTransform( fv->transformMatrix());
-}   // end syncWithViewTransform
-
-
-void PathSetVisualisation::refresh( const FV *fv)
-{
-    if ( _hasView(fv))
-        _views.at(fv)->updateTextColours();
-}   // end refresh
+        _views.at(fv).pokeTransform( fv->transformMatrix());
+}   // end syncTransform
 
 
 bool PathSetVisualisation::_hasView( const FV* fv) const { return fv && _views.count(fv) > 0;}

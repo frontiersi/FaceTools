@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,13 +36,12 @@ public:
 
     QString category() const override { return "Region";}
     QString units() const override { return "perimeter^2/area";}
-    QString typeRemarks() const override { return "The perimeter of a region is the sum of the lengths of line segments of an ordered list of landmarks. The area is defined by the sum of the areas of triangles (with corners as the landmarks) comprising the region.";}
+    QString typeRemarks() const override { return "A region's perimeter is the sum of the lengths of line segments of an ordered list of landmarks. The area is defined by the sum of the areas of triangles (with corners as the landmarks) comprising the region.";}
     Vis::MetricVisualiser* visualiser() override { return &_vis;}
 
     bool fixedInPlane() const override { return false;}
-    void setInPlane( bool v) override { _inPlane = v;}
-    bool inPlane() const override { return _inPlane;}
 
+    bool hasMeasurement( const FM *fm) const override { return _regionInfo.count(fm) > 0;}
     void purge( const FM *fm) override { _regionInfo.erase(fm);}
     const std::vector<RegionMeasure> &regionInfo( const FM *fm) const { return _regionInfo.at(fm);}
 
@@ -51,7 +50,6 @@ protected:
 
 private:
     Vis::RegionVisualiser _vis;
-    bool _inPlane;
     std::unordered_map<const FM*, std::vector<RegionMeasure> > _regionInfo;
 };  // end class
 

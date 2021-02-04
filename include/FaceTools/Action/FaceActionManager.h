@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,12 +19,11 @@
 #define FACE_TOOLS_FACE_ACTION_MANAGER_H
 
 #include "FaceAction.h"
-#include <QMutex>
 
 /**
  * IMPORTANT:
  * Before creating the singleton FaceActionManager, ensure that all FaceModelViewer instances
- * have been added using ModelSelector::addViewer since all interactors and mouse handlers
+ * have been added using ModelSelect::addViewer since all interactors and mouse handlers
  * will attach themselves to all available viewers on creation.
  */
 
@@ -35,30 +34,34 @@ class FaceTools_EXPORT FaceActionManager : public QObject
 public:
     using Ptr = std::shared_ptr<FaceActionManager>;
 
-    // Get (creating if necessary) the static singleton.
-    // Providing the parent widget is only necessary for the first (creating) call.
-    // For calls where the singleton is already present, the parent parameter is ignored.
-    static Ptr get( QWidget* parent=nullptr);
-       
     // Return added action's QAction if added okay (duplicates not allowed).
-    static QAction* registerAction( FaceAction*);
+    // Call finalise after registering all.
+    static QAction* registerAction( FaceAction*, QWidget *parent);
 
-    static void close( const FM*);
+    // Call after all actions have been registered.
+    static void finalise();
 
-public slots:
-    void doEvent( Event e=Event::NONE);
+    // Raise the given event (always raised in the GUI thread).
+    static void raise( Event);
+
+    static Vis::FV* close( const FM*);
+
+    static FaceActionManager* get();    // For connecting to signals
 
 signals:
     void onUpdateSelected();
     void onShowHelp( const QString&);
-    void onRegisteredAction( FaceAction*);
+    void _selfRaise( Event);
+
+private slots:
+    void _doRaise( Event e=Event::NONE);
 
 private:
     static FaceActionManager::Ptr s_singleton;
+    std::vector<FaceAction*> _actions; // Actions in registered order
 
-    QWidget *_parent;
-    std::unordered_set<FaceAction*> _actions;
-    QMutex _closeLock;
+    int _lvl;
+    std::unordered_map<FaceAction*, Event> _acted;
 
     FaceActionManager();
     FaceActionManager( const FaceActionManager&) = delete;

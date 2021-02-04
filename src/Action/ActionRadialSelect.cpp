@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ using FaceTools::Interactor::RadialSelectHandler;
 using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 using LMAN = FaceTools::Landmark::LandmarksManager;
 
 
@@ -33,6 +33,7 @@ ActionRadialSelect::ActionRadialSelect( const QString& dn, const QIcon& ico)
     : ActionVisualise( dn, ico, &MS::handler<RadialSelectHandler>()->visualisation())
 {
     addPurgeEvent( Event::MESH_CHANGE);
+    addRefreshEvent( Event::MESH_CHANGE);
 }   // end ctor
 
 

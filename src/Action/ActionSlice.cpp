@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,10 +21,9 @@
 using FaceTools::Action::ActionSlice;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
-using FaceTools::FVS;
 using FaceTools::FM;
 using FaceTools::Vec3f;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ActionSlice::ActionSlice( const QString &dn, const QIcon& ico, const Vec3f& p, const Vec3f& n)
@@ -37,16 +36,18 @@ ActionSlice::ActionSlice( const QString &dn, const QIcon& ico, const Vec3f& p, c
 bool ActionSlice::isAllowed( Event) { return MS::isViewSelected();}
 
 
-void ActionSlice::doAction( Event)
+bool ActionSlice::doBeforeAction( Event)
 {
     storeUndo( this, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE);
+    return true;
+}   // end doBeforeAction
+
+
+void ActionSlice::doAction( Event)
+{
     FM* fm = MS::selectedModel();
-
-    fm->lockForRead();
-    r3d::Mesh::Ptr nmod = r3d::Slicer( fm->mesh())( _p, _n);    // One half
-    fm->unlock();
-
     fm->lockForWrite();
+    r3d::Mesh::Ptr nmod = r3d::Slicer( fm->mesh())( _p, _n);    // One half
     fm->update( nmod, true, true);
     fm->unlock();
 }   // end doAction

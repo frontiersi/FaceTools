@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,12 +27,19 @@ class FaceTools_EXPORT ActionRestoreLandmarks : public FaceAction
 { Q_OBJECT
 public:
     ActionRestoreLandmarks( const QString&, const QIcon&);
-    QString toolTip() const override { return "Restore landmarks to their initial positions.";}
+    QString toolTip() const override { return "Restore all landmarks to their initial (detected) positions for the current assessment.";}
+
+    // Restore a single landmark for the given assessment (defaults to current assessment).
+    static bool restoreLandmark( FM&, int lmid, int assessmentId=-1);
 
     // Returns true iff given model has a mask and the landmarks were transferred.
     // Set ulmks specifies the ids of the landmarks to restore (function does nothing if empty).
     // Also updates all visualisations on views of the given model if uvis is true.
-    static bool restoreLandmarks( FM*, const IntSet& ulmks, bool uvis=true);
+    static bool restoreLandmarks( FM&, const IntSet& ulmks, bool uvis=true);
+
+    // Detect and restore landmarks missing from the provided model. Simply finds
+    // landmarks not present in the assessments and calls restoreLandmarks.
+    static bool restoreMissingLandmarks( FM&);
 
 protected:
     void postInit() override;

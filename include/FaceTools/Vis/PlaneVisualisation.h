@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,27 +30,24 @@ public:
     //        axis=1 for transverse plane,
     //        axis=2 for frontal (coronal) plane.
     PlaneVisualisation( int axis=0);
-    ~PlaneVisualisation() override;
-
-    const char* name() const override { return "PlaneVisualisation";}
 
     bool applyToAllInViewer() const override { return false;}
     bool applyToAllViewers() const override { return false;}
 
-    bool isAvailable( const FV*, const QPoint*) const override;
+    bool isAvailable( const FV*) const override;
 
-    void apply( const FV*, const QPoint* mc=nullptr) override;
+    void refresh( FV*) override;
     void purge( const FV*) override;
 
     void setVisible( FV*, bool) override;
     bool isVisible( const FV*) const override;
 
-    void syncWithViewTransform( const FV*) override;
+    void syncTransform( const FV*) override;
 
 private:
     const int _axis;
     Vec3f _col;
-    std::unordered_map<const FV*, PlaneView*> _views;
+    std::unordered_map<const FV*, PlaneView> _views;
 };  // end class
 
 }}   // end namespace

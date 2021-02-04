@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
 #include <Vis/FaceView.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <r3dvis/OffscreenMeshViewer.h>
 #include <r3d/Transformer.h>
 #include <r3d/IterativeSurfacePathFinder.h>
 #include <r3d/SurfaceGlobalPlanePathFinder.h>
@@ -96,6 +95,30 @@ Vec3f FaceTools::toSurface( const KDTree &kdt, const Vec3f& v)
 {
     return SurfacePointFinder( kdt.mesh()).find( v, kdt.find(v));
 }   // end toSurface
+
+
+float FaceTools::barycentricMapSrcToDst( const FM *src, Vec3f v, const FM *dst, Vec3f &ov)
+{
+    assert( src->hasMask());
+    assert( src->maskHash() == dst->maskHash());
+
+    // First ensure the point is given in untransformed position
+    //const Mat4f iT = src->inverseTransformMatrix();
+    //v = r3d::transform( iT, v)
+
+    // v is on the source model surface. Find it's closest position on the source mask as vsmsk.
+    Vec3f vsmsk;
+    int fid = -1;
+    int vidx = src->maskKDTree().find( v);  // Beginning vertex on source mask to search from
+    const float sqdiff = SurfacePointFinder( src->mask()).find( v, vidx, fid, vsmsk);
+    if ( fid < 0)   // Ensure valid face ID for the source mask
+        fid = *src->mask().faces(vidx).begin();
+
+    const Vec3f bpos = src->mask().toBarycentric( fid, vsmsk);
+    const Vec3f vdmsk = dst->mask().fromBarycentric( fid, bpos);
+    ov = toSurface( dst->kdtree(), vdmsk);  // Project back to model surface on destination
+    return sqdiff;
+}   // end barycentricMapSrcToDst
 
 
 Vec3f FaceTools::toTarget( const KDTree &kdt, const Vec3f& s, const Vec3f& t)
@@ -198,21 +221,6 @@ Vec3f FaceTools::findHighOrLowPoint( const KDTree& kdt, const Vec3f& p0, const V
 
     return dp;
 }   // end findHighOrLowPoint
-
-
-cv::Mat_<cv::Vec3b> FaceTools::makeThumbnail( const FM* fm, const cv::Size& dims, float d)
-{
-    r3dvis::OffscreenMeshViewer omv( dims, 1);
-    omv.setModel( fm->mesh());
-    const Mat4f& T = fm->transformMatrix();
-    const Vec3f centre = T.block<3,1>(0,3);
-    const Vec3f uvec = T.block<3,1>(0,1);
-    const Vec3f nvec = T.block<3,1>(0,2);
-    const Vec3f cpos = (d * nvec) + centre;
-    const CameraParams cam( cpos, centre, uvec, 30);
-    omv.setCamera( cam);
-    return omv.snapshot();
-}   // end makeThumbnail
 
 
 /*

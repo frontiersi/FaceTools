@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,27 +19,34 @@
 #define FACE_TOOLS_FACE_MODEL_SYMMETRY_H
 
 #include "FaceTypes.h"
-#include <QReadWriteLock>
+#include <vtkFloatArray.h>
 
 namespace FaceTools {
 
 class FaceTools_EXPORT FaceModelSymmetry
 {
 public:
-    // Per vertex symmetry stored for the mesh vertices.
-    // Asymmetry values are the signed X, Y, Z, and signed L2 norm.
-    using VtxAsymmMap = std::unordered_map<int, Vec4f>;
-    using RPtr = std::shared_ptr<const VtxAsymmMap>;
+    using Ptr = std::shared_ptr<FaceModelSymmetry>;
 
-    static RPtr vals( const FM*); // Read lock is held while returned shared ptr is alive.
+    static Ptr create( const FM*);
 
-    static void add( const FM*);
-
-    static void purge( const FM*);
+    vtkSmartPointer<vtkFloatArray> allArray() const { return _allarr;}
+    vtkSmartPointer<vtkFloatArray> xArray() const { return _xarr;}
+    vtkSmartPointer<vtkFloatArray> yArray() const { return _yarr;}
+    vtkSmartPointer<vtkFloatArray> zArray() const { return _zarr;}
 
 private:
-    static std::unordered_map<const FM*, VtxAsymmMap> _vtxSymm;
-    static QReadWriteLock _lock;
+    std::unordered_map<int, Vec4f> _vtxSymm;
+    vtkSmartPointer<vtkFloatArray> _allarr;
+    vtkSmartPointer<vtkFloatArray> _xarr;
+    vtkSmartPointer<vtkFloatArray> _yarr;
+    vtkSmartPointer<vtkFloatArray> _zarr;
+
+    void _makeVtxSymm( const FM*);
+    explicit FaceModelSymmetry( const FM*);
+    ~FaceModelSymmetry();
+    FaceModelSymmetry( const FaceModelSymmetry&) = delete;
+    void operator=( const FaceModelSymmetry&) = delete;
 };  // end class
 
 }   // end namespace

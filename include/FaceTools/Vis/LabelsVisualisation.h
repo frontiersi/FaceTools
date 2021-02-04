@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,20 +31,18 @@ template <class T>
 class LabelsVisualisation : public BaseVisualisation
 {
 public:
-    ~LabelsVisualisation() override;
+    bool isAvailable( const FV*) const override;
 
-    const char* name() const override { return "LabelsVisualisation";}
-    bool isAvailable( const FV*, const QPoint*) const override;
+    bool applyToAllInViewer() const override;
+    bool applyToAllViewers() const override;
 
-    void apply( const FV*, const QPoint* mc=nullptr) override;
+    void refresh( FV*) override;
     void purge( const FV*) override;
 
     void setVisible( FV*, bool) override;
     bool isVisible( const FV*) const override;
 
-    void syncWithViewTransform( const FV*) override;
-
-    void refresh( const FV*) override;
+    void syncTransform( const FV*) override;
 
 private:
     std::unordered_map<const FV*, T> _views;

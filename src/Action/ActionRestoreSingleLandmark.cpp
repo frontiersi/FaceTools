@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,8 +26,7 @@ using FaceTools::Action::Event;
 using FaceTools::Interactor::LandmarksHandler;
 using FaceTools::FaceSide;
 using FaceTools::Vis::FV;
-using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 using LMAN = FaceTools::Landmark::LandmarksManager;
 
 
@@ -37,29 +36,26 @@ ActionRestoreSingleLandmark::ActionRestoreSingleLandmark( const QString& dn, con
     addRefreshEvent( Event::LANDMARKS_CHANGE);
 }   // end ctor
 
-
-int ActionRestoreSingleLandmark::_getLandmarkFromMousePos() const
+namespace {
+int landmarkFromMousePos( const QPoint &mp)
 {
     const LandmarksHandler *lmksHandler = MS::handler<LandmarksHandler>();
-    int lmid = -1;
     const FV *fv = MS::selectedView();
-    if ( fv)
-    {
-        FaceSide lat;
-        const vtkProp *prop = fv->viewer()->getPointedAt( primedMousePos());
-        lmid = lmksHandler->visualisation().landmarkId( fv, prop, lat);
-    }   // end if
-    return lmid;
-}   // end _getLandmarkFromMousePos
+    FaceSide lat;
+    const vtkProp *prop = fv->viewer()->getPointedAt( mp);
+    return lmksHandler->visualisation().landmarkId( fv, prop, lat);
+}   // end landmarkFromMousePos
+}   // end namespace
 
 
 bool ActionRestoreSingleLandmark::isAllowed( Event)
 {
-    const FV* fv = MS::selectedView();
-    if ( !fv || !fv->data()->hasLandmarks())
+    FM::RPtr fm = MS::selectedModelScopedRead();
+    if ( !fm || !fm->hasLandmarks())
         return false;
-    _lmid = _getLandmarkFromMousePos();
-    return _lmid >= 0 && !LMAN::isLocked(_lmid);
+    _lmid = landmarkFromMousePos( primedMousePos());
+    //return _lmid >= 0 && !LMAN::isLocked(_lmid);
+    return _lmid >= 0;
 }   // end isAllowed
 
 
@@ -68,10 +64,8 @@ void ActionRestoreSingleLandmark::doAction( Event)
     storeUndo( this, Event::LANDMARKS_CHANGE);
     IntSet ulmks;
     ulmks.insert( _lmid);
-    FM* fm = MS::selectedModel();
-    fm->lockForWrite();
-    ActionRestoreLandmarks::restoreLandmarks( fm, ulmks);
-    fm->unlock();
+    FM::WPtr fm = MS::selectedModelScopedWrite();
+    ActionRestoreLandmarks::restoreLandmarks( *fm, ulmks);
 }   // end doAction
 
 

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,9 +16,7 @@
  ************************************************************************/
 
 #include <Vis/MetricVisualiser.h>
-#include <LndMrk/LandmarkSet.h>
 #include <Metric/MetricType.h>
-#include <FaceModel.h>
 using FaceTools::Vis::MetricVisualiser;
 using FaceTools::Vis::FV;
 using FaceTools::Metric::MetricType;
@@ -28,60 +26,10 @@ MetricVisualiser::MetricVisualiser() : _metric(nullptr)
 {}   // end ctor
 
 
-void MetricVisualiser::setMetric( const MetricType *m)
+void MetricVisualiser::setMetric( const MetricType *m) { _metric = m;}
+
+
+bool MetricVisualiser::isAvailable( const FV *fv) const
 {
-    _metric = m;
-}   // end setMetric
-
-
-MetricVisualiser::~MetricVisualiser()
-{
-    while (!_fvs.empty())
-        purge( *_fvs.begin());
-}   // end dtor
-
-
-bool MetricVisualiser::isAvailable( const FV *fv, const QPoint*) const
-{
-    const FM *fm = fv->data();
-    for ( int lmid : metric()->landmarkIds())
-        if ( !fm->currentLandmarks().has(lmid))
-            return false;
-    return true;
+    return metric()->hasMeasurement(fv->data());
 }   // end isAvailable
-
-
-void MetricVisualiser::apply( const FV* fv, const QPoint*)
-{
-    assert(_fvs.count(fv) == 0);
-    doApply(fv);
-    _fvs.insert(fv);
-}   // end apply
-
-
-void MetricVisualiser::refresh( const FV* fv)
-{
-    assert( _fvs.count(fv) > 0);
-    doRefresh(fv);
-}   // end refresh
-
-
-void MetricVisualiser::setVisible( FV *fv, bool v)
-{
-    if ( _fvs.count(fv) > 0)
-        doSetVisible( fv, v);
-}   // end setVisible
-
-
-void MetricVisualiser::purge( const FV* fv)
-{
-    assert(_fvs.count(fv) > 0);
-    if (_fvs.count(fv) > 0)
-    {
-        doPurge(fv);
-        _fvs.erase(fv);
-    }   // end if
-}   // end purge
-
-
-

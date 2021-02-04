@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,6 @@ namespace FaceTools { namespace Vis {
 class FaceTools_EXPORT ViewInterface
 {
 public:
-    virtual void setColour( double r, double g, double b, double a) = 0;
     virtual void setVisible( bool, ModelViewer*) = 0;
     virtual bool isVisible() const = 0;
     virtual bool belongs( const vtkProp*) const = 0;

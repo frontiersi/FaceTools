@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,11 @@
 
 namespace Ui { class ChartDialog;}
 
-namespace FaceTools { namespace Widget {
+namespace FaceTools {
+
+namespace Metric { class Metric; }
+
+namespace Widget {
 
 class FaceTools_EXPORT ChartDialog : public QDialog
 { Q_OBJECT
@@ -33,8 +37,7 @@ public:
     explicit ChartDialog( QWidget *parent = nullptr);
     ~ChartDialog() override;
 
-public slots:
-    void refresh();
+    void refresh( const Metric::Metric*);
 
 private slots:
     void _doOnSaveImage();
@@ -44,7 +47,7 @@ private:
     Ui::ChartDialog *_ui;
     QtCharts::QChartView *_cview;
     QFileDialog *_fdialog;
-
+    const Metric::Metric *_metric;
     void _refreshDimensions();
 };  // end class
 

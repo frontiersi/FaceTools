@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ class FaceTools_EXPORT ActionScaleModel : public FaceAction
 public:
     ActionScaleModel( const QString&, const QIcon&, const QKeySequence& ks=(Qt::SHIFT + Qt::Key_S));
 
-    QString toolTip() const override { return "Rescale the selected model.";}
+    QString toolTip() const override { return "Resize the selected model.";}
 
 protected:
     void postInit() override;
@@ -40,6 +40,7 @@ protected:
 private:
     Widget::ResizeDialog *_dialog;
     Mat4f _smat;
+    Event _ev;
 };  // end class
 
 }}   // end namespace

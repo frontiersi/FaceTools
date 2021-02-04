@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,79 +16,96 @@
  ************************************************************************/
 
 #include <Action/ActionUpdateThumbnail.h>
+#include <Action/ActionOrientCamera.h>
+#include <FaceModelCurvatureStore.h>
 #include <Vis/FaceView.h>
-#include <FaceModelCurvature.h>
 #include <FaceModel.h>
+#include <r3dvis/OffscreenMeshViewer.h>
+#include <vtkPointData.h>
+#include <vtkProperty.h>
 using FaceTools::Action::ActionUpdateThumbnail;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
+
+// static definitions
+std::unordered_map<const FM*, cv::Mat_<cv::Vec3b> > ActionUpdateThumbnail::_thumbs;
+QReadWriteLock ActionUpdateThumbnail::_rwlock;
 
 
 ActionUpdateThumbnail::ActionUpdateThumbnail( int w, int h)
-    : FaceAction("Thumbnail Updater"), _omv( cv::Size(w,h))
+    : FaceAction("Thumbnail Updater"), _vsz( w,h)
 {
-    addTriggerEvent( Event::ASSESSMENT_CHANGE);
-    addTriggerEvent( Event::MESH_CHANGE);
-    addTriggerEvent( Event::MODEL_SELECT);
+    addTriggerEvent( Event::MESH_CHANGE | Event::LOADED_MODEL);
+    setAsync(true);
 }   // end ctor
 
 
-ActionUpdateThumbnail::~ActionUpdateThumbnail()
+// static
+cv::Mat ActionUpdateThumbnail::thumbnail( const FM *fm)
 {
-    while ( !_thumbs.empty())
-        _thumbs.erase( _thumbs.begin()->first);
-}   // end dtor
-
-
-bool ActionUpdateThumbnail::update( Event)
-{
-    QColor bgcol = MS::defaultViewer()->backgroundColour();
-    _omv.setBackgroundColour( bgcol.redF(), bgcol.greenF(), bgcol.blueF());
-    return true;
-}   // end update
-
-
-const cv::Mat ActionUpdateThumbnail::thumbnail( const FM* fm)
-{
-    if ( _thumbs.count(fm) > 0)
-        return _thumbs.at(fm);
-
-    fm->lockForRead();
-    vtkActor *actor = _omv.setModel( fm->mesh());
-    if ( !fm->mesh().hasMaterials())
+    if ( !fm)
+        fm = MS::selectedModel();
+    cv::Mat img;
+    if ( _rwlock.tryLockForRead())
     {
-        _omv.setModelColour( Vis::FV::BASECOL.redF(), Vis::FV::BASECOL.greenF(), Vis::FV::BASECOL.blueF());
-        setNormals( actor, fm);
+        if ( _thumbs.count(fm) > 0)
+            img = _thumbs.at(fm).clone();
+        _rwlock.unlock();
     }   // end if
-    const Mat4f& T = fm->transformMatrix();
-    fm->unlock();
-
-    const Vec3f uvec = T.block<3,1>(0,1);
-    const Vec3f nvec = T.block<3,1>(0,2);
-    const Vec3f cent = T.block<3,1>(0,3);
-    float dist = 400.0f;
-    if ( fm->hasLandmarks())
-        dist = sqrtf(fm->currentLandmarks().sqRadius()) * 3.5;
-    const Vec3f cpos = dist * nvec + cent;
-
-    const r3d::CameraParams cam( cpos, cent, uvec, 30);
-    _omv.setCamera( cam);
-    return _thumbs[fm] = _omv.snapshot();
+    return img;
 }   // end thumbnail
 
 
-void ActionUpdateThumbnail::doAction( Event)
-{
-    const FM* fm = MS::selectedModel();
-    _thumbs.erase(fm);
-    const cv::Mat img = thumbnail(fm);
-    emit updated( fm, img);
-}   // end doAction
+void ActionUpdateThumbnail::setThumbnailSize( const QSize &sz) { _vsz = sz;}
 
 
 bool ActionUpdateThumbnail::isAllowed( Event) { return MS::isViewSelected();}
 
 
-void ActionUpdateThumbnail::purge( const FM* fm) { _thumbs.erase(fm);}
+bool ActionUpdateThumbnail::doBeforeAction( Event e) { return isAllowed(e);}
+
+
+void ActionUpdateThumbnail::doAction( Event e)
+{
+    // Don't make offscreen viewer a private member - VTK on Windows hangs in r3dvis::extractBGR
+    // if exec in diff thread. Note that this issue doesn't arise if omv is a private member and
+    // its snapshot function is called in the GUI thread.
+    r3dvis::OffscreenMeshViewer omv( cv::Size(_vsz.width(), _vsz.height()));
+    omv.setBackgroundColour( 1.0f, 1.0f, 1.0f);
+    FM::RPtr fm = MS::selectedModelScopedRead();
+
+    _rwlock.lockForWrite();
+    vtkActor *actor = omv.setModel( fm->mesh());
+    if ( !fm->mesh().hasMaterials())
+    {
+        const auto rptr = FaceModelCurvatureStore::rvals( *fm);
+        if ( rptr)
+            r3dvis::getPolyData( actor)->GetPointData()->SetNormals( rptr->normals());
+        vtkProperty *prop = actor->GetProperty();
+        prop->SetColor( Vis::FV::BASECOL.redF(), Vis::FV::BASECOL.greenF(), Vis::FV::BASECOL.blueF());
+        prop->SetInterpolationToPhong();
+    }   // end if
+
+    omv.setCamera( ActionOrientCamera::makeFrontCamera( *fm, 30, 0.8f));
+    //std::cerr << " SNAP ENTER" << std::endl;
+    _thumbs[fm.get()] = omv.snapshot(); // Breaks in separate thread if omv not constructed every time
+    //std::cerr << " SNAP EXIT" << std::endl;
+    _rwlock.unlock();
+}   // end doAction
+
+
+Event ActionUpdateThumbnail::doAfterAction( Event)
+{
+    emit updated();
+    return Event::NONE;
+}   // end doAfterAction
+
+
+void ActionUpdateThumbnail::purge( const FM *fm)
+{
+    _rwlock.lockForWrite();
+    _thumbs.erase(fm);
+    _rwlock.unlock();
+}   // end purge

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,14 +24,14 @@ using FaceTools::Action::ActionFillHoles;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ActionFillHoles::ActionFillHoles( const QString& dn, const QIcon& ico)
     : FaceAction(dn, ico)
 {
-    setAsync(true);
     addRefreshEvent( Event::MESH_CHANGE);
+    setAsync(true);
 }   // end ctor
 
 
@@ -118,13 +118,13 @@ void ActionFillHoles::doAction( Event)
                 const std::list<int>& blist = bnds.boundary(j);
                 polysAdded += hfiller.fillHole( blist, mpolys);
             }   // end for
-
+#ifndef NDEBUG
             if ( nbs > 1)
             {
                 std::cerr << "Manifold " << i << ": " << std::setw(4) << mholes[i]
                           << " holes filled with " << std::setw(4) << polysAdded << " polygons" << std::endl;
             }   // end if
-
+#endif
             sumPolysAdded += polysAdded;
         }   // end for
 
@@ -145,9 +145,7 @@ void ActionFillHoles::doAction( Event)
 
 Event ActionFillHoles::doAfterAction( Event)
 {
-    const FM* fm = MS::selectedModel();
-
-    const size_t nh = getNumHoles( fm->manifolds());
+    const size_t nh = getNumHoles( MS::selectedModel()->manifolds());
     MS::showStatus( QString("Finished hole filling; %1 hole%2 remain%3.").arg(nh == 0 ? "no" : QString("%1").arg(nh)).arg( nh != 1 ? "s" : "").arg( nh == 1 ? "s" : ""), 5000);
     return Event::MESH_CHANGE;
 }   // end doAfterAction

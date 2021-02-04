@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,40 +20,42 @@
 
 #include "FaceTypes.h"
 #include <r3d/Curvature.h>
-#include <QReadWriteLock>
-#include <vtkActor.h>
 #include <vtkFloatArray.h>
-#include <vtkSmartPointer.h>
 
 namespace FaceTools {
 
 class FaceTools_EXPORT FaceModelCurvature
 {
 public:
-    using RPtr = std::shared_ptr<const r3d::Curvature>;
-    using WPtr = std::shared_ptr<r3d::Curvature>;
+    using Ptr = std::shared_ptr<FaceModelCurvature>;
 
-    // Returns the curvature map for the given model or null if not available.
-    // Read lock is held while returned shared ptr is alive.
-    static RPtr rmetrics( const FM*);
+    static Ptr create( const r3d::Mesh&);
 
-    // Returns the curvature map for the given model or null if not available.
-    // Write lock is held while returned shared ptr is alive.
-    static WPtr wmetrics( const FM*);
+    const r3d::Curvature &vals() const { return *_cmap;}
 
-    // Delete curvature data associated with the given model.
-    static void purge( const FM*);
+    r3d::Curvature &vals() { return *_cmap;}
 
-    // Create and add curvature data for the given model.
-    static void add( const FM*);
+    // Call this if changes made to the curvature map.
+    void updateArrays();
+
+    // Vertex correspondence arrays
+    vtkSmartPointer<vtkFloatArray> meanArray() const { return _mcrv;}   // Scalars
+    vtkSmartPointer<vtkFloatArray> absArray() const { return _acrv;}    // Scalars
+    vtkSmartPointer<vtkFloatArray> d2Array() const { return _dcrv;}     // Scalars
+    vtkSmartPointer<vtkFloatArray> normals() const { return _nrms;}     // 3-vectors
 
 private:
-    static std::unordered_map<const FM*, r3d::Curvature::Ptr> _metrics;
-    static QReadWriteLock _lock;
+    r3d::Curvature::Ptr _cmap;
+    vtkSmartPointer<vtkFloatArray> _nrms;
+    vtkSmartPointer<vtkFloatArray> _mcrv;
+    vtkSmartPointer<vtkFloatArray> _dcrv;
+    vtkSmartPointer<vtkFloatArray> _acrv;
+
+    FaceModelCurvature( const r3d::Mesh&);
+    ~FaceModelCurvature();
+    FaceModelCurvature( const FaceModelCurvature&) = delete;
+    void operator=( const FaceModelCurvature&) = delete;
 };  // end class
-
-
-FaceTools_EXPORT vtkSmartPointer<vtkFloatArray> setNormals( vtkActor*, const FM*);
 
 }   // end namespace
 

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,9 +23,7 @@
 
 namespace FaceTools {
     
-namespace Metric {
-class MetricType;
-}   // end namespace
+namespace Metric { class MetricType;}
 
 namespace Vis {
 
@@ -33,43 +31,28 @@ class FaceTools_EXPORT MetricVisualiser : public BaseVisualisation
 {
 public:
     MetricVisualiser();
-    ~MetricVisualiser() override;
     void setMetric( const Metric::MetricType*);
     const Metric::MetricType *metric() const { return _metric;}
 
-    const char* name() const override { return "MetricVisualiser (virtual)";}
-
-    //bool belongs( const vtkProp*, const FV*) const;
+    //bool belongs( const vtkProp*, const FV*) const override;
     //bool isVisible( const FV*) const override;
-    //void syncWithViewTransform( const FV*) override;
+    //void syncTransform( const FV*) override;
+    //void setVisible( FV*, bool) override;
+    //void purge( const FV*) override;
+    //void refresh( FV*) override;
 
-    bool applyToAllInViewer() const { return true;}
-    bool applyToAllViewers() const { return true;}
-
-    bool isAvailable( const FV*, const QPoint*) const override;
+    bool applyToAllInViewer() const override { return true;}
+    bool applyToAllViewers() const override { return true;}
 
     float minAllowedOpacity() const override { return 0.10f;}
     float maxAllowedOpacity() const override { return 0.99f;}
 
-    void apply( const FV*, const QPoint*) override;
-    void purge( const FV*) override;
+    bool isAvailable( const FV*) const override;
 
-    void refresh( const FV *fv) override;
-    void setVisible( FV *fv, bool v) override;
-
-    virtual void setHighlighted( const FV*, bool) = 0;
-
-    const std::unordered_set<const FV*>& applied() const { return _fvs;}
-
-protected:
-    virtual void doApply( const FV*) = 0;
-    virtual void doPurge( const FV*) = 0;
-    virtual void doRefresh( const FV*) = 0;
-    virtual void doSetVisible( const FV*, bool) = 0;
+    virtual void setHighlighted( bool) = 0;
 
 private:
     const Metric::MetricType *_metric;
-    std::unordered_set<const FV*> _fvs;
 };  // end class
 
 }}   // end namespaces

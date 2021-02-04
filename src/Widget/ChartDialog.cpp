@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,20 +17,21 @@
 
 #include <Widget/ChartDialog.h>
 #include <ui_ChartDialog.h>
-#include <Metric/MetricManager.h>
-#include <Action/ModelSelector.h>
+#include <ModelSelect.h>
+#include <Metric/Metric.h>
 #include <Metric/Chart.h>
 #include <QMessageBox>
 #include <QSvgGenerator>
 using FaceTools::Widget::ChartDialog;
 using FaceTools::Metric::GrowthData;
-using FaceTools::Metric::MC;
-using MM = FaceTools::Metric::MetricManager;
-using MS = FaceTools::Action::ModelSelector;
+using MC = FaceTools::Metric::Metric;
+using MS = FaceTools::ModelSelect;
+using QMB = QMessageBox;
 
 
 ChartDialog::ChartDialog( QWidget *parent) :
-    QDialog(parent), _ui(new Ui::ChartDialog), _cview( new QtCharts::QChartView), _fdialog(nullptr)
+    QDialog(parent), _ui(new Ui::ChartDialog), _cview( new QtCharts::QChartView),
+    _fdialog(nullptr), _metric(nullptr)
 {
     _ui->setupUi(this);
     setWindowTitle( parent->windowTitle() + " | Metric Growth Curves");
@@ -42,7 +43,8 @@ ChartDialog::ChartDialog( QWidget *parent) :
     _cview->setRenderHint( QPainter::Antialiasing);
 
     connect( _ui->saveButton, &QToolButton::clicked, this, &ChartDialog::_doOnSaveImage);
-    connect( _ui->dimensionSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, &ChartDialog::_doRefreshChart);
+    connect( _ui->dimensionSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+                              this, &ChartDialog::_doRefreshChart);
 
     _fdialog = new QFileDialog( this);
     _fdialog->setWindowTitle( tr("Save image as..."));
@@ -57,8 +59,9 @@ ChartDialog::ChartDialog( QWidget *parent) :
 ChartDialog::~ChartDialog() { delete _ui;}
 
 
-void ChartDialog::refresh()
+void ChartDialog::refresh( const MC *m)
 {
+    _metric = m;
     _refreshDimensions();
     _doRefreshChart();
 }   // end refresh
@@ -66,23 +69,21 @@ void ChartDialog::refresh()
 
 void ChartDialog::_refreshDimensions()
 {
-    MC::Ptr mc = MM::currentMetric();
-    const int ndims = mc ? static_cast<int>( mc->dims()) : 1;
+    const int ndims = _metric ? static_cast<int>( _metric->dims()) : 1;
     _ui->dimensionSpinBox->setMaximum( ndims);
     _ui->dimensionSpinBox->setValue(1);
-    _ui->dimensionSpinBox->setEnabled( ndims > 1 && mc->growthData().current());
+    _ui->dimensionSpinBox->setEnabled( ndims > 1 && !_metric->growthData().all().empty());
 }   // end _refreshDimensions
 
 
 void ChartDialog::_doRefreshChart()
 {
-    MC::Ptr mc = MM::currentMetric();
-    const GrowthData *gd = mc ? mc->growthData().current() : nullptr;
+    const bool hasMC = _metric && !_metric->growthData().all().empty();
 
-    if ( gd)
+    if ( hasMC)
     {
         const size_t d = static_cast<size_t>(_ui->dimensionSpinBox->value() - 1);   // Dimension to display
-        Metric::Chart* chart = new Metric::Chart( gd, d, MS::selectedModel());
+        Metric::Chart* chart = new Metric::Chart( _metric->id(), d, MS::selectedModel());
         chart->addTitle();
         _cview->setChart( chart);
     }   // end if
@@ -91,12 +92,12 @@ void ChartDialog::_doRefreshChart()
         static const QString src0 = "Growth curve statistics N/A";
         QString src = src0;
         QtCharts::QChart* chart = new QtCharts::QChart;
-        QString mname = mc ? mc->name() : "No current measurement";
+        QString mname = _metric ? _metric->name() : "No current measurement";
         chart->setTitle( QString("<center><big><b>%1</b><br><em>%2</em></big></center>").arg( mname, src));
         _cview->setChart(chart);
     }   // end else
 
-    _ui->saveButton->setEnabled( gd != nullptr);
+    _ui->saveButton->setEnabled( hasMC);
 }   // end _doRefreshChart
 
 
@@ -142,6 +143,9 @@ void ChartDialog::_doOnSaveImage()
         }   // end else
 
         if ( !savedOkay)
-            QMessageBox::warning( this, tr("Save Error!"), tr("Unable to save to file ") + imgpath);
+        {
+            const QString msg = QString("Unable to save to '%1'").arg(imgpath);
+            QMB::warning( this, tr("Save Error!"), QString("<p align='center'>%1</p>").arg(msg));
+        }   // end if
     }   // end if
 }   // end _doOnSaveImage

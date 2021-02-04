@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,9 +20,9 @@
 #include <Metric/MetricManager.h>
 #include <Metric/SyndromeManager.h>
 #include <Metric/PhenotypeManager.h>
+#include <MiscFunctions.h>
 #include <rlib/FileIO.h>
-#include <algorithm>
-#include <QCloseEvent>
+#include <QHideEvent>
 #include <QHeaderView>
 #include <QDoubleSpinBox>
 #include <QHBoxLayout>
@@ -83,7 +83,7 @@ PhenotypesDialog::PhenotypesDialog( QWidget *parent) :
             [this]( QTableWidgetItem* item){
                 assert(item);
                 _highlightRow( item->row());
-                emit onSelectedHPOTerm( _chid);
+                emit onSelectHPO( _chid);
                 });
     connect( _ui->syndromesComboBox, QOverload<int>::of(&QComboBox::activated),
             this, &PhenotypesDialog::_doOnUserSelectedSyndrome);
@@ -97,19 +97,18 @@ PhenotypesDialog::PhenotypesDialog( QWidget *parent) :
 PhenotypesDialog::~PhenotypesDialog() { delete _ui;}
 
 
-void PhenotypesDialog::show()
+void PhenotypesDialog::showEvent( QShowEvent *e)
 {
-    QDialog::show();
-    raise();
-    activateWindow();
-}   // end show
+    positionWidgetToSideOfParent(this);
+    QDialog::showEvent(e);
+}   // end showEvent
 
 
-void PhenotypesDialog::closeEvent( QCloseEvent *e)
+void PhenotypesDialog::hideEvent( QHideEvent *e)
 {
     e->accept();
     accept();
-}   // end closeEvent
+}   // end hideEvent
 
 
 void PhenotypesDialog::_sortOnColumn( int cidx)
@@ -238,7 +237,7 @@ void PhenotypesDialog::_setFilteredHPOs()
 }   // end _setFilteredHPOs
 
 
-void PhenotypesDialog::showPhenotypes( const IntSet& hids)
+void PhenotypesDialog::showHPOs( const IntSet& hids)
 {
     QSignalBlocker blockerA( _ui->syndromesComboBox);
     QSignalBlocker blockerB( _ui->anatomicalRegionsComboBox);
@@ -246,7 +245,7 @@ void PhenotypesDialog::showPhenotypes( const IntSet& hids)
     _ui->anatomicalRegionsComboBox->setCurrentIndex( 0);
     _allhpos = _fhpos = hids;
     _refresh();
-}   // end showPhenotypes
+}   // end showHPOs
 
 
 void PhenotypesDialog::_refresh()

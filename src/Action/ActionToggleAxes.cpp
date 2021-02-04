@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <Action/ActionToggleAxes.h>
+#include <FileIO/FaceModelManager.h>
 #include <FaceTools.h>
 #include <FaceModel.h>
 #include <vtkProperty.h>
@@ -27,7 +28,8 @@ using FaceTools::Action::Event;
 using FaceTools::FMV;
 using FaceTools::FVS;
 using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
+using FMM = FaceTools::FileIO::FaceModelManager;
 
 namespace {
 void _setAxesUnits( vtkCubeAxesActor* actor)
@@ -42,7 +44,8 @@ void _setAxesUnits( vtkCubeAxesActor* actor)
 void setTextProperties( vtkTextProperty* tp, const QColor& bg, const QColor& fg)
 {
     tp->SetFontFamilyToCourier();
-    tp->SetFontSize(12);
+    tp->SetFontSize(10);
+    tp->SetOpacity(0.8);
     tp->SetBackgroundColor( bg.redF(), bg.greenF(), bg.blueF());
     tp->SetColor( fg.redF(), fg.greenF(), fg.blueF());
 }   // end setTextProperties
@@ -52,8 +55,9 @@ void setColours( const FMV *vwr, vtkCubeAxesActor *actor)
 {
     _setAxesUnits( actor);
 
-    QColor bg = vwr->backgroundColour();
-    QColor fg = FaceTools::chooseContrasting( bg);
+    const QColor bg = vwr->backgroundColour();
+    //const QColor fg = FaceTools::chooseContrasting( bg);
+    const QColor fg = Qt::red;
 
     setTextProperties( actor->GetLabelTextProperty(0), bg, fg);
     setTextProperties( actor->GetLabelTextProperty(1), bg, fg);
@@ -68,10 +72,10 @@ void setColours( const FMV *vwr, vtkCubeAxesActor *actor)
 
 
 ActionToggleAxes::ActionToggleAxes( const QString& dn, const QIcon& ico, const QKeySequence& ks)
-    : FaceAction( dn, ico, ks)
+    : FaceAction( dn, ico, ks), _vis(false)
 {
-    setCheckable( true, false);
-    addRefreshEvent( Event::LOADED_MODEL);
+    setCheckable( true, _vis);
+    addTriggerEvent( Event::LOADED_MODEL | Event::CLOSED_MODEL);
 }   // end ctor
 
 
@@ -87,10 +91,12 @@ void ActionToggleAxes::_addViewer( FMV* fmv)
     vtkCubeAxesActor* actor = _viewers[fmv];
     actor->SetUseTextActor3D(false);
     actor->SetUse2DMode(true);
+    actor->SetLabelOffset( 1.0);
+    actor->SetTitleOffset( 1.0);
 
-    actor->GetProperty()->SetOpacity(0.99);
+    actor->GetProperty()->SetOpacity(0.5);
 
-    actor->SetBounds( -300, 300, -300, 300, -300, 300);
+    actor->SetBounds( -200, 200, -200, 200, -200, 200);
     actor->DrawXGridlinesOn();
     actor->DrawYGridlinesOn();
     actor->DrawZGridlinesOn();
@@ -122,20 +128,40 @@ void ActionToggleAxes::_addViewer( FMV* fmv)
     actor->SetZAxisMinorTickVisibility( false);
 
     actor->SetPickable(false);
+    actor->SetVisibility(_vis);
     fmv->add( actor);
 }   // end _addViewer
 
 
-bool ActionToggleAxes::update( Event e)
+bool ActionToggleAxes::update( Event e) { return _vis;}
+
+
+void ActionToggleAxes::doAction( Event e)
 {
-    const bool chk = has( Event::LOADED_MODEL, e) || (isChecked() && MS::isViewSelected());
+    if ( has(e, Event::CLOSED_MODEL))
+    {
+        if ( FMM::numOpen() == 0)
+            _vis = false;
+    }   // end if
+    else if ( has( e, Event::LOADED_MODEL))
+    {
+        if ( FMM::numOpen() == 1)
+            _vis = true;
+    }   // end else if
+    else
+        _vis = !_vis;
+    _refresh();
+}   // end doAction
+
+
+void ActionToggleAxes::_refresh()
+{
     for ( const auto& p : _viewers)
     {
         setColours( p.first, p.second);
-        p.second->SetVisibility(chk);
+        p.second->SetVisibility( _vis);
     }   // end for
-    return chk;
-}   // end update
+}   // end _refresh
 
 
 bool ActionToggleAxes::isAllowed( Event) { return MS::isViewSelected();}

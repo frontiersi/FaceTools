@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@ using FaceTools::FMS;
 using FaceTools::FM;
 
 
-size_t FaceModelManager::_loadLimit(0);
+size_t FaceModelManager::_loadLimit(2);
 FaceModelFileHandlerMap FaceModelManager::_fhmap;
 FMS FaceModelManager::_models;
 std::unordered_map<FM*, QString> FaceModelManager::_mdata;
@@ -37,17 +37,12 @@ std::unordered_map<QString, FM*> FaceModelManager::_mfiles;    // Lookup models 
 QString FaceModelManager::_err;
 
 
-void FaceModelManager::setLoadLimit( size_t llimit) { _loadLimit = llimit;}
-
-
 void FaceModelManager::add( FaceModelFileHandler* fii) { if ( fii) _fhmap.add(fii);}
 
 
-bool FaceModelManager::hasPreferredFileFormat( const FM* fm)
+bool FaceModelManager::hasPreferredFileFormat( const FM &fm)
 {
-    assert( fm != nullptr);
-    assert( _models.count(const_cast<FM*>(fm)) > 0);
-    return isPreferredFileFormat( _mdata.at(const_cast<FM*>(fm)));
+    return isPreferredFileFormat( _mdata.at(const_cast<FM*>(&fm)));
 }   // end hasPreferredFileFormat
 
 
@@ -59,18 +54,18 @@ bool FaceModelManager::isPreferredFileFormat( const QString& fname)
 }   // end isPreferredFileFormat
 
 
-void FaceModelManager::_setModelFilepath( const FM* cfm, const QString& fname)
+void FaceModelManager::_setModelFilepath( const FM &cfm, const QString& fname)
 {
-    FM* fm = const_cast<FM*>(cfm);
+    FM* fm = const_cast<FM*>(&cfm);
     _models.insert(fm);
     _mdata[fm] = fname;
     _mfiles[fname] = fm;
 }   // end _setModelFilepath
 
 
-bool FaceModelManager::write( const FM* cfm, QString &fpath)
+bool FaceModelManager::write( const FM &cfm, QString &fpath)
 {
-    FM* fm = const_cast<FM*>(cfm);
+    FM* fm = const_cast<FM*>(&cfm);
     assert( _models.count(fm) > 0);
     QString savefilepath = _mdata.at(fm);
     QString delfilepath;    // Will not be empty if replacing filename
@@ -93,7 +88,7 @@ bool FaceModelManager::write( const FM* cfm, QString &fpath)
     else    // Successful write
     {
         _mfiles.erase(delfilepath);
-        _setModelFilepath( fm, savefilepath);
+        _setModelFilepath( *fm, savefilepath);
         fm->setModelSaved( fileio->canWriteTextures() || !fm->hasTexture());
         fm->setMetaSaved( isPreferredFileFormat(savefilepath) || !fm->hasMetaData());
     }   // end else
@@ -165,7 +160,7 @@ FM* FaceModelManager::read( const QString& fn)
         _err = fileio->error();
     else
     {
-        _setModelFilepath( fm, fname);
+        _setModelFilepath( *fm, fname);
         fm->setModelSaved( true);
         fm->setMetaSaved( true);
     }   // end else
@@ -174,11 +169,9 @@ FM* FaceModelManager::read( const QString& fn)
 }   // end read
 
 
-const QString& FaceModelManager::filepath( const FM* fm)
+const QString& FaceModelManager::filepath( const FM &fm)
 {
-    assert( fm);
-    assert( _models.count(const_cast<FM*>(fm)) > 0);
-    return _mdata.at(const_cast<FM*>(fm));
+    return _mdata.at(const_cast<FM*>(&fm));
 }   // end filepath
 
 
@@ -191,15 +184,33 @@ FM* FaceModelManager::model( const QString& fname)
 }   // end model
 
 
-void FaceModelManager::close( const FM* cfm)
+void FaceModelManager::close( const FM &cfm)
 {
-    FM* fm = const_cast<FM*>(cfm);
+    FM* fm = const_cast<FM*>(&cfm);
     assert(_models.count(fm) > 0);
     _mfiles.erase(_mdata.at(fm));
     _models.erase(fm);
     _mdata.erase(fm);
     delete fm;
 }   // end close
+
+
+FM *FaceModelManager::other( const FM &ifm)
+{
+    assert( _loadLimit == 2);
+    FM *ofm = nullptr;
+    if ( _models.size() == 2)
+    {
+        FM *fm0 = *_models.begin();
+        FM *fm1 = *++_models.begin();
+        const FM *pfm = &ifm;
+        if ( fm0 == pfm)
+            ofm = fm1;
+        else if ( fm1 == pfm)
+            ofm = fm0;
+    }   // end if
+    return ofm;
+}   // end other
 
 
 void FaceModelManager::printFormats( std::ostream& os)

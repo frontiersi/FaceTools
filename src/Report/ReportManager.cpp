@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,6 +38,7 @@ QStringList ReportManager::_names;
 std::unordered_map<QString, Report::Ptr> ReportManager::_reports;
 
 
+
 bool ReportManager::init( const QString& pdflatex, const QString& idtfConverter, const QString& inkscape)
 {
     U3DExporter::IDTFConverter = idtfConverter.toStdString();
@@ -51,15 +52,36 @@ bool ReportManager::init( const QString& pdflatex, const QString& idtfConverter,
     _inkscape = inkscape;
     //_tmpdir.setAutoRemove(false);   // Uncomment for debug
 
+    // Write the Javascript file that hides the view axes
+    QFile hideAxesFile( _tmpdir.filePath("hideAxes.js"));
+    if ( hideAxesFile.exists())
+        hideAxesFile.remove();
+    hideAxesFile.open( QIODevice::ReadWrite | QIODevice::Text);
+    if ( !hideAxesFile.isOpen())
+    {
+        const std::string werr = "[WARNING] FaceTools::Report::ReportManager::init: ";
+        std::cerr << werr << "Unable to open 'hideAxes.js' for writing!" << std::endl;
+        return false;
+    }   // end if
+    QTextStream os( &hideAxesFile);
+    os << "scene.showOrientationAxes = false;" << Qt::endl;
+    hideAxesFile.close();
+
+    return isAvailable();
+}   // end init
+
+
+bool ReportManager::writeViewsFile( float d, const QString &fname)
+{
     // (Re)Create the views file in the temporary directory
-    QFile viewsfile( _tmpdir.filePath("views.vws"));
+    QFile viewsfile( _tmpdir.filePath(fname));
     if ( viewsfile.exists())
         viewsfile.remove();
 
     viewsfile.open( QIODevice::ReadWrite | QIODevice::Text);
     if ( !viewsfile.isOpen())
     {
-        const std::string werr = "[WARNING] FaceTools::Report::ReportManager::init: ";
+        const std::string werr = "[WARNING] FaceTools::Report::ReportManager::writeViewsFile: ";
         std::cerr << werr << "Unable to open '" << viewsfile.fileName().toStdString() << "' for writing!" << std::endl;
         return false;
     }   // end if
@@ -67,23 +89,22 @@ bool ReportManager::init( const QString& pdflatex, const QString& idtfConverter,
     QTextStream ots( &viewsfile);
     ots << "VIEW=Front" << Qt::endl
         << "  C2C=0 -1 0" << Qt::endl
-        << "  ROO=300" << Qt::endl
+        << "  ROO=" << d << Qt::endl
         << "  LIGHTS=AmbientLight" << Qt::endl
         << "END" << Qt::endl
         << "VIEW=Right" << Qt::endl
         << "  C2C=-1 0 0" << Qt::endl
-        << "  ROO=300" << Qt::endl
+        << "  ROO=" << d << Qt::endl
         << "  LIGHTS=AmbientLight" << Qt::endl
         << "END" << Qt::endl
         << "VIEW=Left" << Qt::endl
         << "  C2C=1 0 0" << Qt::endl
-        << "  ROO=300" << Qt::endl
+        << "  ROO=" << d << Qt::endl
         << "  LIGHTS=AmbientLight" << Qt::endl
         << "END" << Qt::endl;
     viewsfile.close();
-
-    return isAvailable();
-}   // end init
+    return true;
+}   // end writeViewsFile
 
 
 bool ReportManager::isAvailable()

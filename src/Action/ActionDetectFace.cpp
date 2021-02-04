@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 #include <Action/ActionDetectFace.h>
 #include <Action/ActionAlignModel.h>
 #include <Action/ActionRestoreLandmarks.h>
-#include <Action/ActionOrientCameraToFace.h>
+#include <Action/ActionOrientCamera.h>
 #include <Detect/FaceAlignmentFinder.h>
 #include <LndMrk/LandmarksManager.h>
 #include <boost/filesystem/path.hpp>
@@ -33,7 +33,7 @@ using FaceTools::Action::Event;
 using FaceTools::Widget::LandmarksCheckDialog;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ActionDetectFace::ActionDetectFace( const QString& dn, const QIcon& icon)
@@ -51,7 +51,7 @@ void ActionDetectFace::postInit()
 
 bool ActionDetectFace::isAllowed( Event)
 {
-    const FM *fm = MS::selectedModel();
+    const FM::RPtr fm = MS::selectedModelScopedRead();
     return fm && Detect::FaceAlignmentFinder::isInit()
            && MaskRegistration::maskLoaded()
            && fm->mesh().hasSequentialIds();
@@ -60,14 +60,14 @@ bool ActionDetectFace::isAllowed( Event)
 
 bool ActionDetectFace::doBeforeAction( Event)
 {
-    FM* fm = MS::selectedModel();
+    FM::RPtr fm = MS::selectedModelScopedRead();
     _ulmks.clear();
     _ev = Event::NONE;
     bool goDetect = true;
 
     if ( fm->currentLandmarks().empty())
         _ulmks = Landmark::LandmarksManager::ids();
-    else if ( _cdialog->open( fm))    // Modal dialog - warn if about to overwrite!
+    else if ( _cdialog->open( *fm))    // Modal dialog - warn if about to overwrite!
         _ulmks = _cdialog->landmarks(); // Copy out
     else
         goDetect = false;
@@ -87,44 +87,34 @@ bool ActionDetectFace::doBeforeAction( Event)
 
 void ActionDetectFace::doAction( Event)
 {
-    FM *fm = MS::selectedModel();
-    fm->lockForWrite();
-    detect( fm, _ulmks);
-    fm->unlock();
+    FM::WPtr fm = MS::selectedModelScopedWrite();
+    detect( *fm, _ulmks);
 }   // end doAction
 
 
 // public static
-void ActionDetectFace::detect( FM* fm, const IntSet &ulmks)
+void ActionDetectFace::detect( FM &fm, const IntSet &ulmks)
 {
-    //std::cout << "Doing initial alignment of model..." << std::endl;
     ActionAlignModel::align( fm);
-    fm->fixTransformMatrix();
-    //std::cout << "Registering mask against target face..." << std::endl;
-    r3d::Mesh::Ptr mask = MaskRegistration::registerMask( fm);
+    fm.fixTransformMatrix();
+    r3d::Mesh::Ptr mask = MaskRegistration::registerMask( fm.mesh());
 
-    //std::cout << "Setting mask..." << std::endl;
-    fm->setMask( mask);
-    fm->setMaskHash( MaskRegistration::maskHash());
+    fm.setMask( mask);
+    fm.setMaskHash( MaskRegistration::maskHash());
 
     if ( !ulmks.empty())
-    {
-        //std::cout << "Transferring landmarks..." << std::endl;
         ActionRestoreLandmarks::restoreLandmarks( fm, ulmks, false);
-    }   // end if
 
-    //std::cout << "Doing Procrustes alignment of the coregistered mask with the original..." << std::endl;
     const Mat4f align = MaskRegistration::calcMaskAlignment( *mask);
     const Mat4f ialign = align.inverse();
-
-    fm->addTransformMatrix( ialign);
-    fm->fixTransformMatrix();
+    fm.addTransformMatrix( ialign);
+    fm.fixTransformMatrix();
 }   // end detect
 
 
 Event ActionDetectFace::doAfterAction( Event)
 {
-    ActionOrientCameraToFace::orientToFace( MS::selectedView(), 1);
+    ActionOrientCamera::orient( MS::selectedView(), 1);
     MS::clearStatus();
     MS::setInteractionMode( IMode::CAMERA_INTERACTION);
     QString plusLmks;

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,8 @@ class FaceTools_EXPORT ActionShowScanInfo : public FaceAction
 public:
     ActionShowScanInfo( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
 
-    QString toolTip() const override { return "Show and edit metadata data about the current subject.";}
+    QString toolTip() const override { return "Show/edit metadata about the selected subject.";}
+    QWidget* widget() const override { return _dialog;}
 
     void setThumbnailUpdater( ActionUpdateThumbnail*);
 
@@ -36,11 +37,8 @@ protected:
     void postInit() override;
     bool update( Event) override;
     bool isAllowed( Event) override;
+    bool doBeforeAction( Event) override;
     void doAction( Event) override;
-    Event doAfterAction( Event) override;
-
-private slots:
-    void doOnUpdatedThumbnail( const FM*, const cv::Mat&);
 
 private:
     ActionUpdateThumbnail *_tupdater;

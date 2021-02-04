@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@ using FaceTools::Action::Event;
 using FaceTools::Action::ActionAddPath;
 using FaceTools::Interactor::PathsHandler;
 using FaceTools::Vis::FV;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ActionAddPath::ActionAddPath( const QString& dn, const QIcon& ico, const QKeySequence &ks)
@@ -61,8 +61,7 @@ void ActionAddPath::doAction( Event)
     }   // end if
 
     storeUndo( this, Event::PATHS_CHANGE);
-    const int pid = MS::selectedModel()->addPath( _vproj);
-    handler->addPath( pid);
+    handler->addPath( _vproj);
 }   // end doAction
 
 

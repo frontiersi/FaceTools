@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,21 +44,22 @@ protected:
     Event doAfterAction( Event) override;
 
 private slots:
-    void _doOnShowChart();
-    void _doRefreshGraphics();
+    void _doOnMatchHPOs();
+    void _doOnRemeasure();
+    void _doOnSelectMetric( int, int);
+    void _doRefreshAllMetricsVisibility();
+    void _doRefreshMetricVisibility( int);
 
 private:
     static bool s_showParallelProjection;
     Widget::MetricsDialog *_mdialog;
     Widget::ChartDialog *_cdialog;
-    int _pmid;
     std::unordered_map<const FMV*, vtkNew<vtkTextActor> > _texts;
     bool _updateText( const Vis::FV*, int);
-    void _addViewer( FMV*);
-    void _setMetricHighlighted( int, bool);
     void _setParallelProjection( bool);
-    void _closeDialog( Event);
-    void _hideGraphics();
+    void _refreshMetricAppearance( FM*, int);
+    void _refreshMetricVisibility( int);
+    void _updateCurrentMetricDisplayedInfo();
 };  // end class
 
 }}   // end namespaces

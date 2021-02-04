@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,8 +16,7 @@
  ************************************************************************/
 
 #include <Action/FaceActionManager.h>
-#include <Action/ActionMoveView.h>
-#include <Action/ModelSelector.h>
+#include <ModelSelect.h>
 #include <Interactor/SelectNotifier.h>
 #include <FileIO/FaceModelManager.h>
 #include <FaceModelViewer.h>
@@ -25,32 +24,33 @@
 #include <FaceModel.h>
 #include <Vis/FaceView.h>
 #include <functional>
+#include <algorithm>
 #include <cassert>
 using FaceTools::Action::FaceActionManager;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
+using FaceTools::Vis::FV;
 using FMM = FaceTools::FileIO::FaceModelManager;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 using MM = FaceTools::Metric::MetricManager;
 using FaceTools::FM;
 
 
 namespace {
 
-void pokeViewTransformsWithModel( const FM* fm)
+void rebuildViews( const FM* fm)
 {
-    vtkSmartPointer<vtkMatrix4x4> vmat = r3dvis::toVTK( fm->transformMatrix());
-    for ( FaceTools::Vis::FV* fv : fm->fvs())
-        fv->pokeTransform( vmat);
-}   // end pokeViewTransformsWithModel
-
-
-// Rebuild the actors associated with the model.
-void rebuildViewActors( const FM* fm)
-{
-    for ( FaceTools::Vis::FV* fv : fm->fvs())
+    for ( FV* fv : fm->fvs())
         fv->reset();
-}   // end rebuildViewActors
+}   // end rebuildViews
+
+
+void syncViews( const FM* fm)
+{
+    vtkSmartPointer<vtkMatrix4x4> m = r3dvis::toVTK( fm->transformMatrix());
+    for ( FV* fv : fm->fvs())
+        fv->pokeTransform( m);
+}   // end syncViews
 
 
 void applyFnToModels( const Event &e, const FM* fm, const std::function<void( const FM*)> &fn)
@@ -71,93 +71,100 @@ void applyFnToModels( const Event &e, const FM* fm, const std::function<void( co
 FaceActionManager::Ptr FaceActionManager::s_singleton;
 
 
-// static
-FaceActionManager::Ptr FaceActionManager::get( QWidget* parent)
+FaceActionManager::FaceActionManager() : _lvl(0)
 {
-    if ( !s_singleton)
-    {
-        s_singleton = Ptr(new FaceActionManager, [](FaceActionManager* fam){ delete fam;});
-        s_singleton->_parent = parent;
-    }   // end if
-    return s_singleton;
-}   // end get
-
-
-// private
-FaceActionManager::FaceActionManager()
-{
-    const Interactor::SelectNotifier *sn = MS::selectNotifier();
-    connect( sn, &Interactor::SelectNotifier::onSelected, [this]( Vis::FV*, bool s){ if ( s) this->doEvent( Event::MODEL_SELECT);});
+    connect( this, &FaceActionManager::_selfRaise, this, &FaceActionManager::_doRaise);
 }   // end ctor
 
 
 // static
-QAction* FaceActionManager::registerAction( FaceAction* act)
+FaceActionManager* FaceActionManager::get()
 {
-    auto& acts = get()->_actions;
-    assert( acts.count(act) == 0);
-    connect( act, &FaceAction::onEvent, &*get(), &FaceActionManager::doEvent);
-    connect( act, &FaceAction::onShowHelp, [](const QString& tok){ emit get()->onShowHelp(tok);});
-    acts.insert(act);
-    act->_init(s_singleton->_parent);
-    act->addRefreshEvent( Event::MODEL_SELECT | Event::LOADED_MODEL | Event::CLOSED_MODEL);
-    act->refresh();
-    emit s_singleton->onRegisteredAction(act);
+    if ( !s_singleton)
+        s_singleton = Ptr(new FaceActionManager, [](FaceActionManager* fam){ delete fam;});
+    return &*s_singleton;
+}   // end get
+
+
+// static
+QAction* FaceActionManager::registerAction( FaceAction* act, QWidget *parentWidget)
+{
+    std::vector<FaceAction*>& acts = get()->_actions;
+    acts.push_back(act);
+    act->addRefreshEvent( Event::MODEL_SELECT | Event::CLOSED_MODEL);
+    act->_init( parentWidget);    // No more events added after this
     return act->qaction();
 }   // end registerAction
 
 
 // static
-void FaceActionManager::close( const FM* fm)
+void FaceActionManager::finalise()
+{
+    FaceActionManager *fam = get();
+    std::vector<FaceAction*>& acts = fam->_actions;
+
+    for ( size_t i = 0; i < acts.size(); ++i)
+    {
+        FaceAction *act = acts.at(i);
+        act->refresh();
+        connect( act, &FaceAction::onEvent, fam, &FaceActionManager::_doRaise);
+        connect( act, &FaceAction::onShowHelp, [fam](const QString& tok){ emit fam->onShowHelp(tok);});
+    }   // end for
+    const Interactor::SelectNotifier *sn = MS::selectNotifier();
+    connect( sn, &Interactor::SelectNotifier::onSelected, []( Vis::FV*, bool s){ if ( s) raise( Event::MODEL_SELECT);});
+}   // end finalise
+
+
+// static
+FaceTools::Vis::FV* FaceActionManager::close( const FM *fm)
 {
     assert(fm);
-    get()->_closeLock.lock();
+    FaceActionManager *fam = get();
     fm->lockForRead();
-    const auto& acts = get()->_actions;
+    const auto& acts = fam->_actions;
     for ( FaceAction* act : acts)
         act->purge( fm);
     fm->unlock();
     MS::remove(fm); // Removes views which ordinarily would cause Event::MODEL_SELECT but signal is blocked
     MM::purge(fm);  // Removes cached metric calculation data
-    FMM::close(fm);
+    FMM::close(*fm);
 
-    bool movedView = false;
     Vis::FV *nextfv = nullptr;
 
     // If there are other FaceModels loaded, select one with a preference for models from the default viewer.
     if ( FMM::numOpen() > 0)
     {
-        if ( !MS::defaultViewer()->attached().empty())
+        if ( !MS::defaultViewer()->empty())
             nextfv = MS::defaultViewer()->attached().first();
         else
         {
             // Get the next FaceView to select from one of the other viewers.
             for ( const FMV* fmv : MS::viewers())
             {
-                if ( !fmv->attached().empty())
+                if ( !fmv->empty())
                 {
                     nextfv = fmv->attached().first();
                     break;
                 }   // end if
             }   // end for
-
-            // Since the default viewer is empty, we move this newly selected FaceView into the default viewer.
-            if ( nextfv)
-            {
-                ActionMoveView::move( nextfv, MS::defaultViewer());
-                movedView = true;
-            }   // end if
         }   // end else
     }   // end if
 
-    MS::setSelected( nextfv);
-    if ( movedView)
-        get()->doEvent( Event::VIEWER_CHANGE);
-    get()->_closeLock.unlock();
+    return nextfv;
 }   // end close
 
 
-void FaceActionManager::doEvent( Event E)
+// static
+void FaceActionManager::raise( Event E)
+{
+    // emit to queue in the signal handling thread.
+    // Don't call _doRaise directly since the client might
+    // have called raise from a non-GUI thread.
+    emit get()->_selfRaise( E);
+}   // end raise
+
+
+void FaceActionManager::_doRaise( Event E)
 {
     const FM* fm = MS::selectedModel();
     assert( fm || FMM::numOpen() == 0);
@@ -169,57 +176,100 @@ void FaceActionManager::doEvent( Event E)
     // NOTE sact may be null since a FaceAction may not be causing this call!
     FaceAction* sact = qobject_cast<FaceAction*>( sender());
 
-#ifndef NDEBUG
-    if ( E == Event::NONE && sact)
-        std::cerr << "[WARNING]: " << E << " from " << sact->debugName() << std::endl;
-#endif
-
-    if ( fm)
+    if ( fm && E != Event::NONE)
     {
         // Purge actions first.
-        for ( FaceAction* act : _actions)
-            if ( act != sact && act->isPurgeEvent(E))
+        for ( FaceAction *act : _actions)
+            if ( act != sact && any( act->purgeEvents(), E) && !act->isWorking())
                 act->purge( fm);
-
-        // Geometry change events require rebuilding the actors associated with the affected FaceModels.
-        // This also reapplies visualisations and it is necessary that any visualisations that rely upon
-        // associations of data be fully purged first which is why the above loop to purge the actions
-        // comes before this check.
-        if ( has( E, Event::MESH_CHANGE | Event::ASSESSMENT_CHANGE | Event::RESTORE_CHANGE))
-            applyFnToModels( E, fm, rebuildViewActors);   // Also resets view normals
+        if ( has( E, Event::MESH_CHANGE))
+            applyFnToModels( E, fm, rebuildViews);   // Also resets view normals
         else if ( has( E, Event::AFFINE_CHANGE))
-            applyFnToModels( E, fm, pokeViewTransformsWithModel);
-
-        if ( has( E, Event::MESH_CHANGE | Event::AFFINE_CHANGE | Event::ASSESSMENT_CHANGE | Event::LANDMARKS_CHANGE))
-            applyFnToModels( E, fm, MS::syncBoundingVisualisation);
+            applyFnToModels( E, fm, syncViews);
     }   // end if
 
-    // Load events have to have an initial mesh change event
-    if ( has( E, Event::LOADED_MODEL))
-        E |= Event::MESH_CHANGE;
-
+    // Note that handlers can own visualisations and refreshing handlers can adjust
+    // the visualisations they own. Since ActionVisualise looks at the visualisation
+    // availability and visibility in its refresh function, this must be called first.
     MS::refreshHandlers();
 
-    // Have actions recheck their own state and whether or not they're enabled, then see
-    // if the received event triggers them.
-    for ( FaceAction* act : _actions)
+    std::vector<FaceAction*> tacts; // Actions to be triggered as an immediate response to event(s) E
+    std::vector<FaceAction*> racts; // Actions to refresh afterwards due to E (if not triggered by E)
+    _acted[sact] = E; // Sending actions cannot respond to themselves (set with their own finishing event)
+
+    if ( E != Event::NONE)
     {
-        // Sending actions should not be able to trigger themselves, and
-        // actions are not reentrant generally speaking so running actions are also ignored.
-        if ( act == sact || act->isWorking())
-            continue;
-
-        // In refreshing state, actions decide whether to enable themselves and check themselves.
-        if ( act->isRefreshEvent(E) || act->isTriggerEvent(E) || act->isPurgeEvent(E))
-            act->refresh(E);
-
-        if ( act->isEnabled() && act->isTriggerEvent(E))
+        for ( FaceAction *act : _actions)
         {
-            assert( !has( E, Event::NONE));
-            act->execute(E);
-        }   // end if
-    }   // end for
+            // Actions are not reentrant so running actions are ignored
+            // (they refresh at the end of their action in any case).
+            if ( act->isWorking())
+                continue;
 
-    MS::updateRender();
-    emit onUpdateSelected();
-}   // end doEvent
+            // Actions that have already been acted upon (or that are scheduled
+            // for refresh already) are ignored to prevent recursion - only
+            // the event info is updated for when the action refreshes.
+            if ( _acted.count(act) > 0)
+            {
+                _acted[act] |= E;
+                continue;
+            }   // end if
+
+            if ( any( act->triggerEvents(), E)) // Triggers take precedence
+            {
+                tacts.push_back(act);
+                _acted[act] = E;
+            }   // end if
+            else if ( any( act->refreshEvents(), E))
+            {
+                racts.push_back(act);
+                _acted[act] = E;
+            }   // end else if
+        }   // end for
+    }   // end if
+
+    const std::string chevrons( ++_lvl, '>');
+
+    // Actions triggered for immediate response by the received action (if we have any)
+    if ( !tacts.empty())
+    {
+#ifndef NDEBUG
+        std::cerr << chevrons << " ===== Actions triggered by " << E << " ===== " << std::endl;
+#endif
+        for ( FaceAction *act : tacts)
+        {
+            act->_setDebugPrefix( chevrons);
+            act->execute(E);
+            act->_setDebugPrefix( "!");
+        }   // end for
+    }   // end if
+
+    if ( !racts.empty())
+    {
+#ifndef NDEBUG
+        if ( !racts.empty())
+            std::cerr << chevrons << " ===== Refreshing " << racts.size() << " actions =====" << std::endl;
+#endif
+        for ( FaceAction *act : racts)
+        {
+            assert( act);
+#ifndef NDEBUG
+            std::cerr << chevrons << " " << act->debugName() << " due to ";
+            assert( _acted.count(act) > 0);
+            const Event re = _acted.at(act) & act->refreshEvents();
+            std::cerr << re << std::endl;
+#endif
+            // Ensure the action is refreshed with the complete set of events received
+            // and not just the event that caused it to be identified as a refresh event.
+            act->refresh( _acted.at(act));
+        }   // end for
+    }   // end if
+    
+    _lvl--;
+    if ( _lvl == 0)
+    {
+        _acted.clear();
+        MS::updateRender();
+        emit onUpdateSelected();
+    }   // end if
+}   // end _doRaise

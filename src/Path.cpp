@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,6 +48,37 @@ Path::Path( int i, const Vec3f& v)
 }   // end ctor
 
 
+Path Path::mapSrcToDst( const FM *sfm, const FM *dfm) const
+{
+    Path pth;
+    pth._id = _id;
+    pth._name = _name;
+
+    const Mat4f T = dfm->transformMatrix();
+    const Mat4f iT = sfm->inverseTransformMatrix();
+    pth._orient = T.block<3,3>(0,0) * iT.block<3,3>(0,0) * _orient;
+    pth._orient.normalize();
+
+    Vec3f h0, h1;
+    barycentricMapSrcToDst( sfm, handle0(), dfm, h0);
+    barycentricMapSrcToDst( sfm, handle1(), dfm, h1);
+    pth.setHandle0( h0);
+    pth.setHandle1( h1);
+
+    // We want the depth point to be the same too which means
+    // setting the // depth handle proportion indirectly ;D
+    Vec3f dmax;
+    barycentricMapSrcToDst( sfm, _dmax, dfm, dmax);
+    const Vec3f hline = h1 - h0;
+    const float mhl = hline.norm();
+    pth._dhan = (dmax - h0).dot(hline) / (mhl*mhl);
+
+    pth.update( dfm);
+    pth.updateMeasures();
+    return pth;
+}   // end mapSrcToDst
+
+
 bool Path::update( const FM* fm)
 {
     _validPath = false;
@@ -71,9 +102,9 @@ bool Path::update( const FM* fm)
                 _validPath = findCurveFollowingPath( fm->kdtree(), v0, v1, _vtxs);   // Experimental
                 break;
             case STRAIGHT_CURVE:
-                _validPath = findStraightPath( fm->kdtree(), v0, v1, _vtxs);    // Default
+                _validPath = findStraightPath( fm->kdtree(), v0, v1, _vtxs);
                 break;
-            case ORIENTED_CURVE:
+            case ORIENTED_CURVE:    // Default
                 assert( u != Vec3f::Zero());
                 _validPath = findOrientedPath( fm->kdtree(), v0, v1, u, _vtxs);
                 break;

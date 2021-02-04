@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -111,8 +111,7 @@ public:
 
     void setCursor( QCursor);
 
-    cv::Mat_<cv::Vec3b> grabImage() const;  // Retrieves what's currently being rendered as an OpenCV image matrix.
-    bool saveSnapshot() const;  // User save of grabImage to file.
+    cv::Mat_<cv::Vec3b> grabImage(); // Update render and return as BGR OpenCV matrix.
 
     void setParallelProjection( bool);
     bool parallelProjection() const;

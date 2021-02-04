@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,11 +16,11 @@
  ************************************************************************/
 
 #include <Interactor/ActionClickHandler.h>
-#include <Action/ModelSelector.h>
+#include <ModelSelect.h>
 #include <FaceModelViewer.h>
 using FaceTools::Interactor::ActionClickHandler;
 using FaceTools::Action::FaceAction;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ActionClickHandler::Ptr ActionClickHandler::create() { return Ptr( new ActionClickHandler);}

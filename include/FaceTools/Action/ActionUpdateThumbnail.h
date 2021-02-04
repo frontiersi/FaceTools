@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 #define FACE_TOOLS_ACTION_ACTION_UPDATE_THUMBNAIL_H
 
 #include "FaceAction.h"
-#include <r3dvis/OffscreenMeshViewer.h>
+#include <QReadWriteLock>
 
 namespace FaceTools { namespace Action {
 
@@ -27,25 +27,27 @@ class FaceTools_EXPORT ActionUpdateThumbnail : public FaceAction
 { Q_OBJECT
 public:
     ActionUpdateThumbnail( int width=256, int height=256);
-    ~ActionUpdateThumbnail() override;
 
-    void setThumbnailSize( int w, int h) { _omv.setSize(cv::Size(w,h));}
+    void setThumbnailSize( const QSize&);
 
-    // Returns thumbnail for the given model - generates if not already available.
-    const cv::Mat thumbnail( const FM*);
+    // Returns thumbnail for the given model or the currently selected one if null.
+    static cv::Mat thumbnail( const FM *fm=nullptr);
 
 signals:
-    void updated( const FM*, const cv::Mat&);   // Emitted whenever a new thumbnail generated for the model.
+    // Emitted whenever a new thumbnail generated for the currently selected model.
+    void updated();
 
 protected:
-    bool update( Event) override;
     bool isAllowed( Event) override;
+    bool doBeforeAction( Event) override;
     void doAction( Event) override;
+    Event doAfterAction( Event) override;
     void purge( const FM*) override;
 
 private:
-    r3dvis::OffscreenMeshViewer _omv;
-    std::unordered_map<const FM*, cv::Mat_<cv::Vec3b> > _thumbs;
+    QSize _vsz;
+    static std::unordered_map<const FM*, cv::Mat_<cv::Vec3b> > _thumbs;
+    static QReadWriteLock _rwlock;
 };  // end class
 
 }}   // end namespaces

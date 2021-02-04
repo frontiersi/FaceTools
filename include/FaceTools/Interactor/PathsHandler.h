@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +29,6 @@ public:
     using Ptr = std::shared_ptr<PathsHandler>;
     static Ptr create();
 
-    void postRegister() override;
     void refresh() override;
 
     Vis::PathSetVisualisation &visualisation() { return _vis;}
@@ -38,7 +37,7 @@ public:
     // The path being hovered over (if any).
     inline Vis::PathView::Handle* hoverPath() const { return _handle;}
 
-    void addPath( int pathId);
+    void addPath( const Vec3f&);
 
     // Returns true iff a path was in the middle of being dragged otherwise does nothing.
     bool endDragging();
@@ -66,8 +65,8 @@ private:
     Vis::PathView::Handle *_handle;
     bool _dragging;
     bool _initPlacement;
-    const Vis::BaseVisualisation *_lmkVis;
 
+    bool _execLeftDrag();
     void _showPathInfo();
     void _updateCaption();
 

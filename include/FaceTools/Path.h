@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,6 +47,11 @@ public:
     Path& operator=( const Path&) = default;
     Path( int id, const Vec3f& v0);
 
+    // Return a copy of this path but with all vertices barycentrically mapped
+    // from the source to the given destination . Function updateMeasures is
+    // called on the created path before being returned.
+    Path mapSrcToDst( const FM *src, const FM *dst) const;
+
     void setId( int id) { _id = id;}
     inline int id() const { return _id;}
 
@@ -77,8 +82,7 @@ public:
 
     // Set path endpoints on the model surface and recalculate path and both path
     // lengths using the given model. If no path could be found, return false.
-    // Remember to call updateMeasures after calling this function and setting
-    // the depth handle!
+    // Remember to call updateMeasures after calling this function and setting the depth handle!
     bool update( const FM*);
 
     // After calling update, or setting the depth handle, call this to update measurements.

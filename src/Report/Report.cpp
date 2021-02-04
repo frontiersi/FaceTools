@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,8 +19,11 @@
 #include <Report/ReportManager.h>
 #include <Metric/MetricManager.h>
 #include <Metric/PhenotypeManager.h>
+#include <Metric/StatsManager.h>
 #include <Metric/Chart.h>
+#include <Action/ActionOrientCamera.h>
 #include <r3dio/PDFGenerator.h>
+#include <U3DCache.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <Ethnicities.h>
@@ -32,6 +35,7 @@
 #include <QtDebug>
 using MM = FaceTools::Metric::MetricManager;
 using MC = FaceTools::Metric::Metric;
+using MS = FaceTools::ModelSelect;
 using FaceTools::Metric::GrowthData;
 using FaceTools::Metric::MetricValue;
 using FaceTools::Metric::MetricSet;
@@ -63,36 +67,45 @@ QString sanit( QString s)
 }   // end namespace
 
 
-Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _os(nullptr), _model(nullptr)
+Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _os(nullptr)
 {
     // Create some standardised Lua scripting functions for inserting report elements.
-    addCustomLuaFn( "addScanInfo", [this](){ this->_addLatexScanInfo();});
-    addCustomLuaFn( "addNotes", [this](){ this->_addLatexNotes();});
     addCustomLuaFn( "addStartColumn", [this](){ this->_addLatexStartMinipage();});
     addCustomLuaFn( "addEndColumn", [this](){ this->_addLatexEndMinipage();});
     addCustomLuaFn( "addLineBreak", [this](){ this->_addLatexLineBreak();});
 
+    _lua.set_function( "addScanInfo",
+                        [this]( const FM *fm){ this->_addLatexScanInfo(fm);});
+    _lua.set_function( "addNotes",
+                        [this]( const FM *fm){ this->_addLatexNotes(fm);});
+
     _lua.set_function( "getNumPhenotypicTraits",
-                        [this](){ return this->_getNumPhenotypicTraits();});
+                        [this]( const FM *fm){ return this->_getNumPhenotypicTraits(fm);});
 
     _lua.set_function( "addPhenotypicTraits",
-                       [this](int sidx, int nhids)
-                       { return this->_addLatexPhenotypicTraits( sidx, nhids);});
+                       [this]( const FM *fm, int sidx, int nhids)
+                       { return this->_addLatexPhenotypicTraits( fm, sidx, nhids);});
 
     _lua.set_function( "addFigure",
-                       [this]( float widthMM, float heightMM, const std::string& caption)
-                        { this->_addLatexFigure( widthMM, heightMM, caption);});
+                       [this]( const FM *fm, float widthMM, float heightMM, const std::string& caption)
+                        { this->_addLatexFigure( fm, widthMM, heightMM, caption);});
 
     _lua.set_function( "addGrowthCurvesChart",
-                       [this]( int mid, size_t d, int footnotemark)
-                        { this->_addLatexGrowthCurvesChart( mid, d, footnotemark);});
+                       [this]( const FM *fm, int mid, size_t d, int footnotemark)
+                        { this->_addLatexGrowthCurvesChart( fm, mid, d, footnotemark);});
 
-    _lua.set_function( "addCustomLatex", [this]( const std::string& s) { this->addCustomLatex( QString::fromStdString(s));});
-    _lua.set_function( "addFootnoteSources", [this]( const sol::table &mids){ this->_addFootnoteSources(mids);});
+    _lua.set_function( "addCustomLatex", [this]( const std::string& s)
+            { this->addCustomLatex( QString::fromStdString(s));});
+    _lua.set_function( "addFootnoteSources", [this]( const FM *fm, const sol::table &mids)
+            { this->_addFootnoteSources( fm, mids);});
 
     _lua.set_function( "metric", MM::metric);
-    _lua.set_function( "metricSource", [this](int mid){ return this->_metricCurrentSource(mid).toStdString();});
-    _lua.set_function( "footnoteIndices", [this]( const sol::table &mids){ return this->_footnoteIndices(mids);});
+    _lua.set_function( "metricSource", [this]( const FM *fm, int mid){
+            return this->_metricCurrentSource( fm, mid).toStdString();});
+
+    _lua.set_function( "footnoteIndices", [this]( const FM *fm, const sol::table &mids)
+            { return this->_footnoteIndices( fm, mids);});
+
     _lua.set_function( "round", []( double v, size_t nd){ return rlib::round(v,nd);});
 
     _lua.new_usertype<MetricSet>( "MetricSet",
@@ -103,9 +116,6 @@ Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _os(nullptr), _model(nullp
                                     "value", &MetricValue::value,
                                     "zscore", &MetricValue::zscore,
                                     "mean", &MetricValue::mean);
-
-    //_lua.new_usertype<MC>( "MC",
-    //                       "currentGrowthData", &MC::growthData);
 
     _lua.new_usertype<GrowthData>( "GrowthData",
                                    "source", &GrowthData::source,
@@ -125,7 +135,10 @@ Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _os(nullptr), _model(nullp
                            "paternalEthnicity", &FM::paternalEthnicity,
                            "captureDate", &FM::captureDate,
                            "dateOfBirth", &FM::dateOfBirth,
-                           "currentAssessment", &FM::cassessment);
+                           "currentAssessment", &FM::cassessment,
+                           "hasLandmarks", &FM::hasLandmarks,
+                           "hasMask", &FM::hasMask,
+                           "maskHash", &FM::maskHash);
 
     _lua.new_usertype<FaceAssessment>( "FaceAssessment",
                            "hasLandmarks", &FaceAssessment::hasLandmarks,
@@ -157,6 +170,12 @@ void Report::addCustomLuaFn( const QString& fnName, const std::function<void()>&
 }   // end addCustomLuaFn
 
 
+void Report::addCustomLuaFn( const QString& fnName, const std::function<void( const FM*)>& fn)
+{
+    _lua.set_function( fnName.toStdString(), fn);
+}   // end addCustomLuaFn
+
+
 void Report::addCustomLatex( const QString &s)
 {
     assert(_os);
@@ -165,12 +184,17 @@ void Report::addCustomLatex( const QString &s)
 }   // end addCustomLatex
 
 
-bool Report::isAvailable(const FM *fm) const
+bool Report::isAvailable() const
 {
+    const FM *fm0 = MS::selectedModel();
+    const FM *fm1 = MS::nonSelectedModel();
+    if ( !fm0 || (_twoModels && !fm1))
+        return false;
+
     bool available = false;
     try
     {
-        sol::function_result result = _available( fm);
+        sol::function_result result = _available( fm0, fm1);    // Calls Lua function
         if ( result.valid())
             available = result;
     }   // end try
@@ -240,6 +264,8 @@ Report::Ptr Report::load( const QString& fname, QTemporaryDir& tdir)
         return nullptr;
     }   // end else
 
+    report->_twoModels = table["twoModels"].get_or(false);
+
     if ( sol::optional<sol::function> v = table["isAvailable"])
         report->_available = v.value();
     else
@@ -260,19 +286,13 @@ Report::Ptr Report::load( const QString& fname, QTemporaryDir& tdir)
 }   // end load
 
 
-void Report::setModelFile( const QString &pathToU3DModel)
+bool Report::generate( const QString& pdffile)
 {
-    _u3dfile = QDir( _tmpdir.path()).relativeFilePath( pathToU3DModel);
-}   // end setModelFile
-
-
-bool Report::generate( const FM* fm, const QString& pdffile)
-{
+    _errMsg = "";
     QFile pfile(pdffile);
     if ( pfile.exists() && !pfile.remove())
     {
-        qWarning() << "Cannot overwrite" << pdffile << "!";
-        emit onFinishedGenerate( nullptr, pdffile);
+        _errMsg = tr("Cannot overwrite '") + pdffile + "'!";
         return false;
     }   // end if
 
@@ -281,12 +301,9 @@ bool Report::generate( const FM* fm, const QString& pdffile)
     texfile.open( QIODevice::ReadWrite | QIODevice::Text);
     if ( !texfile.isOpen())
     {
-        qWarning() << "Unable to open '" << texfile.fileName() << "' for writing!";
-        emit onFinishedGenerate( nullptr, pdffile);
+        _errMsg = tr("Unable to open '") + texfile.fileName() + tr("' for writing!");
         return false;
     }   // end if
-
-    _model = fm;
 
     _os = new QTextStream( &texfile);
     const bool writtenLatexOk = _writeLatex( *_os);
@@ -295,27 +312,25 @@ bool Report::generate( const FM* fm, const QString& pdffile)
 
     if ( !writtenLatexOk)
     {
-        qWarning() << "Unable to write latex to '" << texfile.fileName() << "'";
-        emit onFinishedGenerate( nullptr, pdffile);
+        _errMsg = tr( "Unable to write latex to '") + texfile.fileName() + "'!";
         return false;
     }   // end if
-
-    //qInfo( "Generating PDF from LaTeX...");
 
     // Need to generate from within the directory.
     r3dio::PDFGenerator pdfgen(true);
     const bool genOk = pdfgen( QFileInfo(texfile).absoluteFilePath().toLocal8Bit().toStdString(), false);
     if ( !genOk)
     {
-        qWarning() << "Failed to generate PDF!";
-        emit onFinishedGenerate( nullptr, pdffile);
+        _errMsg = tr("Failed to generate PDF!");
         return false;
     }   // end if
 
     // Copy the created pdf to the requested location.
-    QFile::copy( _tmpdir.filePath( "report.pdf"), pdffile);
-
-    emit onFinishedGenerate( fm, pdffile);
+    if ( !QFile::copy( _tmpdir.filePath( "report.pdf"), pdffile))
+    {
+        _errMsg = tr("Failed to copy generated PDF to '") + pdffile + "'!";
+        return false;
+    }   // end if
 
     return true;
 }   // end generate
@@ -330,7 +345,7 @@ bool Report::_useSVG() const
 bool Report::_writeLatex( QTextStream& os) const
 {
     os << "\\documentclass[a4paper]{article}" << Qt::endl
-       << "\\listfiles" << Qt::endl   // Do this to see in the .log file which packages are used
+       << "\\listfiles" << Qt::endl   // For seeing in the .log file which packages are used
        << "\\usepackage[textwidth=20cm,textheight=25cm]{geometry}" << Qt::endl
        << "\\usepackage{graphicx}" << Qt::endl
        << "\\usepackage{verbatim}" << Qt::endl
@@ -355,41 +370,28 @@ bool Report::_writeLatex( QTextStream& os) const
     os << Qt::endl
        << "\\usepackage{fancyhdr}" << Qt::endl
        << "\\pagestyle{fancy}" << Qt::endl
-       //<< "\\renewcommand{\\headrulewidth}{0pt}" << Qt::endl
-       //<< "\\renewcommand{\\footrulewidth}{0pt}" << Qt::endl
-       //<< "\\setlength\\headheight{30mm}" << Qt::endl
-       << "\\setlength\\headheight{23mm}" << Qt::endl
-       << "\\rhead{\\raisebox{0.05\\height}{\\includegraphics[width=60mm]{logo.pdf}} \\\\" << Qt::endl
+       << "\\setlength\\headheight{15mm}" << Qt::endl
+       << "\\rhead{\\raisebox{0mm}{\\includegraphics[width=45mm]{logo.pdf}} \\\\" << Qt::endl
        << "\\footnotesize " << sanit(ReportManager::versionString()) << "}" << Qt::endl
        << "\\lhead{" << Qt::endl
-       << "\\Large \\textbf{" << sanit(_title) << "} \\\\" << Qt::endl;
-
-    os << "\\vspace{2mm} \\normalsize" << Qt::endl; // Small gap below title
-
-    // Source and Study reference
-    const QString src = sanit(_model->source().isEmpty() ? "N/A" : _model->source());
-    const QString studyId = sanit(_model->studyId().isEmpty() ? "N/A" : _model->studyId());
-    os << "\\textbf{Source:} " << src << "\\hspace{3mm}\\textbf{Study Ref:} " << studyId << " \\\\" << Qt::endl;
-
-    // Subject and Image reference
-    const QString subRef = sanit(_model->subjectId().isEmpty() ? "N/A" : _model->subjectId());
-    const QString imgRef = sanit(_model->imageId().isEmpty() ? "N/A" : _model->imageId());
-    os << "\\textbf{Subject Ref:} " << subRef << "\\hspace{3mm}\\textbf{Image Ref:} " << imgRef << " \\\\" << Qt::endl;
-
-    os << "\\textbf{Report Date:} " << QDate::currentDate().toString("dd MMMM yyyy") << "\\\\" << Qt::endl;
-
-    os << "}" << Qt::endl;
+       << "\\Large \\textbf{" << sanit(_title) << "} \\\\" << Qt::endl
+       << "\\vspace{2mm} \\normalsize" << Qt::endl // Small gap below title
+       << "\\textbf{Report Date:} " << QDate::currentDate().toString("dd MMMM yyyy")
+       << "\\\\" << Qt::endl
+       << "}" << Qt::endl;
 
     // Document
     os << Qt::endl
        << "\\begin{document}" << Qt::endl
        << "\\pagenumbering{gobble}" << Qt::endl
-       << "\\thispagestyle{fancy}" << Qt::endl << Qt::endl;
+       << "\\thispagestyle{fancy}" << Qt::endl;
 
     bool valid = true;
     try
     {
-        _addContent( _model);   // Call out to Lua function to add the report elements
+        const FM *fm0 = MS::selectedModel();
+        const FM *fm1 = MS::nonSelectedModel();
+        _addContent( fm0, fm1);   // Lua call to add report elements
     }   // end try
     catch (const sol::error& e)
     {
@@ -400,11 +402,20 @@ bool Report::_writeLatex( QTextStream& os) const
     os << "\\end{document}" << Qt::endl;
     os.flush();
     return valid;
-}   // end _writeLaTeX
+}   // end _writeLatex
 
 
-void Report::_addLatexFigure( float wmm, float hmm, const std::string& scaption)
+void Report::_addLatexFigure( const FM *fm, float wmm, float hmm, const std::string& scaption)
 {
+    assert(fm);
+    const U3DCache::Filepath u3dfilepath = U3DCache::u3dfilepath(*fm);  // Read lock
+    const QString u3dfile = QDir( _tmpdir.path()).relativeFilePath( *u3dfilepath);
+
+    const auto cam = Action::ActionOrientCamera::makeFrontCamera( *fm, 30, 0.75f);
+    const QString viewsFile = "views.vws";
+    if ( !ReportManager::writeViewsFile( cam.distance(), viewsFile))
+        return;
+
     assert(_os);
     QTextStream &os = *_os;
     const QString caption = QString::fromStdString(scaption);
@@ -420,15 +431,15 @@ void Report::_addLatexFigure( float wmm, float hmm, const std::string& scaption)
             \includemedia[
             label=)" << label << "," << Qt::endl
        << "width=" << wmm << "mm," << Qt::endl
-       << "height=" << hmm << "mm," << Qt::endl
+       << "height=" << hmm << "mm," << Qt::endl // keepaspectratio
        << R"(add3Djscript=3Dspintool.js,   % let scene rotate about z-axis
-             keepaspectratio,
+             add3Djscript=hideAxes.js,     % hide the orientation axes (ReportManager file)
              activate=pageopen,
-             playbutton=plain,    % plain | fancy (default) | none
+             playbutton=none,    % plain | fancy | none
              3Dbg=1 1 1,
              3Dmenu,
-             3Dviews=views.vws,
-             ]{}{)" << _u3dfile << R"(}\\)" << Qt::endl;
+             3Dviews=)" << viewsFile << R"(,
+             ]{}{)" << u3dfile << R"(}\\)" << Qt::endl;
 
     /* THESE DON'T WORK (and also aren't formatted well).
     os << "\\mediabutton[3Dgotoview=" << label << ":1]{\\fbox{RIGHT}}" << Qt::endl
@@ -443,7 +454,7 @@ void Report::_addLatexFigure( float wmm, float hmm, const std::string& scaption)
 }   // end _addLatexFigure
 
 
-void Report::_addLatexGrowthCurvesChart( int mid, size_t d, int footnotemark)
+void Report::_addLatexGrowthCurvesChart( const FM *fm, int mid, size_t d, int footnotemark)
 {
     MC::CPtr mc = MM::metric(mid);
     assert(mc);
@@ -460,8 +471,7 @@ void Report::_addLatexGrowthCurvesChart( int mid, size_t d, int footnotemark)
     const int spy = 505;
     static const QRectF crect( 0,0, spx, spy);
 
-    const GrowthData *gd = mc->growthData().current();
-    Metric::Chart *chart = new Metric::Chart( gd, d, _model);
+    Metric::Chart *chart = new Metric::Chart( mid, d, fm);
     chart->resize( crect.size());
     QtCharts::QChartView cview( chart); // Chart deleted when cview is destroyed
 
@@ -525,50 +535,61 @@ void Report::_addLatexGrowthCurvesChart( int mid, size_t d, int footnotemark)
 }   // end _addLatexGrowthCurvesChart
 
 
-void Report::_addLatexScanInfo()
+void Report::_addLatexScanInfo( const FM *fm)
 {
-    const QString cdate = _model->captureDate().toString("dd MMMM yyyy");
-    const QString dob = _model->dateOfBirth().toString("dd MMMM yyyy");
-    const double age = _model->age();
+    const QString cdate = fm->captureDate().toString("dd MMMM yyyy");
+    const QString dob = fm->dateOfBirth().toString("dd MMMM yyyy");
+    const double age = fm->age();
     const int yrs = int(age);
     const int mths = int((age - double(yrs)) * 12);
     const QString sage = QString("%1 yrs. %2 mons.").arg(yrs).arg(mths);
 
-    const QString sexs = sanit(FaceTools::toLongSexString( _model->sex()));
-    QString eths = sanit(Ethnicities::name(_model->maternalEthnicity()));
-    if ( _model->maternalEthnicity() != _model->paternalEthnicity())
-        eths += sanit(" (M) & " + Ethnicities::name(_model->paternalEthnicity()) + " (P)");
+    const QString sexs = sanit(FaceTools::toLongSexString( fm->sex()));
+    QString eths = sanit(Ethnicities::name(fm->maternalEthnicity()));
+    if ( fm->maternalEthnicity() != fm->paternalEthnicity())
+        eths += sanit(" (M) & " + Ethnicities::name(fm->paternalEthnicity()) + " (P)");
     if ( eths.isEmpty())
         eths = "N/A";
 
     QTextStream& os = *_os;
+
+    // Source and Study reference
+    const QString src = sanit(fm->source().isEmpty() ? "N/A" : fm->source());
+    const QString studyId = sanit(fm->studyId().isEmpty() ? "N/A" : fm->studyId());
+    os << "\\textbf{Source:} " << src << "\\hspace{2mm}\\textbf{Study Ref:} " << studyId << " \\\\" << Qt::endl;
+    // Subject and Image reference
+    const QString subRef = sanit(fm->subjectId().isEmpty() ? "N/A" : fm->subjectId());
+    const QString imgRef = sanit(fm->imageId().isEmpty() ? "N/A" : fm->imageId());
+    os << "\\textbf{Subject Ref:} " << subRef << "\\hspace{2mm}\\textbf{Image Ref:} " << imgRef << " \\\\" << Qt::endl;
     os << "\\textbf{Image Captured:} " << cdate << " \\\\" << Qt::endl;
-    os << "\\textbf{DOB:} " << dob << "\\hspace{3mm} \\textbf{Age:} " << sage << " \\\\" << Qt::endl;
-    os << "\\textbf{Ethnicity:} " << eths << " \\\\" << Qt::endl;
-    os << "\\textbf{Sex:} " << sexs << " \\\\" << Qt::endl;
+    os << "\\textbf{Sex:} " << sexs
+       << "\\hspace{2mm} \\textbf{DOB:} " << dob
+       << "\\hspace{2mm} \\textbf{Age:} " << sage << " \\\\" << Qt::endl;
+    os << "\\textbf{Ethnicity:} " << eths << Qt::endl;
+    //os << "\\textbf{Ethnicity:} " << eths << " \\\\" << Qt::endl;
 }   // end _addLatexScanInfo
 
 
-void Report::_addLatexNotes()
+void Report::_addLatexNotes( const FM *fm)
 {
     QTextStream& os = *_os;
-    FaceAssessment::CPtr ass = _model->currentAssessment();
-    os << " \\normalsize{\\textbf{" << tr("Assessor") << ":} " << sanit(ass->assessor()) << R"(} \\)" << Qt::endl;
+    FaceAssessment::CPtr ass = fm->currentAssessment();
+    os << " \\normalsize{\\textbf{" << tr("Assessment") << ":} " << sanit(ass->assessor()) << R"(} \\)" << Qt::endl;
     os << R"( \small{)" << sanit( ass->hasNotes() ? ass->notes() : tr("Nothing recorded.")) << R"(} \\)" << Qt::endl;
 }   // end _addLatexNotes
 
 
-int Report::_getNumPhenotypicTraits() const
+int Report::_getNumPhenotypicTraits( const FM *fm) const
 {
-    const IntSet pids = PhenotypeManager::discover(_model, -1); // Use the current assessment id
+    const IntSet pids = PhenotypeManager::discover(*fm, -1); // Use the current assessment id
     return int(pids.size());
 }   // end _getNumPhenotypicTraits
 
 
-bool Report::_addLatexPhenotypicTraits( int sidx, int nhids)
+bool Report::_addLatexPhenotypicTraits( const FM *fm, int sidx, int nhids)
 {
     sidx = std::max( 0, sidx);
-    const IntSet pids = PhenotypeManager::discover(_model, -1); // Use the current assessment id
+    const IntSet pids = PhenotypeManager::discover(*fm, -1); // Use the current assessment id
     bool moreToGo = false;
 
     QTextStream& os = *_os;
@@ -587,7 +608,7 @@ bool Report::_addLatexPhenotypicTraits( int sidx, int nhids)
         std::list<int> lids( pids.begin(), pids.end());
         lids.sort();
         std::vector<int> vids( lids.begin(), lids.end());
-        const QString title = tr("Notable morphology");
+        const QString title = tr("Noted phenotypic traits");
         os << "\\textbf{" << title << ":}" << Qt::endl
            << "\\begin{itemize}" << Qt::endl;
         for ( int i = sidx; i < topidx; ++i)
@@ -601,15 +622,13 @@ bool Report::_addLatexPhenotypicTraits( int sidx, int nhids)
 
 void Report::_addLatexStartMinipage() { *_os << R"(\begin{minipage}[t]{.5\textwidth})" << Qt::endl;}
 void Report::_addLatexEndMinipage() { *_os << R"(\end{minipage})" << Qt::endl;}
-
 void Report::_addLatexLineBreak() { *_os << R"(\hfill \break)" << Qt::endl;}
 
 
-QString Report::_metricCurrentSource( int mid) const
+QString Report::_metricCurrentSource( const FM *fm, int mid) const
 {
-    const GrowthData *gd = nullptr;
-    if ( MM::metric(mid))
-        gd = MM::metric(mid)->growthData().current();
+    using SM = FaceTools::Metric::StatsManager;
+    SM::RPtr gd = SM::stats( mid, fm);
     if ( !gd)
         return "";
     QString src = gd->source();
@@ -619,7 +638,7 @@ QString Report::_metricCurrentSource( int mid) const
 }   // end _metricCurrentSource
 
 
-std::unordered_map<int, int> Report::_footnoteIndices( const sol::table& mids) const
+std::unordered_map<int, int> Report::_footnoteIndices( const FM *fm, const sol::table& mids) const
 {
     QMap<QString, int> refs;
     std::unordered_map<int, int> idxs;
@@ -627,7 +646,7 @@ std::unordered_map<int, int> Report::_footnoteIndices( const sol::table& mids) c
     for ( size_t i = 0; i < mids.size(); ++i)
     {
         const int mid = mids[i];
-        const QString src = _metricCurrentSource(mid);
+        const QString src = _metricCurrentSource( fm, mid);
         if ( src.isEmpty())
             continue;
 
@@ -643,7 +662,7 @@ std::unordered_map<int, int> Report::_footnoteIndices( const sol::table& mids) c
 }   // end _footnoteIndices
 
 
-void Report::_addFootnoteSources( const sol::table& mids)
+void Report::_addFootnoteSources( const FM *fm, const sol::table& mids)
 {
     assert(_os);
     QTextStream& os = *_os;
@@ -653,7 +672,7 @@ void Report::_addFootnoteSources( const sol::table& mids)
     for ( size_t i = 0; i < mids.size(); ++i)
     {
         const int mid = mids[i];
-        const QString src = _metricCurrentSource(mid);
+        const QString src = _metricCurrentSource( fm, mid);
         if ( !src.isEmpty() && !refs.contains(src))
         {
             refs.insert(src);

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,7 +68,7 @@ FaceTools_EXPORT QString loadData( FM&, const QTemporaryDir&, const QString &mes
 // Export metadata about the given model into a property tree ready for writing.
 // Note that because the data are being written out into a property tree, different
 // export formats are available (not just XML).
-FaceTools_EXPORT void exportMetaData( const FM*, bool withExtras, PTree&);
+FaceTools_EXPORT void exportMetaData( const FM&, bool withExtras, PTree&);
 
 template <typename T>
 T getRecord( const PTree&, const QString& label);

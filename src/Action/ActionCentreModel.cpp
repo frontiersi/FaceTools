@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,40 +16,34 @@
  ************************************************************************/
 
 #include <Action/ActionCentreModel.h>
-#include <Action/ActionOrientCameraToFace.h>
-#include <Vis/FaceView.h>
-#include <FaceModel.h>
-#include <FaceTools.h>
-#include <r3d/Transformer.h>
+#include <Action/ActionOrientCamera.h>
 using FaceTools::Action::ActionCentreModel;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
-using FaceTools::FMS;
 using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ActionCentreModel::ActionCentreModel( const QString &dn, const QIcon& ico, const QKeySequence& ks)
     : FaceAction( dn, ico, ks)
 {
-    addRefreshEvent( Event::AFFINE_CHANGE);
+    addRefreshEvent( Event::MESH_CHANGE | Event::AFFINE_CHANGE);
+    setAsync(true);
 }   // end ctor
 
 
 bool ActionCentreModel::isAllowed( Event)
 {
-    if ( !MS::isViewSelected())
-        return false;
-    const FM* fm = MS::selectedModel();
-    return !fm->bounds()[0]->centre().isZero();
+    FM::RPtr fm = MS::selectedModelScopedRead();
+    return fm && !fm->bounds()[0]->centre().isZero();
 }   // end isAllowed
 
 
 void ActionCentreModel::doAction( Event)
 {
     storeUndo(this, Event::AFFINE_CHANGE | Event::CAMERA_CHANGE);
-    FM* fm = MS::selectedModel();
+    FM::WPtr fm = MS::selectedModelScopedWrite();
     Mat4f cT = Mat4f::Identity();
     cT.block<3,1>(0,3) = -fm->bounds()[0]->centre();
     fm->addTransformMatrix( cT);
@@ -59,7 +53,7 @@ void ActionCentreModel::doAction( Event)
 Event ActionCentreModel::doAfterAction( Event)
 {
     MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-    ActionOrientCameraToFace::orientToFace( MS::selectedView(), 1);
+    ActionOrientCamera::orient( MS::selectedView(), 1);
     MS::showStatus("Centred model.", 5000);
     return Event::AFFINE_CHANGE | Event::CAMERA_CHANGE;
 }   // end doAfterAction

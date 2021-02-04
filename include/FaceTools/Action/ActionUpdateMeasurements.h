@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,19 +27,13 @@ class FaceTools_EXPORT ActionUpdateMeasurements : public FaceAction
 public:
     ActionUpdateMeasurements();
 
+    static bool updateMeasurement( FM*, int mid);
     static bool updateAllMeasurements( FM*);
 
-    static bool updateMeasurementsForLandmark( FM*, int lmid);
-
-    static bool updateMeasurementsForLandmarks( FM*, const IntSet&);
-
 protected:
-    void postInit() override;
+    bool doBeforeAction( Event) override;
     void doAction( Event) override;
-    Event doAfterAction( Event) override { return _ev;}
-
-private:
-    Event _ev;
+    Event doAfterAction( Event) override;
 };  // end class
 
 }}   // end namespaces

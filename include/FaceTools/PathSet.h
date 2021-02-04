@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,7 +39,6 @@ public:
     // Remove the path with given ID returning true on success.
     bool removePath( int pathId);
 
-    // Remove all paths from the set and set back to original state.
     void reset();
 
     // Rename the path with given ID returning true on success.

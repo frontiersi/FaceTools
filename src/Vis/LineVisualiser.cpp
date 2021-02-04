@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,15 +18,14 @@
 #include <Vis/LineVisualiser.h>
 #include <FaceModelViewer.h>
 using FaceTools::Vis::LineVisualiser;
-using FaceTools::Vis::LineView;
 using FaceTools::Vis::FV;
 
 
 bool LineVisualiser::belongs( const vtkProp* p, const FV *fv) const
 {
     if ( _views.count(fv) > 0)
-        for ( const LineView *lview : _views.at(fv))
-            if ( lview->belongs(p))
+        for ( const LineView &lv : _views.at(fv))
+            if ( lv.belongs(p))
                 return true;
     return false;
 }   // end belongs
@@ -34,37 +33,34 @@ bool LineVisualiser::belongs( const vtkProp* p, const FV *fv) const
 
 bool LineVisualiser::isVisible( const FV *fv) const
 {
-    return _views.count(fv) > 0 && _views.at(fv).at(0)->isVisible();
+    return _views.count(fv) > 0 && _views.at(fv).at(0).isVisible();
 }   // end isVisible
 
 
-void LineVisualiser::syncWithViewTransform( const FV *fv)
+void LineVisualiser::syncTransform( const FV *fv)
 {
     assert( _views.count(fv) > 0);
-    for ( LineView *lv : _views.at(fv))
-        lv->pokeTransform( fv->transformMatrix());
-}   // end syncWithViewTransform
+    if ( _views.count(fv) > 0)
+        for ( LineView &lv : _views.at(fv))
+            lv.pokeTransform( fv->transformMatrix());
+}   // end syncTransform
 
 
-void LineVisualiser::setHighlighted( const FV* fv, bool v)
+void LineVisualiser::purge( const FV *fv) { _views.erase(fv);}
+
+
+void LineVisualiser::setVisible( FV* fv, bool v)
 {
-    assert( _views.count(fv) > 0);
+    if ( _views.count(fv) > 0)
+        for ( LineView &lv : _views.at(fv))
+            lv.setVisible( v, fv->viewer());
+}   // end setVisible
+
+
+void LineVisualiser::setHighlighted( bool v)
+{
     const double lw = v ? 5.0 : 1.0;
-    for ( LineView *lv : _views.at(fv))
-        lv->setLineWidth( lw);
+    for ( auto &p : _views)
+        for ( LineView &lv : p.second)
+            lv.setLineWidth( lw);
 }   // end setHighlighted
-
-
-void LineVisualiser::doPurge( const FV *fv)
-{
-    for ( LineView *lv : _views.at(fv))
-        delete lv;
-    _views.erase(fv);
-}   // end doPurge
-
-
-void LineVisualiser::doSetVisible( const FV* fv, bool v)
-{
-    for ( LineView *lv : _views.at(fv))
-        lv->setVisible( v, fv->viewer());
-}   // end doSetVisible

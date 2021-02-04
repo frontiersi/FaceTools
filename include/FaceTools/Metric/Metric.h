@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,15 @@
 #include "MetricSet.h"
 #include <FaceTools/LndMrk/Landmark.h>
 
-namespace FaceTools { namespace Metric {
+namespace FaceTools {
+
+namespace Action { class ActionUpdateMeasurements; }
+
+namespace Metric {
+
+class MetricManager;
+class StatsManager;
+class GrowthData;
 
 class FaceTools_EXPORT Metric
 {
@@ -61,38 +69,42 @@ public:
     inline void setVisible( bool v) { _visible = v && _mct->visualiser() != nullptr;}
     inline bool isVisible() const { return _mct && _mct->visualiser() && _visible;}
 
-    // Whether or not measurement is natively in-plane (i.e. without being determined
-    // by GrowthData in-plane setting). Note that some metrics are always measured
-    // in-plane and can't be set otherwise.
-    inline void setInPlane( bool v) { _mct->setInPlane(v);}
-    inline bool fixedInPlane() const { return _mct->fixedInPlane();}
-    inline bool inPlane() const { return _mct->inPlane() || (_gdRanker.current() && _gdRanker.current()->inPlane());}
-
     // Returns the ids of the landmarks that this metric uses.
-    const IntSet& landmarkIds() const { return _mct->landmarkIds();}
+    inline const IntSet& landmarkIds() const { return _mct->landmarkIds();}
 
-    GrowthDataRanker& growthData() { return _gdRanker;}
-    const GrowthDataRanker& growthData() const { return _gdRanker;}
+    // Return the statistics available for this metric.
+    inline const GrowthDataRanker& growthData() const { return _gdRanker;}
 
-    // Record the measurement for this metric and store in the given model's
-    // metric values against its current assessment.
-    bool measure( FM*) const;
-
-    // Returns true iff this metric can be measured for the given model's current assessment.
-    bool canMeasure( const FM*) const;
-
-    // Purge this metric of any data cached for the given model.
-    void purge( const FM*);
+    // Returns true iff the measurement is always taken projected into the plane.
+    inline bool fixedInPlane() const { return _mct->fixedInPlane();}
+    void setInPlane( bool);
+    bool inPlane( const FM*) const;
 
 private:
     mutable MetricType::Ptr _mct;
     bool _visible;
     size_t _ndps;
+    bool _measureInPlane;
     QString _name, _desc, _regn;
-
     GrowthDataRanker _gdRanker;
-    MetricValue _measure( const FM*, bool) const;
-    bool _setIfMetricValueChanged( MetricSet&, const MetricValue&) const;
+    MetricValue _measure( const FM*, bool, bool) const;
+
+    // Returns whether or not the measurement was changed.
+    bool _measure( FM*) const;
+
+    // Returns true iff this metric can be measured for the given model's current assessment.
+    bool _canMeasure( const FM*) const;
+
+    // Purge this metric of any data cached for the given model.
+    void _purge( const FM*);
+
+    void _addGrowthData( GrowthData::Ptr);
+    void _combineGrowthDataSexes();  // Call after adding all stats
+
+    friend class Action::ActionUpdateMeasurements;
+    friend class MetricManager;
+    friend class StatsManager;
+    friend class GrowthData;
 
     Metric();
     Metric( const Metric&) = delete;

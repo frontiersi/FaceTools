@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  ************************************************************************/
 
 #include <Action/ActionSetMinScalarColour.h>
-#include <Vis/ScalarVisualisation.h>
+#include <Vis/ColourVisualisation.h>
 #include <Vis/FaceView.h>
 #include <QColorDialog>
 using FaceTools::Action::ActionSetMinScalarColour;
@@ -24,8 +24,8 @@ using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
-using FaceTools::Vis::ScalarVisualisation;
-using MS = FaceTools::Action::ModelSelector;
+using FaceTools::Vis::ColourVisualisation;
+using MS = FaceTools::ModelSelect;
 
 
 ActionSetMinScalarColour::ActionSetMinScalarColour( const QString& dname)
@@ -39,11 +39,11 @@ ActionSetMinScalarColour::ActionSetMinScalarColour( const QString& dname)
 bool ActionSetMinScalarColour::isAllowed( Event)
 {
     const FV* fv = MS::selectedView();
-    const ScalarVisualisation* smapper = fv ? fv->activeScalars() : nullptr;
+    const ColourVisualisation* smapper = fv ? fv->activeColours() : nullptr;
     if ( smapper)
         setIconColour( smapper->minColour());
     return smapper != nullptr;
-}   // end isAllowedd
+}   // end isAllowed
 
 
 bool ActionSetMinScalarColour::doBeforeAction( Event)
@@ -60,11 +60,10 @@ bool ActionSetMinScalarColour::doBeforeAction( Event)
 void ActionSetMinScalarColour::doAction( Event)
 {
     FV *fv = MS::selectedView();
-    ScalarVisualisation* smapper = fv->activeScalars();
+    ColourVisualisation* smapper = fv->activeColours();
     assert(smapper);
     smapper->setMinColour( _curColour);
-    smapper->rebuild();
-    fv->setActiveScalars( smapper); // Ensure forwards through
+    smapper->rebuildColourMapping();
 }   // end doAction
 
 

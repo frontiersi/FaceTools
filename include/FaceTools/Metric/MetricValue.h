@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,22 +32,29 @@ using PTree = boost::property_tree::ptree;
 
 namespace FaceTools { namespace Metric {
 
+class GrowthData;
+
 class FaceTools_EXPORT MetricValue
 {
 public:
-    MetricValue(){}
-    MetricValue( int id);
+    MetricValue();
+    MetricValue( int id, const FM*);
+    MetricValue( int id, const FM*, const std::vector<float>& dvals, bool planar);
     MetricValue( const MetricValue&) = default;
     MetricValue& operator=( const MetricValue&) = default;
 
     int id() const { return _id;}
     size_t ndims() const { return _values.size();}
 
-    // Overwrite with new values.
-    void setValues( const std::vector<float>& dvals) { _values = dvals;}
+    // Overwrite with new values stating whether the measurement was
+    // taken as an in-plane projection (true) or was taken out of plane.
+    void setValues( const std::vector<float>& dvals, bool planar);
 
     // Return the raw vector of values.
     const std::vector<float>& values() const { return _values;}
+
+    // Returns true iff the measurement was taken projected in plane.
+    bool planar() const { return _planar;}
 
     // Return the raw value at dimension i.
     float value( size_t i=0) const { return _values.at(i);}
@@ -64,7 +71,9 @@ public:
 
 private:
     int _id;
+    const FM *_fm;
     std::vector<float> _values;
+    bool _planar;
 };  // end class
 
 bool operator==( const MetricValue&, const MetricValue&);

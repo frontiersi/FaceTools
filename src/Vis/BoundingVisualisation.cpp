@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,65 +22,39 @@
 using FaceTools::Vis::BoundingVisualisation;
 using FaceTools::Vis::FV;
 
-BoundingVisualisation::~BoundingVisualisation()
-{
-    while (!_views.empty())
-        purge(_views.begin()->first);
-}   // end dtor
 
-
-void BoundingVisualisation::apply( const FV* fv, const QPoint*)
+void BoundingVisualisation::refresh( FV* fv)
 {
-    if (_views.count(fv) == 0)
-        _views[fv] = new BoundingView( 2.0f);
-}   // end apply
+    static const Vec3f COL( 0.0f, 0.2f, 0.9f);  // Default colour (blue)
+    const FM *fm = fv->data();
+    BoundingView &bv = _views[fv];
+    bv.setColour( COL[0], COL[1], COL[2], 0.32f);
+    bv.setLineStipplingEnabled( !fm->isAligned());
+    bv.setLineWidth( 2.0f);
+    bv.update( fm->bounds()[0]->cornersAs6f());
+}   // end refresh
 
 
 void BoundingVisualisation::setVisible( FV* fv, bool v)
 {
-    if (_views.count(fv) > 0)
-        _views.at(fv)->setVisible( v, fv->viewer());
+    _views[fv].setVisible( v, fv->viewer());
 }   // end setVisible
 
 
 bool BoundingVisualisation::isVisible( const FV* fv) const
 {
-    return _views.count(fv) > 0 && _views.at(fv)->isVisible();
+    return _views.count(fv) > 0 && _views.at(fv).isVisible();
 }   // end isVisible
 
 
-void BoundingVisualisation::syncWithViewTransform( const FV* fv)
+void BoundingVisualisation::syncTransform( const FV* fv)
 {
-    if ( _views.count(fv) > 0)
-    {
-        fv->data()->lockForRead();
-        _setAppearance(fv);
-        fv->data()->unlock();
-        _views.at(fv)->pokeTransform( fv->transformMatrix());
-    }   // end if
-}   // end syncWithViewTransform
+    _views[fv].pokeTransform( fv->transformMatrix());
+}   // end syncTransform
 
 
-void BoundingVisualisation::_setAppearance( const FV* fv)
-{
-    static const Vec3f DEFAULT_COL( 0.0f, 0.2f, 0.9f);  // Default colour (blue)
-    static const Vec3f LNDMRK_COL( 0.0f, 0.9f, 0.2f);    // Green
-
-    const FM *fm = fv->data();
-    const Vec3f col = fm->hasLandmarks() ? LNDMRK_COL : DEFAULT_COL;
-    BoundingView *bv = _views.at(fv);
-    bv->update( fm->bounds()[0]->cornersAs6f());
-    bv->setColour( col[0], col[1], col[2], 0.32f);
-    bv->setLineStipplingEnabled( !fm->isAligned());
-}   // end _setAppearance
-
-
-void BoundingVisualisation::purge( const FV* fv)
+void BoundingVisualisation::purge( const FV *fv)
 {
     if (_views.count(fv) > 0)
-    {
-        _views.at(fv)->setVisible( false, fv->viewer());
-        delete _views.at(fv);
         _views.erase(fv);
-    }   // end if
 }   // end purge

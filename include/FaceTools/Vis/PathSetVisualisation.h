@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,14 +27,11 @@ class FaceTools_EXPORT PathSetVisualisation : public BaseVisualisation
 {
 public:
     PathSetVisualisation();
-    ~PathSetVisualisation() override;
-
-    const char* name() const override { return "PathSetVisualisation";}
 
     bool applyToAllInViewer() const override { return false;}
     bool applyToAllViewers() const override { return true;}
 
-    bool isAvailable( const FV*, const QPoint*) const override;
+    bool isAvailable( const FV*) const override;
 
     float minAllowedOpacity() const override { return 0.1f;}
     float maxAllowedOpacity() const override { return _maxOpacity;}
@@ -42,35 +39,37 @@ public:
 
     bool belongs( const vtkProp*, const FV*) const override;
 
-    void apply( const FV*, const QPoint* mc=nullptr) override;
+    void refresh( FV*) override;
     void purge( const FV*) override;
 
     void setVisible( FV*, bool) override;
     bool isVisible( const FV*) const override;
 
-    void addPath( const FM*, int pathId);
-    void updatePath( const FM*, int pathId);
-    void erasePath( const FM*, int pathId);
-    void syncPaths( const FM*);
+    void setPickable( const FV*, bool);
+
+    void updatePath( const FM&, int pathId);
+    void erasePath( const FM&, int pathId);
+
+    void showTemporaryPath( const FM&, const Path&, int hid, const QString&);
+    void clearTemporaryPath();
 
     // Returns the handle for a path by looking for it by prop.
     PathView::Handle* pathHandle( const FV*, const vtkProp*) const;
     // Returns handles 0 or 1 for the given path.
     PathView::Handle* pathHandle0( const FV*, int pathID) const;
 
-    // Update text info from the specified path from the given model.
-    // Text displayed at display coordinates x,y.
-    void updateCaption( const FM*, int pid, int x, int y);
+    // Update bottom right text from the specified path and model.
+    void updateCaption( const FM&, const Path&);
 
     // Show the text caption just for the given view (turns off others).
     void showCaption( const Vis::FV* fv=nullptr);
 
-    void refresh( const FV*) override;
-    void syncWithViewTransform( const FV*) override;
+    void syncTransform( const FV*) override;
 
 private:
     // The paths associated with a FV.
-    std::unordered_map<const FV*, PathSetView*> _views;
+    std::unordered_map<const FV*, PathSetView> _views;
+    std::unordered_map<FV*, PathSetView> _tviews; // Temporary
     float _maxOpacity;
     bool _hasView( const FV*) const;
 };  // end class

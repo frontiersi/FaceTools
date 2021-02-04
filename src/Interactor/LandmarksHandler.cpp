@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,17 +17,16 @@
 
 #include <Interactor/LandmarksHandler.h>
 #include <LndMrk/LandmarksManager.h>
-#include <Action/ModelSelector.h>
+#include <ModelSelect.h>
 #include <Vis/FaceView.h>
 #include <MiscFunctions.h>
 #include <FaceModel.h>
 using FaceTools::Interactor::LandmarksHandler;
 using FaceTools::Vis::LandmarksVisualisation;
 using FaceTools::Vis::FV;
-using FaceTools::FM;
 using FaceTools::Vec3f;
 using FaceTools::FaceSide;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 using LMAN = FaceTools::Landmark::LandmarksManager;
 
 
@@ -60,7 +59,7 @@ bool LandmarksHandler::doEnterProp()
         _lat = lat;
         _vis.setLabelVisible( fv, hid, _lat, true);
         _vis.setLandmarkHighlighted( fv, hid, _lat, true);
-        const Vec3f& pos = fv->data()->currentLandmarks().pos( hid, _lat);
+        const Vec3f pos = fv->rdata()->currentLandmarks().pos( hid, _lat);
         MS::showStatus( posString( LMAN::makeLandmarkString( hid, _lat), pos), 5000);
         MS::setCursor( Qt::CursorShape::CrossCursor);
         emit onEnterLandmark( hid, _lat);
@@ -141,21 +140,23 @@ bool LandmarksHandler::doLeftDrag()
     {
         swallowed = true;
         // Get the position on the surface of the actor
-        const FV *fv = MS::selectedView();
+        FV *fv = MS::selectedView();
         Vec3f dpos;
         if ( fv->projectToSurface( fv->viewer()->mouseCoords(), dpos))
         {
-            FM* fm = fv->data();
+            FM *fm = fv->data();
+            fm->lockForWrite();
             fm->setLandmarkPosition( _dragId, _lat, dpos);
             for ( const FV *f : fm->fvs())
                 _vis.refreshLandmarkPosition( f, _dragId, _lat);
+            fm->unlock();
             // Update across all viewers if more than one view
-            if ( fm->fvs().size() > 1)
-                MS::updateRender();
-            if ( _emitDragUpdates)
-                emit onDoingDrag( _dragId, _lat);
             MS::showStatus( posString( LMAN::makeLandmarkString( _dragId, _lat), dpos), 5000);
             MS::setCursor( Qt::CursorShape::CrossCursor);
+            if ( _emitDragUpdates)
+                emit onDoingDrag( _dragId, _lat);
+            else if ( fm->fvs().size() > 1)
+                MS::updateRender();
         }   // end if
     }   // end if
     return swallowed;

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,14 +24,10 @@ using FaceTools::FaceModelViewer;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
 
-FaceModelViewer::FaceModelViewer( QWidget *parent)
-    : ModelViewer(parent)
+FaceModelViewer::FaceModelViewer( QWidget *parent) : ModelViewer(parent), _lastfv(nullptr)
 {
     resetDefaultCamera();
 }   // end ctor
-
-
-void FaceModelViewer::saveScreenshot() const { saveSnapshot();}
 
 
 bool FaceModelViewer::attach( FV* fv)
@@ -40,6 +36,7 @@ bool FaceModelViewer::attach( FV* fv)
         return false;
     _attached.insert(fv);
     _models[fv->data()] = fv;
+    _lastfv = fv;
     emit onAttached(fv);
     return true;
 }   // end attach
@@ -51,12 +48,22 @@ bool FaceModelViewer::detach( FV* fv)
         return false;
     _attached.erase(fv);
     _models.erase(fv->data());
+    if ( fv == _lastfv)
+        _lastfv = _attached.empty() ? nullptr : _attached.first();
     emit onDetached(fv);
     return true;
 }   // end detach
 
 
 FV* FaceModelViewer::get( const FM* fm) const { return _models.count(fm) == 0 ? nullptr : _models.at(fm);}
+
+FV* FaceModelViewer::other( const FV *fv) const
+{
+    if ( !fv || _attached.size() != 2)
+        return nullptr;
+    FV *fv0 = _attached.first();
+    return fv0 == fv ? *(++_attached.begin()) : fv0;
+}   // end other
 
 
 // protected
@@ -72,7 +79,4 @@ void FaceModelViewer::resizeEvent( QResizeEvent* evt)
 }   // end resizeEvent
 
 
-bool FaceModelViewer::isZeroArea() const
-{
-    return size().width() * size().height() == 0;
-}   // end isZeroArea
+bool FaceModelViewer::isZeroArea() const { return size().width() * size().height() == 0;}

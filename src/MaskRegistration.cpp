@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,9 +19,8 @@
 #include <FileIO/FaceModelXMLFileHandler.h>
 #include <FileIO/FaceModelManager.h>
 #include <FaceModelViewer.h>
-#include <rNonRigid.h>
 #include <FaceModel.h>
-#include <QMessageBox>
+#include <rNonRigid.h>
 #include <QFileInfo>
 #include <QThread>
 #include <r3d/ProcrustesSuperimposition.h>
@@ -30,7 +29,6 @@
 //#include <thread>
 using FaceTools::MaskRegistration;
 using FaceTools::Vis::FV;
-using FaceTools::FM;
 using FMM = FaceTools::FileIO::FaceModelManager;
 
 
@@ -101,6 +99,21 @@ size_t createHash( const r3d::Mesh &mesh)
     return h;
 }   // end createHash
 
+
+void binPointIndices( MaskRegistration::MaskData &md, float y, int vidx, int ovidx)
+{
+    if ( y >= 0)
+    {
+        md.q0.insert(vidx);
+        md.q1.insert(ovidx);
+    }   // end if
+    if ( y <= 0)
+    {
+        md.q2.insert(ovidx);
+        md.q3.insert(vidx);
+    }   // end if
+}   // end binPointIndices
+
 }   // end namespace
 
 
@@ -114,6 +127,7 @@ void MaskRegistration::unsetMask()
         s_mask.hash = 0;
     }   // end if
 }   // end unsetMask
+
 
 
 bool MaskRegistration::setMask( const QString &mpath)
@@ -187,23 +201,11 @@ bool MaskRegistration::setMask( const QString &mpath)
                     s_mask.oppVtxs[vidx] = ovidx;
                     if ( ovidx == vidx)
                        s_mask.medialVtxs.insert(vidx);
-
                     // Partitioning of the vertices into the four quadrants is not mutually exclusive.
                     if ( p[0] >= 0)
-                    {
-                        if ( p[1] >= 0)
-                            s_mask.q0.insert(vidx);
-                        if ( p[1] <= 0)
-                            s_mask.q3.insert(vidx);
-                    }   // end if
-
+                        binPointIndices( s_mask, p[1], vidx, ovidx);
                     if ( p[0] <= 0)
-                    {
-                        if ( p[1] >= 0)
-                            s_mask.q1.insert(vidx);
-                        if ( p[1] <= 0)
-                            s_mask.q2.insert(vidx);
-                    }   // end else if
+                        binPointIndices( s_mask, p[1], ovidx, vidx);
                 }   // end for
 
                 s_lock.unlock();
@@ -262,7 +264,7 @@ std::shared_ptr<const MaskRegistration::MaskData> MaskRegistration::maskData()
 void MaskRegistration::setParams( const MaskRegistration::Params &prms) { s_params = prms;}
 
 
-r3d::Mesh::Ptr MaskRegistration::registerMask( const FM *fm)
+r3d::Mesh::Ptr MaskRegistration::registerMask( const r3d::Mesh &targetMesh)
 {
     assert( maskLoaded());
     if ( !maskLoaded())
@@ -283,7 +285,7 @@ r3d::Mesh::Ptr MaskRegistration::registerMask( const FM *fm)
     floating.flags = rNonRigid::FlagVec::Ones( floating.features.rows());   // Use all vertices on the mask
 
     rNonRigid::Mesh target;
-    target.features = fm->mesh().toFeatures( target.topology/*unused*/, true/*use transformed*/);
+    target.features = targetMesh.toFeatures( target.topology/*unused*/, true/*use transformed*/);
     target.flags = rNonRigid::FlagVec::Ones( target.features.rows());   // Use all vertices on the target
 
     const Mat4f T1 = rNonRigid::RigidRegistration()( floating, target);
@@ -314,7 +316,6 @@ r3d::Mesh::Ptr MaskRegistration::registerMask( const FM *fm)
 r3d::Mat4f MaskRegistration::calcMaskAlignment( const r3d::Mesh &mask)
 {
     const MaskPtr mdata = maskData();
-
     const IntSet &vidxs = mdata->mask->mesh().vtxIds();
     r3d::MatX3f tgtVtxRows( vidxs.size(), 3);
     r3d::MatX3f mvtxs( vidxs.size(), 3);
@@ -325,10 +326,5 @@ r3d::Mat4f MaskRegistration::calcMaskAlignment( const r3d::Mesh &mask)
         mvtxs.row(i) = mask.vtx(vidx);
         i++;
     }   // end for
-
-    r3d::VecXf weights = r3d::VecXf::Ones( vidxs.size());
-    r3d::ProcrustesSuperimposition psupp( tgtVtxRows, weights);
-    r3d::Mat4f T = psupp( mvtxs);
-
-    return T;
+    return r3d::ProcrustesSuperimposition( tgtVtxRows, false)( mvtxs);
 }   // end calcMaskAlignment

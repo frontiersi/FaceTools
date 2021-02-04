@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,7 +43,6 @@ public:
         int pathId() const { return _pid;}
         Vec3f viewPos() const;  // Position handle is being viewed at (after applying view transform).
         const vtkProp* prop() const { return _sv->prop();}
-        float scaleFactor() const { return _sv->scaleFactor();}
         float radius() const { return _sv->radius();}
         void setCaption( const QString& c) { _sv->setCaption(c);}
         void showCaption( bool v) { _sv->showCaption(v);}
@@ -59,11 +58,14 @@ public:
         friend class PathView;
     };  // end struct
 
+    Handle* handle( int hid);
     Handle* handle0() { return _h0;}
     Handle* handle1() { return _h1;}
     Handle* depthHandle() { return _g;}
 
     void updateColours();
+
+    void setPickable( bool);
 
     void pokeTransform( const vtkMatrix4x4*);
 

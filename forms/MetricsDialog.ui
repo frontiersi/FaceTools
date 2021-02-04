@@ -413,7 +413,7 @@ QToolButton:hover{
           </widget>
          </item>
          <item>
-          <widget class="QCheckBox" name="autoStatsCheckBox">
+          <widget class="QCheckBox" name="matchSubjectCheckBox">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
              <horstretch>1</horstretch>
@@ -422,13 +422,13 @@ QToolButton:hover{
            </property>
            <property name="minimumSize">
             <size>
-             <width>100</width>
+             <width>120</width>
              <height>0</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
-             <width>150</width>
+             <width>120</width>
              <height>16777215</height>
             </size>
            </property>
@@ -436,10 +436,10 @@ QToolButton:hover{
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, for each measurement, a compatible set of growth curve statistics from those available for the measurement is automatically chosen to best match the subject's sex and ethnicity, and the closest matching of these is used.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="whatsThis">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, growth curve statistics will be automatically set for each metric to most narrowly match the subject's sex and ethnicity, and the available set of statistics for each metric will be constrained to only those that are compatible with the current subject's sex and ethnicity.&lt;/p&gt;&lt;p&gt;Note that when automatically matching to the available statistics, a match to sex is preferred over a match to ethnicity, however the user can manually select a different set of growth curves from the compatible list. If this option is unchecked, the user can select the growth curves to use for each metric from all available statistics.&lt;/p&gt;&lt;p&gt;The currently set growth curves for a metric are used to calculate the statistics (Z scores) for the metric.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, statistics will be automatically set to most narrowly match the subject's sex and ethnicity and the set of statistics to choose from for comparing against will be constrained to just those that are compatible with the subject's sex and ethnicity.&lt;/p&gt;&lt;p&gt;When automatic matching is enabled, a sex match is preferred over an ethnicity match from the available (constrained) set of statistics. If this option is disabled, statistics can be arbitrarily selected from the dropdown lists for each metric.&lt;/p&gt;&lt;p&gt;The currently set metric statistics are used to calculate the Z scores.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="text">
-            <string>Automatch</string>
+            <string>Subject Match</string>
            </property>
            <property name="checked">
             <bool>true</bool>
@@ -507,13 +507,13 @@ QToolButton:hover{
            </property>
            <property name="minimumSize">
             <size>
-             <width>100</width>
+             <width>120</width>
              <height>0</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
-             <width>16777215</width>
+             <width>120</width>
              <height>16777215</height>
             </size>
            </property>
@@ -530,7 +530,7 @@ QToolButton:hover{
       </layout>
      </item>
      <item>
-      <widget class="QToolButton" name="matchAtypicalToolButton">
+      <widget class="QToolButton" name="atypicalToolButton">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -677,7 +677,7 @@ QToolButton:checked {
       </widget>
      </item>
      <item>
-      <widget class="QToolButton" name="showPhenotypesButton">
+      <widget class="QToolButton" name="showHPOsButton">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
          <horstretch>0</horstretch>

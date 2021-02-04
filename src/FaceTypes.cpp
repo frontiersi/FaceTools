@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,20 +52,19 @@ int8_t FaceTools::fromSexString( const QString& s)
 }   // end fromSexString
 
 
-Event FaceTools::Action::operator|( const Event &e0, const Event &e1)
+Event FaceTools::Action::operator|( Event e0, Event e1)
 {
     return Event( uint32_t(e0) | uint32_t(e1));
 }   // end operator|
 
 
-void FaceTools::Action::operator|=( Event &e, const Event &e1) { e = operator|( e, e1);}
-Event& FaceTools::Action::add( Event &e, const Event &e1) { e = operator|( e, e1); return e;}
-Event& FaceTools::Action::remove( Event &e, const Event &e1) { e = Event( uint32_t(e) & ~uint32_t(e1)); return e;}
-Event FaceTools::Action::operator&( const Event &e0, const Event &e1) { return Event( uint32_t(e0) & uint32_t(e1));}
-bool FaceTools::Action::has( const Event &e0, const Event &e1) { return operator&( e0, e1) != Event::NONE;}
+void FaceTools::Action::operator|=( Event &e, Event e1) { e = operator|( e, e1);}
+Event& FaceTools::Action::add( Event &e, Event e1) { e = operator|( e, e1); return e;}
+Event FaceTools::Action::operator&( Event e0, Event e1) { return Event( uint32_t(e0) & uint32_t(e1));}
+bool FaceTools::Action::has( Event e0, Event e1) { return (operator&( e0, e1) == e1) && (e1 != Event::NONE);}
+bool FaceTools::Action::any( Event e0, Event e1) { return operator&( e0, e1) != Event::NONE;}
 
-
-std::ostream &FaceTools::Action::operator<<( std::ostream &os, const Event &e)
+std::ostream &FaceTools::Action::operator<<( std::ostream &os, Event e)
 {
     std::vector<std::string> nms;
 
@@ -103,8 +102,8 @@ std::ostream &FaceTools::Action::operator<<( std::ostream &os, const Event &e)
 
     if ( has( e, Event::ACTOR_MOVE))
         nms.push_back("ACTOR_MOVE");
-    if ( has( e, Event::ASSESSMENT_CHANGE))
-        nms.push_back("ASSESSMENT_CHANGE");
+    if ( has( e, Event::METADATA_CHANGE))
+        nms.push_back("METADATA_CHANGE");
 
     if ( has( e, Event::RESTORE_CHANGE))
         nms.push_back("RESTORE_CHANGE");

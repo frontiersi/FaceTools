@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,7 +39,7 @@ const Vec3f MOVG_COL( 1.0f, 0.0f, 0.7f);
 }   // end namespace
 
 
-LandmarkSetView::LandmarkSetView( double r) : _lmrad(r), _viewer(nullptr), _visible(false) {}
+LandmarkSetView::LandmarkSetView() : _lmrad(1.0), _viewer(nullptr), _visible(false) {}
 
 
 LandmarkSetView::~LandmarkSetView()
@@ -49,6 +49,43 @@ LandmarkSetView::~LandmarkSetView()
     for ( auto& p : _mviews) delete p.second;
     for ( auto& p : _rviews) delete p.second;
 }   // end dtor
+
+
+void LandmarkSetView::set( int lm, FaceSide lat, const Vec3f& pos)
+{
+    SphereMap *views = nullptr;
+    PropMap *props = nullptr;
+    if ( lat == LEFT)
+    {
+        views = &_lviews;
+        props = &_lprops;
+    }   // end if
+    else if ( lat == RIGHT)
+    {
+        views = &_rviews;
+        props = &_rprops;
+    }   // end else if
+    else
+    {
+        views = &_mviews;
+        props = &_mprops;
+    }   // end else
+
+    if ( views->count(lm) == 0)
+    {
+        SphereView *sv = new SphereView( pos, _lmrad, true/*pickable*/, true/*fixed scale*/);
+        sv->setColour( CURR_COL[0], CURR_COL[1], CURR_COL[2], ALPHA);
+        sv->setResolution(21);
+        QString lmstr = LMAN::makeLandmarkString( lm, lat);
+        // Put Inferius/Superius on line beneath to make it easier to see
+        lmstr.replace(" Inferius", "\nInferius");
+        lmstr.replace(" Superius", "\nSuperius");
+        sv->setCaption( lmstr.toStdString());
+        (*props)[sv->prop()] = lm;
+        (*views)[lm] = sv;
+    }   // end if
+    views->at(lm)->setCentre( pos);
+}   // end set
 
 
 void LandmarkSetView::setSelectedColour( bool isSelected)
@@ -68,12 +105,23 @@ void LandmarkSetView::setSelectedColour( bool isSelected)
     for ( auto& p : _mviews) p.second->setColour( r, g, b, a);
     for ( auto& p : _rviews) p.second->setColour( r, g, b, a);
 
-    assert(_viewer);
-    const QColor fg = chooseContrasting( _viewer->backgroundColour());
-    for ( auto& p : _lviews) p.second->setCaptionColour( fg);
-    for ( auto& p : _mviews) p.second->setCaptionColour( fg);
-    for ( auto& p : _rviews) p.second->setCaptionColour( fg);
+    if (_viewer)
+    {
+        const QColor bg = _viewer->backgroundColour();
+        const QColor fg = chooseContrasting( bg);
+        for ( auto& p : _lviews) p.second->setCaptionColour( fg, bg);
+        for ( auto& p : _mviews) p.second->setCaptionColour( fg, bg);
+        for ( auto& p : _rviews) p.second->setCaptionColour( fg, bg);
+    }   // end if
 }   // end setSelectedColour
+
+
+void LandmarkSetView::setPickable( bool v)
+{
+    for ( auto& p : _lviews) p.second->setPickable( v);
+    for ( auto& p : _mviews) p.second->setPickable( v);
+    for ( auto& p : _rviews) p.second->setPickable( v);
+}   // end setPickable
 
 
 void LandmarkSetView::setVisible( bool enable, ModelViewer* viewer)
@@ -104,11 +152,15 @@ void LandmarkSetView::showLandmark( bool enable, int lm)
     if ( _lviews.count(lm) > 0)
     {
         assert( _rviews.count(lm) > 0);
+        assert( _viewer);
         _lviews.at(lm)->setVisible( enable, _viewer);
         _rviews.at(lm)->setVisible( enable, _viewer);
     }   // end if
     else if ( _mviews.count(lm) > 0)
+    {
+        assert( _viewer);
         _mviews.at(lm)->setVisible( enable, _viewer);
+    }   // end else if
 }   // end showLandmark
 
 
@@ -147,15 +199,6 @@ void LandmarkSetView::setHighlighted( bool enable, int lm, FaceSide lat)
         col = LMAN::isLocked(lm) ? &HGLT_COL : &MOVG_COL;
     _setLandmarkColour( *col, lm, lat);
 }   // end setHighlighted
-
-
-void LandmarkSetView::setLandmarkRadius( double r)
-{
-    _lmrad = r;
-    for ( auto& p : _lviews) p.second->setRadius( r);
-    for ( auto& p : _mviews) p.second->setRadius( r);
-    for ( auto& p : _rviews) p.second->setRadius( r);
-}   // end setLandmarkRadius
 
 
 void LandmarkSetView::pokeTransform( const vtkMatrix4x4* vd)
@@ -199,17 +242,6 @@ void LandmarkSetView::remove( int lm)
 }   // end remove
 
 
-void LandmarkSetView::set( int lm, FaceSide lat, const Vec3f& pos)
-{
-    if ( lat == LEFT)
-        _set( lm, lat, _lviews, _lprops, pos);
-    else if ( lat == MID)
-        _set( lm, lat, _mviews, _mprops, pos);
-    else if ( lat == RIGHT)
-        _set( lm, lat, _rviews, _rprops, pos);
-}   // end set
-
-
 void LandmarkSetView::_remove( int lm, SphereMap& views, PropMap& props)
 {
     if ( views.count(lm) > 0)
@@ -221,20 +253,3 @@ void LandmarkSetView::_remove( int lm, SphereMap& views, PropMap& props)
         delete sv;
     }   // end if
 }   // end _remove
-
-
-void LandmarkSetView::_set( int lm, FaceSide lat, SphereMap& views, PropMap& props, const Vec3f& pos)
-{
-    SphereView *sv = nullptr;
-    if ( views.count(lm) > 0) // Get the landmark sphere view to update
-        sv = views.at(lm);
-    else    // Landmark was added
-    {
-        sv = views[lm] = new SphereView( pos, _lmrad, true/*pickable*/, true/*fixed scale*/);
-        props[sv->prop()] = lm;
-        sv->setColour( BASE_COL[0], BASE_COL[1], BASE_COL[2], ALPHA);
-        sv->setResolution(21);
-    }   // end if
-    sv->setCaption( LMAN::makeLandmarkString( lm, lat).toStdString());
-    sv->setCentre( pos);
-}   // end _set

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 #define FACETOOLS_WIDGET_SCAN_INFO_DIALOG_H
 
 #include <FaceTools/FaceTypes.h>
+#include <QTools/EventSignaller.h>
 #include <QDialog>
 #include <opencv2/opencv.hpp>
 
@@ -35,13 +36,18 @@ public:
     QSize thumbDims() const;
     void setThumbnail( const cv::Mat_<cv::Vec3b>);
 
+    bool isApplyEnabled() const;
+
+    void refreshNotableHPOs();
+
 signals:
-    void onAssessmentChanged();
+    void onInfoChanged();
 
 public slots:
     void accept() override;
     void reject() override;
-    void refresh();
+    void refresh(); // Refresh all info
+    void refreshAssessment(); // Just refresh assessment info
 
 private slots:
     void _doOnChangedMaternalEthnicity();
@@ -55,7 +61,6 @@ private slots:
     void _doOnSubjectIdChanged();
     void _doOnNotesChanged();
     void _doOnAssessorChanged();
-    void _doOnEditedAssessorText();
 
     void _doOnCopyAssessment();
     void _doOnDeleteAssessment();
@@ -66,9 +71,9 @@ private slots:
 private:
     Ui::ScanInfoDialog *_ui;
     const QString _dialogRootTitle;
+    QTools::EventSignaller _focusOutSignaller;
     bool _isDifferentToCurrent() const;
     void _checkEnableApply();
-    void _refreshCurrentAssessment();
 };  // end class
 
 }}   // end namespace

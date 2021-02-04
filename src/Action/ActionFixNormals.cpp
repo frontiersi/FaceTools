@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,8 @@ using FaceTools::Vis::FV;
 using FaceTools::FVS;
 using FaceTools::FMS;
 using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
+using QMB = QMessageBox;
 
 
 ActionFixNormals::ActionFixNormals( const QString& dn, const QIcon& ico) : FaceAction(dn, ico)
@@ -42,7 +43,8 @@ bool ActionFixNormals::isAllowed( Event) { return MS::isViewSelected();}
 
 bool ActionFixNormals::doBeforeAction( Event)
 {
-    MS::showStatus( "Fixing inconsistent face normals on selected model...");
+    MS::showStatus( "Fixing inconsistent normals on selected model...");
+    storeUndo( this, Event::MESH_CHANGE);
     return true;
 }   // end doBeforeAction
 
@@ -168,7 +170,6 @@ int ActionFixNormals::fixNormals( FM *fm)
 
 void ActionFixNormals::doAction( Event)
 {
-    storeUndo( this, Event::MESH_CHANGE);
     FM* fm = MS::selectedModel();
     fm->lockForWrite();
     _nfixed = fixNormals( fm);
@@ -194,8 +195,9 @@ Event ActionFixNormals::doAfterAction( Event)
     if ( _nfixed < 0)
     {
         // Print warning about being a twisted mesh
-        const QString msg = tr("Face normals cannot be consistently ordered due to at least one manifold being twisted onto itself.");
-        QMessageBox::warning( static_cast<QWidget*>(parent()), tr("Twisted surface!"), msg);
+        const QString msg = tr("Normals cannot be consistently ordered due to at least one manifold being twisted onto itself.");
+        QMB::warning( static_cast<QWidget*>(parent()), tr("Normal Fixing Failed!"),
+                            QString("<p align='center'>%1</p>").arg(msg));
     }   // end if
 
     return _nfixed != 0 ? Event::MESH_CHANGE : Event::NONE;

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,17 +33,23 @@ class FaceTools_EXPORT FaceModelViewer : public ModelViewer
 public:
     explicit FaceModelViewer( QWidget *parent=nullptr);
 
-    bool attach( Vis::FV*);
+    bool attach( Vis::FV*); // Also makes the given view the selected one
     bool detach( Vis::FV*);
 
     bool isZeroArea() const;
 
-    const FVS& attached() const { return _attached;}
-    bool isAttached( const FM* fm) const { return _models.count(fm) > 0;}
-    Vis::FV* get( const FM* fm) const; // Pointer to view/control of given model or null if model not attached.
+    inline bool empty() const { return _attached.empty();}
+    inline const FVS& attached() const { return _attached;}
+    inline bool has( const Vis::FV *fv) const { return _attached.has(fv);}
+    inline bool isAttached( const FM* fm) const { return _models.count(fm) > 0;}
+    Vis::FV* get( const FM* fm) const; // Pointer to view of given model or null if not attached.
 
-public slots:
-    void saveScreenshot() const;
+    // Return the other view that *isn't* the given view or null
+    // if there are not exactly two FaceViews in this viewer.
+    Vis::FV* other( const Vis::FV*) const;
+
+    inline void setSelected( Vis::FV *fv) { _lastfv = fv;}
+    inline Vis::FV *selected() const { return _lastfv;}
 
 signals:
     void toggleZeroArea( bool); // When going from positve to zero viewing area (true) and back (false).
@@ -54,8 +60,9 @@ protected:
     void resizeEvent( QResizeEvent*) override;
 
 private:
-    FVS _attached; // All attached FaceControl instances
+    FVS _attached;
     std::unordered_map<const FM*, Vis::FV*> _models;
+    Vis::FV *_lastfv;
 };  // end class
 
 }   // end namespace

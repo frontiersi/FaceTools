@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,17 +25,19 @@ using FaceTools::Action::Event;
 using FaceTools::Vis::BaseVisualisation;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ActionVisualise::ActionVisualise( const QString& dn, const QIcon& ic, BaseVisualisation* vis, const QKeySequence& ks)
     : FaceAction( dn, ic, ks), _vis(vis)
 {
+    // Required for visualisations to check their exclusivity
+    addRefreshEvent( Event::VIEW_CHANGE | Event::MESH_CHANGE | Event::VIEWER_CHANGE);
     setCheckable( true, false);
 }   // end ctor
 
 
-FaceTools::FVS ActionVisualise::_getWorkViews()
+FaceTools::FVS ActionVisualise::_getWorkViews( Event e)
 {
     FV* sfv = MS::selectedView();
     FVS fvs;
@@ -57,7 +59,11 @@ FaceTools::FVS ActionVisualise::_getWorkViews()
             fvs.insert(afvs);
             _evg |= Event::ALL_VIEWS;
         }   // end if
-    }   // end sfv
+
+        // If the event included VIEWER_CHANGE, include views in the previous viewer.
+        if ( has( e, Event::VIEWER_CHANGE) && sfv->pviewer())
+            fvs.insert( sfv->pviewer()->attached());
+    }   // end if
 
     return fvs;
 }   // end _getWorkViews
@@ -65,23 +71,24 @@ FaceTools::FVS ActionVisualise::_getWorkViews()
 
 bool ActionVisualise::update( Event e)
 {
+    const bool doRefresh = any(refreshEvents(), e) && !has( e, Event::VIEW_CHANGE);
     bool rval = false;
-    FVS fvs = _getWorkViews();
-    const bool isTrigger = isTriggerEvent(e);
+    FVS fvs = _getWorkViews( e);
     for ( FV *fv : fvs)
     {
-        if ( _vis->isAvailable( fv, &primedMousePos()) && (_vis->isVisible(fv) || isTrigger))
-        {
-            rval = true;
-            if ( _vis->isVisible(fv))   // Refresh if already visible
-                _vis->refresh( fv);
-        }   // end if
-        else if ( _vis->isVisible( fv))
-            _vis->setVisible( fv, false);   // Hide visualisation
-    }   // end for
+        if ( !_vis->isVisible(fv))
+            continue;
 
-    if ( !fvs.empty())
-        MS::updateRender();
+        if ( !_vis->isAvailable( fv))
+        {
+            _vis->setVisible( fv, false);   // Hide visualisation
+            continue;
+        }   // end if
+
+        rval = true;
+        if ( doRefresh)
+            _vis->refresh(fv);
+    }   // end for
 
     return rval;
 }   // end update
@@ -90,36 +97,31 @@ bool ActionVisualise::update( Event e)
 bool ActionVisualise::isAllowed( Event)
 {
     const FV* fv = MS::selectedView();
-    return fv && _vis->isAvailable( fv, &primedMousePos());
+    return fv && _vis->isAvailable( fv);
 }   // end isAllowed
 
 
-void ActionVisualise::_toggleVis( FV* fv, const QPoint* mc) const
+void ActionVisualise::doAction( Event e)
 {
-    if ( isChecked() || !_vis->isToggled())
-        fv->apply( _vis, mc);
-    else
-        _vis->setVisible( fv, false);
-}   // end _toggleVis
-
-
-void ActionVisualise::doAction( Event)
-{
+    const bool turnOn = any( triggerEvents(), e) || isChecked();
     _evg = Event::VIEW_CHANGE;
-    FVS fvs = _getWorkViews();
-    const QPoint& mc = primedMousePos();
+    FVS fvs = _getWorkViews( e);
     for ( FV* fv : fvs)
-        if ( _vis->isAvailable( fv, &mc))
-            _toggleVis( fv, &mc);
+    {
+        if ( turnOn && _vis->isAvailable( fv))
+            fv->apply( _vis);
+        else
+            _vis->setVisible( fv, false);
+    }   // end for
 }   // end doAction
 
 
 Event ActionVisualise::doAfterAction( Event e)
 {
-    if ( isChecked())
-        MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-    if ( e == Event::USER && !isTriggerEvent(e))
-        MS::showStatus( displayName() + (isChecked() ? " ON" : " OFF"), 5000);
+    const FV *fv = MS::selectedView();
+    const bool isvis = fv && _vis->isVisible( fv);
+    if ( e == Event::USER && !any( triggerEvents(), e))
+        MS::showStatus( displayName() + (isvis ? " ON" : " OFF"), 5000);
     return _evg;
 }   // end doAfterAction
 

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,10 +23,7 @@ using FaceTools::Vec3f;
 using FaceTools::FM;
 
 
-AngleMetricType::AngleMetricType()
-{
-    _vis.setMetric(this);
-}   // end ctor
+AngleMetricType::AngleMetricType() { _vis.setMetric(this);}
 
 
 float AngleMetricType::update( size_t k, const FM *fm, const std::vector<Vec3f>& pts, Vec3f, Vec3f nrm, bool swapped, bool)

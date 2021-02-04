@@ -37,7 +37,7 @@ if(UNIX)
     endif()
 endif()
 
-set( _hint ${_prefix}FaceTools${_suffix})
+set( _hint ${_prefix}FaceTools${_dsuffix}${_suffix})
 find_library( FaceTools_LIBRARIES NAMES ${_hint} PATHS "${FaceTools_LIBRARY_DIR}/static" "${FaceTools_LIBRARY_DIR}")
 set( FaceTools_LIBRARIES     ${FaceTools_LIBRARIES}         CACHE FILEPATH "The FaceTools imported libraries to link to.")
 

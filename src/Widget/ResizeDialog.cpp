@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,8 +28,9 @@ ResizeDialog::ResizeDialog( QWidget *parent) :
     QDialog(parent), _ui(new Ui::ResizeDialog)
 {
     _ui->setupUi(this);
+    setModal(true);
     setWindowTitle( parent->windowTitle() + " | Resize Model");
-    setWindowFlags( windowFlags() & ~Qt::WindowCloseButtonHint);
+    //setWindowFlags( windowFlags() & ~Qt::WindowCloseButtonHint);
 
     connect( _ui->resizeXSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::_doOnScaleXSpinBoxChanged);
     connect( _ui->resizeYSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::_doOnScaleYSpinBoxChanged);
@@ -39,18 +40,14 @@ ResizeDialog::ResizeDialog( QWidget *parent) :
     connect( _ui->newYSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::_doOnNewYSpinBoxChanged);
     connect( _ui->newZSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ResizeDialog::_doOnNewZSpinBoxChanged);
 
+    setFixedSize( geometry().width(), geometry().height());
     reset(nullptr);
 }   // end ctor
 
 
-// public
-ResizeDialog::~ResizeDialog()
-{
-    delete _ui;
-}   // end dtor
+ResizeDialog::~ResizeDialog() { delete _ui;}
 
 
-// public
 double ResizeDialog::xScaleFactor() const
 {
     const double d = _ui->oldXLabel->text().toDouble();
@@ -60,7 +57,6 @@ double ResizeDialog::xScaleFactor() const
 }   // end xScaleFactor
 
 
-// public
 double ResizeDialog::yScaleFactor() const
 {
     const double d = _ui->oldYLabel->text().toDouble();
@@ -70,7 +66,6 @@ double ResizeDialog::yScaleFactor() const
 }   // end yScaleFactor
 
 
-// public
 double ResizeDialog::zScaleFactor() const
 {
     const double d = _ui->oldZLabel->text().toDouble();
@@ -80,7 +75,6 @@ double ResizeDialog::zScaleFactor() const
 }   // end zScaleFactor
 
 
-// public
 void ResizeDialog::reset( const FM* fm)
 {
     double x = 0.0;

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@ using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::FM;
 using FaceTools::Widget::LandmarksCheckDialog;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 using LMAN = FaceTools::Landmark::LandmarksManager;
 
 
@@ -46,7 +46,7 @@ void ActionRestoreLandmarks::postInit()
 
 bool ActionRestoreLandmarks::isAllowed( Event)
 {
-    const FM *fm = MS::selectedModel();
+    FM::RPtr fm = MS::selectedModelScopedRead();
     return fm && fm->hasMask()
               && !fm->currentLandmarks().empty()  // Shouldn't be possible if has a mask
               && MaskRegistration::maskHash() == fm->maskHash();   // Same mask?
@@ -56,7 +56,7 @@ bool ActionRestoreLandmarks::isAllowed( Event)
 bool ActionRestoreLandmarks::doBeforeAction( Event)
 {
     _ulmks.clear();
-    if ( _cdialog->open( MS::selectedModel()))
+    if ( _cdialog->open( *MS::selectedModelScopedRead()))
         _ulmks = _cdialog->landmarks(); // Copy out
     return !_ulmks.empty();
 }   // end doBeforeAction
@@ -65,23 +65,21 @@ bool ActionRestoreLandmarks::doBeforeAction( Event)
 void ActionRestoreLandmarks::doAction( Event)
 {
     storeUndo( this, Event::LANDMARKS_CHANGE);
-    FM *fm = MS::selectedModel();
-    fm->lockForWrite();
-    restoreLandmarks( fm, _ulmks);
-    fm->unlock();
+    FM::WPtr fm = MS::selectedModelScopedWrite();
+    restoreLandmarks( *fm, _ulmks);
 }   // end doAction
 
 
 Event ActionRestoreLandmarks::doAfterAction( Event)
 {
     MS::showStatus("Landmark positions restored.", 5000);
-    return Event::LANDMARKS_CHANGE;
+    return Event::LANDMARKS_CHANGE | Event::RESTORE_CHANGE;
 }   // end doAfterAction
 
 
 namespace {
 
-void updateVisualisation( const FM *fm, const IntSet &ulmks)
+void updateVisualisation( const FM &fm, const IntSet &ulmks)
 {
     using namespace FaceTools;
     Vis::LandmarksVisualisation &vis = MS::handler<Interactor::LandmarksHandler>()->visualisation();
@@ -90,7 +88,7 @@ void updateVisualisation( const FM *fm, const IntSet &ulmks)
     {
         if ( LMAN::isBilateral(lmid))
         {
-            for ( const Vis::FV *fv : fm->fvs())
+            for ( const Vis::FV *fv : fm.fvs())
             {
                 vis.refreshLandmarkPosition( fv, lmid, LEFT);
                 vis.refreshLandmarkPosition( fv, lmid, RIGHT);
@@ -98,7 +96,7 @@ void updateVisualisation( const FM *fm, const IntSet &ulmks)
         }   // end if
         else
         {
-            for ( const Vis::FV *fv : fm->fvs())
+            for ( const Vis::FV *fv : fm.fvs())
                 vis.refreshLandmarkPosition( fv, lmid, MID);
         }   // end else
     }   // end for
@@ -107,33 +105,68 @@ void updateVisualisation( const FM *fm, const IntSet &ulmks)
 }   // end namespace
 
 
-bool ActionRestoreLandmarks::restoreLandmarks( FM *fm, const IntSet &ulmks, bool uvis)
+bool ActionRestoreLandmarks::restoreLandmark( FM &fm, int lmid, int aid)
 {
-    if ( !fm->hasMask())
+    if ( !fm.hasMask())
         return false;
 
-    const r3d::Mesh &msk = ((const FM*)fm)->mask();
-    const r3d::KDTree &kdt = fm->kdtree();
+    FaceAssessment::Ptr ass = fm.assessment(aid);
+    assert( ass);
+    Landmark::LandmarkSet &lmset = ass->landmarks();
+
+    const r3d::Mesh &msk = fm.mask();
+    const r3d::KDTree &kdt = fm.kdtree();
     MaskRegistration::MaskPtr mdata = MaskRegistration::maskData();
-    for ( int lmid : ulmks)
+    const std::pair<int, r3d::Vec3f> *bcds;
+
+    if ( LMAN::isBilateral(lmid))
     {
-        const std::pair<int, r3d::Vec3f> *bcds;
-        if ( LMAN::isBilateral(lmid))
-        {
-            bcds = &mdata->lmksL.at(lmid);
-            fm->setLandmarkPosition( lmid, LEFT, toSurface( kdt, msk.fromBarycentric( bcds->first, bcds->second)));
-            bcds = &mdata->lmksR.at(lmid);
-            fm->setLandmarkPosition( lmid, RIGHT, toSurface( kdt, msk.fromBarycentric( bcds->first, bcds->second)));
-        }   // end if
-        else
-        {
-            bcds = &mdata->lmksM.at(lmid);
-            fm->setLandmarkPosition( lmid, MID, toSurface( kdt, msk.fromBarycentric( bcds->first, bcds->second)));
-        }   // end else
-    }   // end for
+        bcds = &mdata->lmksL.at(lmid);
+        lmset.set( lmid, toSurface( kdt, msk.fromBarycentric( bcds->first, bcds->second)), LEFT);
+        bcds = &mdata->lmksR.at(lmid);
+        lmset.set( lmid, toSurface( kdt, msk.fromBarycentric( bcds->first, bcds->second)), RIGHT);
+    }   // end if
+    else
+    {
+        bcds = &mdata->lmksM.at(lmid);
+        lmset.set( lmid, toSurface( kdt, msk.fromBarycentric( bcds->first, bcds->second)), MID);
+    }   // end else
+
+    return true;
+}   // end restoreLandmark
+
+
+bool ActionRestoreLandmarks::restoreLandmarks( FM &fm, const IntSet &ulmks, bool uvis)
+{
+    if ( !fm.hasMask())
+        return false;
+
+    for ( int lmid : ulmks)
+        restoreLandmark( fm, lmid, -1); // Just the current assessment
 
     if ( uvis)
         updateVisualisation( fm, ulmks);
 
     return true;
 }   // end restoreLandmarks
+
+
+bool ActionRestoreLandmarks::restoreMissingLandmarks( FM &fm)
+{
+    if ( !fm.hasMask())
+        return false;
+
+    // Just check landmarks from the current assessment (others
+    // will have the same missing landmarks so this is fine).
+    const Landmark::LandmarkSet &lmset = fm.currentLandmarks();
+    IntSet mlmks;
+    for ( int lmid : LMAN::ids())
+        if ( !lmset.has(lmid))
+            mlmks.insert(lmid);
+
+    for ( int aid : fm.assessmentIds())
+        for ( int lmid : mlmks)
+            restoreLandmark( fm, lmid, aid);
+
+    return !mlmks.empty();
+}   // end restoreMissingLandmarks

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  ************************************************************************/
 
 #include <Action/ActionSmooth.h>
-#include <FaceModelCurvature.h>
+#include <FaceModelCurvatureStore.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <QMessageBox>
@@ -25,7 +25,8 @@ using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionSmooth;
 using FaceTools::Action::Event;
 using FaceTools::Action::UndoState;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
+using QMB = QMessageBox;
 
 // static definitions
 double ActionSmooth::s_maxc(0.9);
@@ -37,65 +38,66 @@ void ActionSmooth::setMaxIterations( size_t i) { s_maxi = i;}
 
 ActionSmooth::ActionSmooth( const QString& dn, const QIcon& ico) : FaceAction(dn, ico)
 {
-    setAsync(true);
     addRefreshEvent( Event::SURFACE_DATA_CHANGE);
+    setAsync(true);
 }   // end ctor
 
 
 bool ActionSmooth::isAllowed( Event)
 {
-    return MS::isViewSelected() && FaceModelCurvature::rmetrics( MS::selectedModel());
+    return MS::isViewSelected() && FaceModelCurvatureStore::rvals( *MS::selectedModel());
 }   // end isAllowed
 
 
 void ActionSmooth::saveState( UndoState &us) const
 {
+    us.model()->lockForRead();
     us.setUserData( "Mesh", QVariant::fromValue( us.model()->mesh().deepCopy()));
     us.setUserData( "Ass", QVariant::fromValue( us.model()->currentAssessment()->deepCopy()));
+    us.model()->unlock();
 }   // end saveState
 
 
 void ActionSmooth::restoreState( const UndoState &us)
 {
+    us.model()->lockForWrite();
     us.model()->update( us.userData("Mesh").value<r3d::Mesh::Ptr>(), false, false);
     us.model()->setAssessment( us.userData("Ass").value<FaceAssessment::Ptr>());
+    us.model()->unlock();
 }   // end restoreState
 
 
 bool ActionSmooth::doBeforeAction( Event)
 {
     _ev = Event::MESH_CHANGE;
-    bool goSmooth = true;
-    if ( MS::selectedModel()->hasLandmarks())
+    bool doit = true;
+    if ( MS::selectedModelScopedRead()->hasLandmarks())
     {
         _ev |= Event::LANDMARKS_CHANGE;
-        static const QString msg = tr("Landmark positions may be perturbed; continue?");
-        goSmooth = QMessageBox::Yes == QMessageBox::warning( static_cast<QWidget*>(parent()),
-                                tr("Landmarks present!"), msg, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        static const QString msg = tr("Smoothing will perturb landmarks positions. Are you sure you want to continue?");
+        doit = QMB::Yes == QMB::warning( static_cast<QWidget*>(parent()), tr("Landmarks Present!"),
+                                QString("<p align='center'>%1</p>").arg(msg), QMB::Yes | QMB::No, QMB::No);
     }   // end if
 
-    if ( goSmooth)
+    if ( doit)
     {
         MS::showStatus( "Smoothing model surface...");
         storeUndo( this, _ev, false);   // Must provide custom UndoState
     }   // end goSmooth
 
-    return goSmooth;
+    return doit;
 }   // end doBeforeAction
 
 
 void ActionSmooth::doAction( Event)
 {
-    FM* fm = MS::selectedModel();
-    fm->lockForWrite();
+    FM::WPtr fm = MS::selectedModelScopedWrite();
     r3d::Mesh::Ptr mesh = fm->mesh().deepCopy();
-    FaceModelCurvature::WPtr cmap = FaceModelCurvature::wmetrics( fm);
-
-    // Updates curvature data for the mesh but should be reconstructed anyway.
-    r3d::Smoother( maxCurvature(), maxIterations())( *mesh, *cmap);
-
+    FaceModelCurvatureStore::WPtr cmap = FaceModelCurvatureStore::wvals( *fm);
+    // Updates curvature data for the mesh but should be reconstructed anyway
+    // so no need to call updateArrays.
+    r3d::Smoother( maxCurvature(), maxIterations())( *mesh, cmap->vals());
     fm->update( mesh, false, true);
-    fm->unlock();
 }   // end doAction
 
 
@@ -104,4 +106,3 @@ Event ActionSmooth::doAfterAction( Event)
     MS::showStatus("Finished smooth.", 5000);
     return _ev;
 }   // end doAfterAction
-

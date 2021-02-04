@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,11 +30,9 @@ public:
      * Create and return a new chart showing the given growth curve data for dimension d.
      */
     using Ptr = std::shared_ptr<Chart>;
-
-    static Ptr create( const GrowthData*, size_t d, const FM* fm=nullptr);
     static Ptr create( int mid, size_t d, const FM* fm=nullptr);
 
-    Chart( const GrowthData*, size_t, const FM* fm=nullptr);
+    Chart( int mid, size_t, const FM* fm=nullptr);
 
     /**
      * Set this chart to have the default rich text formatted title
@@ -46,10 +44,14 @@ public:
     QString makeLatexTitleString( int footnotemark=0) const;
 
 private:
-    const GrowthData *_gdata;
+    const int _mid;
     const size_t _dim;
-    void _addSeriesToChart( float&, float&, float&, float&);
-    void _addDataPoints( const FM*, float&, float&);
+    const GrowthData *_gdata;
+    float _ymin, _ymax;
+    int _xmin, _xmax;
+    bool _ageOutOfBounds;
+    void _addSeriesToChart();
+    void _addDataPoints( const FM*);
 };  // end class
 
 }}   // end namespace

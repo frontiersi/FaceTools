@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,21 +33,21 @@ public:
 
     QWidget* widget() const override { return _opacitySpinBox;}
 
-    static void setOverlapOpacityReduction( float);
-
 protected:
     void postInit() override;
     bool update( Event) override;
     bool isAllowed( Event) override;
+    void purge( const FM*) override;
 
 private slots:
     void _doOnValueChanged();
 
 private:
-    static float s_opacityReduction;
     QDoubleSpinBox *_opacitySpinBox;
+    void _setViewOpacity( Vis::FV*);
     void _updateOpacities( const FMV*);
-    void _setOpacity( Vis::FV*);
+    std::unordered_map<const Vis::FV*, float> _olaps;
+    std::unordered_map<const Vis::FV*, float> _vbnds;
 };  // end class
 
 }}   // end namespaces

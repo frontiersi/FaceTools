@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,6 +40,10 @@ namespace FaceTools {
 using byte = unsigned char;
 using IntSet = std::unordered_set<int>;
 
+using Vec2d = Eigen::Vector2d;
+using Vec3d = Eigen::Vector3d;
+using Vec4d = Eigen::Vector4d;
+
 using Vec2f = Eigen::Vector2f;
 using Vec3f = Eigen::Vector3f;
 using Vec4f = Eigen::Vector4f;
@@ -50,7 +54,7 @@ using MatX3f = Eigen::Matrix<float, Eigen::Dynamic, 3>;
 
 class FaceModel;
 using FM = FaceModel;
-using FaceModelSet = std::unordered_set<FaceModel*>;
+using FaceModelSet = std::unordered_set<FM*>;
 using FMS = FaceModelSet;
 
 class FaceViewSet;
@@ -59,7 +63,7 @@ using FVS = FaceViewSet;
 class ModelViewer;
 class FaceModelViewer;
 using FMV = FaceModelViewer;
-using FaceModelViewerSet = std::unordered_set<FaceModelViewer*>;
+using FaceModelViewerSet = std::unordered_set<FMV*>;
 using FMVS = FaceModelViewerSet;
 
 enum Sex : int8_t
@@ -137,7 +141,7 @@ enum struct Event : uint32_t
     VIEWER_CHANGE =         0x2000, // Changed viewer (or the viewer's state) in which view is shown.
     CAMERA_CHANGE =         0x4000, // Changes to camera parameters within a viewer.
     ACTOR_MOVE =            0x8000, // Change to the position of a visualisation actor through interaction.
-    ASSESSMENT_CHANGE =    0x10000, // Assessment change either in name, notes, landmarks, or path data.
+    METADATA_CHANGE =      0x10000, // Metadata change
     RESTORE_CHANGE =       0x20000, // Emitted after restoring any undo.
     ALL_VIEWS =            0x40000, // Specify that the event relates to all models in the selected viewer.
     ALL_VIEWERS =          0x80000, // Specify that all viewers partake in the event.
@@ -149,25 +153,30 @@ enum struct Event : uint32_t
 
 
 // Create a new Event as the union of two others.
-FaceTools_EXPORT Event operator|( const Event &e0, const Event &e1);
+FaceTools_EXPORT Event operator|( Event, Event);
 
-// Add an event e1 to e.
-FaceTools_EXPORT void operator|=( Event &e, const Event &e1);
+// Add event e1 to e.
+FaceTools_EXPORT void operator|=( Event &e, Event e1);
 
 // Synonym for |= but also returning it for convenience.
-FaceTools_EXPORT Event& add( Event &e, const Event &e1);
+FaceTools_EXPORT Event& add( Event &e, Event e1);
 
-// Remove event e1 from e also returning it for convenience.
-FaceTools_EXPORT Event& remove( Event &e, const Event &e1);
+// Return the intersection of the two events.
+FaceTools_EXPORT Event operator&( Event, Event);
 
-// Return the intersection of events e0 and e1
-FaceTools_EXPORT Event operator&( const Event &e0, const Event &e1);
+// Returns true iff event e0 contains event e1 (and e1 isn't Event::NONE).
+// E.g. if e0 == (ACTOR_MOVE | ALL_VIEWS | CAMERA_CHANGE) and e1 == (ACTOR_MOVE | CAMERA_CHANGE),
+// this function will return true. But if ACTOR_MOVE or CAMERA_CHANGE (or both) are missing
+// from e0, this function will return false.
+FaceTools_EXPORT bool has( Event e0, Event e1);
 
-// Returns true iff the intersection of e0 and e1 share an event in common that isn't Event::NONE.
-FaceTools_EXPORT bool has( const Event &e0, const Event &e1);
+// Returns true iff event e0 has one of the events of e1 (except Event::NONE).
+// E.g. if e0 == (ACTOR_MOVE | ALL_VIEWS) and e1 == (ACTOR_MOVE | CAMERA_CHANGE),
+// this function will return true because there's an intersection of ACTOR_MOVE.
+FaceTools_EXPORT bool any( Event e0, Event e1);
 
 // Print the name of the event.
-FaceTools_EXPORT std::ostream &operator<<( std::ostream &os, const Event &e);
+FaceTools_EXPORT std::ostream &operator<<( std::ostream &os, Event);
 
 
 // Make Event available to Qt's meta type system.

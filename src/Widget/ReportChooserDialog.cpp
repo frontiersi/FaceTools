@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,8 +22,7 @@
 #include <QListView>
 #include <QStandardItemModel>
 using FaceTools::Widget::ReportChooserDialog;
-using FaceTools::Report::ReportManager;
-using FaceTools::FM;
+using RMAN = FaceTools::Report::ReportManager;
 
 
 ReportChooserDialog::ReportChooserDialog(QWidget *parent) :
@@ -46,15 +45,12 @@ QString ReportChooserDialog::selectedReportName() const
 }   // end selectedReportName
 
 
-bool ReportChooserDialog::show( const FM* fm)
+bool ReportChooserDialog::show()
 {
     _ui->reportsComboBox->clear();
-    const QStringList& reportNames = ReportManager::names();
-    for ( const QString& reportName : reportNames)
-    {
-        if ( ReportManager::report(reportName)->isAvailable(fm))
+    for ( const QString& reportName : RMAN::names())
+        if ( RMAN::report(reportName)->isAvailable())
             _ui->reportsComboBox->addItem(reportName);
-    }   // end for
     return QDialog::exec() > 0;
 }   // end show
 

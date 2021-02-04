@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 
 #include <Metric/Phenotype.h>
 #include <Metric/MetricManager.h>
+#include <Metric/StatsManager.h>
 #include <Ethnicities.h>
 #include <FaceModel.h>
 using FaceTools::Metric::Phenotype;
@@ -24,6 +25,7 @@ using FaceTools::Metric::MetricSet;
 using FaceTools::Metric::MetricValue;
 using FaceTools::Metric::GrowthData;
 using MM = FaceTools::Metric::MetricManager;
+using SM = FaceTools::Metric::StatsManager;
 using FaceTools::FM;
 
 
@@ -114,9 +116,9 @@ Phenotype::Ptr Phenotype::load( const QString& fpath)
 }   // end load
 
 
-bool Phenotype::_hasMeasurements( const FM* fm, int aid) const
+bool Phenotype::_hasMeasurements( const FM &fm, int aid) const
 {
-    FaceAssessment::CPtr ass = aid < 0 ? fm->currentAssessment() : fm->assessment(aid);
+    FaceAssessment::CPtr ass = aid < 0 ? fm.currentAssessment() : fm.assessment(aid);
     const MetricSet& mlat = ass->cmetrics(MID);
     const MetricSet& llat = ass->cmetrics(LEFT);
     const MetricSet& rlat = ass->cmetrics(RIGHT);
@@ -132,18 +134,15 @@ bool Phenotype::_hasMeasurements( const FM* fm, int aid) const
             if ( !llat.has(mid) || !rlat.has(mid))
                 return false;
         }   // end if
-        else
-        {
-            if ( !mlat.has(mid))
+        else if ( !mlat.has(mid))
                 return false;
-        }   // end else
     }   // end for
 
     return true;
 }   // end _hasMeasurements
 
 
-bool Phenotype::isPresent( const FM* fm, int aid) const
+bool Phenotype::isPresent( const FM &fm, int aid) const
 {
     if ( !_determine.valid())
         return false;
@@ -154,11 +153,11 @@ bool Phenotype::isPresent( const FM* fm, int aid) const
     bool present = false;
     try
     {
-        FaceAssessment::CPtr ass = aid < 0 ? fm->currentAssessment() : fm->assessment(aid);
+        FaceAssessment::CPtr ass = aid < 0 ? fm.currentAssessment() : fm.assessment(aid);
         const MetricSet& mlat = ass->cmetrics(MID);
         const MetricSet& llat = ass->cmetrics(LEFT);
         const MetricSet& rlat = ass->cmetrics(RIGHT);
-        sol::function_result result = _determine( fm->age(), mlat, llat, rlat);
+        sol::function_result result = _determine( fm.age(), mlat, llat, rlat);
         if ( result.valid())
             present = result;
         else
@@ -190,14 +189,14 @@ QString Phenotype::metricsList() const
 }   // end metricsList
 
 
-bool Phenotype::isSexMatch( int8_t sex) const
+bool Phenotype::isSexMatch( const FM &fm) const
 {
+    const int8_t sex = fm.sex();
     if ( sex == UNKNOWN_SEX)
         return false;
     for ( int mid : _metrics)
     {
-        MC::Ptr mc = MM::metric(mid);
-        const GrowthData *gd = mc->growthData().current();  // May be null
+        SM::RPtr gd = SM::stats( mid, &fm);
         if ( !gd || ( gd->sex() != sex && gd->sex() != (FEMALE_SEX | MALE_SEX)))
             return false;
     }   // end for
@@ -205,27 +204,37 @@ bool Phenotype::isSexMatch( int8_t sex) const
 }   // end isSexMatch
 
 
-bool Phenotype::isAgeMatch( float age) const
+bool Phenotype::isAgeMatch( const FM &fm) const
 {
     for ( int mid : _metrics)
     {
-        MC::Ptr mc = MM::metric(mid);
-        const GrowthData *gd = mc->growthData().current();  // May be null
-        if ( !gd || !gd->isWithinAgeRange(age))
+        SM::RPtr gd = SM::stats( mid, &fm);
+        if ( !gd || !gd->isWithinAgeRange(fm.age()))
             return false;
     }   // end for
     return true;
 }   // end isAgeMatch
 
 
-bool Phenotype::isEthnicityMatch( int ethn) const
+bool Phenotype::_isEthnicityMatch( const FM &fm, int ethn) const
 {
     for ( int mid : _metrics)
     {
-        MC::Ptr mc = MM::metric(mid);
-        const GrowthData *gd = mc->growthData().current();  // May be null
+        SM::RPtr gd = SM::stats( mid, &fm);
         if ( !gd || !Ethnicities::belongs( gd->ethnicity(), ethn))
             return false;
     }   // end for
     return true;
-}   // end isEthnicityMatch
+}   // end _isEthnicityMatch
+
+
+bool Phenotype::isMaternalEthnicityMatch( const FM &fm) const
+{
+    return _isEthnicityMatch( fm, fm.maternalEthnicity());
+}   // end isMaternalEthnicityMatch
+
+
+bool Phenotype::isPaternalEthnicityMatch( const FM &fm) const
+{
+    return _isEthnicityMatch( fm, fm.paternalEthnicity());
+}   // end isPaternalEthnicityMatch

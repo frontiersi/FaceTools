@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,7 +66,7 @@ bool checkMissingStats( Phenotype::Ptr hpo)
     {
         if ( !MetricManager::metric(mid))
             noMids.insert(mid);
-        else if ( MetricManager::metric(mid)->growthData().empty())
+        else if ( MetricManager::metric(mid)->growthData().all().empty())
             noStats.insert(mid);
     }   // end for
 
@@ -165,7 +165,7 @@ int PhenotypeManager::load( const QString& sdir)
 }   // end load
 
 
-IntSet PhenotypeManager::discover( const FM* fm, int aid)
+IntSet PhenotypeManager::discover( const FM &fm, int aid)
 {
     IntSet dids;
     for ( const auto& p : _hpos)

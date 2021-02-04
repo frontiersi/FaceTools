@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,12 +31,11 @@ using FaceTools::FM;
 IntSet MetricManager::_ids;
 IntSet MetricManager::_bids;
 std::unordered_map<int, MC::Ptr> MetricManager::_metrics;
-std::unordered_map<int, MCSet> MetricManager::_lmMetrics;
+std::unordered_map<int, IntSet> MetricManager::_lmMetrics;
 std::unordered_map<QString, int> MetricManager::_nMetrics;
 MCSet MetricManager::_mset;
 MCSet MetricManager::_vmset;
 QStringList MetricManager::_names;
-int MetricManager::_cmid(-1);
 
 
 int MetricManager::load( const QString& dname)
@@ -88,23 +87,23 @@ int MetricManager::load( const QString& dname)
         // Get the landmarks used by this metric for storing metrics keyed by landmark
         IntSet lmids = mc->landmarkIds();
         for ( int lmid : lmids)
-            _lmMetrics[lmid].insert(mc);
+            _lmMetrics[lmid].insert(mc->id());
     }   // end for
 
     _names.sort();
-    _cmid = *_ids.begin();
     return nloaded;
 }   // end load
 
 
-const MCSet& MetricManager::metricsForLandmark( int lmid)
+const IntSet& MetricManager::metricsForLandmark( int lmid)
 {
-    static const MCSet EMPTY_SET;
+    static const IntSet EMPTY_SET;
     return _lmMetrics.count(lmid) == 0 ? EMPTY_SET : _lmMetrics.at(lmid);
 }   // end metricsForLandmark
 
 
 MC::Ptr MetricManager::metric( int id) { return _metrics.count(id) > 0 ? _metrics.at(id) : nullptr;}
+const MC *MetricManager::cmetric( int id) { return _metrics.count(id) > 0 ? _metrics.at(id).get() : nullptr;}
 
 MC::Ptr MetricManager::metricForName( const QString &nm)
 {
@@ -112,26 +111,9 @@ MC::Ptr MetricManager::metricForName( const QString &nm)
     return _nMetrics.count(lnm) > 0 ? _metrics.at( _nMetrics.at(lnm)) : nullptr;
 }   // end metricForName
 
-MC::Ptr MetricManager::currentMetric() { return _metrics.count(_cmid) > 0 ? _metrics.at(_cmid) : nullptr;}
-
-
-MC::Ptr MetricManager::setCurrentMetric( int mid)
-{
-    if ( _cmid != mid)
-        _cmid = mid;
-    return currentMetric();
-}   // end setCurrentMetric
-
 
 void MetricManager::purge( const FM *fm)
 {
     for ( auto &mp : _metrics)
-        mp.second->purge(fm);
+        mp.second->_purge(fm);
 }   // end purge
-
-
-void MetricManager::setInPlane( bool v)
-{
-    for ( MC::Ptr mc : metrics())
-        mc->setInPlane(v);
-}   // end setInPlane

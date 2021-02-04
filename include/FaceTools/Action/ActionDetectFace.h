@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ public:
     QString toolTip() const override { return "Register correspondence mask and place facial landmarks.";}
 
     // Set ulmks specifies the ids of the landmarks to update (if any).
-    static void detect( FM*, const IntSet& ulmks=IntSet());
+    static void detect( FM&, const IntSet& ulmks=IntSet());
 
 protected:
     void postInit() override;

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 using FaceTools::Action::UndoState;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 void FaceTools::Action::storeUndo( const FaceAction* a, Event egrp, bool autoRestore)
@@ -87,18 +87,10 @@ QVariant UndoState::userData( const QString& s) const
 Event UndoState::restore() const
 {
     assert(_action != nullptr);
-
     if ( !isAutoRestore())
-    {
-        _sfm->lockForWrite();
         _action->restoreState(*this);    // Call the custom restore function
-        _sfm->unlock();
-    }   // end if
     else
-    {
         for ( const auto& fstate : _fstates)
             fstate->restore(_egrp);
-    }   // end if
-
     return _egrp | Event::RESTORE_CHANGE;
 }   // end restore

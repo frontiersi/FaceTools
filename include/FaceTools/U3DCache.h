@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 #define FACE_TOOLS_U3D_CACHE_H
 
 #include "FaceTypes.h"
+#include "FaceModel.h"
 #include <QTemporaryDir>
 #include <QReadWriteLock>
 
@@ -31,7 +32,7 @@ public:
 
     // Returns the u3dfile for the given model if present or empty string if not found.
     // While a filepath is held, no write updates can occur.
-    static Filepath u3dfilepath( const FM*);
+    static Filepath u3dfilepath( const FM&);
 
     // Returns true iff U3D model export is possible.
     static bool isAvailable();
@@ -40,23 +41,20 @@ public:
     // If media9 is true, coordinates are transformed as (a,b,c) --> (a,-c,b)
     // to allow for LaTeX media9 inclusion of 3D figures.
     // Returns true iff model was updated in the cache successfully.
-    // *** THIS FUNCTION calls FM::lockForRead on the passed in FaceModel ***
-    static bool refresh( const FM*, bool media9=false);
+    static bool refresh( const FM&, bool media9=false);
 
-    static void purge( const FM*);
+    static void purge( const FM&);
 
 private:
     static QTemporaryDir _tmpdir;
-    static QReadWriteLock _cacheLock;
+    static QReadWriteLock _rwLock;
     static std::unordered_set<const FM*> _cache;
+    static QString _makeFilePath( const FM&);
 
     void _purge( const FM*);
-
     U3DCache(){}
     U3DCache( const U3DCache&) = delete;
     void operator=( const U3DCache&) = delete;
-
-    static QString makeFilePath( const FM*);
 };  // end class
 
 }   // end namespace

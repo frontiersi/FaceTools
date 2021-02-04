@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,9 +25,8 @@ using FaceTools::Action::Event;
 using FaceTools::FaceModelViewer;
 using FaceTools::ModelViewer;
 using FaceTools::FM;
-using FaceTools::FVS;
 using FaceTools::Vis::FV;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ActionToggleCameraActorInteraction::ActionToggleCameraActorInteraction( const QString& dn, const QIcon& ico, const QKeySequence& ks)
@@ -87,21 +86,18 @@ void ActionToggleCameraActorInteraction::doAction( Event)
 }   // end doAction
 
 
-Event ActionToggleCameraActorInteraction::doAfterAction( Event)
-{
-    return Event::NONE;
-}   // end doAfterAction
+Event ActionToggleCameraActorInteraction::doAfterAction( Event) { return Event::NONE;}
 
 
 void ActionToggleCameraActorInteraction::_doOnActorStart()
 {
-    storeUndo( this, Event::AFFINE_CHANGE | Event::CAMERA_CHANGE);
+    storeUndo( this, Event::AFFINE_CHANGE);
 }   // end _doOnActorStart
 
 
 void ActionToggleCameraActorInteraction::_doOnActorStop()
 {
-    emit onEvent( Event::AFFINE_CHANGE | Event::CAMERA_CHANGE);
+    emit onEvent( Event::AFFINE_CHANGE);
 }   // end _doOnActorStop
 
 

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,16 +24,11 @@ using FaceTools::Action::ActionSetFocus;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
-using FaceTools::FMV;
-using FaceTools::Vec3f;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ActionSetFocus::ActionSetFocus( const QString& dn, const QIcon& ico, const QKeySequence& ks)
     : FaceAction( dn, ico, ks) {}
-
-
-void ActionSetFocus::setFocus( FMV* vwr, const Vec3f& v) { vwr->setCameraFocus( v);}
 
 
 bool ActionSetFocus::isAllowed( Event) { return MS::isViewSelected();}
@@ -45,24 +40,25 @@ bool ActionSetFocus::doBeforeAction( Event)
     QPoint mp = primedMousePos();
     if ( mp.x() < 0)
         mp = fv->viewer()->mouseCoords();
-
     const bool go = fv->projectToSurface( mp, _vproj);
 
     // If projects to surface, check overlap with landmarks
-    if ( go)
+    if ( go && MS::handler<Interactor::LandmarksHandler>()->visualisation().isVisible(fv))
     {
-        if (MS::handler<Interactor::LandmarksHandler>()->visualisation().isVisible(fv))
-        {
-            const float srng = fv->viewer()->snapRange();
-            _vproj = fv->data()->currentLandmarks().snapTo( _vproj, srng*srng);
-        }   // end if
-    }   // end go
+        const float srng = fv->viewer()->snapRange();
+        _vproj = fv->data()->currentLandmarks().snapTo( _vproj, srng*srng);
+    }   // end if
 
     return go;
 }   // end doBeforeAction
 
 
-void ActionSetFocus::doAction( Event) { setFocus( MS::selectedViewer(), _vproj);}
+void ActionSetFocus::doAction( Event)
+{
+    r3d::CameraParams cam = MS::selectedViewer()->camera();
+    cam.set( _vproj, _vproj + cam.pos() - cam.focus());
+    MS::selectedViewer()->setCamera(cam);
+}   // end doAction
 
 
 Event ActionSetFocus::doAfterAction( Event) { return Event::CAMERA_CHANGE;}

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@ using FaceTools::Interactor::PathsHandler;
 using FaceTools::FVS;
 using FaceTools::Vis::FV;
 using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ActionRenamePath::ActionRenamePath( const QString& dn, const QIcon& ico, const QKeySequence &ks)
@@ -70,11 +70,9 @@ bool ActionRenamePath::isAllowed( Event)
 
 bool ActionRenamePath::doBeforeAction( Event)
 {
-    const FM* fm = MS::selectedModel();
     const int pid = MS::handler<PathsHandler>()->hoverPath()->pathId();
-    fm->lockForRead();
+    FM::RPtr fm = MS::selectedModelScopedRead();
     _label = fm->currentPaths().name(pid);
-    fm->unlock();
 
     _dialog->setTextValue( _label);
     _dialog->exec();
@@ -94,11 +92,9 @@ bool ActionRenamePath::doBeforeAction( Event)
 void ActionRenamePath::doAction( Event)
 {
     storeUndo(this, Event::PATHS_CHANGE);
-    FM* fm = MS::selectedModel();
+    FM::WPtr fm = MS::selectedModelScopedWrite();
     const int pid = MS::handler<PathsHandler>()->hoverPath()->pathId();
-    fm->lockForWrite();
     fm->renamePath( pid, _label);
-    fm->unlock();
 }   // end doAction
 
 

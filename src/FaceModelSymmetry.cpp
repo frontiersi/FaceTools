@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,42 +18,37 @@
 #include <FaceTools/FaceModelSymmetry.h>
 #include <FaceTools/MaskRegistration.h>
 #include <FaceTools/FaceModel.h>
+#include <r3dvis/SurfaceMapper.h>
 #include <r3d/SurfacePointFinder.h>
 #include <cassert>
 using FaceTools::FaceModelSymmetry;
 using FaceTools::FM;
 
 
-std::unordered_map<const FM*, FaceModelSymmetry::VtxAsymmMap> FaceModelSymmetry::_vtxSymm;
-QReadWriteLock FaceModelSymmetry::_lock;
-
-
-FaceModelSymmetry::RPtr FaceModelSymmetry::vals( const FM *fm)
+FaceModelSymmetry::Ptr FaceModelSymmetry::create( const FM *fm)
 {
-    _lock.lockForRead();
-    const VtxAsymmMap *vvals = _vtxSymm.count(fm) > 0 ? &_vtxSymm.at(fm) : nullptr;
-    if ( !vvals)
-    {
-        _lock.unlock();
-        return nullptr;
-    }   // end if
-    return RPtr( vvals, []( const VtxAsymmMap*){ _lock.unlock();});
-}   // end vals
+    assert( fm->hasMask());
+    return Ptr( new FaceModelSymmetry( fm), []( const FaceModelSymmetry *d){ delete d;});
+}   // end create
 
 
-void FaceModelSymmetry::purge( const FM *fm)
+FaceModelSymmetry::~FaceModelSymmetry(){}
+
+
+FaceModelSymmetry::FaceModelSymmetry( const FM *fm)
 {
-    _lock.lockForWrite();
-    _vtxSymm.erase(fm);
-    _lock.unlock();
-}   // end purge
+    _makeVtxSymm( fm);
+    const r3d::Mesh &mesh = fm->mesh();
+    using VSM = r3dvis::VertexSurfaceMapper;
+    _xarr = VSM( [this]( int i, size_t){ return _vtxSymm.at(i)[0];}, 1).makeArray( mesh, "FaceModelSymmetry_X");
+    _yarr = VSM( [this]( int i, size_t){ return _vtxSymm.at(i)[1];}, 1).makeArray( mesh, "FaceModelSymmetry_Y");
+    _zarr = VSM( [this]( int i, size_t){ return _vtxSymm.at(i)[2];}, 1).makeArray( mesh, "FaceModelSymmetry_Z");
+    _allarr = VSM( [this]( int i, size_t){ return _vtxSymm.at(i)[3];}, 1).makeArray( mesh, "FaceModelSymmetry_All");
+}   // end ctor
 
 
-void FaceModelSymmetry::add( const FM *fm)
+void FaceModelSymmetry::_makeVtxSymm( const FM *fm)
 {
-    assert( _vtxSymm.count(fm) == 0);
-    _lock.lockForWrite();
-
     const r3d::Mesh &mesh = fm->mesh();
     const r3d::Mesh &mask = fm->mask();
     const r3d::KDTree &mkdt = fm->maskKDTree();
@@ -70,10 +65,9 @@ void FaceModelSymmetry::add( const FM *fm)
         m = T.block<3,1>(0,3);
     }   // end if
 
-    VtxAsymmMap &vmap = _vtxSymm[fm];
     for ( int vidx : mesh.vtxIds())
     {
-        const Vec3f &p = mesh.vtx(vidx);    // Original vertex on the model
+        const Vec3f &p = mesh.uvtx(vidx);    // Original vertex on the model
 
         // Find pm as the position on the mask that vertex p is closest to and mt as the triangle it's within:
         Vec3f pm;
@@ -85,8 +79,8 @@ void FaceModelSymmetry::add( const FM *fm)
         if ( mt < 0)
         {
             assert( pvidx >= 0);
-            assert( pm == mask.vtx(pvidx));
-            qm = mask.vtx(maskOppVtxs.at(pvidx));
+            assert( pm == mask.uvtx(pvidx));
+            qm = mask.uvtx(maskOppVtxs.at(pvidx));
         }   // end if
         else
         {
@@ -97,10 +91,14 @@ void FaceModelSymmetry::add( const FM *fm)
             // in the opposite polygon will not match due to the surface being reflected, but
             // the normal still pointing out from the face.
             const int *fvidxs = mask.fvidxs(mt);
+            assert(fvidxs);
+            assert( maskOppVtxs.count(fvidxs[0]) > 0);
+            assert( maskOppVtxs.count(fvidxs[1]) > 0);
+            assert( maskOppVtxs.count(fvidxs[2]) > 0);
             const int v0 = maskOppVtxs.at(fvidxs[0]);
             const int v1 = maskOppVtxs.at(fvidxs[1]);
             const int v2 = maskOppVtxs.at(fvidxs[2]);
-            qm = bm[0]*mask.vtx(v0) + bm[1]*mask.vtx(v1) + bm[2]*mask.vtx(v2);
+            qm = bm[0]*mask.uvtx(v0) + bm[1]*mask.uvtx(v1) + bm[2]*mask.uvtx(v2);
         }   // end else
 
         // Find pr as original point p reflected through the medial plane to its perfectly symmetric position:
@@ -110,7 +108,7 @@ void FaceModelSymmetry::add( const FM *fm)
         const Vec3f pmr2qm = qm - pmr;
         const Vec3f pm2pmr = pmr - pm;
 
-        Vec4f &vals = vmap[vidx];
+        Vec4f &vals = _vtxSymm[vidx];
         vals[0] = fabsf(pm2pmr[0]) - fabsf(pm2qm[0]);    // Asymmetry through medial plane (along X-axis)
         vals[1] = -pmr2qm[1];  // Asymmetry along Y-axis
         vals[2] = -pmr2qm[2];  // Asymmetry along Z-axis
@@ -123,6 +121,4 @@ void FaceModelSymmetry::add( const FM *fm)
         // with the expected perfectly laterally symmetric point pmr and multiply this by the sign above.
         vals[3] = sgn * pmr2qm.norm();    // Signed disparity of surface to reflected point
     }   // end for
-
-    _lock.unlock();
-}   // end add
+}   // end _makeVtxSymm

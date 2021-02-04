@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 
 #include <Metric/Metric.h>
 #include <Metric/MetricTypeRegistry.h>
+#include <Metric/StatsManager.h>
 #include <MiscFunctions.h>
 #include <FaceModel.h>
 #include <fstream>
@@ -26,6 +27,7 @@ using FaceTools::Metric::Metric;
 using FaceTools::Metric::MetricValue;
 using FaceTools::Metric::MetricSet;
 using FaceTools::FM;
+using SM = FaceTools::Metric::StatsManager;
 
 
 Metric::Ptr Metric::load( const QString &fpath)
@@ -134,67 +136,87 @@ Metric::Ptr Metric::load( const QString &fpath)
         return nullptr;
     }   // end if
 
+    mc->setInPlane( mc->_mct->fixedInPlane());
     return mc;
 }   // end load
 
 
-Metric::Metric() : _visible(false), _ndps(0) {}
+Metric::Metric() : _visible(false), _ndps(0), _measureInPlane(false) {}
 
 
-MetricValue Metric::_measure( const FM *fm, bool swap) const
+void Metric::_addGrowthData( GrowthData::Ptr gd) { _gdRanker.add(gd);}
+
+
+void Metric::_combineGrowthDataSexes()
 {
-    // Decide whether to take the measurement in-plane or not based
-    // on the existence and value of the current growth data's (stats) in-plane value.
+    _gdRanker.combineSexes();
+    SM::setDefaultMetricStats( id(), *_gdRanker.all().begin());
+}   // end _combineGrowthDataSexes
+
+
+void Metric::setInPlane( bool v) { _measureInPlane = v || fixedInPlane();}
+
+
+bool Metric::inPlane( const FM *fm) const
+{
+    const bool fixed = fixedInPlane();
+    bool inp = _measureInPlane || fixed;
+    if ( !fixed && fm && !SM::usingDefaultMetricStats( id()))
+    {
+        SM::RPtr gd = SM::stats( id(), fm);
+        if ( gd)
+            inp = gd->inPlane();
+    }   // end if
+    return inp;
+}   // end inPlane
+
+
+MetricValue Metric::_measure( const FM *fm, bool swap, bool inPlane) const
+{
     std::vector<float> dvals;
-    _mct->measure( dvals, fm, swap, inPlane());
-    MetricValue mv( id());
-    mv.setValues(dvals);
-    return mv;
+    _mct->measure( dvals, fm, swap, inPlane);
+    return MetricValue( id(), fm, dvals, inPlane);
 }   // end _measure
 
 
-bool Metric::canMeasure( const FM *fm) const
+namespace {
+bool setIfMetricValueChanged( MetricSet &mset, const MetricValue &nv, int mid)
+{
+    if ( !mset.hasMetric(mid) || mset.metric(mid) != nv)
+    {
+        mset.set(nv);
+        return true;
+    }   // end if
+    return false;
+}   // end setIfMetricValueChanged
+}   // end namespace
+
+
+bool Metric::_measure( FM *fm) const
+{
+    const bool inp = inPlane( fm);
+    const int mid = id();
+    bool cval = false;
+    FaceAssessment::Ptr ass = fm->currentAssessment();
+    if ( isBilateral())
+    {
+        cval |= setIfMetricValueChanged( ass->metrics(RIGHT), _measure( fm, true, inp), mid);
+        cval |= setIfMetricValueChanged( ass->metrics(LEFT), _measure( fm, false, inp), mid);
+    }   // end if
+    else
+        cval |= setIfMetricValueChanged( ass->metrics(MID), _measure( fm, false, inp), mid);
+    return cval;
+}   // end _measure
+
+
+bool Metric::_canMeasure( const FM *fm) const
 {
     const Landmark::LandmarkSet& lmset = fm->currentLandmarks();
     for ( int lmid : _mct->landmarkIds())
         if ( !lmset.has(lmid))
             return false;
     return true;
-}   // end canMeasure
+}   // end _canMeasure
 
 
-bool Metric::_setIfMetricValueChanged( MetricSet &mset, const MetricValue &nv) const
-{
-    bool set = false;
-    const int i = id();
-    if ( !mset.hasMetric(i) || mset.metric(i) != nv)
-    {
-        mset.set(nv);
-        set = true;
-    }   // end if
-    return set;
-}   // end _setIfMetricValueChanged
-
-
-bool Metric::measure( FM* fm) const
-{
-    bool changedVal = false;
-    FaceAssessment::Ptr ass = fm->currentAssessment();
-
-    if ( isBilateral())
-    {
-        if ( _setIfMetricValueChanged( ass->metrics(RIGHT), _measure( fm, true)))
-            changedVal = true;
-        if ( _setIfMetricValueChanged( ass->metrics(LEFT), _measure( fm, false)))
-            changedVal = true;
-    }   // end if
-    else
-    {
-        if ( _setIfMetricValueChanged( ass->metrics(MID), _measure( fm, false)))
-            changedVal = true;
-    }   // end else
-    return changedVal;
-}   // end measure
-
-
-void Metric::purge( const FM *fm) { _mct->purge(fm);}
+void Metric::_purge( const FM *fm) { _mct->purge(fm);}

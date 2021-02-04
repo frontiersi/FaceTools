@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -168,9 +168,9 @@ QString LandmarksManager::makeLandmarkString( int id, FaceTools::FaceSide lat)
     QString lmname = landmark(id)->name();
     QString lats;
     if ( lat == LEFT)
-        lats = " (L)";
+        lats = " (Left)";
     else if ( lat == RIGHT)
-        lats = " (R)";
+        lats = " (Right)";
     return lmname + lats;
 }   // end makeLandmarkString
 

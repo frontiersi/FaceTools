@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,6 +53,9 @@ public:
 
     // Return reference to the report with given name or null if doesn't exist.
     static Report::Ptr report( const QString& nm) { return _reports.count(nm) > 0 ? _reports.at(nm) : nullptr;}
+
+    // (Over)write the views file inside the temporary directory for U3D model export.
+    static bool writeViewsFile( float distance, const QString &fname="views.vws");
 
 private:
     static QTemporaryDir _tmpdir;

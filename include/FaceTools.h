@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,6 +37,11 @@ FaceTools_EXPORT Vec3f findNormal( const r3d::KDTree&,
 // Return the point closest to v on the surface of the model.
 FaceTools_EXPORT Vec3f toSurface( const r3d::KDTree&, const Vec3f& v);
 
+// Sets dv on the model surface of dst to be the barycentrically mapped position of sv through
+// model src via their underlying coregistration masks which MUST EXIST AND BE THE SAME!
+// Returns the squared difference between sv and it's closest position on the source mask.
+FaceTools_EXPORT float barycentricMapSrcToDst( const FM *src, Vec3f sv, const FM *dst, Vec3f &dv);
+
 // Starting at the point on the surface closest to s, return the point on the surface closest to t.
 FaceTools_EXPORT Vec3f toTarget( const r3d::KDTree&, const Vec3f& s, const Vec3f& t);
 
@@ -53,8 +58,6 @@ FaceTools_EXPORT float calcFaceCropRadius( const Vec3f& faceCentre, const Vec3f&
 
 // Update exactly once all renderers referenced by all views of all models in the provided set.
 FaceTools_EXPORT void updateRenderers( const FMS&);
-
-FaceTools_EXPORT cv::Mat_<cv::Vec3b> makeThumbnail( const FM*, const cv::Size& dims, float d);
 
 // Return a colour giving best contrast with the parameter colour.
 FaceTools_EXPORT QColor chooseContrasting( const QColor&);

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,9 +16,11 @@
  ************************************************************************/
 
 #include <Action/ActionLoad.h>
-#include <Action/ActionOrientCameraToFace.h>
+#include <Action/ActionOrientCamera.h>
+#include <Action/ActionRestoreLandmarks.h>
 #include <FileIO/FaceModelManager.h>
 #include <QFileInfo>
+#include <QMessageBox>
 using FaceTools::Action::ActionLoad;
 using FaceTools::Action::Event;
 using FaceTools::Action::FaceAction;
@@ -26,13 +28,16 @@ using FaceTools::FileIO::LoadFaceModelsHelper;
 using FaceTools::Vis::FV;
 using FaceTools::FVS;
 using FMM = FaceTools::FileIO::FaceModelManager;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
+using QMB = QMessageBox;
 
 
 ActionLoad::ActionLoad( const QString& dn, const QIcon& ico, const QKeySequence& ks)
     : FaceAction( dn, ico, ks), _loadHelper(nullptr), _dialog(nullptr)
 {
+#ifdef NDEBUG
     setAsync(true);
+#endif
 }   // end ctor
 
 
@@ -43,12 +48,12 @@ void ActionLoad::postInit()
 {
     QWidget* p = static_cast<QWidget*>(parent());
     _loadHelper = new LoadFaceModelsHelper(p);
-    _dialog = new QFileDialog(p, tr("Select model(s) to load"));
+    _dialog = new QFileDialog(p, tr("Select model to load"));
     QStringList filters = FMM::fileFormats().createImportFilters();
     filters.prepend( "Any file (*)");
     _dialog->setNameFilters(filters);
     _dialog->setViewMode(QFileDialog::Detail);
-    _dialog->setFileMode(QFileDialog::ExistingFiles);
+    _dialog->setFileMode(QFileDialog::ExistingFile);    // Single file only
     //_dialog->setOption(QFileDialog::DontUseNativeDialog);
     //_dialog->setOption(QFileDialog::DontUseCustomDirectoryIcons);
 }   // end postInit
@@ -99,20 +104,42 @@ void ActionLoad::doAction( Event)
 
 Event ActionLoad::doAfterAction( Event)
 {
-    MS::defaultViewer()->resetDefaultCamera();
     _loadHelper->showLoadErrors();
     const FMS& fms = _loadHelper->lastLoaded();
-    FV *fv = nullptr;
-    for ( FM* fm : fms)
-        fv = MS::add( fm, MS::defaultViewer());
+    FM *fm = fms.empty() ? nullptr : *fms.begin();
 
-    Event e;
-    if ( fv)
+    Event e = Event::NONE;
+    if ( fm)
     {
+        // Restore any missing landmarks and warn user of this.
+        if ( fm->hasLandmarks() && ActionRestoreLandmarks::restoreMissingLandmarks( *fm))
+        {
+            static const QString msg = tr("Some more recently added landmarks were automatically set.<br>Ensure all landmark positions are correct before continuing.");
+            QMB::information( static_cast<QWidget*>(parent()), tr("Some Landmarks Automatically Set"),
+                              QString("<p align='center'>%1</p>").arg(msg));
+        }   // end if
+
+        // Get the viewer to place the newly loaded model into.
+        FMV *fmv = MS::viewers()[1];
+        if ( fmv->attached().size() > 0)
+            fmv = MS::viewers()[2];
+        if ( fmv->attached().size() > 0)
+            fmv = MS::viewers()[0];
+        if ( fmv->attached().size() > 1)
+            fmv = MS::viewers()[1];
+        if ( fmv->attached().size() > 1)
+            fmv = MS::viewers()[2];
+        if ( fmv->attached().size() > 1)
+            fmv = MS::viewers()[0];
+        if ( fmv->attached().size() > 2)
+            fmv = MS::defaultViewer();
+
+        FV *fv = MS::add( fm, fmv);
         MS::setSelected( fv);
-        ActionOrientCameraToFace::orientToFace( fv, 1);
+        ActionOrientCamera::orient( fv, 1);
+
         MS::showStatus( "Finished loading.", 5000);
-        e = Event::LOADED_MODEL;
+        e = Event::LOADED_MODEL | Event::MESH_CHANGE | Event::MODEL_SELECT;
     }   // end if
     else
     {

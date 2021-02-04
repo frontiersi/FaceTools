@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,19 +28,16 @@ using FaceTools::FMS;
 using FaceTools::FM;
 
 
-// public static
 FaceViewSet::Ptr FaceViewSet::create() { return Ptr( new FaceViewSet);}
 FaceViewSet::Ptr FaceViewSet::create( const FaceViewSet& fvs) { return Ptr( new FaceViewSet(fvs));}
 
 
-// public
 FaceViewSet::FaceViewSet( const FaceViewSet& fvs)
 {
     *this = fvs;
 }   // end ctor
 
 
-// public
 FaceViewSet& FaceViewSet::operator=( const FaceViewSet& fvs)
 {
     _fvs = fvs._fvs;
@@ -50,7 +47,6 @@ FaceViewSet& FaceViewSet::operator=( const FaceViewSet& fvs)
 }   // end operator=
 
 
-// public
 FaceViewSet& FaceViewSet::operator+( const FaceViewSet& fvs)
 {
     for ( FV* fv : fvs)
@@ -59,7 +55,6 @@ FaceViewSet& FaceViewSet::operator+( const FaceViewSet& fvs)
 }   // end operator+
 
 
-// public
 FaceViewSet& FaceViewSet::operator-( const FaceViewSet& fvs)
 {
     for ( FV* fv : fvs)
@@ -68,7 +63,6 @@ FaceViewSet& FaceViewSet::operator-( const FaceViewSet& fvs)
 }   // end operator-
 
 
-// public
 FaceViewSet& FaceViewSet::operator/( const FaceViewSet& fvs)
 {
     for ( FV* fv : _fvs)
@@ -80,7 +74,6 @@ FaceViewSet& FaceViewSet::operator/( const FaceViewSet& fvs)
 }   // end operator/
 
 
-// public
 FaceViewSet FaceViewSet::operator()( const FM* fm) const
 {
     FaceViewSet fvs;
@@ -93,7 +86,6 @@ FaceViewSet FaceViewSet::operator()( const FM* fm) const
 }   // end operator()
 
 
-// public
 size_t FaceViewSet::insert( const FMS& fms)
 {
     size_t n = 0;
@@ -103,7 +95,6 @@ size_t FaceViewSet::insert( const FMS& fms)
 }   // end insert
 
 
-// public
 size_t FaceViewSet::insert( const FaceViewSet& fvs)
 {
     if ( this == &fvs)  // Can't insert into self!
@@ -117,7 +108,6 @@ size_t FaceViewSet::insert( const FaceViewSet& fvs)
 }   // end insert
 
 
-// public
 bool FaceViewSet::insert( FV* fv)
 {
     bool success = false;
@@ -136,7 +126,6 @@ bool FaceViewSet::insert( FV* fv)
 }   // end insert
 
 
-// public
 bool FaceViewSet::erase( const FV* cfv)
 {
     FV* fv = const_cast<FV*>(cfv);
@@ -156,7 +145,6 @@ bool FaceViewSet::erase( const FV* cfv)
 }   // end erase
 
 
-// public
 bool FaceViewSet::insert( const FM* fm)
 {
     size_t a = 0;
@@ -166,7 +154,6 @@ bool FaceViewSet::insert( const FM* fm)
 }   // end insert
 
 
-// public
 bool FaceViewSet::erase( const FM* fm)
 {
     size_t a = _fmm.size();
@@ -176,7 +163,6 @@ bool FaceViewSet::erase( const FM* fm)
 }   // end erase
 
 
-// public
 bool FaceViewSet::has( const FV* fv) const { return _fvs.count(const_cast<FV*>(fv)) == 1;}
 bool FaceViewSet::has( const FM* fm) const { return _fmm.count(fm) == 1;}
 size_t FaceViewSet::size( const FM* fm) const { return has(fm) ? _fmm.at(fm).size() : 0;}
@@ -184,7 +170,6 @@ size_t FaceViewSet::size() const { return _fvs.size();}
 bool FaceViewSet::empty() const { return _fvs.empty();}
 
 
-// public
 void FaceViewSet::clear()
 {
     _fvs.clear();
@@ -193,21 +178,11 @@ void FaceViewSet::clear()
 }   // end clear
 
 
-// public
-FV* FaceViewSet::first() const
-{
-    FV* fv = nullptr;
-    if ( !empty())
-        fv = *_fvs.begin();
-    return fv;
-}   // end first
+FV* FaceViewSet::first() const { return empty() ? nullptr : *_fvs.begin();}
 
-
-// public
 const FMS& FaceViewSet::models() const { return _fms;}
 
 
-// public
 FMVS FaceViewSet::viewers() const
 {
     FMVS viewers;
@@ -217,7 +192,6 @@ FMVS FaceViewSet::viewers() const
 }   // end viewers
 
 
-// public
 void FaceViewSet::updateRenderers() const
 {
     FMVS vwrs = viewers();
@@ -225,7 +199,6 @@ void FaceViewSet::updateRenderers() const
 }   // end updateRenderers
 
 
-// public
 FV* FaceViewSet::find( const vtkProp* prop) const
 {
     if ( prop)

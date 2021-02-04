@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,12 +49,18 @@ vtkSmartPointer<vtkPolyData> LandmarkLabelsView::createLabels( const FM *fm) con
         }   // end else
     }   // end for
 
+    const int n = static_cast<int>( lmnames.size());
+
+    // The landmark positions need to be corrected for any existing transform.
+    const r3d::Mat4d imat = fm->inverseTransformMatrix().cast<double>();
+    for ( int i = 0; i < n; ++i)
+        lmpos[i] = r3d::transform( imat, lmpos[i]);
+
     vtkSmartPointer<vtkPolyData> pdata = vtkSmartPointer<vtkPolyData>::New();
     vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
     vtkSmartPointer<vtkCellArray> cells = vtkSmartPointer<vtkCellArray>::New();
     vtkSmartPointer<vtkStringArray> labels = vtkSmartPointer<vtkStringArray>::New();
 
-    const int n = static_cast<int>( lmnames.size());
     points->SetNumberOfPoints( n);
     labels->SetNumberOfValues( n);
     labels->SetName( "landmarkLabels");

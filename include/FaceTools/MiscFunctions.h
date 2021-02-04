@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,9 +36,16 @@ FaceTools_EXPORT QTemporaryFile* writeToTempFile( const QString& rfile);
 
 FaceTools_EXPORT std::string getDateTimeDigits( const std::string&); // Get the first 10 digits as a string from given string.
 
-// Construct and return a string of the form "P pos[0] X | pos[1] Y | pos[2] Z" where fw is the field width
+// Set the geometry of the given widget to be to the left or right of its parent widget
+// choosing the side that has the most room. Tries not to overlap the parent widget but
+// will do so on that side if the alternative is to move the widget off the screen.
+// A call to this function should be placed in the given widget's showEvent function.
+// It's an error to call this function if the widget has no parent.
+FaceTools_EXPORT void positionWidgetToSideOfParent( QWidget*);
+
+// Construct and return a string of the form "P pos[0] X, pos[1] Y, pos[2] Z" where fw is the field width
 // that each value takes up. Floating point representation with precision of 2 d.p. is used.
-FaceTools_EXPORT QString posString( const QString prefix, const Vec3f& pos, int fw=8);
+FaceTools_EXPORT QString posString( const QString prefix, const Vec3f& pos, int fw=-1);
 
 FaceTools_EXPORT long getDateTimeSecs( const std::string&);
 

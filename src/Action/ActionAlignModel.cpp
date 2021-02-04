@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,11 +17,10 @@
 
 #include <Action/ActionAlignModel.h>
 #include <MaskRegistration.h>
-#include <Action/ActionOrientCameraToFace.h>
+#include <Action/ActionOrientCamera.h>
 #include <Detect/FaceAlignmentFinder.h>
-#include <r3d/ProcrustesSuperimposition.h>
 #include <r3d/FrontFinder.h>
-#include <FaceModelCurvature.h>
+#include <FaceModelCurvatureStore.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <algorithm>
@@ -33,15 +32,16 @@ using FaceTools::Vec3f;
 using FaceTools::Mat3f;
 using FaceTools::MatX3f;
 using FaceTools::Mat4f;
-using FMC = FaceTools::FaceModelCurvature;
-using MS = FaceTools::Action::ModelSelector;
+using FMCS = FaceTools::FaceModelCurvatureStore;
+using MS = FaceTools::ModelSelect;
 
 
 ActionAlignModel::ActionAlignModel( const QString& dn, const QIcon& ico, const QKeySequence &ks)
     : FaceAction(dn, ico, ks)
 {
-    setAsync(true);
+    // Refresh on SURFACE_DATA_CHANGE for FaceModelCurvatureStore completion
     addRefreshEvent( Event::AFFINE_CHANGE | Event::MESH_CHANGE | Event::SURFACE_DATA_CHANGE);
+    setAsync(true);
 }   // end ctor
 
 
@@ -57,8 +57,9 @@ QString ActionAlignModel::whatsThis() const
 
 bool ActionAlignModel::isAllowed( Event)
 {
+    //FM::RPtr fm = MS::selectedModelScopedRead();
     const FM *fm = MS::selectedModel();
-    const bool isInit = fm && Detect::FaceAlignmentFinder::isInit() && FMC::rmetrics(fm) != nullptr;
+    const bool isInit = fm && Detect::FaceAlignmentFinder::isInit() && FMCS::rvals(*fm) != nullptr;
     // Enable if the model isn't already aligned, OR if the model is aligned but has no mask (and
     // therefore no capacity to have a separate alignment matrix not equal to the model's orientation).
     return isInit && (!fm->hasMask() || !fm->isAligned());
@@ -75,31 +76,6 @@ bool ActionAlignModel::doBeforeAction( Event)
 
 
 namespace {
-
-// Not that pos must be the current transformed position on the model.
-MatX3f getNormFeatures( const FM *fm, Vec3f &pos, float sqRad)
-{
-    std::vector<std::pair<size_t, float> > vidxs;
-    fm->kdtree().findr( pos, sqRad, vidxs);
-    const size_t N = vidxs.size();
-
-    const Mat4f T = fm->mesh().transformMatrix();   // Need to transform vertex normals
-    FMC::RPtr curv = FMC::rmetrics( fm);
-    assert( curv);
-    const MatX3f &vnrms = curv->vertexNormals();    // Untransformed
-    MatX3f frows( N, 3);
-    pos = Vec3f::Zero();
-    for ( size_t i = 0; i < N; ++i)
-    {
-        const int vidx = int(vidxs[i].first);
-        pos += fm->mesh().vtx( vidx);   // Transformed position returned
-        frows.block<1,3>(i,0) = r3d::transform( T, vnrms.row(vidx));
-    }   // end for
-    pos /= N;   // New mean position
-
-    return frows;
-}   // end getNormFeatures
-
 
 Vec3f makePositive( const Vec3f &v, int i) { return v[i] < 0 ? -v : v;}
 
@@ -125,17 +101,41 @@ Mat4f makeMatrixFromEigenVectors( const MatX3f &nrms, const Vec3f &pos, const Ve
 }   // end makeMatrixFromEigenVectors
 
 
-Mat4f _calcGeometricAlignment( const FM *fm, float rad)
+// Note that pos must be the current transformed position on the model.
+MatX3f getNormFeatures( const FM &fm, Vec3f &pos, float sqRad)
 {
-    r3d::FrontFinder fff( fm->mesh());
+    std::vector<std::pair<size_t, float> > vidxs;
+    fm.kdtree().findr( pos, sqRad, vidxs);
+    const size_t N = vidxs.size();
+
+    const Mat4f T = fm.mesh().transformMatrix();   // Need to transform vertex normals
+    FMCS::RPtr curv = FMCS::rvals( fm);
+    assert( curv);
+    const MatX3f &vnrms = curv->vals().vertexNormals();    // Untransformed
+    MatX3f frows( N, 3);
+    pos = Vec3f::Zero();
+    for ( size_t i = 0; i < N; ++i)
+    {
+        const int vidx = int(vidxs[i].first);
+        pos += fm.mesh().vtx( vidx);   // Transformed position returned
+        frows.block<1,3>(i,0) = r3d::transform( T, vnrms.row(vidx));
+    }   // end for
+    pos /= N;   // New mean position
+
+    return frows;
+}   // end getNormFeatures
+
+
+Mat4f calcGeometricAlignment( const FM &fm, float rad)
+{
+    r3d::FrontFinder fff( fm.mesh());
     Vec3f pos = fff();
     const Vec3f nrm = fff.meanNrm();
     // Get the vertex normals and update the mean position.
     const MatX3f nrms = getNormFeatures( fm, pos, rad*rad);
     // Get the eigenvector decomposition of the vertex norms
     return makeMatrixFromEigenVectors( nrms, pos, nrm);
-}   // end _calcGeometricAlignment
-
+}   // end calcGeometricAlignment
 }   // end namespace
 
 /*
@@ -159,25 +159,26 @@ void ActionAlignModel::alignUsingMaskLandmarksProcrustes( FM *fm)
 */
 
 
-void ActionAlignModel::align( FM *fm)
+void ActionAlignModel::align( FM &fm)
 {
-    if ( fm->hasMask()) // If model has mask, then simply restore alignment defined by it.
+    if ( fm.hasMask()) // If model has mask, then simply restore alignment defined by it.
     {
-        const Mat4f iT = fm->inverseTransformMatrix();
-        fm->addTransformMatrix( iT);
+        const Mat4f iT = fm.inverseTransformMatrix();
+        fm.addTransformMatrix( iT);
     }   // end if
     else
     {
-        assert( FMC::rmetrics( fm) != nullptr);
+        assert( FMCS::rvals( fm) != nullptr);
 
         Mat4f T = Mat4f::Zero();
 
+        Detect::FaceAlignmentFinder faf;
         // Texture aligning may fail or model may not have a texture returning zero matrix
-        if ( fm->hasTexture())
-            T = Detect::FaceAlignmentFinder( fm->kdtree(), 600.0f).find( fm->bounds()[0]->centre());
+        if ( fm.hasTexture())
+            T = faf.find( fm.kdtree(), fm.bounds()[0]->centre(), 600.0f);
         else
         {
-            T = _calcGeometricAlignment( fm, 80);
+            T = calcGeometricAlignment( fm, 80);
             assert( !T.isZero());
         }   // end else
 
@@ -188,40 +189,36 @@ void ActionAlignModel::align( FM *fm)
         while ( T.isZero() && tries < 5)
         {
             tries++;
-            T = _calcGeometricAlignment( fm, 80);
+            T = calcGeometricAlignment( fm, 80);
             assert( !T.isZero());
-            fm->addTransformMatrix( T.inverse());
-            T = Detect::FaceAlignmentFinder( fm->kdtree(), 600.0f).find( fm->bounds()[0]->centre());    // May return zero matrix
+            fm.addTransformMatrix( T.inverse());
+            T = faf.find( fm.kdtree(), fm.bounds()[0]->centre(), 600.0f);    // May return zero matrix
         }   // end if
 
         if ( !T.isZero())
-            fm->addTransformMatrix( T.inverse());
+            fm.addTransformMatrix( T.inverse());
     }   // end else
 }   // end align
 
 
 void ActionAlignModel::doAction( Event)
 {
-    FM *fm = MS::selectedModel();
-    fm->lockForWrite();
-    align( fm);
+    FM::WPtr fm = MS::selectedModelScopedWrite();
+    align( *fm);
     fm->fixTransformMatrix();
-    fm->unlock();
 }   // end doAction
 
 
 Event ActionAlignModel::doAfterAction( Event)
 {
-    const Vis::FV *fv = MS::selectedView();
-    ActionOrientCameraToFace::orientToFace( fv, 1);
+    Vis::FV *fv = MS::selectedView();
+    ActionOrientCamera::orient( fv, 1);
 
     QString msg = "Alignment defined by mask";
-    if ( !fv->data()->hasMask())
+    if ( !fv->rdata()->hasMask())
         msg = "Alignment recalculated";
 
     MS::setInteractionMode( IMode::CAMERA_INTERACTION);
     MS::showStatus( msg, 5000);
     return _egrp;
 }   // end doAfterAction
-
-

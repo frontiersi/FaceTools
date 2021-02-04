@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,9 +36,10 @@ public:
     void setCaption( const Path&, int xpos, int ypos, const Mat3f&);
     void setCaptionVisible( bool);
 
+    void setPickable( bool);
+
     void sync( const PathSet&);
-    void addPath( const Path&);
-    void updatePath( const Path&);
+    void sync( const Path&);
 
     void erasePath( int pid);
 
@@ -56,6 +57,8 @@ private:
     std::unordered_set<int> _visible;   // Which paths are visible
     vtkNew<vtkTextActor> _caption; // Bottom right text
 
+    void _addPath( const Path&);
+    void _updatePath( const Path&);
     void _showPath( bool, int pathID);                   // Show/hide individual path
     PathSetView( const PathSetView&) = delete;
     void operator=( const PathSetView&) = delete;

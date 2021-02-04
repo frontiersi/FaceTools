@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  ************************************************************************/
 
 #include <Action/ActionMakeHalfFace.h>
-//#include <MaskRegistration.h>
+#include <MaskRegistration.h>
 #include <FaceModel.h>
 #include <QMessageBox>
 #include <r3d/Slicer.h>
@@ -24,17 +24,17 @@ using FaceTools::Action::ActionMakeHalfFace;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
-
+using MS = FaceTools::ModelSelect;
+using QMB = QMessageBox;
 using r3d::Vec3f;
 using r3d::Mat4f;
 
 
 namespace {
 
-void reflectLandmarks( FM* fm, const Mat4f& tmat, const Vec3f& p, const Vec3f& n)
+void reflectLandmarks( FM &fm, const Mat4f& tmat, const Vec3f& p, const Vec3f& n)
 {
-    const FaceTools::Landmark::LandmarkSet& lmks = fm->currentLandmarks();
+    const FaceTools::Landmark::LandmarkSet& lmks = fm.currentLandmarks();
     for ( const auto& pair : lmks.lateral( FaceTools::LEFT))
     {
         const int lmid = pair.first;
@@ -44,9 +44,9 @@ void reflectLandmarks( FM* fm, const Mat4f& tmat, const Vec3f& p, const Vec3f& n
         const float ldot = n.dot(lpos - p);
         const float rdot = n.dot(rpos - p);
         if ( ldot > 0 && rdot < 0)   // Keep the left lateral
-            fm->setLandmarkPosition( lmid, FaceTools::RIGHT, r3d::transform( tmat, lpos));
+            fm.setLandmarkPosition( lmid, FaceTools::RIGHT, r3d::transform( tmat, lpos));
         else if ( rdot > 0 && ldot < 0)   // Keep the right lateral
-            fm->setLandmarkPosition( lmid, FaceTools::LEFT, r3d::transform( tmat, rpos));
+            fm.setLandmarkPosition( lmid, FaceTools::LEFT, r3d::transform( tmat, rpos));
     }   // end for
 
     for ( const auto& pair : lmks.lateral( FaceTools::MID))
@@ -54,8 +54,8 @@ void reflectLandmarks( FM* fm, const Mat4f& tmat, const Vec3f& p, const Vec3f& n
         const int lmid = pair.first;
         const Vec3f lpos0 = lmks.pos(lmid, FaceTools::MID);
         const Vec3f lpos1 = r3d::transform( tmat, lpos0);
-        const Vec3f lpos = fm->findClosestSurfacePoint( (lpos0 + lpos1) * 0.5f);
-        fm->setLandmarkPosition( lmid, FaceTools::MID, lpos);
+        const Vec3f lpos = fm.findClosestSurfacePoint( (lpos0 + lpos1) * 0.5f);
+        fm.setLandmarkPosition( lmid, FaceTools::MID, lpos);
     }   // end for
 }   // end reflectLandmarks
 
@@ -63,9 +63,9 @@ void reflectLandmarks( FM* fm, const Mat4f& tmat, const Vec3f& p, const Vec3f& n
 
 
 ActionMakeHalfFace::ActionMakeHalfFace( const QString &dn, const QIcon& ico)
-    : FaceAction( dn, ico), _n(0,1,0), _p(0,0,0)
+    : FaceAction( dn, ico), _n(0,1,0), _p(0,0,0), _ev(Event::NONE)
 {
-    setAsync(false);
+    setAsync(true);
 }   // end ctor
 
 
@@ -99,38 +99,44 @@ bool ActionMakeHalfFace::isAllowed( Event) { return MS::isViewSelected();}
 bool ActionMakeHalfFace::doBeforeAction( Event)
 {
     bool go = true;
+    _ev = Event::MESH_CHANGE | Event::AFFINE_CHANGE;
 
     // If the selected model has no landmarks, ask the user if they want to continue.
-    const FM* fm = MS::selectedModel();
-    if ( fm->currentAssessment()->landmarks().empty())
+    FM::RPtr fm = MS::selectedModelScopedRead();
+    if ( fm->hasLandmarks())
+        _ev |= Event::LANDMARKS_CHANGE;
+    else
     {
-        static const QString msg = tr("There are no landmarks to place the cutting plane! Use the preset cutting plane instead?");
+        static const QString msg = tr("Facial landmarks are not present and so cannot be used to find the centreline. Slice through the YZ plane at X = 0 instead?");
         QWidget* prnt = static_cast<QWidget*>(parent());
-        go = QMessageBox::Yes == QMessageBox::question( prnt, tr("Use preset cutting plane?"), msg,
-                                      QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
-    }   // end if
+        go = QMB::Yes == QMB::question( prnt, tr("Use Default Slicing Plane?"),
+                QString("<p align='center'>%1</p>").arg(msg), QMB::Yes | QMB::No, QMB::No);
+    }   // end else
+
+    //if ( fm->hasMask())
+    //    _ev |= Event::MASK_CHANGE;
+    if ( fm->hasPaths())
+        _ev |= Event::PATHS_CHANGE;
 
     if ( go)
-        storeUndo( this, Event::MESH_CHANGE | Event::AFFINE_CHANGE);
+        storeUndo( this, _ev);
     return go;
 }   // end doBeforeAction
 
 
 void ActionMakeHalfFace::doAction( Event)
 {
-    FM* fm = MS::selectedModel();
+    FM::WPtr fm = MS::selectedModelScopedWrite();
 
     // Set up the reflection in X axis transformation
     static Mat4f tmat = Mat4f::Identity();
     tmat(0,0) = -1;
 
-    const Vec3f p = _p;
-    const Vec3f n = _n;
-
-    fm->lockForWrite();
+    const Vec3f p = _p; // Plane position
+    const Vec3f n = _n; // Plane normal
 
     // Set the model into standard position before doing the reflection.
-    const Mat4f T = fm->transformMatrix();   // Copy out for after
+    const Mat4f T = fm->transformMatrix();   // Copy out for transforming back afterwards
     fm->addTransformMatrix( fm->inverseTransformMatrix());
 
     r3d::Mesh::Ptr mesh = fm->mesh().deepCopy();
@@ -150,50 +156,51 @@ void ActionMakeHalfFace::doAction( Event)
 
     fm->update( mesh, true, false);
 
-    /*
     // Also do the mask - keep the vertex IDs intact!
     if ( fm->hasMask())
     {
-        r3d::Mesh::Ptr mask = fm->mask().deepCopy();
+        const r3d::Mesh &omask = fm->mask();
+        r3d::Mesh::Ptr mask = omask.deepCopy();
         mask->fixTransformMatrix();
 
         const auto &maskData = MaskRegistration::maskData();
         const auto &oppVtxs = maskData->oppVtxs;
-        const IntSet &l0 = maskData->q0;  // Top left
-        const IntSet &l1 = maskData->q3;  // Bottom left
 
+        const IntSet *l0;
+        const IntSet *l1;
         if ( _n[0] < 0)
         {
-            for ( int lvidx : l0)
-                mask->adjustRawVertex( lvidx, mask->uvtx( oppVtxs.at( lvidx)));
-            for ( int lvidx : l1)
-                mask->adjustRawVertex( lvidx, mask->uvtx( oppVtxs.at( lvidx)));
+            l0 = &maskData->q0;  // Top left
+            l1 = &maskData->q3;  // Bottom left
         }   // end if
         else
         {
-            for ( int lvidx : l0)
-                mask->adjustRawVertex( oppVtxs.at(lvidx), mask->uvtx( lvidx));
-            for ( int lvidx : l1)
-                mask->adjustRawVertex( oppVtxs.at(lvidx), mask->uvtx( lvidx));
+            l0 = &maskData->q1;  // Top right
+            l1 = &maskData->q2;  // Bottom right
         }   // end else
+
+        for ( int lvidx : *l0)
+        {
+            const Vec3f &v = omask.uvtx( oppVtxs.at( lvidx));
+            mask->adjustRawVertex( lvidx, -v[0], v[1], v[2]);
+        }   // end for
+        for ( int lvidx : *l1)
+        {
+            const Vec3f &v = omask.uvtx( oppVtxs.at( lvidx));
+            mask->adjustRawVertex( lvidx, -v[0], v[1], v[2]);
+        }   // end for
 
         fm->setMask( mask);
     }   // end if
-    */
 
     // Also need to update the positions of the lateral landmarks on the rejected side to reflect
     // their partner positions through the same plane. Also reflect the median landmarks and take
     // the average of their original and reflected positions as their new positions.
-    reflectLandmarks( fm, tmat, p, n);
+    reflectLandmarks( *fm, tmat, p, n);
 
     fm->addTransformMatrix( T); // Re-orient.
-
-    fm->unlock();
 }   // end doAction
 
 
-Event ActionMakeHalfFace::doAfterAction( Event)
-{
-    return Event::MESH_CHANGE | Event::LANDMARKS_CHANGE | Event::PATHS_CHANGE;
-}   // end doAfterAction
+Event ActionMakeHalfFace::doAfterAction( Event) { return _ev;}
 

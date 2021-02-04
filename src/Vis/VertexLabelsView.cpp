@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@ vtkSmartPointer<vtkPolyData> VertexLabelsView::createLabels( const FM *fm) const
     for ( int i = 0; i < nv; ++i)
     {
         vlabels->SetValue( i, i);
-        points->SetPoint( i, &model.uvtx(i)[0]);
+        points->SetPoint( i, &model.uvtx(i)[0]);    // Note untransformed position!
         vertices->InsertNextCell(1);
         vertices->InsertCellPoint(i);
     }   // end for

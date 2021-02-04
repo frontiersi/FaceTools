@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,12 @@
  ************************************************************************/
 
 #include <Interactor/ViewerNotifier.h>
-#include <Action/ModelSelector.h>
+#include <ModelSelect.h>
 #include <ModelViewer.h>
 using FaceTools::Interactor::ViewerNotifier;
 using FaceTools::Vis::FV;
 using FaceTools::FMV;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ViewerNotifier::ViewerNotifier() : _vwr(nullptr)

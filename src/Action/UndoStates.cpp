@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ using FaceTools::Action::UndoState;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 // static init
 UndoStates::Ptr UndoStates::_singleton;
@@ -53,9 +53,6 @@ void UndoStates::_clear() { _stacks.clear();}
 void UndoStates::storeUndo( const FaceAction* a, Event e, bool autoRestore) { get()->_storeUndo(a, e, autoRestore);}
 void UndoStates::_storeUndo( const FaceAction* a, Event e, bool autoRestore)
 {
-#ifndef NDEBUG
-    std::cerr << "UndoStates::storeUndo: thread ID = " << QThread::currentThreadId() << std::endl;
-#endif
     UndoState::Ptr us = UndoState::create( a, e, autoRestore);
     if ( !autoRestore)
         a->saveState( *us);

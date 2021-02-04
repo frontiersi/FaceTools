@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,7 +66,7 @@ public:
     // model is used. Demographic information about the model is ignored here - the only
     // consideration is if the model has the necessary measurements of the metrics
     // corresponding to each phenotypic indication.
-    static IntSet discover( const FM*, int aid=-1);
+    static IntSet discover( const FM&, int aid=-1);
 
 private:
     static IntSet _ids;

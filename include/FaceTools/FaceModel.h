@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,6 +35,14 @@ public:
     void lockForWrite();        // Lock before making write changes to this FaceModel.
     void lockForRead() const;   // Lock before reading this FaceModel's state.
     void unlock() const;        // Call after done with read or write locks.
+
+    // Return a read lock for this model that releases when the pointer goes out of scope.
+    using RPtr = std::shared_ptr<const FaceModel>;
+    RPtr scopedReadLock() const;
+
+    // Return a write lock for this model that releases when the pointer goes out of scope.
+    using WPtr = std::shared_ptr<FaceModel>;
+    WPtr scopedWriteLock();
 
     /**
      * Update with new mesh - must be different from the existing mesh!
@@ -108,7 +116,6 @@ public:
      */
     void setMask( r3d::Mesh::Ptr, bool copyInTexture=false);
     const r3d::Mesh &mask() const { return *_mask;}
-    r3d::Mesh::Ptr mask() { return _mask;}
     const r3d::KDTree& maskKDTree() const { return *_mkdtree;}
 
     /**
@@ -203,9 +210,15 @@ public:
     Landmark::LandmarkSet makeMeanLandmarksSet() const;
 
     /**
-     * Convenience function to return const paths from the current assessment.
+     * Convenience function to return paths from the current assessment.
      */
     const PathSet& currentPaths() const;
+    PathSet &currentPaths();
+
+    /**
+     * Returns true if the current assessment has paths.
+     */
+    bool hasPaths() const;
 
     /**
      * Add a path with its initial (transformed) position and both handles are set to.
@@ -242,6 +255,11 @@ public:
     void setSex( int8_t);
     int8_t sex() const { return _sex;}
 
+    // Returns true iff this model is a subject match for the given model.
+    // A subject match requires only the following three fields to match:
+    // subjectId(), dateOfBirth(), maskHash().
+    bool isSubjectMatch( const FM*) const;
+
     /**
      * Set/get ethnicity of individual's mother.
      */
@@ -267,6 +285,7 @@ public:
 
     // The views associated with this model.
     const FVS& fvs() const { return _fvs;}
+    FVS& fvs() { return _fvs;}
 
     // Returns true if any of the metadata are present.
     bool hasMetaData() const;

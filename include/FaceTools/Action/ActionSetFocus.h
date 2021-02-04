@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,8 +28,6 @@ public:
     ActionSetFocus( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
 
     QString toolTip() const override { return "Set the camera focus to the chosen point.";}
-
-    static void setFocus( FMV*, const Vec3f&);
 
 protected:
     bool isAllowed( Event) override;

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +30,6 @@ public:
     QString toolTip() const override { return "Show and edit user defined calliper measurements.";}
 
 protected:
-    bool update( Event) override;
     Event doAfterAction( Event) override;
 
 private slots:
@@ -40,8 +39,9 @@ private slots:
     void _doOnLeaveHandle( int pid, int hid);
 
 private:
-    bool _tchanged;
+    FVS _tchanged;
     void _setTempTransparency(bool);
+    void _changeTransparency(bool, Vis::FV*);
 };  // end class
 
 }}   // end namespaces

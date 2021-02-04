@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,65 +16,70 @@
  ************************************************************************/
 
 #include <Action/ActionMoveView.h>
-#include <Vis/BaseVisualisation.h>
 #include <FaceModelViewer.h>
-#include <FaceModel.h>
 #include <Vis/FaceView.h>
-#include <algorithm>
 #include <cassert>
 using FaceTools::Action::ActionMoveView;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
-using FaceTools::Vis::BaseVisualisation;
 using FaceTools::Vis::FV;
-using FaceTools::FMVS;
 using FaceTools::FMV;
-using FaceTools::FVS;
 using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ActionMoveView::ActionMoveView( FMV *tv, FMV *sv, const QString& dn, const QIcon& ico)
-    : FaceAction(dn, ico), _tviewer(tv), _sviewer(sv)
+    : FaceAction(dn, ico), _tvwr(tv), _svwr(sv)
 {
-    assert( _tviewer);
+    assert( _tvwr);
     addRefreshEvent( Event::VIEWER_CHANGE);
+    if ( MS::defaultViewer() == _tvwr)
+        addTriggerEvent( Event::CLOSED_MODEL);
 }   // end ctor
 
 
 bool ActionMoveView::isAllowed( Event)
 {
+    const bool isSrcVwr = MS::defaultViewer() == _svwr;
     const FV* fv = MS::selectedView();
-    // Disallow if moving away from the centre viewer would leave it empty - UNLESS
-    // moving the view merges it with a copy of the model on the target viewer.
-    if ( !fv || (MS::defaultViewer() == fv->viewer() && fv->viewer()->attached().size() == 1 && !_tviewer->isAttached(fv->data())))
+    // Disallow if moving away from the centre viewer leaves it empty unless the target has views.
+    if ( !fv || (isSrcVwr && _svwr->attached().size() == 1 && _tvwr->empty()))
         return false;
     // Enable only if the target viewer isn't the FaceView's current viewer, and either
     // a source viewer isn't defined, or the source viewer is the selected FaceView's viewer. 
-    return _tviewer != fv->viewer() && (!_sviewer || _sviewer->attached().has(fv));
+    const bool allow = _tvwr != fv->viewer() && (!_svwr || _svwr->has(fv));
+    // Restrict maximum number of model views per viewer to 2 unless moving
+    // this view to the target viewer will cause views of the same model to merge.
+    return allow && (_tvwr->attached().size() < 2 || _tvwr->get(fv->data()));
 }   // end isAllowed
 
 
-void ActionMoveView::move( FV* fv, FMV* tfmv)
+bool ActionMoveView::doBeforeAction( Event e) { return isAllowed(e);}
+
+
+void ActionMoveView::doAction( Event)
 {
-    assert( fv);
-    assert( tfmv);
+    FV *fv = MS::selectedView();
+    FM::RPtr fm = fv->rdata();
+    if ( _tvwr->get(fm.get())) // Remove target viewer's copy of the model if present.
+        MS::remove( _tvwr->get(fm.get()));
 
-    assert( fv->viewer() != tfmv);
+    _tvwr->setUpdatesEnabled(false);
+    _svwr->setUpdatesEnabled(false);
+    fv->setViewer( _tvwr);
+    _tvwr->setCamera( _svwr->camera());
+    if ( MS::defaultViewer()->empty())
+    {
+        assert( MS::defaultViewer() == _svwr);
+        // Move all views in the target viewer back to the source (default) viewer
+        while ( !_tvwr->empty())
+            _tvwr->attached().first()->setViewer( _svwr);
+        _svwr->setSelected(fv);  // Ensure the current view is still the selected one
+    }   // end if
 
-    const FM* fm = fv->data();
-    // Does target viewer have view of same model? Remove to replace if so.
-    if ( tfmv->get(fm))
-        MS::remove( tfmv->get(fm));
-
-    fv->setViewer( tfmv);    // Attach to target viewer (detaches from source)
-    // If moving the view has left the centre viewer empty, then move it back to the centre viewer.
-    if ( MS::defaultViewer()->attached().empty())
-        fv->setViewer( MS::defaultViewer());
-}   // end move
-
-
-void ActionMoveView::doAction( Event) { move( MS::selectedView(), _tviewer);}
+    _tvwr->setUpdatesEnabled(true);
+    _svwr->setUpdatesEnabled(true);
+}   // end doAction
 
 
 Event ActionMoveView::doAfterAction( Event) { return Event::VIEWER_CHANGE;}

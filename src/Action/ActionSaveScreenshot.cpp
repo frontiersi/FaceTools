@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ using FaceTools::Action::ActionSaveScreenshot;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::FMV;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ActionSaveScreenshot::ActionSaveScreenshot( const QString& dn, const QIcon& ico, const QKeySequence& ks)
@@ -78,7 +78,7 @@ void ActionSaveScreenshot::doAction( Event)
             fname += ".jpg";
 
         std::vector<cv::Mat> imgs;
-        for ( const FMV* fmv : MS::viewers())
+        for ( FMV* fmv : MS::viewers())
         {
             QSize sz = fmv->size();
             if ( fmv->isVisible() && sz.width() > 0 && sz.height() > 0)

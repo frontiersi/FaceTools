@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,15 +33,15 @@ public:
     ~PhenotypesDialog() override;
 
 signals:
-    void onSelectedHPOTerm( int);
+    void onSelectHPO( int);
 
 public slots:
-    void show();
-    void showPhenotypes( const IntSet&);
+    void showHPOs( const IntSet&);
     void selectHPO( int);
 
 protected:
-    void closeEvent( QCloseEvent*) override;
+    void showEvent( QShowEvent*) override;
+    void hideEvent( QHideEvent*) override;
 
 private slots:
     void _doOnUserSelectedSyndrome();

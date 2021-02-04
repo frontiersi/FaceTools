@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,21 +16,15 @@
  ************************************************************************/
 
 #include <Action/ActionRemesh.h>
-#include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <VertexAdder.h>   // r3d
-#include <cassert>
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionRemesh;
 using FaceTools::Action::Event;
-using FaceTools::Vis::FV;
-using FaceTools::FVS;
-using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
-ActionRemesh::ActionRemesh( const QString& dn, const QIcon& ico)
-    : FaceAction(dn, ico), _maxtarea(2.0)
+ActionRemesh::ActionRemesh( const QString& dn, const QIcon& ico) : FaceAction(dn, ico), _maxtarea(2.0)
 {
     setAsync(true);
 }   // end ctor
@@ -42,6 +36,10 @@ bool ActionRemesh::isAllowed( Event) { return MS::isViewSelected();}
 bool ActionRemesh::doBeforeAction( Event)
 {
     MS::showStatus( "Remeshing model...");
+    _ev = Event::MESH_CHANGE;
+    if ( MS::selectedModelScopedRead()->hasLandmarks())
+        _ev |= Event::LANDMARKS_CHANGE;
+    storeUndo( this, _ev);
     return true;
 }   // end doBeforeAction
 
@@ -62,5 +60,5 @@ void ActionRemesh::doAction( Event)
 Event ActionRemesh::doAfterAction()
 {
     MS::showStatus( "Finished remeshing model.", 5000);
-    return Event::MESH_CHANGE;
+    return _ev;
 }   // end doAfterAction

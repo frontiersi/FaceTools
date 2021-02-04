@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,8 @@ using FaceTools::Action::ActionDeleteAllPaths;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Interactor::PathsHandler;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
+using QMB = QMessageBox;
 
 
 ActionDeleteAllPaths::ActionDeleteAllPaths( const QString& dn, const QIcon& ico)
@@ -47,32 +48,23 @@ bool ActionDeleteAllPaths::isAllowed( Event)
 
 bool ActionDeleteAllPaths::doBeforeAction( Event)
 {
-    using QMB = QMessageBox;
-    static const QString tit = tr("Delete all?");
-    static const QString msg = tr("All custom measurements on this assessment will be erased! Continue?");
-    return QMB::Yes == QMB::warning( static_cast<QWidget*>(parent()), tit, msg, QMB::Yes | QMB::No, QMB::Yes);
+    static const QString tit = tr("Delete Calliper Measurements?");
+    static const QString msg = tr("Are you sure you want to remove all calliper measurements?");
+    return QMB::Yes == QMB::warning( static_cast<QWidget*>(parent()), tit,
+            QString("<p align='center'>%1</p>").arg(msg), QMB::Yes | QMB::No, QMB::Yes);
 }   // end doBeforeAction
 
 
 void ActionDeleteAllPaths::doAction( Event)
 {
     storeUndo(this, Event::PATHS_CHANGE);
-    FM *fm = MS::selectedModel();
-
-    fm->lockForWrite();
-
+    FM::WPtr fm = MS::selectedModelScopedWrite();
     const IntSet pids = fm->currentAssessment()->paths().ids(); // Copy out because altering
-    PathsHandler *handler = MS::handler<PathsHandler>();
     for ( int pid : pids)
-    {
         fm->removePath(pid);
-        handler->visualisation().erasePath( fm, pid);
-    }   // end for
-
+    PathsHandler *handler = MS::handler<PathsHandler>();
     if ( handler->hoverPath())
         handler->leavePath();
-
-    fm->unlock();
 }   // end doAction
 
 

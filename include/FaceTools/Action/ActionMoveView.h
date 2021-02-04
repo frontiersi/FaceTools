@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,20 +29,17 @@ public:
     // the subset of the selected Vis::FVs that are in the source viewer.
     ActionMoveView( FMV* target, FMV* source, const QString&, const QIcon&);
 
-    QString toolTip() const override { return "Move the view of the selected model to an adjacent viewer - removing any existing duplicate view in that viewer.";}
-
-    // Move the given FaceView to the given target viewer - merging if necessary with any copy present in the target viewer.
-    // Does nothing if the target viewer is the same as the FaceView's current viewer.
-    static void move( Vis::FV*, FMV *target);
+    QString toolTip() const override { return "Move the selected view into an adjacent viewer - replacing any existing view of that model.";}
 
 protected:
     bool isAllowed( Event) override;
+    bool doBeforeAction( Event) override;
     void doAction( Event) override;
     Event doAfterAction( Event) override;
 
 private:
-    FMV *_tviewer;
-    FMV *_sviewer;
+    FMV *_tvwr;
+    FMV *_svwr;
 };  // end class
 
 }}   // end namespace

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,8 +34,8 @@ PathSetView::PathSetView() : _viewer(nullptr)
     // The bottom right text.
     _caption->GetTextProperty()->SetJustificationToRight();
     _caption->GetTextProperty()->SetFontFamilyToCourier();
-    _caption->GetTextProperty()->SetFontSize(21);
-    _caption->GetTextProperty()->SetBackgroundOpacity(0.7);
+    _caption->GetTextProperty()->SetFontSize(14);
+    _caption->GetTextProperty()->SetBackgroundOpacity(0.8);
     _caption->SetPickable( false);
     _caption->SetVisibility(false);
 }   // end ctor
@@ -114,8 +114,8 @@ void PathSetView::setCaption( const Path& path, int xpos, int ypos, const Mat3f 
     oss5 << "\n  Y Size:" << appendValue( fabsf(avec[1]), lnunits);
     oss6 << "\n  Z Size:" << appendValue( fabsf(avec[2]), lnunits);
     oss7 << "\n   Depth:" << appendValue( path.depth(), lnunits);
-    oss8 << "\n   Angle:" << appendValue( path.angleAtDepth(), "degs");
-    oss9 << "\n    Area:" << appendValue( path.crossSectionalArea(), lnunits + "^2");
+    oss8 << "\n   Angle:" << appendValue( path.angleAtDepth(), "°");
+    oss9 << "\n    Area:" << appendValue( path.crossSectionalArea(), lnunits + "²");
     _caption->SetInput( (oss0.str() + oss1.str() + oss2.str() + oss3.str() + oss4.str() + oss5.str() + oss6.str() + oss7.str() + oss8.str() + oss9.str()).c_str());
     _caption->SetDisplayPosition( xpos, ypos);
 }   // end setCaption
@@ -136,22 +136,22 @@ PathView* PathSetView::pathView( int id) const
 }   // end pathView
 
 
-void PathSetView::addPath( const Path& path)
+void PathSetView::_addPath( const Path& path)
 {
     PathView* pview = _views[path.id()] = new PathView( path.id());
     // Map handle props to the handles themselves for fast lookup.
     _handles[pview->handle0()->prop()] = pview->handle0();
     _handles[pview->handle1()->prop()] = pview->handle1();
     _handles[pview->depthHandle()->prop()] = pview->depthHandle();
-    updatePath( path);
-}   // end addPath
+    _updatePath( path);
+}   // end _addPath
 
 
-void PathSetView::updatePath( const Path& path)
+void PathSetView::_updatePath( const Path& path)
 {
     assert( _views.count(path.id()) > 0);
     _views.at(path.id())->update( path);
-}   // end updatePath
+}   // end _updatePath
 
 
 void PathSetView::erasePath( int id)
@@ -167,9 +167,17 @@ void PathSetView::erasePath( int id)
 }   // end erasePath
 
 
+void PathSetView::sync( const Path &path)
+{
+    if ( _views.count(path.id()) == 0)
+        _addPath( path);
+    else
+        _updatePath( path);
+}   // end sync
+
+
 void PathSetView::sync( const PathSet& paths)
 {
-    bool isVis = !_visible.empty();
     // First remove any entries from _views that aren't in paths
     IntSet rpids;
     for ( auto& p : _views)
@@ -181,17 +189,7 @@ void PathSetView::sync( const PathSet& paths)
 
     // Then add any in paths not yet present or update what is there
     for ( int pid : paths.ids())
-    {
-        const Path& path = paths.path(pid);
-        if ( _views.count(pid) == 0)
-            addPath( path);
-        else
-            updatePath( path);
-    }   // end for
-
-    isVis = isVis && !_views.empty();
-    if ( isVis)
-        setVisible(true, _viewer);
+        sync( paths.path(pid));
 }   // end sync
 
 
@@ -203,15 +201,19 @@ void PathSetView::pokeTransform( const vtkMatrix4x4* vm)
 }   // end pokeTransform
 
 
+void PathSetView::setPickable( bool v)
+{
+    for ( auto& p : _views)
+        p.second->setPickable(v);
+}   // end setPickable
+
+
 void PathSetView::updateTextColours()
 {
-    if ( _viewer)
-    {
-        const QColor bg = _viewer->backgroundColour();
-        const QColor fg = chooseContrasting(bg);
-        _caption->GetTextProperty()->SetBackgroundColor( bg.redF(), bg.greenF(), bg.blueF());
-        _caption->GetTextProperty()->SetColor( fg.redF(), fg.greenF(), fg.blueF());
-        for ( auto& p : _views)
-            p.second->updateColours();
-    }   // end if
+    const QColor bg = _viewer ? _viewer->backgroundColour() : Qt::white;
+    const QColor fg = chooseContrasting(bg);
+    _caption->GetTextProperty()->SetBackgroundColor( bg.redF(), bg.greenF(), bg.blueF());
+    _caption->GetTextProperty()->SetColor( fg.redF(), fg.greenF(), fg.blueF());
+    for ( auto& p : _views)
+        p.second->updateColours();
 }   // end updateTextColours

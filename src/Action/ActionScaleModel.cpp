@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,9 +21,7 @@ using FaceTools::Action::ActionScaleModel;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
-using FaceTools::FVS;
-using FaceTools::FM;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ActionScaleModel::ActionScaleModel( const QString &dn, const QIcon& ico, const QKeySequence& ks)
@@ -35,8 +33,7 @@ ActionScaleModel::ActionScaleModel( const QString &dn, const QIcon& ico, const Q
 
 void ActionScaleModel::postInit()
 {
-    QWidget* p = static_cast<QWidget*>(parent());
-    _dialog = new Widget::ResizeDialog(p);
+    _dialog = new Widget::ResizeDialog(static_cast<QWidget*>(parent()));
 }   // end postInit
 
 
@@ -45,7 +42,8 @@ bool ActionScaleModel::isAllowed( Event) { return MS::isViewSelected();}
 
 bool ActionScaleModel::doBeforeAction( Event)
 {
-    _dialog->reset( MS::selectedModel());
+    FM::RPtr fm = MS::selectedModelScopedRead();
+    _dialog->reset( fm.get());
     _smat = Mat4f::Identity();
 
     if ( _dialog->exec() > 0)
@@ -60,6 +58,12 @@ bool ActionScaleModel::doBeforeAction( Event)
     {
         MS::showStatus("Resizing model...");
         doResize = true;
+        _ev = Event::MESH_CHANGE | Event::AFFINE_CHANGE | Event::CAMERA_CHANGE;
+        if ( fm->hasLandmarks())
+            _ev |= Event::LANDMARKS_CHANGE;
+        if ( fm->hasPaths())
+            _ev |= Event::PATHS_CHANGE;
+        storeUndo(this, _ev);
     }   // end if
 
     return doResize;
@@ -68,11 +72,11 @@ bool ActionScaleModel::doBeforeAction( Event)
 
 void ActionScaleModel::doAction( Event)
 {
-    storeUndo(this, Event::AFFINE_CHANGE | Event::CAMERA_CHANGE);
-    FM* fm = MS::selectedModel();
-    fm->lockForWrite();
-    fm->addTransformMatrix( _smat);
-    fm->unlock();
+    FM::WPtr fm = MS::selectedModelScopedWrite();
+    const Mat4f T = fm->transformMatrix();
+    fm->addTransformMatrix( _smat * fm->inverseTransformMatrix());
+    fm->fixTransformMatrix();
+    fm->addTransformMatrix( T);
 }   // end doAction
 
 
@@ -81,9 +85,8 @@ Event ActionScaleModel::doAfterAction( Event)
     // Also apply the scale transform to the camera position (focus is fixed)
     const Vec3f cpos = r3d::transform( _smat, MS::selectedViewer()->camera().pos());
     MS::selectedViewer()->setCameraPosition(cpos);
-
     MS::showStatus( "Finished resizing model.", 5000);
     MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-    return Event::AFFINE_CHANGE;
+    return _ev;
 }   // end doAfterAction
 

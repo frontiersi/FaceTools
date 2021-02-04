@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@ using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
 using FaceTools::ModelViewer;
 using FMM = FaceTools::FileIO::FaceModelManager;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
 ActionSetParallelProjection::ActionSetParallelProjection( const QString& dn, const QIcon& ico, const QKeySequence& ks)
@@ -41,7 +41,7 @@ bool ActionSetParallelProjection::update( Event e)
 }   // end update
 
 
-bool ActionSetParallelProjection::isAllowed( Event e) { return has( e, Event::CLOSED_MODEL) || FMM::numOpen() > 0;}
+bool ActionSetParallelProjection::isAllowed( Event e) { return FMM::numOpen() > 0;}
 
 
 void ActionSetParallelProjection::doAction( Event)

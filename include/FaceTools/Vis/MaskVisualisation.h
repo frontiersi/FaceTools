@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,23 +28,20 @@ class FaceTools_EXPORT MaskVisualisation : public BaseVisualisation
 public:
     ~MaskVisualisation() override;
 
-    const char* name() const override { return "MaskVisualisation";}
-
     bool applyToAllInViewer() const override { return false;}
     bool applyToAllViewers() const override { return false;}
 
-    bool isAvailable( const FV*, const QPoint*) const override;
+    bool isAvailable( const FV*) const override;
 
     float maxAllowedOpacity() const override { return 0.99f;}
 
-    void apply( const FV*, const QPoint*) override;
+    void refresh( FV*) override;
     void purge( const FV*) override;
 
     void setVisible( FV*, bool) override;
     bool isVisible( const FV*) const override;
 
-    void refresh( const FV*) override;
-    void syncWithViewTransform( const FV*) override;
+    void syncTransform( const FV*) override;
 
 private:
     std::unordered_map<const FV*, MaskView*> _views;

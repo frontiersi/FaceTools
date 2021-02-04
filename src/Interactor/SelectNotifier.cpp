@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 
 #include <Interactor/SelectNotifier.h>
 #include <Vis/FaceView.h>
+#include <FaceModelViewer.h>
 #include <cassert>
 using FaceTools::Interactor::SelectNotifier;
 using FaceTools::Vis::FV;
@@ -52,7 +53,10 @@ void SelectNotifier::setSelected( FV* fv, bool selected)
     if ( !isLocked() && fv && (fv == _selected) != selected)    // Only change if needing to
     {
         if ( _selected)
+        {
+            _selected->actor()->SetPickable(false);
             emit onSelected( _selected, false);
+        }   // end if
 
         _selected = nullptr;
 
@@ -60,6 +64,8 @@ void SelectNotifier::setSelected( FV* fv, bool selected)
         {
             assert( _available.has(fv));
             _selected = fv;
+            _selected->actor()->SetPickable(true);
+            fv->viewer()->setSelected(fv);
             emit onSelected( fv, true);
         }   // end if
     }   // end if

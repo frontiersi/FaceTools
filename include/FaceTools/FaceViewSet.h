@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2018 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,9 +63,9 @@ public:
     Vis::FV* find( const vtkProp*) const;
 
     std::unordered_set<Vis::FV*>::iterator begin() { return _fvs.begin();}
-    std::unordered_set<Vis::FV*>::const_iterator begin() const { return _fvs.begin();}
+    std::unordered_set<Vis::FV*>::const_iterator begin() const { return _fvs.cbegin();}
     std::unordered_set<Vis::FV*>::iterator end() { return _fvs.end();}
-    std::unordered_set<Vis::FV*>::const_iterator end() const { return _fvs.end();}
+    std::unordered_set<Vis::FV*>::const_iterator end() const { return _fvs.cend();}
 
 private:
     std::unordered_set<Vis::FV*> _fvs;
@@ -74,7 +74,5 @@ private:
 };  // end class
 
 }   // end namespace
-
-Q_DECLARE_METATYPE( FaceTools::FaceViewSet)
 
 #endif

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,30 +16,14 @@
  ************************************************************************/
 
 #include <Vis/RadialSelectVisualisation.h>
-#include <Vis/FaceView.h>
 #include <Interactor/RadialSelectHandler.h>
 #include <FaceModelViewer.h>
-#include <FaceModel.h>
 using FaceTools::Vis::RadialSelectVisualisation;
 using FaceTools::Vis::RadialSelectView;
 using FaceTools::Vis::FV;
-using FaceTools::FM;
 
 
 RadialSelectVisualisation::RadialSelectVisualisation() : _handler(nullptr) {}
-
-
-RadialSelectVisualisation::~RadialSelectVisualisation()
-{
-    while (!_views.empty())
-        purge( _views.begin()->first);
-}   // end dtor
-
-
-bool RadialSelectVisualisation::isAvailable( const FV *fv, const QPoint*) const
-{
-    return true;
-}   // end isAvailable
 
 
 bool RadialSelectVisualisation::belongs( const vtkProp* prop, const FV* fv) const
@@ -48,24 +32,13 @@ bool RadialSelectVisualisation::belongs( const vtkProp* prop, const FV* fv) cons
 }   // end belongs
 
 
-void RadialSelectVisualisation::apply( const FV* fv, const QPoint*)
-{
-    _views[fv]; // Just ensure present
-    setHighlighted( fv, false);
-}   // end apply
-
-
-void RadialSelectVisualisation::purge( const FV* fv)
-{
-    if ( _views.count(fv) > 0)
-        _views.erase(fv);
-}   // end purge
+bool RadialSelectVisualisation::isAvailable( const FV *fv) const { return true;}
 
 
 void RadialSelectVisualisation::setVisible( FV* fv, bool v)
 {
-    if ( _views.count(fv) > 0)
-        _views.at(fv).setVisible( v, fv->viewer());
+    assert( _views.count(fv) > 0);
+    _views.at(fv).setVisible( v, fv->viewer());
 }   // end setVisible
 
 
@@ -75,32 +48,49 @@ bool RadialSelectVisualisation::isVisible( const FV* fv) const
 }   // end isVisible
 
 
-void RadialSelectVisualisation::syncWithViewTransform( const FV *fv)
+void RadialSelectVisualisation::syncTransform( const FV *fv)
 {
-    if ( _views.count(fv) > 0)
-        _views.at(fv).pokeTransform( fv->transformMatrix());
-}   // end syncWithViewTransform
+    assert( _views.count(fv) > 0);
+    _views.at(fv).pokeTransform( fv->transformMatrix());
+}   // end syncTransform
 
 
-void RadialSelectVisualisation::refresh( const FV *fv)
+void RadialSelectVisualisation::purge( const FV* fv) { _views.erase(fv);}
+
+
+void RadialSelectVisualisation::purgeAll()
 {
-    assert(_handler);
-    assert(fv);
-    const FM *fm = fv->data();
-    const r3d::Mesh &mesh = fm->mesh();
-    // Get the untransformed centre
-    const Vec3f upos = r3d::transform( fm->inverseTransformMatrix(), _handler->centre());
-    // Get the untransformed vertices
-    const std::list<int> &vidxs = _handler->boundaryVertices();
-    std::vector<const Vec3f*> vvec( vidxs.size());
-    int i = 0;
-    for ( int vidx : vidxs)
-        vvec[i++] = &mesh.uvtx(vidx);
+    // Need to copy out the FaceViews as non-const first so the purge calls
+    // don't erase items from the container we're iterating over. This is
+    // some crappy design frankly - need to think of a better way of doing
+    // this more generally.
+    std::vector<FV*> fvs;
+    fvs.reserve( _views.size());
+    for ( const auto &p : _views)
+        fvs.push_back(const_cast<FV*>(p.first));
+    for ( FV *fv : fvs)
+        fv->purge(this);
+}   // end purgeAll
 
-    for ( const FV *f : fm->fvs())
-        if ( _views.count(f) > 0)
-            _views.at(f).update( upos, vvec);
+
+void RadialSelectVisualisation::refresh( FV *fv)
+{
+    if ( _views.count(fv) == 0)
+        update( fv->data());
+    setHighlighted( fv, false);
 }   // end refresh
+
+
+void RadialSelectVisualisation::update( const FM *fm)
+{
+    // Get the untransformed centre
+    const Vec3f c = r3d::transform( fm->inverseTransformMatrix(), _handler->centre());
+    // Get the list of vertices
+    const std::list<int> &vidxs = _handler->boundaryVertices();
+    // Update the RadialSelectView of each FaceView and render immediately
+    for ( const FV *fv : fm->fvs())
+        _views[fv].update( c, fm->mesh(), vidxs);
+}   // end update
 
 
 void RadialSelectVisualisation::setHighlighted( const FV* fv, bool hval)

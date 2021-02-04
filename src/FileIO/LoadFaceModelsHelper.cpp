@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 #include <QFile>
 using FaceTools::FileIO::LoadFaceModelsHelper;
 using FMM = FaceTools::FileIO::FaceModelManager;
+using QMB = QMessageBox;
 
 
 LoadFaceModelsHelper::LoadFaceModelsHelper( QWidget* parent) : _parent(parent) {}
@@ -56,26 +57,45 @@ int LoadFaceModelsHelper::setFilteredFilenames( const QStringList& fnames)
             msg.append( QObject::tr("Only one more model may be loaded."));
         else
             msg.append( QObject::tr("%1 more models may be loaded.").arg(nallowed));
-        QMessageBox::warning( _parent, QObject::tr("Load limit reached!"), msg);
+        QMB::warning( _parent, QObject::tr("Load limit reached!"), QString("<p align='center'>%1</p>").arg(msg));
         _filenames.clear();
     }   // end if
 
-    // Show warning for not supported files
-    if ( notpres.size() == 1)
-        QMessageBox::warning( _parent, QObject::tr("Not existent file!"), QObject::tr( "Can't find file ") + notpres.join(" "));
-    else if ( notpres.size() > 1)
-        QMessageBox::warning( _parent, QObject::tr("Not existent files!"), QObject::tr( "Can't find files ") + notpres.join(" "));
+    QString mtit, msg;
 
-    if ( notsupp.size() == 1)
-        QMessageBox::warning( _parent, QObject::tr("Unsupported file type!"), notsupp.join(" ") + QObject::tr(" has an unsupported format!"));
-    else if ( notsupp.size() > 1)
-        QMessageBox::warning( _parent, QObject::tr("Unsupported file types!"), notsupp.join(", ") + QObject::tr(" are not supported file types!"));
+    // File not present?
+    if ( notpres.size() > 0)
+    {
+        mtit = QObject::tr("File Not Present!");
+        if ( notpres.size() == 1)
+            msg = QObject::tr( "Can't find file ") + notpres.join(" ");
+        else if ( notpres.size() > 1)
+            msg = QObject::tr( "Can't find files ") + notpres.join(" ");
+    }   // end if
 
-    if ( areopen.size() == 1)
-        QMessageBox::warning( _parent, QObject::tr("File already open!"), areopen.join(" ") + QObject::tr(" is already open!"));
-    else if ( areopen.size() > 1)
-        QMessageBox::warning( _parent, QObject::tr("Files already open!"), areopen.join(", ") + QObject::tr(" are already open!"));
+    // File type not supported?
+    if ( notsupp.size() > 0)
+    {
+        mtit = QObject::tr("Unsupported File Type!");
+        if ( notsupp.size() == 1)
+            msg = notsupp.join(" ") + QObject::tr(" has an unsupported format!");
+        else if ( notsupp.size() > 1)
+            msg = notsupp.join(", ") + QObject::tr(" are not supported file types!");
+    }   // end if
 
+    // File already open?
+    if ( areopen.size() > 0)
+    {
+        mtit = QObject::tr("File Already Open!");
+        if ( areopen.size() == 1)
+            msg = areopen.join(" ") + QObject::tr(" is already open!");
+        else if ( areopen.size() > 1)
+            msg = areopen.join(", ") + QObject::tr(" are already open!");
+    }   // end if
+
+    if ( !mtit.isEmpty())
+        QMB::warning( _parent, mtit, QString("<p align='center'>%1</p>").arg(msg));
+    
     return _filenames.size();
 }   // end setFilteredFilenames
 
@@ -112,9 +132,10 @@ void LoadFaceModelsHelper::showLoadErrors()
     // For each error type, display a warning dialog
     for ( auto f : _failnames)
     {
-        QString msg = f.first + QObject::tr("\nUnable to load the following:\n");
-        msg.append( f.second.join("\n"));
-        QMessageBox::warning( _parent, QObject::tr("Unable to load file(s)!"), msg);
+        QString msg = f.first + QObject::tr("<br>Unable to load the following:<br>");
+        msg.append( f.second.join("<br>"));
+        const QString mtit = QObject::tr("Unable to load file(s)!");
+        QMB::warning( _parent, mtit, QString("<p align='center'>%1</p>").arg(msg));
     }   // end for
     _failnames.clear();
 }   // end showLoadErrors

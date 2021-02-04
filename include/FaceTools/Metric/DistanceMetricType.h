@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,13 +37,12 @@ public:
 
     QString category() const override { return "Distance";}
     QString units() const override { return FM::LENGTH_UNITS;}
-    QString typeRemarks() const override { return "Distances are measured between points by default, unless projected into one of the facial planes.";}
+    QString typeRemarks() const override { return "Distances are measured between points in 3D space in general but may instead be measured as a projection into one of the standard anatomical planes.";}
     Vis::MetricVisualiser* visualiser() override { return &_vis;}
 
     bool fixedInPlane() const override { return false;}
-    void setInPlane( bool v) override { _inPlane = v;}
-    bool inPlane() const override { return _inPlane;}
 
+    bool hasMeasurement( const FM *fm) const override { return _distInfo.count(fm) > 0;}
     void purge( const FM *fm) override { _distInfo.erase(fm);}
 
     const std::vector<DistMeasure> &distInfo( const FM *fm) const { return _distInfo.at(fm);}
@@ -53,7 +52,6 @@ protected:
 
 private:
     Vis::DistanceVisualiser _vis;
-    bool _inPlane;
     std::unordered_map<const FM*, std::vector<DistMeasure> > _distInfo;
 };  // end class
 

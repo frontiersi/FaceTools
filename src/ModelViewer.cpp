@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
 #include <MiscFunctions.h>
 #include <r3dvis/VtkTools.h>
 #include <r3dvis/VtkActorCreator.h>
-#include <r3dvis/ImageGrabber.h>
 #include <r3dvis/PointPlacer.h>
 #include <QTools/QImageTools.h>
 #include <vtkMapper.h>
@@ -106,7 +105,6 @@ void ModelViewer::clear() { _qviewer->clear();}
 
 size_t ModelViewer::getWidth() const { return _qviewer->getWidth();}
 size_t ModelViewer::getHeight() const { return _qviewer->getHeight();}
-bool ModelViewer::saveSnapshot() const { return QTools::saveImage( _qviewer->getColourImg());}
 
 
 Vec3f ModelViewer::project( const QPoint &q) const { return _qviewer->pickWorldPosition(q);}
@@ -195,7 +193,8 @@ void ModelViewer::fitCamera( float r)
     setCamera(cp);
 }   // end fitCamera
 
-cv::Mat_<cv::Vec3b> ModelViewer::grabImage() const { return r3dvis::ImageGrabber( _qviewer->getRenderWindow()).colour();}
+
+cv::Mat_<cv::Vec3b> ModelViewer::grabImage() { return _qviewer->getColourImg();}
 
 
 void ModelViewer::setParallelProjection( bool enable)

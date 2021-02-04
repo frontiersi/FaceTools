@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,90 +17,98 @@
 
 #include <Vis/LandmarksVisualisation.h>
 #include <LndMrk/LandmarksManager.h>
-#include <Action/ModelSelector.h>
+#include <ModelSelect.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 using FaceTools::Vis::LandmarksVisualisation;
-using FaceTools::Vis::BaseVisualisation;
-using FaceTools::Vis::LandmarkSetView;
 using FaceTools::Vis::FV;
 using FaceTools::FaceSide;
 using FaceTools::Landmark::LandmarkSet;
 using LMAN = FaceTools::Landmark::LandmarksManager;
-using MS = FaceTools::Action::ModelSelector;
+using MS = FaceTools::ModelSelect;
 
 
-LandmarksVisualisation::~LandmarksVisualisation()
-{
-    while (!_views.empty())
-        purge(_views.begin()->first);
-}   // end dtor
-
-
-bool LandmarksVisualisation::isAvailable( const FV *fv, const QPoint*) const
+bool LandmarksVisualisation::isAvailable( const FV *fv) const
 {
     return fv->data()->hasLandmarks();
 }   // end isAvailable
 
 
-void LandmarksVisualisation::apply( const FV* fv, const QPoint*)
-{
-    assert( !_hasView(fv));
-    _views[fv] = new LandmarkSetView;
-}   // end apply
-
-
-void LandmarksVisualisation::purge( const FV* fv)
-{
-    assert( _hasView(fv));
-    delete _views.at(fv);
-    _views.erase(fv);
-}   // end purge
+void LandmarksVisualisation::purge( const FV* fv) { _views.erase(fv);}
 
 
 void LandmarksVisualisation::setVisible( FV* fv, bool v)
 {
-    assert( _hasView(fv));
-    _views.at(fv)->setVisible( v, fv->viewer());
+    if ( _hasView(fv))
+    {
+        _views.at(fv).setVisible( v, fv->viewer());
+        _views.at(fv).setSelectedColour( MS::selectedModel() == fv->data());
+    }   // end if
 }   // end setVisible
 
 
 bool LandmarksVisualisation::isVisible( const FV* fv) const
 {
-    return _hasView(fv) && _views.at(fv)->isVisible();
+    return _hasView(fv) && _views.at(fv).isVisible();
 }   // end isVisible
 
 
-void LandmarksVisualisation::syncWithViewTransform( const FV* fv)
+void LandmarksVisualisation::syncTransform( const FV* fv)
 {
-    assert( _hasView(fv));
-    _views.at(fv)->pokeTransform(fv->transformMatrix());
-}   // end syncWithViewTransform
+    if ( _hasView(fv))
+        _views.at(fv).pokeTransform(fv->transformMatrix());
+}   // end syncTransform
 
 
-void LandmarksVisualisation::refresh( const FV *fv)
+void LandmarksVisualisation::refresh( FV *fv)
 {
-    assert( _hasView(fv));
+    LandmarkSetView &lsv = _views[fv];  // Creates if doesn't exist
+    const Mat4f imat = fv->data()->inverseTransformMatrix();
     const LandmarkSet& lmks = fv->data()->currentLandmarks();
+
     for ( int lm : lmks.ids())
     {
         if ( LMAN::isBilateral(lm))
         {
-            refreshLandmarkPosition( fv, lm, LEFT);
-            refreshLandmarkPosition( fv, lm, RIGHT);
+            lsv.set( lm, LEFT, r3d::transform( imat, lmks.pos(lm, LEFT)));
+            lsv.set( lm, RIGHT, r3d::transform( imat, lmks.pos(lm, RIGHT)));
         }   // end if
         else
-            refreshLandmarkPosition( fv, lm, MID);
+            lsv.set( lm, MID, r3d::transform( imat, lmks.pos(lm, MID)));
     }   // end for
-    _views.at(fv)->setSelectedColour( fv == MS::selectedView());
 }   // end refresh
+
+
+void LandmarksVisualisation::setSelectedColour( const FV *fv, bool v)
+{
+    if ( _hasView(fv))
+        _views.at(fv).setSelectedColour( v);
+}   // end setSelectedColour
+
+
+void LandmarksVisualisation::setPickable( const FV *fv, bool v)
+{
+    if ( _hasView(fv))
+        _views.at(fv).setPickable( v);
+}   // end setPickable
+
+
+void LandmarksVisualisation::refreshLandmarkPosition( const FV* fv, int lm, FaceSide lat)
+{
+    if ( _hasView(fv))
+    {
+        const FM *fm = fv->data();
+        const LandmarkSet& lmks = fm->currentLandmarks();
+        _views.at(fv).set( lm, lat, r3d::transform( fm->inverseTransformMatrix(), lmks.pos(lm, lat)));
+    }   // end if
+}   // end refreshLandmarkPosition
 
 
 // Called from handler
 void LandmarksVisualisation::setLabelVisible( const FV* fv, int lm, FaceSide lat, bool v)
 {
     if ( _hasView(fv))
-        _views.at(fv)->setLabelVisible( v, lm, lat);
+        _views.at(fv).setLabelVisible( v, lm, lat);
 }   // end setLabelVisible
 
 
@@ -108,22 +116,14 @@ void LandmarksVisualisation::setLabelVisible( const FV* fv, int lm, FaceSide lat
 void LandmarksVisualisation::setLandmarkHighlighted( const FV* fv, int lm, FaceSide lat, bool v)
 {
     if ( _hasView(fv))
-        _views.at(fv)->setHighlighted( v, lm, lat);
+        _views.at(fv).setHighlighted( v, lm, lat);
 }   // end setLandmarkHighlighted
-
-
-void LandmarksVisualisation::refreshLandmarkPosition( const FV* fv, int lm, FaceSide lat)
-{
-    assert( _hasView(fv));
-    const LandmarkSet& lmks = fv->data()->currentLandmarks();
-    _views.at(fv)->set( lm, lat, r3d::transform( fv->data()->inverseTransformMatrix(), lmks.pos(lm, lat)));
-}   // end refreshLandmarkPosition
 
   
 // Called from handler
 int LandmarksVisualisation::landmarkId( const FV* fv, const vtkProp* prop, FaceSide &lat) const
 {
-    return _hasView(fv) ? _views.at(fv)->landmarkId( prop, lat) : -1;
+    return _hasView(fv) ? _views.at(fv).landmarkId( prop, lat) : -1;
 }   // end landmarkId
 
 
@@ -133,7 +133,7 @@ bool LandmarksVisualisation::belongs( const vtkProp* p, const FV* fv) const
     if ( _hasView(fv))
     {
         FaceSide ignored;
-        b = _views.at(fv)->landmarkId(p, ignored) >= 0;
+        b = _views.at(fv).landmarkId(p, ignored) >= 0;
     }   // end if
     return b;
 }   // end belongs

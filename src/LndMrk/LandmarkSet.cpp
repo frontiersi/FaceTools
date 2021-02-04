@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,17 +81,7 @@ LandmarkSet::LandmarkSet( const std::unordered_set<const LandmarkSet*>& lms)
         setAverage( _lmksM, n);
         setAverage( _lmksR, n);
     }   // end if
-
-    //_clearAlignment();
 }   // end ctor
-
-/*
-void LandmarkSet::_clearAlignment() const
-{
-    _algn.setZero();
-    _ialgn.setZero();
-}   // end _clearAlignment
-*/
 
 
 bool LandmarkSet::has( int id, FaceSide lat) const
@@ -156,11 +146,6 @@ bool LandmarkSet::set( int id, const Vec3f& v, FaceSide lat)
 
     _lateral(lat)[id] = v;
     _ids.insert(id);
-
-    /*
-    if ( LMAN::usedForAlignment(id))
-        _clearAlignment();
-    */
     return true;
 }   // end set
 
@@ -279,79 +264,6 @@ Vec3f getMeanOfSet( const IntSet &ms, const std::unordered_map<int, Vec3f> &lmks
 
 Vec3f LandmarkSet::medialMean() const { return getMeanOfSet( LMAN::medialAlignmentSet(), _lmksM);}
 
-/*
-Vec3f LandmarkSet::_quarter0() const { return getMeanOfSet( LMAN::topAlignmentSet(), _lmksR);}
-Vec3f LandmarkSet::_quarter1() const { return getMeanOfSet( LMAN::topAlignmentSet(), _lmksL);}
-Vec3f LandmarkSet::_quarter2() const { return getMeanOfSet( LMAN::bottomAlignmentSet(), _lmksL);}
-Vec3f LandmarkSet::_quarter3() const { return getMeanOfSet( LMAN::bottomAlignmentSet(), _lmksR);}
-
-
-Mat4f LandmarkSet::alignment() const
-{
-    if ( empty())
-        return Mat4f::Identity();
-
-    if ( _algn.isZero())
-    {
-        const Vec3f mmean = medialMean();
-
-        const Vec3f q0 = _quarter0() - mmean;
-        const Vec3f q1 = _quarter1() - mmean;
-        const Vec3f q2 = _quarter2() - mmean;
-        const Vec3f q3 = _quarter3() - mmean;
-
-        Vec3f zvec01 = q0.cross(q1);
-        Vec3f zvec12 = q1.cross(q2);
-        Vec3f zvec23 = q2.cross(q3);
-        Vec3f zvec30 = q3.cross(q0);
-        zvec01.normalize();
-        zvec12.normalize();
-        zvec23.normalize();
-        zvec30.normalize();
-
-        Vec3f zvec = zvec01 + zvec12 + zvec23 + zvec30;
-        Vec3f yvec = (q0 + q1) - (q2 + q3);
-        Vec3f xvec = yvec.cross(zvec);
-        zvec = xvec.cross(yvec);
-
-        xvec.normalize();
-        yvec.normalize();
-        zvec.normalize();
-        // Only now are these vectors orthonormal.
-
-        _algn = Mat4f::Identity();
-        _algn.block<3,1>(0,0) = xvec;
-        _algn.block<3,1>(0,1) = yvec;
-        _algn.block<3,1>(0,2) = zvec;
-
-        // Set the mean further back toward the ear
-        //const float d = (q0 - q1).norm() + (q1 - q2).norm() + (q2 - q3).norm() + (q3 - q0).norm();
-        _algn.block<3,1>(0,3) = mmean;// - 0.3f * d * zvec;
-        _ialgn.setZero();
-    }   // end if
-
-    assert( !_algn.isZero());
-    return _algn;
-}   // end alignment
-
-
-Mat4f LandmarkSet::inverseAlignment() const
-{
-    if ( empty())
-        return Mat4f::Identity();
-
-    if ( _ialgn.isZero())
-    {
-        if ( _algn.isZero())    // Ensure the alignment matrix is calculated
-            alignment();
-        _ialgn = _algn.inverse();
-    }   // end if
-
-    assert( !_ialgn.isZero());
-    return _ialgn;
-}   // end inverseAlignment
-*/
-
 
 namespace {
 
@@ -417,7 +329,6 @@ void LandmarkSet::swapLaterals()
     const auto tmp = _lmksL;
     _lmksL = _lmksR;
     _lmksR = tmp;
-    //_clearAlignment();
 }   // end swapLaterals
 
 
@@ -429,7 +340,6 @@ void LandmarkSet::moveToSurface( const FaceTools::FM* fm)
         _lmksM.at(p.first) = FaceTools::toSurface( fm->kdtree(), p.second);
     for ( const auto& p : _lmksR)
         _lmksR.at(p.first) = FaceTools::toSurface( fm->kdtree(), p.second);
-    //_clearAlignment();
 }   // end moveToSurface
 
 
@@ -442,7 +352,6 @@ void LandmarkSet::transform( const Mat4f& t)
         p.second = r3d::transform( t, p.second);
     for ( auto& p : _lmksR)
         p.second = r3d::transform( t, p.second);
-    //_clearAlignment();
 }   // end transform
 
 
@@ -484,6 +393,7 @@ bool LandmarkSet::_readLateral( const PTree& lats, FaceSide lat)
         return false;
     }   // end if
 
+    // Read in all the landmarks present in the tree
     for ( const PTree::value_type& lval : lats.get_child( tag))
     {
         const QString lmcode = lval.first.c_str();
@@ -498,6 +408,7 @@ bool LandmarkSet::_readLateral( const PTree& lats, FaceSide lat)
         }   // end if
         set( lmk->id(), r3d::getVertex(lval.second), lat);
     }   // end for
+
     return true;
 }   // end _readLateral
 
@@ -505,7 +416,6 @@ bool LandmarkSet::_readLateral( const PTree& lats, FaceSide lat)
 // Read in the landmarks from record.
 bool LandmarkSet::read( const PTree& lnodes)
 {
-    //_clearAlignment();
     if ( !_readLateral( lnodes, LEFT))
         return false;
     if ( !_readLateral( lnodes, MID))

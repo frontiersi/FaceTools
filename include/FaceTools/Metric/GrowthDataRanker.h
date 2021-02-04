@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2020 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,56 +31,40 @@ public:
 
     void add( GrowthData::Ptr);
     void combineSexes();
-    void combineEthnicities();
 
-    bool empty() const { return _gdata.empty();}
     const GrowthDataSources& all() const { return _all;}
-
-    // Return the available sexs
-    std::unordered_set<int8_t> sexes() const;
-
-    // Return the available ethnicities
-    IntSet ethnicities() const;
-
-    // Return the source references sorted alphanumerically
-    static QStringList sources( const GrowthDataSources&);
-
-    // Return the matched GrowthData sources or an empty set.
-    GrowthDataSources lookup( int8_t sex, int ethn) const;
-
-    // Returns true iff data exist for the given sex, ethnicity.
-    bool hasData( int8_t sex, int ethn) const;
-
-    // Return the match GrowthData or null.
-    const GrowthData* lookup( int8_t sex, int ethn, const QString& src) const;
-
-    const GrowthData* current() const { return _cgd;}
-    void setCurrent( const GrowthData*);    // Set the current explicitly
-
-    // Returns just those set as compatible from the last call to set.
-    const GrowthDataSources& compatible() const { return _compat;}
-    void setCompatible( const FM*); // Set the most compatible set for the given model.
-
-    // Return the best scored match for the given model. Won't be null unless this ranker is empty.
-    const GrowthData* findBestMatch( const FM*) const;
-
-    const GrowthData* findBestMatch( int8_t sex, int ethn) const;
+    std::unordered_set<int8_t> sexes() const; // Return the available sexs
+    IntSet ethnicities() const; // Return the available ethnicities
 
     const GrowthData* stats( int growthDataId) const;
 
+    // Returns the compatible set for the given model.
+    GrowthDataSources compatible( const FM*) const;
+
+    // Return the compatible set for the given sex and ethnicity.
+    GrowthDataSources compatible( int8_t sex, int ethn) const;
+
+    // Return the matching GrowthData or null.
+    const GrowthData* matching( int8_t sex, int ethn, const QString& src) const;
+
+    // Return the best scored match for the given data from the given sources.
+    static const GrowthData* bestMatch( const GrowthDataSources&, const FM*);
+    static const GrowthData* bestMatch( const GrowthDataSources&, int8_t sex, int eth);
+    static const GrowthData* bestMatch( const GrowthDataSources&, int8_t sex, int meth, int peth, float age);
+    // Return the references sorted alphanumerically for the given sources.
+    static QStringList sources( const GrowthDataSources&);
+
 private:
     int _gids;
-    const GrowthData *_cgd;
-    std::unordered_map<int8_t, std::unordered_map<int, GrowthDataSources> > _gdata; // Keyed by sex-->ethnicity
-    std::unordered_map<int8_t, GrowthDataSources> _sdata;   // Keyed by sex
-    GrowthDataSources _compat;
+    std::unordered_map<int8_t, std::unordered_map<int, GrowthDataSources> > _gdata; // sex-->ethnicity
+    std::unordered_map<int8_t, GrowthDataSources> _sdata;   // sex
     GrowthDataSources _all;
     std::unordered_set<GrowthData::Ptr> _allptrs;
     std::unordered_map<int, const GrowthData*> _stats;
 
-    const GrowthData* _findBestMatch( int8_t, int, int, float) const;
-    GrowthDataSources _findMatching( int8_t, int) const;
-    void _findMatching( int8_t, int, GrowthDataSources&) const;
+    GrowthDataSources _compatible( int8_t, int) const;
+    void _compatible( int8_t, int, GrowthDataSources&) const;
+
     GrowthDataRanker( const GrowthDataRanker&) = delete;
     void operator=( const GrowthDataRanker&) = delete;
 };  // end class
