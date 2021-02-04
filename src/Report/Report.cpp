@@ -22,6 +22,7 @@
 #include <Metric/StatsManager.h>
 #include <Metric/Chart.h>
 #include <Action/ActionOrientCamera.h>
+#include <Action/ActionUpdateThumbnail.h>
 #include <r3dio/PDFGenerator.h>
 #include <U3DCache.h>
 #include <FaceModel.h>
@@ -33,19 +34,19 @@
 #include <QPixmap>
 #include <QFile>
 #include <QtDebug>
-using MM = FaceTools::Metric::MetricManager;
-using MC = FaceTools::Metric::Metric;
-using MS = FaceTools::ModelSelect;
 using FaceTools::Metric::GrowthData;
 using FaceTools::Metric::MetricValue;
 using FaceTools::Metric::MetricSet;
-
 using FaceTools::Report::Report;
-using r3d::CameraParams;
-using r3d::Mesh;
 using FaceTools::FM;
 using FaceTools::Metric::PhenotypeManager;
 using FaceTools::Metric::Phenotype;
+using MM = FaceTools::Metric::MetricManager;
+using MC = FaceTools::Metric::Metric;
+using MS = FaceTools::ModelSelect;
+using RMAN =FaceTools::Report::ReportManager;
+using r3d::CameraParams;
+using r3d::Mesh;
 
 namespace {
 QString sanit( QString s)
@@ -372,7 +373,7 @@ bool Report::_writeLatex( QTextStream& os) const
        << "\\pagestyle{fancy}" << Qt::endl
        << "\\setlength\\headheight{15mm}" << Qt::endl
        << "\\rhead{\\raisebox{0mm}{\\includegraphics[width=45mm]{logo.pdf}} \\\\" << Qt::endl
-       << "\\footnotesize " << sanit(ReportManager::versionString()) << "}" << Qt::endl
+       << "\\footnotesize " << sanit(RMAN::versionString()) << "}" << Qt::endl
        << "\\lhead{" << Qt::endl
        << "\\Large \\textbf{" << sanit(_title) << "} \\\\" << Qt::endl
        << "\\vspace{2mm} \\normalsize" << Qt::endl // Small gap below title
@@ -411,9 +412,16 @@ void Report::_addLatexFigure( const FM *fm, float wmm, float hmm, const std::str
     const U3DCache::Filepath u3dfilepath = U3DCache::u3dfilepath(*fm);  // Read lock
     const QString u3dfile = QDir( _tmpdir.path()).relativeFilePath( *u3dfilepath);
 
-    const auto cam = Action::ActionOrientCamera::makeFrontCamera( *fm, 30, 0.75f);
+    const auto cam = Action::ActionOrientCamera::makeFrontCamera( *fm, 30, 0.8f);
     const QString viewsFile = "views.vws";
-    if ( !ReportManager::writeViewsFile( cam.distance(), viewsFile))
+    if ( !RMAN::writeViewsFile( cam.distance(), viewsFile))
+        return;
+
+    // Background image for model until user enables 3D content to replace this.
+    const QSize bimgSz( int(wmm*10), int(hmm*10));
+    const cv::Mat bimg = Action::ActionUpdateThumbnail::generateImage( fm, bimgSz, 30, 0.8f);
+    const QString bimgFile = "bgimg.jpg";
+    if ( !RMAN::writeImageFile( bimg, bimgFile))
         return;
 
     assert(_os);
@@ -431,15 +439,17 @@ void Report::_addLatexFigure( const FM *fm, float wmm, float hmm, const std::str
             \includemedia[
             label=)" << label << "," << Qt::endl
        << "width=" << wmm << "mm," << Qt::endl
-       << "height=" << hmm << "mm," << Qt::endl // keepaspectratio
+       << "height=" << hmm << "mm," << Qt::endl
        << R"(add3Djscript=3Dspintool.js,   % let scene rotate about z-axis
-             add3Djscript=hideAxes.js,     % hide the orientation axes (ReportManager file)
+             add3Djscript=hideAxes.js,     % hide the orientation axes (RMAN file)
              activate=pageopen,
              playbutton=none,    % plain | fancy | none
+             transparent=false,
              3Dbg=1 1 1,
              3Dmenu,
              3Dviews=)" << viewsFile << R"(,
-             ]{}{)" << u3dfile << R"(}\\)" << Qt::endl;
+             ]{\includegraphics[width=)" << wmm << "mm,height=" << hmm << "mm]{"
+                 << bimgFile << "}}{" << u3dfile << R"(}\\)" << Qt::endl;
 
     /* THESE DON'T WORK (and also aren't formatted well).
     os << "\\mediabutton[3Dgotoview=" << label << ":1]{\\fbox{RIGHT}}" << Qt::endl

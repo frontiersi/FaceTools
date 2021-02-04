@@ -71,6 +71,15 @@ bool ReportManager::init( const QString& pdflatex, const QString& idtfConverter,
 }   // end init
 
 
+bool ReportManager::writeImageFile( const cv::Mat &img, const QString &fname)
+{
+    const QString fpath = _tmpdir.filePath(fname);
+    if ( QFile::exists(fpath))
+        QFile::remove(fpath);
+    return cv::imwrite( fpath.toStdString(), img);
+}   // end writeImageFile
+
+
 bool ReportManager::writeViewsFile( float d, const QString &fname)
 {
     // (Re)Create the views file in the temporary directory

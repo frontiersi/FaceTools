@@ -57,6 +57,9 @@ public:
     // (Over)write the views file inside the temporary directory for U3D model export.
     static bool writeViewsFile( float distance, const QString &fname="views.vws");
 
+    // (Over)write the image file inside the temporary directory.
+    static bool writeImageFile( const cv::Mat&, const QString &fname="img.jpg");
+
 private:
     static QTemporaryDir _tmpdir;
     static QString _hname;

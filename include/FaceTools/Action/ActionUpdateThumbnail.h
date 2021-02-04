@@ -33,6 +33,11 @@ public:
     // Returns thumbnail for the given model or the currently selected one if null.
     static cv::Mat thumbnail( const FM *fm=nullptr);
 
+    // Generate an image of the given model having given size. Params fov and
+    // dscale give the camera field of view and distance (scale) from focus
+    // (passed through to ActionOrientCamera::makeFrontCamera).
+    static cv::Mat generateImage( const FM*, const QSize&, float fov=30, float dscale=1.0f);
+
 signals:
     // Emitted whenever a new thumbnail generated for the currently selected model.
     void updated();

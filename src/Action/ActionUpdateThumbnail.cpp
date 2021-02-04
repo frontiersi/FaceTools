@@ -58,25 +58,17 @@ cv::Mat ActionUpdateThumbnail::thumbnail( const FM *fm)
 }   // end thumbnail
 
 
-void ActionUpdateThumbnail::setThumbnailSize( const QSize &sz) { _vsz = sz;}
-
-
-bool ActionUpdateThumbnail::isAllowed( Event) { return MS::isViewSelected();}
-
-
-bool ActionUpdateThumbnail::doBeforeAction( Event e) { return isAllowed(e);}
-
-
-void ActionUpdateThumbnail::doAction( Event e)
+// static
+cv::Mat ActionUpdateThumbnail::generateImage( const FM *fm, const QSize &sz, float fov, float dscale)
 {
-    // Don't make offscreen viewer a private member - VTK on Windows hangs in r3dvis::extractBGR
+    // This function used to be an instance member function (now static). The note
+    // below relates to when it was a member function:
+    // "Don't make offscreen viewer a private member - VTK on Windows hangs in r3dvis::extractBGR
     // if exec in diff thread. Note that this issue doesn't arise if omv is a private member and
-    // its snapshot function is called in the GUI thread.
-    r3dvis::OffscreenMeshViewer omv( cv::Size(_vsz.width(), _vsz.height()));
+    // its snapshot function is called in the GUI thread."
+    r3dvis::OffscreenMeshViewer omv( cv::Size(sz.width(), sz.height()));
     omv.setBackgroundColour( 1.0f, 1.0f, 1.0f);
-    FM::RPtr fm = MS::selectedModelScopedRead();
 
-    _rwlock.lockForWrite();
     vtkActor *actor = omv.setModel( fm->mesh());
     if ( !fm->mesh().hasMaterials())
     {
@@ -88,10 +80,28 @@ void ActionUpdateThumbnail::doAction( Event e)
         prop->SetInterpolationToPhong();
     }   // end if
 
-    omv.setCamera( ActionOrientCamera::makeFrontCamera( *fm, 30, 0.8f));
+    omv.setCamera( ActionOrientCamera::makeFrontCamera( *fm, fov, dscale));
     //std::cerr << " SNAP ENTER" << std::endl;
-    _thumbs[fm.get()] = omv.snapshot(); // Breaks in separate thread if omv not constructed every time
+    return omv.snapshot(); // Breaks in separate thread if omv not constructed every time
     //std::cerr << " SNAP EXIT" << std::endl;
+}   // end generateImage
+
+
+void ActionUpdateThumbnail::setThumbnailSize( const QSize &sz) { _vsz = sz;}
+
+
+bool ActionUpdateThumbnail::isAllowed( Event) { return MS::isViewSelected();}
+
+
+bool ActionUpdateThumbnail::doBeforeAction( Event e) { return isAllowed(e);}
+
+
+void ActionUpdateThumbnail::doAction( Event e)
+{
+    FM::RPtr fm = MS::selectedModelScopedRead();
+    cv::Mat img = generateImage( fm.get(), _vsz, 30, 0.8f);
+    _rwlock.lockForWrite();
+    _thumbs[fm.get()] = img;
     _rwlock.unlock();
 }   // end doAction
 
