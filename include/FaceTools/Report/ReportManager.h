@@ -55,7 +55,7 @@ public:
     static Report::Ptr report( const QString& nm) { return _reports.count(nm) > 0 ? _reports.at(nm) : nullptr;}
 
     // (Over)write the views file inside the temporary directory for U3D model export.
-    static bool writeViewsFile( float distance, const QString &fname="views.vws");
+    static bool writeViewsFile( float distance, float fov, const QString &fname="views.vws");
 
     // (Over)write the image file inside the temporary directory.
     static bool writeImageFile( const cv::Mat&, const QString &fname="img.jpg");

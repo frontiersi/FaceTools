@@ -37,6 +37,7 @@ protected:
 
 private:
     std::unordered_map<const FMV*, r3dvis::ScalarLegend> _legends;
+    void _recalcLegendPlacement( r3dvis::ScalarLegend*);
 };  // end class
 
 }}   // end namespaces

@@ -92,7 +92,7 @@ public:
     static FM* selectedModel() { return selectedView() ? selectedView()->data() : nullptr;}
 
     // Return pointer to the other (non-selected) model if it exists.
-    static const FM* nonSelectedModel();
+    static FM* nonSelectedModel();
 
     // Return the selected model or null if not available.
     static FM::RPtr selectedModelScopedRead();

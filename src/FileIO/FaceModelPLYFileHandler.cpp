@@ -36,7 +36,10 @@ FM* FaceModelPLYFileHandler::read( const QString& qfname)
     FM* fm = nullptr;
     r3d::Mesh::Ptr model = _importer.load(qfname.toLocal8Bit().toStdString());
     if ( model)
+    {
         fm = new FM(model);
+        setImageCaptureDate( fm, qfname);
+    }   // end if
     else
         _err = _importer.err().c_str();
     return fm;

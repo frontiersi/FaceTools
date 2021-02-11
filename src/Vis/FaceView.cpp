@@ -453,4 +453,6 @@ void FaceView::_updateSurfaceProperties()
     _actor->GetMapper()->SetInterpolateScalarsBeforeMapping(false);
     if ( s_interpolateShading)
         _actor->GetMapper()->SetInterpolateScalarsBeforeMapping(true);
+
+    _actor->GetMapper()->SetScalarVisibility( _cv != nullptr);  // Not actually necessary
 }   // end _updateSurfaceProperties

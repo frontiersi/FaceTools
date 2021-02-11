@@ -90,13 +90,13 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionRemoveManifolds.h"
     "${INCLUDE_ACTION_DIR}/ActionRenamePath.h"
     "${INCLUDE_ACTION_DIR}/ActionResetDetection.h"
+    "${INCLUDE_ACTION_DIR}/ActionResizeModel.h"
     "${INCLUDE_ACTION_DIR}/ActionRestoreLandmarks.h"
     "${INCLUDE_ACTION_DIR}/ActionRestoreSingleLandmark.h"
     "${INCLUDE_ACTION_DIR}/ActionRotateModel.h"
     "${INCLUDE_ACTION_DIR}/ActionSaveAs.h"
     "${INCLUDE_ACTION_DIR}/ActionSave.h"
     "${INCLUDE_ACTION_DIR}/ActionSaveScreenshot.h"
-    "${INCLUDE_ACTION_DIR}/ActionScaleModel.h"
     "${INCLUDE_ACTION_DIR}/ActionSelect.h"
     "${INCLUDE_ACTION_DIR}/ActionSetFocus.h"
     "${INCLUDE_ACTION_DIR}/ActionSetMaxScalarColour.h"
@@ -323,13 +323,13 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/ActionRemoveManifolds
     ${SRC_ACTION_DIR}/ActionRenamePath
     ${SRC_ACTION_DIR}/ActionResetDetection
+    ${SRC_ACTION_DIR}/ActionResizeModel
     ${SRC_ACTION_DIR}/ActionRestoreLandmarks
     ${SRC_ACTION_DIR}/ActionRestoreSingleLandmark
     ${SRC_ACTION_DIR}/ActionRotateModel
     ${SRC_ACTION_DIR}/ActionSaveAs
     ${SRC_ACTION_DIR}/ActionSave
     ${SRC_ACTION_DIR}/ActionSaveScreenshot
-    ${SRC_ACTION_DIR}/ActionScaleModel
     ${SRC_ACTION_DIR}/ActionSelect
     ${SRC_ACTION_DIR}/ActionSetFocus
     ${SRC_ACTION_DIR}/ActionSetMaxScalarColour

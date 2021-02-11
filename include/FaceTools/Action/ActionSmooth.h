@@ -30,10 +30,10 @@ public:
     QString toolTip() const override { return "Smooth surface geometry to reduce curvature at vertices.";}
 
     static void setMaxCurvature( double c);
-    static double maxCurvature() { return s_maxc;}  // Default is 0.9
+    static double maxCurvature() { return s_maxc;}  // Default is 1.0
 
     static void setMaxIterations( size_t i);
-    static size_t maxIterations() { return s_maxi;} // Default is 10
+    static size_t maxIterations() { return s_maxi;} // Default is 1
 
 protected:
     bool isAllowed( Event) override;

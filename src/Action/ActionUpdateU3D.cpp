@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <Action/ActionUpdateU3D.h>
+#include <Report/ReportManager.h>
 #include <U3DCache.h>
 #include <algorithm>
 using FaceTools::Action::ActionUpdateU3D;
@@ -27,31 +28,28 @@ using MS = FaceTools::ModelSelect;
 
 ActionUpdateU3D::ActionUpdateU3D() : FaceAction( "U3D Updater")
 {
-    addPurgeEvent( Event::MASK_CHANGE);
-    addTriggerEvent( Event::MASK_CHANGE | Event::LOADED_MODEL);
-#ifdef NDEBUG
+    addPurgeEvent( Event::MESH_CHANGE);
+    addTriggerEvent( Event::MESH_CHANGE | Event::LOADED_MODEL);
     setAsync( true);
-#endif
 }   // end ctor
 
 
 bool ActionUpdateU3D::isAllowed( Event)
 {
+    if ( !Report::ReportManager::isAvailable() || !U3DCache::isAvailable())
+        return false;
     const FM *fm = MS::selectedModel();
-    return fm && fm->hasLandmarks() && fm->isAligned() && U3DCache::isAvailable();
+    return fm && fm->hasLandmarks() && fm->isAligned();
 }   // end isAllowed
 
 
-void ActionUpdateU3D::doAction( Event)
-{
-    U3DCache::refresh( *MS::selectedModel(), true);
-}   // end doAction
+bool ActionUpdateU3D::doBeforeAction( Event e) { return isAllowed(e);}
 
 
-void ActionUpdateU3D::purge( const FM* fm)
-{
-    U3DCache::purge(*fm);
-}   // end purge
+void ActionUpdateU3D::doAction( Event) { U3DCache::refresh( *MS::selectedModel());}
+
+
+void ActionUpdateU3D::purge( const FM* fm) { U3DCache::purge(*fm);}
 
 
 Event ActionUpdateU3D::doAfterAction( Event)

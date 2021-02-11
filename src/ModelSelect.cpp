@@ -171,10 +171,10 @@ FM::WPtr ModelSelect::selectedModelScopedWrite()
 }   // end selectedModelScopedWrite
 
 
-const FM *ModelSelect::nonSelectedModel()
+FM *ModelSelect::nonSelectedModel()
 {
     const FM *fm = selectedModel();
-    const FM *ofm = nullptr;
+    FM *ofm = nullptr;
     if ( fm)
         ofm = FMM::other(*fm);
     return ofm;

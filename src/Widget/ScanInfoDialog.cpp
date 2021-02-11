@@ -148,9 +148,6 @@ ScanInfoDialog::ScanInfoDialog( QWidget *parent) :
     _focusOutSignaller( QEvent::FocusOut, false)
 {
     _ui->setupUi(this);
-    _ui->hpoTermsTextBrowser->setOpenExternalLinks(true);
-    setFixedSize( geometry().width(), geometry().height());
-    setSizeGripEnabled( false);
 
     setWindowTitle( _dialogRootTitle);
     connect( _ui->buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked, this, &ScanInfoDialog::_apply);
@@ -162,6 +159,8 @@ ScanInfoDialog::ScanInfoDialog( QWidget *parent) :
                                        this, &ScanInfoDialog::_doOnChangedPaternalEthnicity);
     connect( _ui->sexComboBox, QOverload<int>::of(&QComboBox::activated), this, &ScanInfoDialog::_doOnSexChanged);
 
+    _ui->dobDateEdit->setDisplayFormat( "dd MMM yyyy");
+    _ui->captureDateEdit->setDisplayFormat( "dd MMM yyyy");
     connect( _ui->dobDateEdit, &QDateEdit::dateChanged, this, &ScanInfoDialog::_doOnDOBChanged);
     connect( _ui->captureDateEdit, &QDateEdit::dateChanged, this, &ScanInfoDialog::_doOnCaptureDateChanged);
 
@@ -195,6 +194,9 @@ ScanInfoDialog::ScanInfoDialog( QWidget *parent) :
     _ui->sexComboBox->addItem( toLongSexString( UNKNOWN_SEX), UNKNOWN_SEX);    // Used for intersex
     _ui->sexComboBox->addItem( toLongSexString( FEMALE_SEX), FEMALE_SEX);
     _ui->sexComboBox->addItem( toLongSexString( MALE_SEX), MALE_SEX);
+
+    this->adjustSize();
+    setFixedSize( geometry().width(), geometry().height());
 
     refresh();
 }   // end ctor
@@ -277,10 +279,7 @@ void ScanInfoDialog::setThumbnail( const cv::Mat_<cv::Vec3b> img)
 }   // end setThumbnail
 
 
-QSize ScanInfoDialog::thumbDims() const
-{
-    return _ui->imageLabel->size();
-}   // end thumbDims
+QSize ScanInfoDialog::thumbDims() const { return _ui->imageLabel->size();}
 
 
 void ScanInfoDialog::_apply()

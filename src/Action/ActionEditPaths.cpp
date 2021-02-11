@@ -75,7 +75,7 @@ void ActionEditPaths::_setTempTransparency( bool enable)
     if ( fv)
     {
         _changeTransparency( enable, fv);
-        FM::WPtr wfm = MS::otherModelScopedWrite();
+        FM *wfm = MS::nonSelectedModel();
         if ( wfm)
             for ( FV *f : wfm->fvs())
                 _changeTransparency( enable, f);

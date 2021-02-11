@@ -15,18 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_SCALE_MODEL_H
-#define FACE_TOOLS_ACTION_SCALE_MODEL_H
+#ifndef FACE_TOOLS_ACTION_RESIZE_MODEL_H
+#define FACE_TOOLS_ACTION_RESIZE_MODEL_H
 
 #include "FaceAction.h"
 #include <FaceTools/Widget/ResizeDialog.h>
 
 namespace FaceTools { namespace Action {
 
-class FaceTools_EXPORT ActionScaleModel : public FaceAction
+class FaceTools_EXPORT ActionResizeModel : public FaceAction
 { Q_OBJECT
 public:
-    ActionScaleModel( const QString&, const QIcon&, const QKeySequence& ks=(Qt::SHIFT + Qt::Key_S));
+    ActionResizeModel( const QString&, const QIcon&, const QKeySequence& ks=(Qt::SHIFT + Qt::Key_S));
 
     QString toolTip() const override { return "Resize the selected model.";}
 

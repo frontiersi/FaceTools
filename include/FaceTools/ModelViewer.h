@@ -118,7 +118,12 @@ public:
 
     void updateRender();    // Call after making changes to content
 
+signals:
+    void onResized();   // Signal that this viewer was resized
+
 protected:
+    void resizeEvent( QResizeEvent*) override;
+
     // Attach/detach interactors and mouse handlers returning false iff already attached.
     bool attach( Interactor::ViewerNotifier*);
     bool detach( Interactor::ViewerNotifier*);

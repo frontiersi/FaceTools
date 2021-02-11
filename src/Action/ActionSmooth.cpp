@@ -29,8 +29,8 @@ using MS = FaceTools::ModelSelect;
 using QMB = QMessageBox;
 
 // static definitions
-double ActionSmooth::s_maxc(0.9);
-size_t ActionSmooth::s_maxi(10);
+double ActionSmooth::s_maxc(1.0);
+size_t ActionSmooth::s_maxi(1);
 
 void ActionSmooth::setMaxCurvature( double c) { s_maxc = std::max( 0.0, std::min( c, 1.0));}
 void ActionSmooth::setMaxIterations( size_t i) { s_maxi = i;}

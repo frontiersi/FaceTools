@@ -40,7 +40,7 @@ void ModelViewer::enableFloodLights( bool enable)
 {
     std::vector<r3dvis::Light> lights;
     if ( enable)
-        r3dvis::createBoxLights( 600, lights, true);
+        r3dvis::createBoxLights( 100000, lights, true);
     else
         lights.push_back( r3dvis::Light()); // Default r3dvis::Light is a bright white headlight
     _floodLightsEnabled = enable;
@@ -73,6 +73,12 @@ bool ModelViewer::attach( ViewerNotifier* v) { return _qviewer->attach( v);}
 bool ModelViewer::detach( ViewerNotifier* v) { return _qviewer->detach( v);}
 bool ModelViewer::attach( MouseHandler* v) { return _qviewer->attach( v);}
 bool ModelViewer::detach( MouseHandler* v) { return _qviewer->detach( v);}
+
+void ModelViewer::resizeEvent( QResizeEvent *e)
+{
+    QWidget::resizeEvent(e);
+    emit onResized();
+}   // end resizeEvent
 
 
 void ModelViewer::setSize( const cv::Size& sz) { _qviewer->setSize( static_cast<size_t>(sz.width), static_cast<size_t>(sz.height));}

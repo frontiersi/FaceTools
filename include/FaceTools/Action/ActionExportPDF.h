@@ -30,7 +30,7 @@ class FaceTools_EXPORT ActionExportPDF : public FaceAction
 public:
     ActionExportPDF( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
 
-    QString toolTip() const override { return "Generate and export a PDF containing information about the selected model.";}
+    QString toolTip() const override { return "Generate a PDF report about the selected model.";}
 
     // By default, the user is simply asked to save the report. If set true here,
     // the report will be opened in the user's default PDF reader after saving.
@@ -42,8 +42,8 @@ public:
     static bool isAvailable();
 
     // Ask user where to save a report generated at the given temporary file location.
-    // Before returning true, if the PDF viewer is set to open generated reports automatically,
-    // the corresponding viewer program will be forked to try to open the file in the newly saved location.
+    // Before returning true, if the PDF viewer is set to open reports automatically,
+    // the corresponding PDF viewer program will be used to open the report at save location.
     // Returns false if unable to save the report or if the user cancels.
     static bool saveGeneratedReport( const QString& tmpfile, QFileDialog*);
 
@@ -61,8 +61,6 @@ private:
     QFileDialog *_fileDialog;
     Widget::ReportChooserDialog *_dialog;
     Report::Report::Ptr _report;
-    QTemporaryDir _tmpdir;
-    QString _tmpfile;
     QString _err;
     static bool _openOnSave;
 };  // end class

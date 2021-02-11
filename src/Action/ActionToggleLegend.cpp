@@ -38,13 +38,20 @@ ActionToggleLegend::ActionToggleLegend( const QString& dn) : FaceAction( dn)
 
 void ActionToggleLegend::postInit()
 {
+    /*
     for ( FMV *fmv : MS::viewers())
     {
-        r3dvis::ScalarLegend &sleg = _legends[fmv];
-        sleg.setPosition( 0.8, 0.1);
-        sleg.setHeight( 0.8);
+        r3dvis::ScalarLegend *sleg = &_legends[fmv];
+        connect( fmv, &ModelViewer::onResized, [=]()
+        {
+            this->_recalcLegendPlacement(sleg);
+            sleg->prop()->RenderOpaqueGeometry(fmv->getRenderer());
+        });
     }   // end for
+    */
+    ; // no-op
 }   // end postInit
+
 
 
 namespace  {
@@ -104,6 +111,16 @@ bool updateLegend( r3dvis::ScalarLegend &sleg, const FV *fv)
 }   // end namespace
 
 
+void ActionToggleLegend::_recalcLegendPlacement( r3dvis::ScalarLegend *sleg)
+{
+    // Setting the position and height here forces the texture to be recalculated.
+    // NB on high DPI screens, the texture is not stable - bug in VTK.
+    sleg->setPosition( 0.8, 0.50);
+    sleg->setWidth( 0.1);
+    sleg->setHeight( 0.47);
+}   // end _recalcLegendPlacement
+
+
 bool ActionToggleLegend::isAllowed( Event)
 {
     // Toggling is allowed if the selected view has an active surface
@@ -129,11 +146,12 @@ bool ActionToggleLegend::update( Event e)
                 fv = fmv->selected();
         }   // end if
 
-        r3dvis::ScalarLegend &sleg = _legends.at(fmv);
+        r3dvis::ScalarLegend &sleg = _legends[fmv];
         if ( isVis && fv && updateLegend( sleg, fv))
             fmv->add( sleg.prop());
         else
             fmv->remove( sleg.prop());
+        _recalcLegendPlacement( &sleg);
     }   // end for
 
     return isChecked();

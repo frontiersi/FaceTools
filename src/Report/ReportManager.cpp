@@ -38,16 +38,18 @@ QStringList ReportManager::_names;
 std::unordered_map<QString, Report::Ptr> ReportManager::_reports;
 
 
+bool ReportManager::isAvailable()
+{
+    return U3DExporter::isAvailable() && PDFGenerator::isAvailable();
+}   // end isAvailable
+
 
 bool ReportManager::init( const QString& pdflatex, const QString& idtfConverter, const QString& inkscape)
 {
     U3DExporter::IDTFConverter = idtfConverter.toStdString();
-    if ( !U3DExporter::isAvailable())
-        std::cerr << "WARNING: IDTFConverter " << U3DExporter::IDTFConverter << " unavailable!" << std::endl;
-
     PDFGenerator::pdflatex = pdflatex.toStdString();
-    if ( !PDFGenerator::isAvailable())
-        std::cerr << "WARNING: pdflatex " << PDFGenerator::pdflatex << " unavailable!" << std::endl;
+    if ( !isAvailable())
+        std::cerr << "'pdflatex' not set/found; report generation is disabled." << std::endl;
 
     _inkscape = inkscape;
     //_tmpdir.setAutoRemove(false);   // Uncomment for debug
@@ -80,7 +82,7 @@ bool ReportManager::writeImageFile( const cv::Mat &img, const QString &fname)
 }   // end writeImageFile
 
 
-bool ReportManager::writeViewsFile( float d, const QString &fname)
+bool ReportManager::writeViewsFile( float d, float fov, const QString &fname)
 {
     // (Re)Create the views file in the temporary directory
     QFile viewsfile( _tmpdir.filePath(fname));
@@ -99,27 +101,25 @@ bool ReportManager::writeViewsFile( float d, const QString &fname)
     ots << "VIEW=Front" << Qt::endl
         << "  C2C=0 -1 0" << Qt::endl
         << "  ROO=" << d << Qt::endl
+        << "  AAC=" << fov << Qt::endl
         << "  LIGHTS=AmbientLight" << Qt::endl
         << "END" << Qt::endl
         << "VIEW=Right" << Qt::endl
         << "  C2C=-1 0 0" << Qt::endl
         << "  ROO=" << d << Qt::endl
+        << "  AAC=" << fov << Qt::endl
         << "  LIGHTS=AmbientLight" << Qt::endl
         << "END" << Qt::endl
         << "VIEW=Left" << Qt::endl
         << "  C2C=1 0 0" << Qt::endl
         << "  ROO=" << d << Qt::endl
+        << "  AAC=" << fov << Qt::endl
         << "  LIGHTS=AmbientLight" << Qt::endl
         << "END" << Qt::endl;
     viewsfile.close();
     return true;
 }   // end writeViewsFile
 
-
-bool ReportManager::isAvailable()
-{
-    return U3DExporter::isAvailable() && PDFGenerator::isAvailable();
-}   // end isAvailable
 
 
 int ReportManager::load( const QString& sdir)

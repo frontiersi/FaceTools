@@ -39,7 +39,10 @@ FM* FaceModelAssImpFileHandler::read( const QString& qfname)
     const std::string fname = qfname.toLocal8Bit().toStdString();
     r3d::Mesh::Ptr model = _assimp->load(fname);
     if ( model)
+    {
         fm = new FM(model);
+        setImageCaptureDate( fm, qfname);
+    }   // end if
     else
         _err = _assimp->err().c_str();
     return fm;

@@ -152,7 +152,7 @@ QString makeSourceString( const GrowthData *gd, bool ageOutOfBounds, const QStri
     if ( !gd->longNote().isEmpty())
         src += lb + gd->longNote();
     if ( ageOutOfBounds)
-        src += lb + "[Age Outside Inferential Domain!]";
+        src += lb + "[Age Outside Inferential Domain]";
     return src;
 }   // end makeSourceString
 }   // end namespace

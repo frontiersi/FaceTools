@@ -42,6 +42,9 @@ public:
     virtual FM* read( const QString&);              // Must override if canRead overridden to true
     virtual bool write( const FM*, const QString&); // Must override if canWrite overridden to true
 
+protected:
+    static void setImageCaptureDate( FM*, const QString&);
+
 private:
     FaceModelFileHandler( const FaceModelFileHandler&) = delete;
     void operator=( const FaceModelFileHandler&) = delete;

@@ -52,9 +52,19 @@ public:
     // Return true iff this report can be generated.
     bool isAvailable() const;
 
-    // Generate report and save to given filename returning true on success.
+    // Set the content of the report by calling out to the corresponding
+    // Lua delegate functions for this report. This must be called in the
+    // GUI thread since the _addLatexGrowthCurvesChart requires the use
+    // of the QChartView object which assumes it's in the GUI thread.
     // If false is returned, the error message is retrieved using errorMsg().
-    bool generate( const QString& pdffile);
+    bool setContent();
+
+    // Generate report returning true on success. If false is
+    // returned, the error message is retrieved using errorMsg().
+    bool generate();
+
+    // Return the path to the generated PDF.
+    QString pdffile() const;
 
     inline const QString &errorMsg() const { return _errMsg;}
 
@@ -66,10 +76,13 @@ private:
     QString _title;
     bool _twoModels;
     sol::state _lua;
-    sol::function _available;
-    sol::function _addContent;
+    sol::function _isAvailable;
+    sol::function _setContent;
     QTextStream *_os;
     QString _errMsg;
+    bool _validContent;
+
+    void _addLatexTestFigure( float wmm, float hmm);
 
     void _addLatexFigure( const FM*, float widthMM, float heightMM, const std::string& caption);
 
@@ -92,7 +105,7 @@ private:
     void _addFootnoteSources( const FM*, const sol::table&);
 
     bool _useSVG() const;
-    bool _writeLatex( QTextStream&) const;
+    void _writeLatex( QTextStream&);
     Report( const Report&) = delete;
     void operator=( const Report&) = delete;
 };  // end class

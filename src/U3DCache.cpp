@@ -16,13 +16,17 @@
  ************************************************************************/
 
 #include <U3DCache.h>
+#include <Vis/FaceView.h>
 #include <r3dio/U3DExporter.h>
+#include <r3dvis/VtkTools.h>
 #include <QTemporaryFile>
 #include <QTools/QImageTools.h>
 #include <cassert>
 using FaceTools::U3DCache;
 using FaceTools::FM;
+using FaceTools::Vis::FV;
 
+// static definitions
 QTemporaryDir U3DCache::_tmpdir;
 QReadWriteLock U3DCache::_rwLock;
 std::unordered_set<const FM*> U3DCache::_cache;
@@ -51,50 +55,88 @@ bool U3DCache::isAvailable()
 }   // end isAvailable
 
 
-bool U3DCache::refresh( const FM &fm, bool med9)
+namespace {
+std::string exportU3D( const r3d::Mesh &mesh, const QString &fname,
+                       const r3d::Colour &ems=r3d::Colour::white())
+{
+    std::string errmsg = "";
+    QTemporaryFile tfile( QDir::tempPath() + "/XXXXXX.u3d");
+    if ( tfile.open())
+    {
+        r3dio::U3DExporter xptr( true/*false for debug*/, true/*media9*/, ems);
+        if ( xptr.save( mesh, tfile.fileName().toLocal8Bit().toStdString()))
+        {
+            if ( !QFile::copy( tfile.fileName(), fname))
+                errmsg = "Unable to copy generated U3D to required location!";
+            QFile::remove( tfile.fileName());
+        }   // end if
+        else
+            errmsg = "Unable to save to U3D format!";
+    }   // end if
+    else
+        errmsg = "Couldn't open temporary file for U3D export!";
+    return errmsg;
+}   // end exportU3D
+}   // end namespace
+
+
+bool U3DCache::refresh( const FM &fm)
 {
     fm.lockForRead();
     r3d::Mesh::Ptr mesh = fm.mesh().deepCopy();
     fm.unlock();
+    assert( mesh->hasSequentialVertexIds());
 
-    // Add a texture if none present
-    float ambv = 1.0f;
+    r3d::Colour ems = r3d::Colour::white();
     if ( !mesh->hasMaterials())
     {
-        ambv = 0.3f;    // Allow flat textured models to show up with less ambient light reflected by their material
-        const cv::Mat mat = QTools::copyQImage2OpenCV( QImage(":/imgs/BASE_BLUE"));
-        mesh->addMaterial( mat);
-        static const Vec2f uvs[3] = {Vec2f(1,0), Vec2f(1,1), Vec2f(0,0)};
-        for ( int fid : mesh->faces())
-            mesh->setOrderedFaceUVs( 0, fid, uvs);
+        const QColor bc = FV::BASECOL;
+        ems = r3d::Colour( bc.red(), bc.green(), bc.blue());
+        /*
+        // Add a flat texture since none present
+        static const QImage timg(":/textures/BASE_BLUE");
+        if ( timg.isNull())
+            std::cerr << "timg is null! Cannot add pseudo texture!" << std::endl;
+        else
+        {
+            const cv::Mat mat = QTools::copyQImage2OpenCV( timg);
+            const int mid = mesh->addMaterial( mat);
+            static const Vec2f uvs[3] = {Vec2f(1,0), Vec2f(1,1), Vec2f(0,0)};
+            for ( int fid : mesh->faces())
+                mesh->setOrderedFaceUVs( mid, fid, uvs);
+        }   // end else
+        */
     }   // end if
 
-    bool refreshed = false;
-    QTemporaryFile tfile( QDir::tempPath() + "/XXXXXX.u3d");
-    if ( tfile.open())
+    const std::string errmsg = exportU3D( *mesh, _makeFilePath(fm), ems);
+    if ( errmsg.empty())
     {
-        //r3dio::U3DExporter xptr( false, med9, ambv);  // For debug
-        r3dio::U3DExporter xptr( true, med9, ambv);
-        //std::cerr << QString( "Exporting U3D model to '%1'").arg( tfile.fileName()).toStdString() << std::endl;
-        if ( xptr.save( *mesh, tfile.fileName().toLocal8Bit().toStdString()))
-        {
-            const QString cacheFileName = _makeFilePath(fm);
-            _rwLock.lockForWrite();
-            // Copy U3D model exported to the temporary location to the cache location
-            QFile::copy( tfile.fileName(), cacheFileName);
-            _cache.insert(&fm);
-            _rwLock.unlock();
-            QFile::remove( tfile.fileName());
-            refreshed = true;
-        }   // end if
-        else
-            std::cerr << "[ERROR] FaceTools::U3DCache::refresh: Unable to save to U3D format!" << std::endl;
+        _rwLock.lockForWrite();
+        _cache.insert(&fm);
+        _rwLock.unlock();
     }   // end if
     else
-        std::cerr << "[ERROR] FaceTools::U3DCache::refresh: Couldn't open temporary file for exporting U3D!" << std::endl;
-
-    return refreshed;
+        std::cerr << "[ERROR] FaceTools::U3DCache::refresh: " << errmsg << std::endl;
+    return errmsg.empty();
 }   // end refresh
+
+
+r3d::Mesh::Ptr U3DCache::makeU3D( const FV *fv, const QString &u3dfile)
+{
+    const FM *fm = fv->data();
+    fm->lockForRead();
+    r3d::Mesh::Ptr mesh = fm->mesh().deepCopy();
+    fm->unlock();
+    mesh->removeAllMaterials();
+    r3dvis::mapActiveScalarsToMesh( fv->actor(), *mesh);
+    const std::string errmsg = exportU3D( *mesh, u3dfile);
+    if ( !errmsg.empty())
+    {
+        std::cerr << "[ERROR] FaceTools::U3DCache::makeU3D: " << errmsg << std::endl;
+        mesh = nullptr;
+    }   // end if
+    return mesh;
+}   // end makeU3D
 
 
 void U3DCache::purge( const FM &fm)

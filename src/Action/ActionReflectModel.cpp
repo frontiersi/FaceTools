@@ -62,7 +62,8 @@ bool ActionReflectModel::doBeforeAction( Event)
 {
     // Even though its an affine change on the model, we need to treat it as a geometry change
     // for the purposes of visualisation since VTK will need to rebuild its normals.
-    _ev = Event::MESH_CHANGE | Event::MASK_CHANGE;
+    //_ev = Event::MESH_CHANGE | Event::MASK_CHANGE;
+    _ev = Event::MESH_CHANGE;
     storeUndo( this, _ev, false);
     return true;
 }   // end doBeforeAction

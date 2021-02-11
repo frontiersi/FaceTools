@@ -156,7 +156,7 @@ void PathSetVisualisation::updateCaption( const FM &fm, const Path &path)
         const int xpos = int(fv->viewer()->getWidth()) - 10;
         if ( _views.count(fv) > 0)
             _views.at(fv).setCaption( path, xpos, ypos, iR);
-        else if ( _tviews.count(fv) > 0)
+        if ( _tviews.count(fv) > 0)
             _tviews.at(fv).setCaption( path, xpos, ypos, iR);
     }   // end for
 }   // end updateCaption

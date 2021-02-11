@@ -205,10 +205,10 @@ bool FaceAction::execute( Event e)
 
     _isWorking = true;
 
-#ifndef NDEBUG
-    static const bool ALLOW_ASYNC = false;
-#else
+#ifdef NDEBUG
     static const bool ALLOW_ASYNC = true;
+#else
+    static const bool ALLOW_ASYNC = false;
 #endif
 
     if ( ALLOW_ASYNC && isAsync())

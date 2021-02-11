@@ -48,10 +48,8 @@ bool ActionExportPDF::_openOnSave(false);
 ActionExportPDF::ActionExportPDF( const QString& nm, const QIcon& icon, const QKeySequence& ks)
     : FaceAction( nm, icon, ks), _dialog( nullptr)
 {
-    //_tmpdir.setAutoRemove(false);    // Uncomment for debug purposes
-    assert( _tmpdir.isValid());
     addRefreshEvent( Event::CACHE);
-    //setAsync(true);
+    setAsync(true);
 }   // end ctor
 
 
@@ -97,13 +95,15 @@ bool ActionExportPDF::isAllowed( Event) { return isAvailable();}
 bool ActionExportPDF::doBeforeAction( Event)
 {
     _report = nullptr;
-    _tmpfile = "";
     _err = "";
     if ( _dialog->show())
         _report = ReportManager::report(_dialog->selectedReportName());
     const bool doAct = _report != nullptr;
     if ( doAct)
+    {
+        _report->setContent();
         MS::showStatus( "Generating report...", 10000);
+    }   // end if
     return doAct;
 }   // end doBeforeAction
 
@@ -111,9 +111,7 @@ bool ActionExportPDF::doBeforeAction( Event)
 void ActionExportPDF::doAction( Event)
 {
     _err = "";
-    _tmpfile = _tmpdir.filePath( "report.pdf");
-    const bool genok = _report->generate( _tmpfile);
-    if ( !genok)
+    if ( !_report->generate())    // Blocks
         _err = _report->errorMsg();
 }   // end doAction
 
@@ -128,13 +126,13 @@ Event ActionExportPDF::doAfterAction( Event)
                       QString("<p align='center'>%1</p>").arg(_err));
     }   // end if
     else
-        saveGeneratedReport(_tmpfile, _fileDialog);
+        saveGeneratedReport( _report->pdffile(), _fileDialog);
     return Event::NONE;
 }   // end doAfterAction
 
 
 // static
-bool ActionExportPDF::saveGeneratedReport( const QString& tmpfile, QFileDialog *fdialog)
+bool ActionExportPDF::saveGeneratedReport( const QString& pdffile, QFileDialog *fdialog)
 {
     assert( fdialog);
     const FM *fm = MS::selectedModel();
@@ -174,17 +172,13 @@ bool ActionExportPDF::saveGeneratedReport( const QString& tmpfile, QFileDialog *
     }   // end while
 
     bool success = false;
-    // Copy the report temporary file to the output location (only succeeds if outfile not present already).
-    if ( docopy && QFile::copy( tmpfile, outfile))
+    // Copy the generated report to the output location (only succeeds if outfile not present already).
+    if ( docopy && QFile::copy( pdffile, outfile))
     {
         MS::showStatus( "Report saved to '" + outfile + "'", 5000);
         success = true;
         if ( _openOnSave)
-        {
-            //std::cerr << "Forking " << _pdfreader.toStdString() << " " << outfile.toStdString() << std::endl;
-            //QProcess::startDetached(_pdfreader, QStringList(outfile), "");
             QDesktopServices::openUrl( QUrl( "file:///" + outfile, QUrl::TolerantMode));
-        }   // end if
     }   // end if
 
     return success;

@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <FileIO/FaceModelFileHandler.h>
+#include <QFileInfo>
 #include <cassert>
 using FaceTools::FileIO::FaceModelFileHandler;
 using FaceTools::FM;
@@ -42,3 +43,23 @@ bool FaceModelFileHandler::write( const FM*, const QString&)
     }   // end if
     return false;
 }   // end write
+
+
+void FaceModelFileHandler::setImageCaptureDate( FM *fm, const QString &fpath)
+{
+    QFileInfo finfo(fpath);
+    QDateTime ctime = finfo.fileTime( QFileDevice::FileBirthTime);
+    QDateTime t2 = finfo.fileTime( QFileDevice::FileMetadataChangeTime);
+    QDateTime t3 = finfo.fileTime( QFileDevice::FileModificationTime);
+
+    if ( t2.isValid() && (!ctime.isValid() || t2 < ctime))
+        ctime = t2;
+    if ( t3.isValid() && (!ctime.isValid() || t3 < ctime))
+        ctime = t3;
+
+    if ( ctime.isValid())
+    {
+        fm->setDateOfBirth( ctime.date());
+        fm->setCaptureDate( ctime.date());  
+    }   // end if
+}   // end setImageCaptureDate

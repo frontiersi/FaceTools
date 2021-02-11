@@ -38,6 +38,10 @@ public:
     // (passed through to ActionOrientCamera::makeFrontCamera).
     static cv::Mat generateImage( const FM*, const QSize&, float fov=30, float dscale=1.0f);
 
+    // As above but pass a different mesh (which might have a different texture).
+    // The mesh must have the same geometry (or at least the same face IDs) for assigning normals.
+    static cv::Mat generateImage( const FM*, const r3d::Mesh&, const QSize&, float fov=30, float dscale=1.0f);
+
 signals:
     // Emitted whenever a new thumbnail generated for the currently selected model.
     void updated();

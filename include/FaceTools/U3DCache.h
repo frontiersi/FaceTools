@@ -38,12 +38,15 @@ public:
     static bool isAvailable();
 
     // Locks for write the export of the model to U3D and unlocks on return.
-    // If media9 is true, coordinates are transformed as (a,b,c) --> (a,-c,b)
-    // to allow for LaTeX media9 inclusion of 3D figures.
     // Returns true iff model was updated in the cache successfully.
-    static bool refresh( const FM&, bool media9=false);
+    static bool refresh( const FM&);
 
     static void purge( const FM&);
+
+    // Makes a U3D model from the current scalar visualisation on fv
+    // and saves at u3dfilepath. This function blocks. Returns the
+    // generated copy of the model with the scalar texture on success.
+    static r3d::Mesh::Ptr makeU3D( const Vis::FV *fv, const QString &u3dfilepath);
 
 private:
     static QTemporaryDir _tmpdir;

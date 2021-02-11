@@ -15,32 +15,32 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <Action/ActionScaleModel.h>
+#include <Action/ActionResizeModel.h>
 #include <FaceModel.h>
-using FaceTools::Action::ActionScaleModel;
+using FaceTools::Action::ActionResizeModel;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Vis::FV;
 using MS = FaceTools::ModelSelect;
 
 
-ActionScaleModel::ActionScaleModel( const QString &dn, const QIcon& ico, const QKeySequence& ks)
+ActionResizeModel::ActionResizeModel( const QString &dn, const QIcon& ico, const QKeySequence& ks)
     : FaceAction( dn, ico, ks), _dialog(nullptr)
 {
     setAsync(true);
 }   // end ctor
 
 
-void ActionScaleModel::postInit()
+void ActionResizeModel::postInit()
 {
     _dialog = new Widget::ResizeDialog(static_cast<QWidget*>(parent()));
 }   // end postInit
 
 
-bool ActionScaleModel::isAllowed( Event) { return MS::isViewSelected();}
+bool ActionResizeModel::isAllowed( Event) { return MS::isViewSelected();}
 
 
-bool ActionScaleModel::doBeforeAction( Event)
+bool ActionResizeModel::doBeforeAction( Event)
 {
     FM::RPtr fm = MS::selectedModelScopedRead();
     _dialog->reset( fm.get());
@@ -70,7 +70,7 @@ bool ActionScaleModel::doBeforeAction( Event)
 }   // end doBeforeAction
 
 
-void ActionScaleModel::doAction( Event)
+void ActionResizeModel::doAction( Event)
 {
     FM::WPtr fm = MS::selectedModelScopedWrite();
     const Mat4f T = fm->transformMatrix();
@@ -80,7 +80,7 @@ void ActionScaleModel::doAction( Event)
 }   // end doAction
 
 
-Event ActionScaleModel::doAfterAction( Event)
+Event ActionResizeModel::doAfterAction( Event)
 {
     // Also apply the scale transform to the camera position (focus is fixed)
     const Vec3f cpos = r3d::transform( _smat, MS::selectedViewer()->camera().pos());

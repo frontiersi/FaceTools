@@ -121,5 +121,5 @@ Event ActionDetectFace::doAfterAction( Event)
     if ( has( _ev, Event::LANDMARKS_CHANGE))
         plusLmks = " and placed landmarks";
     MS::showStatus( QString("Detected face%1.").arg(plusLmks), 5000);
-    return _ev;
+    return _ev | Event::CAMERA_CHANGE;
 }   // end doAfterAction

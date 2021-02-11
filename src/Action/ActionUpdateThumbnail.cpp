@@ -61,6 +61,14 @@ cv::Mat ActionUpdateThumbnail::thumbnail( const FM *fm)
 // static
 cv::Mat ActionUpdateThumbnail::generateImage( const FM *fm, const QSize &sz, float fov, float dscale)
 {
+    return generateImage( fm, fm->mesh(), sz, fov, dscale);
+}   // end generateImage
+
+
+// static
+cv::Mat ActionUpdateThumbnail::generateImage( const FM *fm, const r3d::Mesh &mesh,
+                                                const QSize &sz, float fov, float dscale)
+{
     // This function used to be an instance member function (now static). The note
     // below relates to when it was a member function:
     // "Don't make offscreen viewer a private member - VTK on Windows hangs in r3dvis::extractBGR
@@ -69,15 +77,18 @@ cv::Mat ActionUpdateThumbnail::generateImage( const FM *fm, const QSize &sz, flo
     r3dvis::OffscreenMeshViewer omv( cv::Size(sz.width(), sz.height()));
     omv.setBackgroundColour( 1.0f, 1.0f, 1.0f);
 
-    vtkActor *actor = omv.setModel( fm->mesh());
-    if ( !fm->mesh().hasMaterials())
+    vtkActor *actor = omv.setModel( mesh);  // Create the actor in the viewer
+    // Add normals for smooth lighting interpolation
+    const auto rptr = FaceModelCurvatureStore::rvals( *fm);
+    if ( rptr)
+        r3dvis::getPolyData( actor)->GetPointData()->SetNormals( rptr->normals());
+
+    vtkProperty *prop = actor->GetProperty();
+    prop->SetInterpolationToPhong();
+    if ( !mesh.hasMaterials())
     {
-        const auto rptr = FaceModelCurvatureStore::rvals( *fm);
-        if ( rptr)
-            r3dvis::getPolyData( actor)->GetPointData()->SetNormals( rptr->normals());
-        vtkProperty *prop = actor->GetProperty();
-        prop->SetColor( Vis::FV::BASECOL.redF(), Vis::FV::BASECOL.greenF(), Vis::FV::BASECOL.blueF());
-        prop->SetInterpolationToPhong();
+        static const QColor COL = Vis::FV::BASECOL;
+        prop->SetColor( COL.redF(), COL.greenF(), COL.blueF());
     }   // end if
 
     omv.setCamera( ActionOrientCamera::makeFrontCamera( *fm, fov, dscale));

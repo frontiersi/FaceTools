@@ -91,6 +91,10 @@ Report::Report( QTemporaryDir& tdir) : _tmpdir(tdir), _os(nullptr)
                        [this]( const FM *fm, float widthMM, float heightMM, const std::string& caption)
                         { this->_addLatexFigure( fm, widthMM, heightMM, caption);});
 
+    _lua.set_function( "addTestFigure",
+                       [this]( float widthMM, float heightMM)
+                        { this->_addLatexTestFigure( widthMM, heightMM);});
+
     _lua.set_function( "addGrowthCurvesChart",
                        [this]( const FM *fm, int mid, size_t d, int footnotemark)
                         { this->_addLatexGrowthCurvesChart( fm, mid, d, footnotemark);});
@@ -195,7 +199,7 @@ bool Report::isAvailable() const
     bool available = false;
     try
     {
-        sol::function_result result = _available( fm0, fm1);    // Calls Lua function
+        sol::function_result result = _isAvailable( fm0, fm1);    // Calls Lua function
         if ( result.valid())
             available = result;
     }   // end try
@@ -268,18 +272,18 @@ Report::Ptr Report::load( const QString& fname, QTemporaryDir& tdir)
     report->_twoModels = table["twoModels"].get_or(false);
 
     if ( sol::optional<sol::function> v = table["isAvailable"])
-        report->_available = v.value();
+        report->_isAvailable = v.value();
     else
     {
         qWarning() << "Missing 'available' function!";
         return nullptr;
     }   // end else
 
-    if ( sol::optional<sol::function> v = table["addContent"])
-        report->_addContent = v.value();
+    if ( sol::optional<sol::function> v = table["setContent"])
+        report->_setContent = v.value();
     else
     {
-        qWarning() << "Missing 'addContent' function!";
+        qWarning() << "Missing 'setContent' function!";
         return nullptr;
     }   // end else
 
@@ -287,15 +291,9 @@ Report::Ptr Report::load( const QString& fname, QTemporaryDir& tdir)
 }   // end load
 
 
-bool Report::generate( const QString& pdffile)
+bool Report::setContent()
 {
     _errMsg = "";
-    QFile pfile(pdffile);
-    if ( pfile.exists() && !pfile.remove())
-    {
-        _errMsg = tr("Cannot overwrite '") + pdffile + "'!";
-        return false;
-    }   // end if
 
     // Create the filestream to the raw LaTeX file
     QFile texfile( _tmpdir.filePath("report.tex"));
@@ -307,43 +305,33 @@ bool Report::generate( const QString& pdffile)
     }   // end if
 
     _os = new QTextStream( &texfile);
-    const bool writtenLatexOk = _writeLatex( *_os);
+    _validContent = true;
+    _writeLatex( *_os);
     texfile.close();
     delete _os;
+    if ( !_validContent)
+        _errMsg = tr( "Failed to write latex to '") + texfile.fileName() + "'!";
+    return _validContent;
+}   // end setContent
 
-    if ( !writtenLatexOk)
-    {
-        _errMsg = tr( "Unable to write latex to '") + texfile.fileName() + "'!";
-        return false;
-    }   // end if
 
-    // Need to generate from within the directory.
+bool Report::generate()
+{
+    _errMsg = "";
+    // Generate from within the same directory as report.tex
+    const QString texpath = QFileInfo( _tmpdir.filePath("report.tex")).absoluteFilePath();
     r3dio::PDFGenerator pdfgen(true);
-    const bool genOk = pdfgen( QFileInfo(texfile).absoluteFilePath().toLocal8Bit().toStdString(), false);
-    if ( !genOk)
-    {
+    if ( !pdfgen( texpath.toLocal8Bit().toStdString(), false))
         _errMsg = tr("Failed to generate PDF!");
-        return false;
-    }   // end if
-
-    // Copy the created pdf to the requested location.
-    if ( !QFile::copy( _tmpdir.filePath( "report.pdf"), pdffile))
-    {
-        _errMsg = tr("Failed to copy generated PDF to '") + pdffile + "'!";
-        return false;
-    }   // end if
-
-    return true;
+    return _errMsg.isEmpty();
 }   // end generate
 
 
-bool Report::_useSVG() const
-{
-    return !_inkscape.isEmpty() && QFile::exists(_inkscape);
-}   // end _useSVG
+QString Report::pdffile() const { return _tmpdir.filePath( "report.pdf");}
+bool Report::_useSVG() const { return !_inkscape.isEmpty() && QFile::exists(_inkscape);}
 
 
-bool Report::_writeLatex( QTextStream& os) const
+void Report::_writeLatex( QTextStream& os)
 {
     os << "\\documentclass[a4paper]{article}" << Qt::endl
        << "\\listfiles" << Qt::endl   // For seeing in the .log file which packages are used
@@ -387,53 +375,73 @@ bool Report::_writeLatex( QTextStream& os) const
        << "\\pagenumbering{gobble}" << Qt::endl
        << "\\thispagestyle{fancy}" << Qt::endl;
 
-    bool valid = true;
+    _validContent = true;
     try
     {
         const FM *fm0 = MS::selectedModel();
         const FM *fm1 = MS::nonSelectedModel();
-        _addContent( fm0, fm1);   // Lua call to add report elements
+        _setContent( fm0, fm1);   // Lua call to add report elements
     }   // end try
     catch (const sol::error& e)
     {
         qWarning() << "Lua Error: " << e.what();
-        valid = false;
+        _validContent = false;
     }   // end catch
 
     os << "\\end{document}" << Qt::endl;
     os.flush();
-    return valid;
 }   // end _writeLatex
 
 
-void Report::_addLatexFigure( const FM *fm, float wmm, float hmm, const std::string& scaption)
+namespace {
+
+using namespace FaceTools::Action;
+
+
+QString _writeModelBackgroundImage( const FM *fm, const r3d::Mesh &mesh, float wmm, float hmm)
 {
-    assert(fm);
-    const U3DCache::Filepath u3dfilepath = U3DCache::u3dfilepath(*fm);  // Read lock
-    const QString u3dfile = QDir( _tmpdir.path()).relativeFilePath( *u3dfilepath);
-
-    const auto cam = Action::ActionOrientCamera::makeFrontCamera( *fm, 30, 0.8f);
-    const QString viewsFile = "views.vws";
-    if ( !RMAN::writeViewsFile( cam.distance(), viewsFile))
-        return;
-
     // Background image for model until user enables 3D content to replace this.
-    const QSize bimgSz( int(wmm*10), int(hmm*10));
-    const cv::Mat bimg = Action::ActionUpdateThumbnail::generateImage( fm, bimgSz, 30, 0.8f);
-    const QString bimgFile = "bgimg.jpg";
-    if ( !RMAN::writeImageFile( bimg, bimgFile))
-        return;
+    const QSize bimSz( 512, 512*hmm/wmm);
+    const cv::Mat bimg = ActionUpdateThumbnail::generateImage( fm, mesh, bimSz, 30, 0.8f);
+    static int bimNum = 0;
+    QString bimgFile = QString("bgimg_%1.jpg").arg(bimNum++);
+    if (!RMAN::writeImageFile( bimg, bimgFile))
+        bimgFile = "";
+    return bimgFile;
+}   // end _writeModelBackgroundImage
 
-    assert(_os);
-    QTextStream &os = *_os;
-    const QString caption = QString::fromStdString(scaption);
 
+QString _writeModelBackgroundImage( const FM *fm, float wmm, float hmm)
+{
+    return _writeModelBackgroundImage( fm, fm->mesh(), wmm, hmm);
+}   // end _writeModelBackgroundImage
+
+
+QString _writeViewsFile( const FM *fm, float wmm, float hmm)
+{
+    const auto cam = ActionOrientCamera::makeFrontCamera( *fm, 30, 0.8f);
+    float fov = cam.fov();
+    if ( wmm < hmm) // FoV must be in narrowest aspect of viewport for media9
+    {
+        static const float D2R = EIGEN_PI / 180;
+        fov = 2*atanf( wmm/hmm * tanf(fov/2 * D2R))/D2R;
+    }   // end if
+    static int vimNum = 0;
+    QString viewsFile = QString("views_%1.vws").arg(vimNum++);
+    if ( !RMAN::writeViewsFile( cam.distance(), fov, viewsFile))
+        viewsFile = "";
+    return viewsFile;
+}   // end _writeViewsFile
+
+
+void _writeModelLatex( QTextStream &os, float wmm, float hmm,
+                       const QString &u3dfile, const QString &viewsFile, const QString &bimgFile,
+                       const QString &caption="")
+{
     static int labelID = 0;
     const QString label = QString("label%1").arg(labelID++);
-
     os.setRealNumberNotation( QTextStream::FixedNotation);
     os.setRealNumberPrecision( 3);
-
     os << R"(\begin{figure}[H]
             \centering
             \includemedia[
@@ -450,26 +458,94 @@ void Report::_addLatexFigure( const FM *fm, float wmm, float hmm, const std::str
              3Dviews=)" << viewsFile << R"(,
              ]{\includegraphics[width=)" << wmm << "mm,height=" << hmm << "mm]{"
                  << bimgFile << "}}{" << u3dfile << R"(}\\)" << Qt::endl;
-
     /* THESE DON'T WORK (and also aren't formatted well).
     os << "\\mediabutton[3Dgotoview=" << label << ":1]{\\fbox{RIGHT}}" << Qt::endl
        << "\\mediabutton[3Dgotoview=" << label << ":0]{\\fbox{FRONT}}" << Qt::endl
        << "\\mediabutton[3Dgotoview=" << label << ":2]{\\fbox{LEFT}}" << Qt::endl;
     */
-
     if ( !caption.isEmpty())
         os << "\\caption*{" << caption << "}" << Qt::endl;
-
     os << "\\end{figure}" << Qt::endl;
+}   // end _writeModelLatex
+
+}   // end namespace
+
+
+void Report::_addLatexFigure( const FM *fm, float wmm, float hmm, const std::string& caption)
+{
+    if ( !_validContent)
+        return;
+
+    assert(fm);
+    const U3DCache::Filepath u3dfilepath = U3DCache::u3dfilepath(*fm);  // Read lock
+    const QString u3dfile = QDir( _tmpdir.path()).relativeFilePath( *u3dfilepath);
+
+    const QString viewsFile = _writeViewsFile( fm, wmm, hmm);
+    if ( viewsFile.isEmpty())
+    {
+        _validContent = false;
+        return;
+    }   // end if
+
+    // Background image for model until user enables 3D content to replace this.
+    const QString bimgFile = _writeModelBackgroundImage( fm, wmm, hmm);
+    if ( bimgFile.isEmpty())
+    {
+        _validContent = false;
+        return;
+    }   // end if
+
+    _writeModelLatex( *_os, wmm, hmm, u3dfile, viewsFile, bimgFile, QString::fromStdString(caption));
 }   // end _addLatexFigure
+
+
+void Report::_addLatexTestFigure( float wmm, float hmm)
+{
+    if ( !_validContent)
+        return;
+
+    const Vis::FV *fv = MS::selectedView();
+    const FM *fm = fv->data();
+
+    const QString viewsFile = _writeViewsFile( fm, wmm, hmm);
+    if ( viewsFile.isEmpty())
+    {
+        _validContent = false;
+        return;
+    }   // end if
+
+    static int uid = 0;
+    const QString u3dfile = _tmpdir.filePath( QString("u3dfile_%1.u3d").arg(uid++));
+    r3d::Mesh::Ptr mesh = U3DCache::makeU3D( fv, u3dfile);
+
+    if ( mesh)
+    {
+        // Background image for model until user enables 3D content to replace this.
+        const QString bimgFile = _writeModelBackgroundImage( fm, *mesh, wmm, hmm);
+        if ( bimgFile.isEmpty())
+        {
+            _validContent = false;
+            return;
+        }   // end if
+        _writeModelLatex( *_os, wmm, hmm, u3dfile, viewsFile, bimgFile);
+    }   // end if
+    else
+        _validContent = false;
+}   // end _addLatexTestFigure
 
 
 void Report::_addLatexGrowthCurvesChart( const FM *fm, int mid, size_t d, int footnotemark)
 {
+    if ( !_validContent)
+        return;
+
     MC::CPtr mc = MM::metric(mid);
     assert(mc);
     if ( !mc)
+    {
+        _validContent = false;
         return;
+    }   // end if
 
     // Ensure the chart name is unique (client may want more than one in a report).
     static int chartid = 0;
@@ -519,6 +595,7 @@ void Report::_addLatexGrowthCurvesChart( const FM *fm, int mid, size_t d, int fo
     if ( !usingSVG && !static_cast<QPixmap*>(pdev)->save( imgpath))
     {
         qWarning( "Unable to save PNG!");
+        _validContent = false;
         return;
     }   // end if
 
@@ -547,14 +624,17 @@ void Report::_addLatexGrowthCurvesChart( const FM *fm, int mid, size_t d, int fo
 
 void Report::_addLatexScanInfo( const FM *fm)
 {
-    const QString cdate = fm->captureDate().toString("dd MMMM yyyy");
-    const QString dob = fm->dateOfBirth().toString("dd MMMM yyyy");
+    if ( !_validContent)
+        return;
+
+    const QString cdate = fm->captureDate().toString("dd MMM yyyy");
+    const QString dob = fm->dateOfBirth().toString("dd MMM yyyy");
     const double age = fm->age();
     const int yrs = int(age);
     const int mths = int((age - double(yrs)) * 12);
     const QString sage = QString("%1 yrs. %2 mons.").arg(yrs).arg(mths);
 
-    const QString sexs = sanit(FaceTools::toLongSexString( fm->sex()));
+    const QString sexs = sanit(FaceTools::toSexString( fm->sex())); // F/M/F M
     QString eths = sanit(Ethnicities::name(fm->maternalEthnicity()));
     if ( fm->maternalEthnicity() != fm->paternalEthnicity())
         eths += sanit(" (M) & " + Ethnicities::name(fm->paternalEthnicity()) + " (P)");
@@ -582,6 +662,9 @@ void Report::_addLatexScanInfo( const FM *fm)
 
 void Report::_addLatexNotes( const FM *fm)
 {
+    if ( !_validContent)
+        return;
+
     QTextStream& os = *_os;
     FaceAssessment::CPtr ass = fm->currentAssessment();
     os << " \\normalsize{\\textbf{" << tr("Assessment") << ":} " << sanit(ass->assessor()) << R"(} \\)" << Qt::endl;
@@ -598,6 +681,9 @@ int Report::_getNumPhenotypicTraits( const FM *fm) const
 
 bool Report::_addLatexPhenotypicTraits( const FM *fm, int sidx, int nhids)
 {
+    if ( !_validContent)
+        return false;
+
     sidx = std::max( 0, sidx);
     const IntSet pids = PhenotypeManager::discover(*fm, -1); // Use the current assessment id
     bool moreToGo = false;
@@ -674,6 +760,9 @@ std::unordered_map<int, int> Report::_footnoteIndices( const FM *fm, const sol::
 
 void Report::_addFootnoteSources( const FM *fm, const sol::table& mids)
 {
+    if ( !_validContent)
+        return;
+
     assert(_os);
     QTextStream& os = *_os;
 

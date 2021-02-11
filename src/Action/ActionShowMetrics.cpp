@@ -182,6 +182,7 @@ void ActionShowMetrics::_doRefreshAllMetricsVisibility()
 {
     for ( int mid : MM::ids())
         _refreshMetricVisibility( mid);
+    _updateCurrentMetricDisplayedInfo();
     MS::updateRender();
 }   // end _doRefreshAllMetricsVisibility
 
@@ -189,6 +190,7 @@ void ActionShowMetrics::_doRefreshAllMetricsVisibility()
 void ActionShowMetrics::_doRefreshMetricVisibility( int mid)
 {
     _refreshMetricVisibility( mid);
+    _updateCurrentMetricDisplayedInfo();
     MS::updateRender();
 }   // end _doRefreshMetricVisibility
 
@@ -386,7 +388,7 @@ bool ActionShowMetrics::_updateText( const FV *fv, int mid)
         if ( age == 0.0f)
             oss << " [DOB unset]";
         else if ( !gd->isWithinAgeRange(age))
-            oss << " [Age Outside Inferential Domain!]";
+            oss << " [Age Outside Inferential Domain]";
         else
         {
             QStringList dwarns;
