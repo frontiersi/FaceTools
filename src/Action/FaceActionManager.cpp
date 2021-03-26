@@ -34,6 +34,7 @@ using FMM = FaceTools::FileIO::FaceModelManager;
 using MS = FaceTools::ModelSelect;
 using MM = FaceTools::Metric::MetricManager;
 using FaceTools::FM;
+//#undef NDEBUG
 
 
 namespace {
@@ -180,7 +181,7 @@ void FaceActionManager::_doRaise( Event E)
     {
         // Purge actions first.
         for ( FaceAction *act : _actions)
-            if ( act != sact && any( act->purgeEvents(), E) && !act->isWorking())
+            if ( act != sact && act->purges( E) && !act->isWorking())
                 act->purge( fm);
         if ( has( E, Event::MESH_CHANGE))
             applyFnToModels( E, fm, rebuildViews);   // Also resets view normals
@@ -215,12 +216,12 @@ void FaceActionManager::_doRaise( Event E)
                 continue;
             }   // end if
 
-            if ( any( act->triggerEvents(), E)) // Triggers take precedence
+            if ( act->triggers( E)) // Triggers take precedence
             {
                 tacts.push_back(act);
                 _acted[act] = E;
             }   // end if
-            else if ( any( act->refreshEvents(), E))
+            else if ( act->refreshes( E))
             {
                 racts.push_back(act);
                 _acted[act] = E;

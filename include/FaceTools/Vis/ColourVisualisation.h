@@ -39,8 +39,8 @@ public:
 
     float minRange() const { return _minr;} // Min range initially same as min visible
     float maxRange() const { return _maxr;} // Max range initially same as max visible
-    float minVisible() const { return _minv;}
-    float maxVisible() const { return _maxv;}
+    float minVisible() const { return _cmapper.minVisible();}
+    float maxVisible() const { return _cmapper.maxVisible();}
     float stepSize() const { return _ssize;}
     void setNumStepSize( size_t v) { _nssize = v;}
     size_t numStepSize() const { return _nssize;}
@@ -58,14 +58,14 @@ public:
     virtual QString getCaption( const Vec3f&) const { return "";}
 
     void setVisibleRange( float, float);    // Scalar visible values
-    void rebuildColourMapping();            // Call after changing colour mapping aspects
-    inline const vtkLookupTable* lookupTable() const { return _cmapper.lookupTable();}
+    void rebuildColourMapping();      // Call after changing colour mapping aspects
+
+    const vtkLookupTable* lookupTable() const { return _lut.Get();}
 
     bool isVisible( const FV* fv) const override { return fv->activeColours() == this;}
     void setVisible( FV* fv, bool v) override;
     void activate( FV*);    // Called by FaceView
     void deactivate( FV*);  // Called by FaceView
-    virtual void refreshColourMap( const FV*){}
 
     //bool isAvailable( const FV *fv) const override;
     //void refresh( FV* fv) override
@@ -86,16 +86,18 @@ protected:
     // Only ever called on currently visible visualisations.
     virtual void show( FV*){}
     virtual void hide( FV*){}
+    virtual void refreshColourMap( const FV*){}
 
 private:
     const QString _label;
     const float _minr;
     const float _maxr;
-    float _minv, _maxv;
     float _ssize;
     size_t _nssize;
     QTools::ScalarColourRangeMapper _cmapper;
     std::unordered_set<FV*> _visible;
+    vtkSmartPointer<vtkLookupTable> _lut;
+    void _refreshLookupTable( FV*);
 };  // end class
 
 }}   // end namespace

@@ -194,6 +194,11 @@ public:
     void setLandmarkPosition( int, FaceSide, const Vec3f&);
 
     /**
+     * Convenience function to get the landmark position from the current assessment.
+     */
+    const Vec3f &landmarkPosition( int, FaceSide) const;
+
+    /**
      * Swap the landmark laterals for ALL assessments.
      */
     void swapLandmarkLaterals();

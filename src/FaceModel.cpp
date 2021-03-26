@@ -26,6 +26,7 @@ using FaceTools::FaceAssessment;
 using FaceTools::Vis::FV;
 using FaceTools::Vec3f;
 using FaceTools::Mat4f;
+using FaceTools::FaceSide;
 
 
 // public static
@@ -488,11 +489,17 @@ void FaceModel::setLandmarks( const LandmarkSet &lmks)
 bool FaceModel::hasLandmarks() const { return _cass->hasLandmarks();}
 
 
-void FaceModel::setLandmarkPosition( int lid, FaceTools::FaceSide flat, const Vec3f &pos)
+void FaceModel::setLandmarkPosition( int lid, FaceSide flat, const Vec3f &pos)
 {
     _cass->landmarks().set( lid, pos, flat);
     remakeBounds();
 }   // end setLandmarkPosition
+
+
+const Vec3f &FaceModel::landmarkPosition( int lid , FaceSide flat) const
+{
+    return _cass->landmarks().pos( lid, flat);
+}   // end landmarkPosition
 
 
 void FaceModel::swapLandmarkLaterals()

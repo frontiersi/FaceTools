@@ -34,23 +34,17 @@ ActionUpdateU3D::ActionUpdateU3D() : FaceAction( "U3D Updater")
 }   // end ctor
 
 
-bool ActionUpdateU3D::isAllowed( Event)
+bool ActionUpdateU3D::doBeforeAction( Event e)
 {
     if ( !Report::ReportManager::isAvailable() || !U3DCache::isAvailable())
         return false;
-    const FM *fm = MS::selectedModel();
-    return fm && fm->hasLandmarks() && fm->isAligned();
-}   // end isAllowed
-
-
-bool ActionUpdateU3D::doBeforeAction( Event e) { return isAllowed(e);}
+    return MS::isViewSelected();
+}   // end doBeforeAction
 
 
 void ActionUpdateU3D::doAction( Event) { U3DCache::refresh( *MS::selectedModel());}
 
-
 void ActionUpdateU3D::purge( const FM* fm) { U3DCache::purge(*fm);}
-
 
 Event ActionUpdateU3D::doAfterAction( Event)
 {

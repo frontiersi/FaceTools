@@ -48,7 +48,7 @@ bool ActionExportPDF::_openOnSave(false);
 ActionExportPDF::ActionExportPDF( const QString& nm, const QIcon& icon, const QKeySequence& ks)
     : FaceAction( nm, icon, ks), _dialog( nullptr)
 {
-    addRefreshEvent( Event::CACHE);
+    addRefreshEvent( Event::CACHE | Event::MESH_CHANGE);
     setAsync(true);
 }   // end ctor
 

@@ -15,29 +15,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_INTERACTOR_ACTOR_MOVE_NOTIFIER_H
-#define FACE_TOOLS_INTERACTOR_ACTOR_MOVE_NOTIFIER_H
+#ifndef FACE_TOOLS_ACTION_ROTATE_CAMERA_H
+#define FACE_TOOLS_ACTION_ROTATE_CAMERA_H
 
-#include "ViewerNotifier.h"
-#include <r3d/CameraParams.h>
+#include "FaceAction.h"
 
-namespace FaceTools { namespace Interactor {
+namespace FaceTools { namespace Action {
 
-class ActorMoveNotifier : public QObject, public ViewerNotifier
+class FaceTools_EXPORT ActionRotateCamera : public FaceAction
 { Q_OBJECT
-signals:
-    void onActorStart( Vis::FV*);
-    void onActorStop( Vis::FV*);
-    void onCameraStop();
-
+public:
+    /**
+     * vdegs : The vertical rotation step size in degrees (signed).
+     * hdegs : The horizontal rotation step size in degrees (signed).
+     */
+    ActionRotateCamera( const QString&, const QKeySequence& ks=QKeySequence(),
+                                        float vdegs=0.0f, float hdegs=0.0f);
 protected:
-    void cameraStop() override;
-    void actorStart( const vtkProp3D*) override;
-    void actorMove( const vtkProp3D*) override;
-    void actorStop( const vtkProp3D*) override;
+    bool isAllowed( Event) override;
+    bool doBeforeAction( Event) override;
+    void doAction( Event) override;
+    Event doAfterAction( Event) override;
 
 private:
-    r3d::CameraParams _cam;
+    float _vdegs;
+    float _hdegs;
 };  // end class
 
 }}   // end namespace

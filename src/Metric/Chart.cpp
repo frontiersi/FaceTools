@@ -152,7 +152,7 @@ QString makeSourceString( const GrowthData *gd, bool ageOutOfBounds, const QStri
     if ( !gd->longNote().isEmpty())
         src += lb + gd->longNote();
     if ( ageOutOfBounds)
-        src += lb + "[Age Outside Inferential Domain]";
+        src += lb + "[Age Outside Domain]";
     return src;
 }   // end makeSourceString
 }   // end namespace
@@ -215,7 +215,7 @@ void Chart::_addDataPoints( const FM* fm)
             const float val = 0.5f * (mvl.value(_dim) + mvr.value(_dim));
 
             this->addSeries( createMetricPoint( age, mvl.value(_dim), "Left", Qt::blue, isOutOfBounds));
-            this->addSeries( createMetricPoint( age, mvr.value(_dim), "Right", Qt::darkGreen, isOutOfBounds));
+            this->addSeries( createMetricPoint( age, mvr.value(_dim), "Right", Qt::green, isOutOfBounds));
             this->addSeries( createMetricPoint( age, val, "Mean", Qt::red, isOutOfBounds));
 
             _ymin = std::min( mvl.value(_dim), mvr.value(_dim));

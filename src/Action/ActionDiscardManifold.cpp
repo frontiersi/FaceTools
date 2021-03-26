@@ -82,7 +82,7 @@ bool ActionDiscardManifold::doBeforeAction( Event)
     bool goOk = false;
     if ( numFaceRemove > 0)
     {
-        const QString msg = tr("%1 triangles from manifold %2 will be removed. Do you want to continue?").arg(numFaceRemove).arg(1+_mid);
+        const QString msg = tr("%1 triangles from manifold %2 will be removed. Continue?").arg(numFaceRemove).arg(1+_mid);
         const int rv = QMB::question( static_cast<QWidget*>(parent()),
                               tr("Discard Manifold?"), QString("<p align='center'>%1</p>").arg(msg),
                               QMB::Yes | QMB::No, QMB::No);
@@ -103,6 +103,8 @@ void ActionDiscardManifold::doAction( Event)
 {
     FM* fm = MS::selectedModel();
     fm->lockForWrite();
+    const Mat4f T = fm->transformMatrix();
+
     r3d::Mesh::Ptr mobj = fm->mesh().deepCopy();
     const IntSet& polys = fm->manifolds()[_mid].faces();  // Faces to discard
     for ( int f : polys)
@@ -113,6 +115,7 @@ void ActionDiscardManifold::doAction( Event)
     // FM::update removes any unused vertices resulting from the removal of faces
     // and then ensures that the vertices are in sequential order.
     fm->update( mobj, true, true);
+    fm->addTransformMatrix( T); // Reapply any transform
     fm->unlock();
 }   // end doAction
 

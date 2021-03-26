@@ -85,6 +85,10 @@ public:
     // Returns squared radius from medialMean() to the most distant landmark from it.
     float sqRadius() const;
 
+    // Returns the nearest landmark to the given landmark.
+    SpecificLandmark nearest( const SpecificLandmark&) const;
+    SpecificLandmark nearest( int id, FaceSide) const;
+
     // Returns the mean of the landmarks in the designated medial set.
     Vec3f medialMean() const;
 
@@ -131,12 +135,6 @@ private:
     Vec3f _quarter1() const;
     Vec3f _quarter2() const;
     Vec3f _quarter3() const;
-
-    /*
-    mutable Mat4f _algn;    // Alignment matrix calculated as needed
-    mutable Mat4f _ialgn;   // Inverse of the alignment matrix calculated as needed
-    void _clearAlignment() const;
-    */
 };  // end class
 
 }}   // end namespace

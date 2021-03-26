@@ -116,22 +116,17 @@ bool ActionRestoreLandmarks::restoreLandmark( FM &fm, int lmid, int aid)
 
     const r3d::Mesh &msk = fm.mask();
     const r3d::KDTree &kdt = fm.kdtree();
-    MaskRegistration::MaskPtr mdata = MaskRegistration::maskData();
-    const std::pair<int, r3d::Vec3f> *bcds;
 
+    using MaskReg = MaskRegistration;
     if ( LMAN::isBilateral(lmid))
     {
-        bcds = &mdata->lmksL.at(lmid);
-        lmset.set( lmid, toSurface( kdt, msk.fromBarycentric( bcds->first, bcds->second)), LEFT);
-        bcds = &mdata->lmksR.at(lmid);
-        lmset.set( lmid, toSurface( kdt, msk.fromBarycentric( bcds->first, bcds->second)), RIGHT);
+        lmset.set( lmid, toSurface( kdt, MaskReg::maskLandmarkPosition( msk, lmid, LEFT)), LEFT);
+        lmset.set( lmid, toSurface( kdt, MaskReg::maskLandmarkPosition( msk, lmid, RIGHT)), RIGHT);
     }   // end if
     else
-    {
-        bcds = &mdata->lmksM.at(lmid);
-        lmset.set( lmid, toSurface( kdt, msk.fromBarycentric( bcds->first, bcds->second)), MID);
-    }   // end else
+        lmset.set( lmid, toSurface( kdt, MaskReg::maskLandmarkPosition( msk, lmid, MID)), MID);
 
+    fm.setMetaSaved(false);
     return true;
 }   // end restoreLandmark
 

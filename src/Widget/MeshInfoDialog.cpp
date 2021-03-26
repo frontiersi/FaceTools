@@ -38,6 +38,7 @@ MeshInfoDialog::MeshInfoDialog( QWidget *parent) :
     setWindowTitle( _dialogRootTitle);
     connect( _ui->manifoldSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
                              this, &MeshInfoDialog::doOnManifoldIndexChanged);
+    setFixedSize( geometry().width(), geometry().height());
     reset();
 }   // end ctor
 
@@ -59,7 +60,6 @@ void MeshInfoDialog::set( const FM* fm)
 void MeshInfoDialog::reset()
 {
     setWindowTitle( _dialogRootTitle);
-    _ui->textureMappedLabel->clear();
     _ui->modelPolygonsLabel->clear();
     _ui->modelVerticesLabel->clear();
     _ui->modelBoundariesLabel->clear();
@@ -73,7 +73,7 @@ void MeshInfoDialog::reset()
         const r3d::Mesh& cmodel = _model->mesh();
         nm = int(manfs.count());  // Number of manifolds
 
-        _ui->textureMappedLabel->setText( cmodel.materialIds().empty() ? "No Texture Mapping!" : "");
+        //_ui->textureMappedLabel->setText( cmodel.materialIds().empty() ? "No Texture Mapping!" : "");
 
         _ui->modelPolygonsLabel->setText( QString("%1").arg(cmodel.numFaces()));
         _ui->modelVerticesLabel->setText( QString("%1").arg(cmodel.numVtxs()));
@@ -84,7 +84,7 @@ void MeshInfoDialog::reset()
         _model->unlock();
     }   // end if
 
-    _ui->maxManifoldsLabel->setText( QString("of %1").arg(nm));
+    //_ui->maxManifoldsLabel->setText( QString("of %1").arg(nm));
     _ui->manifoldSpinBox->setMaximum( nm);
     _ui->manifoldSpinBox->setMinimum( 1);
     _ui->manifoldSpinBox->setEnabled( nm > 1);

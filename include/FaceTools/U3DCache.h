@@ -20,6 +20,7 @@
 
 #include "FaceTypes.h"
 #include "FaceModel.h"
+#include <r3d/Colour.h>
 #include <QTemporaryDir>
 #include <QReadWriteLock>
 
@@ -43,18 +44,17 @@ public:
 
     static void purge( const FM&);
 
-    // Makes a U3D model from the current scalar visualisation on fv
+    // Makes a U3D model from the current colour visualisation on fv
     // and saves at u3dfilepath. This function blocks. Returns the
     // generated copy of the model with the scalar texture on success.
-    static r3d::Mesh::Ptr makeU3D( const Vis::FV *fv, const QString &u3dfilepath);
+    static r3d::Mesh::Ptr makeColourMappedU3D( const Vis::FV *fv, const QString &u3dfilepath);
 
 private:
     static QTemporaryDir _tmpdir;
     static QReadWriteLock _rwLock;
-    static std::unordered_set<const FM*> _cache;
-    static QString _makeFilePath( const FM&);
+    static std::unordered_map<const FM*, QString> _cache;
 
-    void _purge( const FM*);
+    static bool _exportU3D( const r3d::Mesh&, const QString&, const r3d::Colour &ems);
     U3DCache(){}
     U3DCache( const U3DCache&) = delete;
     void operator=( const U3DCache&) = delete;

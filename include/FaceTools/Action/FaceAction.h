@@ -122,12 +122,15 @@ public:
     */
     void addPurgeEvent( Event);
     Event purgeEvents() const { return _pevents;}
+    bool purges( Event) const;
 
     void addTriggerEvent( Event);
     Event triggerEvents() const { return _tevents;}
+    bool triggers( Event) const;
 
     void addRefreshEvent( Event);
     Event refreshEvents() const { return _revents;}
+    bool refreshes( Event) const;
 
 signals:
     void onEvent( Event);   // Report to others that state changing event(s) have occurred.

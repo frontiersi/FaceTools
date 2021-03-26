@@ -25,31 +25,43 @@ using FaceTools::Vis::FV;
 
 
 ColourVisualisation::ColourVisualisation( const QString &lb, float minv, float maxv, float ss, size_t ns)
-    : _label(lb), _minr(minv), _maxr(maxv), _minv(minv), _maxv(maxv), _ssize(ss), _nssize(ns)
+    : _label(lb), _minr(minv), _maxr(maxv), _ssize(ss), _nssize(ns)
 {
     if ( ss <= 0.0f)
-        _ssize = (_maxv - _minv)/20;
+        _ssize = (maxv - minv)/20;
     setVisibleRange( minv, maxv);
     _cmapper.setMinColour( Qt::blue);
     _cmapper.setMaxColour( Qt::red);
     _cmapper.setNumColours( 99);
-    _cmapper.rebuild();
+    _lut = _cmapper.build();
 }   // end ctor
 
 
 void ColourVisualisation::setVisibleRange( float vmin, float vmax)
 {
     _cmapper.setVisibleRange( vmin, vmax);
-    _minv = _cmapper.minVisible();
-    _maxv = _cmapper.maxVisible();
 }   // end setVisibleRange
+
+
+void ColourVisualisation::_refreshLookupTable( FV *fv)
+{
+    const bool v = _visible.count(fv) > 0;
+    vtkMapper *mapper = fv->actor()->GetMapper();
+    mapper->SetLookupTable( v ? _lut.Get() : nullptr);
+    mapper->SetScalarVisibility( v);
+    if ( v)
+    {
+        mapper->SetScalarRange( minVisible(), maxVisible());
+        refreshColourMap(fv);   // Virtual call
+    }   // end if
+}   // end _refreshLookupTable
 
 
 void ColourVisualisation::rebuildColourMapping()
 {
-    _cmapper.rebuild();
+    _lut = _cmapper.build();
     for ( FV *fv : _visible)
-        fv->refreshColourMap();
+        _refreshLookupTable( fv);
 }   // end rebuildColourMapping
 
 
@@ -62,14 +74,16 @@ void ColourVisualisation::setVisible( FV *fv, bool v)
 void ColourVisualisation::deactivate( FV *fv)
 {
     _visible.erase(fv);
-    hide( fv);
+    _refreshLookupTable( fv);
+    hide( fv);  // Virtual call
 }   // end deactivate
 
 
 void ColourVisualisation::activate( FV *fv)
 {
     _visible.insert(fv);
-    show( fv);
+    _refreshLookupTable( fv);
+    show( fv);  // Virtual call
 }   // end activate
 
 

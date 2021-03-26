@@ -388,7 +388,7 @@ bool ActionShowMetrics::_updateText( const FV *fv, int mid)
         if ( age == 0.0f)
             oss << " [DOB unset]";
         else if ( !gd->isWithinAgeRange(age))
-            oss << " [Age Outside Inferential Domain]";
+            oss << " [Age Outside Domain]";
         else
         {
             QStringList dwarns;

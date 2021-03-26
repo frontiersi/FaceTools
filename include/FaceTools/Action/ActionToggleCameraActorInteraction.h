@@ -19,7 +19,7 @@
 #define FACE_TOOLS_ACTION_TOGGLE_CAMERA_ACTOR_INTERACTION_H
 
 #include "FaceAction.h"
-#include <FaceTools/Interactor/ActorMoveNotifier.h>
+#include <FaceTools/Interactor/MovementNotifier.h>
 
 namespace FaceTools { namespace Action {
 
@@ -40,10 +40,11 @@ protected:
 private slots:
     void _doOnActorStart();
     void _doOnActorStop();
+    void _doOnCameraMove();
     void _doOnCameraStop();
 
 private:
-    Interactor::ActorMoveNotifier _moveNotifier;
+    Interactor::MovementNotifier _moveNotifier;
 };  // end class
 
 

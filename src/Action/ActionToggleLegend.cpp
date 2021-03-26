@@ -115,9 +115,9 @@ void ActionToggleLegend::_recalcLegendPlacement( r3dvis::ScalarLegend *sleg)
 {
     // Setting the position and height here forces the texture to be recalculated.
     // NB on high DPI screens, the texture is not stable - bug in VTK.
-    sleg->setPosition( 0.8, 0.50);
+    sleg->setPosition( 0.8/*from left*/, 0.3/*from bottom*/);
     sleg->setWidth( 0.1);
-    sleg->setHeight( 0.47);
+    sleg->setHeight( 0.67);
 }   // end _recalcLegendPlacement
 
 

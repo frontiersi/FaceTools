@@ -20,8 +20,11 @@
 #include <ModelSelect.h>
 #include <Metric/Metric.h>
 #include <Metric/Chart.h>
+#include <QBuffer>
+#include <QSaveFile>
 #include <QMessageBox>
 #include <QSvgGenerator>
+#include <QSvgRenderer>
 using FaceTools::Widget::ChartDialog;
 using FaceTools::Metric::GrowthData;
 using MC = FaceTools::Metric::Metric;
@@ -52,7 +55,7 @@ ChartDialog::ChartDialog( QWidget *parent) :
     _fdialog->setViewMode( QFileDialog::Detail);
     _fdialog->setAcceptMode( QFileDialog::AcceptSave);
     //_fdialog->setOption( QFileDialog::DontUseNativeDialog);
-    _fdialog->setNameFilter( tr("Image Files (*.png *.jpg *.jpeg *.gif *.bmp *.svg)"));
+    _fdialog->setNameFilter( tr("Image Files (*.png *.jpg *.jpeg *.bmp *.svg)"));
 }   // end ctor
 
 
@@ -107,8 +110,8 @@ bool hasValidExtension( const QString& fname)
     return fname.endsWith( ".jpg", Qt::CaseInsensitive)
         || fname.endsWith( ".jpeg", Qt::CaseInsensitive)
         || fname.endsWith( ".png", Qt::CaseInsensitive)
-        || fname.endsWith( ".gif", Qt::CaseInsensitive)
-        || fname.endsWith( ".bmp", Qt::CaseInsensitive);
+        || fname.endsWith( ".bmp", Qt::CaseInsensitive)
+        || fname.endsWith( ".svg", Qt::CaseInsensitive);
 }   // end hasValidExtension
 }   // end namespace
 
@@ -120,32 +123,76 @@ void ChartDialog::_doOnSaveImage()
     if ( _fdialog->exec())
         imgpath = _fdialog->selectedFiles().first().trimmed();
 
-    if ( !imgpath.isEmpty())
+    if ( !imgpath.isEmpty() && !saveImage( _cview, imgpath))
     {
-        bool savedOkay = true;
-
-        if ( QFileInfo(imgpath).suffix().toLower() == "svg")
-        {
-            QSvgGenerator simg;
-            simg.setFileName( imgpath);
-            simg.setSize( _cview->size());
-            simg.setViewBox( QRect( 0, 0, _cview->width(), _cview->height()));
-            static_cast<QWidget*>(_cview)->render( &simg);
-        }   // end if
-        else
-        {
-            if ( !hasValidExtension(imgpath))
-                imgpath += ".jpg";
-
-            QPixmap pixmap( _cview->size());
-            static_cast<QWidget*>(_cview)->render( &pixmap);
-            savedOkay = pixmap.save( imgpath);
-        }   // end else
-
-        if ( !savedOkay)
-        {
-            const QString msg = QString("Unable to save to '%1'").arg(imgpath);
-            QMB::warning( this, tr("Save Error!"), QString("<p align='center'>%1</p>").arg(msg));
-        }   // end if
+        const QString msg = QString("Unable to save to '%1'").arg(imgpath);
+        QMB::warning( this, tr("Save Error!"), QString("<p align='center'>%1</p>").arg(msg));
     }   // end if
 }   // end _doOnSaveImage
+
+
+namespace {
+void paintChartToDevice( QtCharts::QChartView *cview, QPaintDevice *pdev)
+{
+    QPainter painter;
+    painter.begin( pdev);
+    painter.setRenderHint( QPainter::Antialiasing);
+    cview->render( &painter);
+}   // end paintChartToDevice
+}   // end namespace
+
+
+bool ChartDialog::saveImage( QtCharts::QChartView *cview, QString &fpath)
+{
+    assert( !fpath.isEmpty());
+
+    bool savedOkay = false;
+
+    QString suffix = QFileInfo(fpath).suffix().toLower();
+    if ( !hasValidExtension(fpath))
+    {
+        suffix = "jpg";
+        fpath += "." + suffix;
+    }   // end if
+
+    QSvgGenerator simg;
+    const QSize sz = cview->size();
+    simg.setSize( sz);
+    simg.setViewBox( QRect( 0, 0, sz.width(), sz.height()));
+    simg.setResolution( 90);
+
+    if ( suffix == "svg")
+    {
+        QSaveFile saveFile( fpath);
+        if ( saveFile.open(QIODevice::WriteOnly))
+        {
+            simg.setOutputDevice( &saveFile);
+            paintChartToDevice( cview, &simg);
+            savedOkay = saveFile.commit();
+        }   // end if
+    }   // end if
+    else
+    {
+        QBuffer buffer;
+        if ( buffer.open(QIODevice::WriteOnly))
+        {
+            // First write the SVG out to internal buffer
+            simg.setOutputDevice( &buffer);
+            paintChartToDevice( cview, &simg);
+            buffer.close();
+
+            // Then write the buffer out to image data via SVG renderer
+            QSvgRenderer svgRenderer( buffer.data());
+            QPixmap img( sz);
+            img.fill( suffix == "png" ? Qt::transparent : Qt::white);
+            QPainter painter;
+            painter.begin( &img);
+            painter.setRenderHint( QPainter::Antialiasing);
+            svgRenderer.render( &painter);
+            savedOkay = img.save( fpath);
+        }   // end if
+    }   // end else
+
+    return savedOkay;
+}   // end saveImage
+

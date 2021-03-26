@@ -39,6 +39,11 @@ public:
 
     void refresh( const Metric::Metric*);
 
+    // Save the chart view to the given file path. If fpath is not an svg
+    // and doesn't have a valid image extension, it's saved as {fpath}.jpg.
+    // Returns true iff the image was saved to the given path.
+    static bool saveImage( QtCharts::QChartView*, QString& fpath);
+
 private slots:
     void _doOnSaveImage();
     void _doRefreshChart();

@@ -22,14 +22,22 @@
 
 namespace FaceTools { namespace Interactor {
 
-class FaceTools_EXPORT MovementNotifier : public QObject, public ViewerNotifier
+class MovementNotifier : public QObject, public ViewerNotifier
 { Q_OBJECT
 signals:
-    void onEvent( Action::Event);   // Event::CAMERA_CHANGE or Event::ACTOR_MOVE
+    void onActorStart( Vis::FV*);
+    void onActorStop( Vis::FV*);
+    void onCameraStart();
+    void onCameraMove();
+    void onCameraStop();
 
-private:
+protected:
     void cameraStart() override;
+    void cameraMove() override;
+    void cameraStop() override;
     void actorStart( const vtkProp3D*) override;
+    void actorMove( const vtkProp3D*) override;
+    void actorStop( const vtkProp3D*) override;
 };  // end class
 
 }}   // end namespace

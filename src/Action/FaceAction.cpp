@@ -27,6 +27,7 @@ using FaceTools::Action::FaceAction;
 using FaceTools::Action::UndoState;
 using FaceTools::Action::Event;
 using MS = FaceTools::ModelSelect;
+//#undef NDEBUG
 
 
 FaceAction::FaceAction()
@@ -126,6 +127,10 @@ bool FaceAction::primeMousePos( const QPoint &p)
 void FaceAction::addPurgeEvent( Event e) { assert( !_isFinalised); _pevents |= e;}
 void FaceAction::addTriggerEvent( Event e) { assert( !_isFinalised); _tevents |= e;}
 void FaceAction::addRefreshEvent( Event e) { assert( !_isFinalised); _revents |= e;}
+
+bool FaceAction::purges( Event e) const { return any( _pevents, e);}
+bool FaceAction::triggers( Event e) const { return any( _tevents, e);}
+bool FaceAction::refreshes( Event e) const { return any( _revents, e);}
 
 
 // protected

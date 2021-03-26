@@ -22,14 +22,16 @@
 #include <QTemporaryFile>
 #include <QTools/QImageTools.h>
 #include <cassert>
+#include <boost/filesystem.hpp>
 using FaceTools::U3DCache;
 using FaceTools::FM;
 using FaceTools::Vis::FV;
+namespace BFS = boost::filesystem;
 
 // static definitions
 QTemporaryDir U3DCache::_tmpdir;
 QReadWriteLock U3DCache::_rwLock;
-std::unordered_set<const FM*> U3DCache::_cache;
+std::unordered_map<const FM*, QString> U3DCache::_cache;
 
 
 U3DCache::Filepath U3DCache::u3dfilepath( const FM &fm)
@@ -38,7 +40,7 @@ U3DCache::Filepath U3DCache::u3dfilepath( const FM &fm)
     if ( !_rwLock.tryLockForRead())
         return nullptr;
     if ( _cache.count(&fm) > 0)
-        fname = _makeFilePath(fm);
+        fname = _cache.at(&fm);
     return Filepath( new QString( fname), []( QString* s){ delete s; _rwLock.unlock();});
 }   // end u3dfilepath
 
@@ -55,29 +57,17 @@ bool U3DCache::isAvailable()
 }   // end isAvailable
 
 
-namespace {
-std::string exportU3D( const r3d::Mesh &mesh, const QString &fname,
-                       const r3d::Colour &ems=r3d::Colour::white())
+bool U3DCache::_exportU3D( const r3d::Mesh &mesh, const QString &savepath, const r3d::Colour &ems)
 {
     std::string errmsg = "";
-    QTemporaryFile tfile( QDir::tempPath() + "/XXXXXX.u3d");
-    if ( tfile.open())
+    r3dio::U3DExporter xptr( true/*delete on destroy*/, true/*media9*/, ems);
+    if ( !xptr.save( mesh, savepath.toLocal8Bit().toStdString()))
     {
-        r3dio::U3DExporter xptr( true/*false for debug*/, true/*media9*/, ems);
-        if ( xptr.save( mesh, tfile.fileName().toLocal8Bit().toStdString()))
-        {
-            if ( !QFile::copy( tfile.fileName(), fname))
-                errmsg = "Unable to copy generated U3D to required location!";
-            QFile::remove( tfile.fileName());
-        }   // end if
-        else
-            errmsg = "Unable to save to U3D format!";
+        errmsg = "Unable to save to U3D format!";
+        std::cerr << "[ERROR] FaceTools::U3DCache::_exportU3D: " << errmsg << std::endl;
     }   // end if
-    else
-        errmsg = "Couldn't open temporary file for U3D export!";
-    return errmsg;
-}   // end exportU3D
-}   // end namespace
+    return errmsg.empty();
+}   // end _exportU3D
 
 
 bool U3DCache::refresh( const FM &fm)
@@ -108,20 +98,26 @@ bool U3DCache::refresh( const FM &fm)
         */
     }   // end if
 
-    const std::string errmsg = exportU3D( *mesh, _makeFilePath(fm), ems);
-    if ( errmsg.empty())
+    const std::string upath = BFS::unique_path( "%%%%-%%%%-%%%%-%%%%.u3d").string();
+    const QString fname = QString("%1_%2").arg(fm.subjectId()).arg( QString::fromStdString(upath));
+    const QString savepath = _tmpdir.filePath( fname);
+    const bool okay = _exportU3D( *mesh, savepath, ems);
+
+    // Update the reference to the newly cached U3D and remove the old U3D.
+    if ( okay)
     {
         _rwLock.lockForWrite();
-        _cache.insert(&fm);
+        if ( _cache.count(&fm) > 0)
+            QFile::remove( _cache.at(&fm));
+        _cache[&fm] = savepath;
         _rwLock.unlock();
     }   // end if
-    else
-        std::cerr << "[ERROR] FaceTools::U3DCache::refresh: " << errmsg << std::endl;
-    return errmsg.empty();
+
+    return okay;
 }   // end refresh
 
 
-r3d::Mesh::Ptr U3DCache::makeU3D( const FV *fv, const QString &u3dfile)
+r3d::Mesh::Ptr U3DCache::makeColourMappedU3D( const FV *fv, const QString &u3dfile)
 {
     const FM *fm = fv->data();
     fm->lockForRead();
@@ -129,14 +125,11 @@ r3d::Mesh::Ptr U3DCache::makeU3D( const FV *fv, const QString &u3dfile)
     fm->unlock();
     mesh->removeAllMaterials();
     r3dvis::mapActiveScalarsToMesh( fv->actor(), *mesh);
-    const std::string errmsg = exportU3D( *mesh, u3dfile);
-    if ( !errmsg.empty())
-    {
-        std::cerr << "[ERROR] FaceTools::U3DCache::makeU3D: " << errmsg << std::endl;
+    const r3d::Colour ems = r3d::Colour::white();
+    if ( !_exportU3D( *mesh, u3dfile, ems))
         mesh = nullptr;
-    }   // end if
     return mesh;
-}   // end makeU3D
+}   // end makeColourMappedU3D
 
 
 void U3DCache::purge( const FM &fm)
@@ -144,18 +137,9 @@ void U3DCache::purge( const FM &fm)
     _rwLock.lockForWrite();
     if ( _cache.count(&fm) > 0)
     {
-        QFile::remove( _makeFilePath(fm));
+        QFile::remove( _cache.at(&fm));
         _cache.erase(&fm);
     }   // end if
     _rwLock.unlock();
 }   // end purge
 
-
-QString U3DCache::_makeFilePath( const FM &fm)
-{
-    QString fname;
-    QTextStream os(&fname);
-    os << "obj_" << Qt::hex << &fm << ".u3d";
-    fname = _tmpdir.filePath( fname);   // The filename to save to
-    return fname;
-}   // end _makeFilePath

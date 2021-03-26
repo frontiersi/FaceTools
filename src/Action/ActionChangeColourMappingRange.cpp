@@ -98,8 +98,8 @@ void ActionChangeColourMappingRange::_doOnValueChanged( float minv, float maxv)
     FV* fv = MS::selectedView();
     assert( fv);
     assert( fv->activeColours());
-    ColourVisualisation *svis = fv->activeColours();
-    svis->setVisibleRange( minv, maxv);
-    svis->rebuildColourMapping();
+    ColourVisualisation *cv = fv->activeColours();
+    cv->setVisibleRange( minv, maxv);
+    cv->rebuildColourMapping();
     emit onEvent( Event::VIEW_CHANGE);
 }   // end _doOnValueChanged

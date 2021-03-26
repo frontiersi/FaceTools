@@ -44,7 +44,7 @@ public:
     bool applyToAllInViewer() const override { return true;}
     bool applyToAllViewers() const override { return true;}
 
-    float minAllowedOpacity() const override { return 0.10f;}
+    float minAllowedOpacity() const override { return 0.00f;}
     float maxAllowedOpacity() const override { return 0.99f;}
 
     bool isAvailable( const FV*) const override;

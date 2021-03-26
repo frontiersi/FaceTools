@@ -16,15 +16,53 @@
  ************************************************************************/
 
 #include <Interactor/MovementNotifier.h>
+#include <FaceModelViewer.h>
+#include <ModelSelect.h>
+#include <FaceModel.h>
+#include <r3dvis/VtkTools.h>
 using FaceTools::Interactor::MovementNotifier;
-using FaceTools::Action::Event;
+using FaceTools::Vis::FV;
+using MS = FaceTools::ModelSelect;
 
-void MovementNotifier::cameraStart()
-{
-    emit onEvent(Event::CAMERA_CHANGE);
-}   // end cameraStart
 
-void MovementNotifier::actorStart( const vtkProp3D*)
+void MovementNotifier::actorStart( const vtkProp3D* prop)
 {
-    emit onEvent(Event::ACTOR_MOVE);
+    FV* fv = viewFromActor( prop);
+    if ( fv && fv == MS::selectedView())
+        emit onActorStart(fv);
 }   // end actorStart
+
+
+void MovementNotifier::actorMove( const vtkProp3D* prop)
+{
+    // Propogate the matrix of the affected actor to all associated FaceView actors.
+    FV* fv = viewFromActor( prop);
+    if ( fv && fv == MS::selectedView())
+    {
+        const vtkMatrix4x4 *vt = fv->transformMatrix();
+        for ( FV* f : fv->data()->fvs())
+            f->pokeTransform( vt);
+        MS::updateRender();
+    }   // end if
+}   // end actorMove
+
+
+void MovementNotifier::actorStop( const vtkProp3D* prop)
+{
+    // Catch up the data transform to the actor's.
+    FV* fv = viewFromActor( prop);
+    if ( fv && fv == MS::selectedView())
+    {
+        FM *fm = fv->data();
+        fm->lockForWrite();
+        const Mat4f t = r3dvis::toEigen( fv->transformMatrix());
+        fm->addTransformMatrix( t * fm->inverseTransformMatrix());
+        fm->unlock();
+        emit onActorStop(fv);
+    }   // end if
+}   // end actorStop
+
+
+void MovementNotifier::cameraStart() { emit onCameraStart();}
+void MovementNotifier::cameraMove() { emit onCameraMove();}
+void MovementNotifier::cameraStop() { emit onCameraStop();}

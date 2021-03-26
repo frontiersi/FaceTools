@@ -40,7 +40,7 @@ ActionAlignModel::ActionAlignModel( const QString& dn, const QIcon& ico, const Q
     : FaceAction(dn, ico, ks)
 {
     // Refresh on SURFACE_DATA_CHANGE for FaceModelCurvatureStore completion
-    addRefreshEvent( Event::AFFINE_CHANGE | Event::MESH_CHANGE | Event::SURFACE_DATA_CHANGE);
+    addRefreshEvent( Event::AFFINE_CHANGE | Event::MASK_CHANGE | Event::MESH_CHANGE | Event::SURFACE_DATA_CHANGE);
     setAsync(true);
 }   // end ctor
 

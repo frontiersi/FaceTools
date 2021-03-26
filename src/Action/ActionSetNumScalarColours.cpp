@@ -86,9 +86,9 @@ void ActionSetNumScalarColours::_doOnValueChanged( int v)
     FV* fv = MS::selectedView();
     assert(fv);
     assert(fv->activeColours());
-    ColourVisualisation* svis = fv->activeColours();
-    svis->setNumColours( static_cast<size_t>(v));
-    svis->rebuildColourMapping();
+    ColourVisualisation* cv = fv->activeColours();
+    cv->setNumColours( static_cast<size_t>(v));
+    cv->rebuildColourMapping();
     emit onEvent( Event::VIEW_CHANGE);
 }   // end _doOnValueChanged
 

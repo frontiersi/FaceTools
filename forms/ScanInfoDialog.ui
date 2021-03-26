@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>678</width>
+    <width>588</width>
     <height>456</height>
    </rect>
   </property>
@@ -39,7 +39,7 @@
       <widget class="QLabel" name="label_4">
        <property name="minimumSize">
         <size>
-         <width>120</width>
+         <width>90</width>
          <height>0</height>
         </size>
        </property>
@@ -70,15 +70,21 @@
        </property>
        <property name="minimumSize">
         <size>
-         <width>130</width>
+         <width>160</width>
          <height>0</height>
         </size>
        </property>
+       <property name="maximumSize">
+        <size>
+         <width>160</width>
+         <height>16777215</height>
+        </size>
+       </property>
        <property name="toolTip">
-        <string>When was this image taken?</string>
+        <string>The date when the image was taken.</string>
        </property>
        <property name="whatsThis">
-        <string>The date this image was captured. Required to be able to accurately calculate the subject's age.</string>
+        <string>The image capture date is used with the subject's date of birth to calculate their age.</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -137,7 +143,7 @@
       <widget class="QLabel" name="label_3">
        <property name="minimumSize">
         <size>
-         <width>120</width>
+         <width>90</width>
          <height>0</height>
         </size>
        </property>
@@ -148,7 +154,7 @@
         </size>
        </property>
        <property name="text">
-        <string>Date of Birth</string>
+        <string>Birth Date</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -168,21 +174,21 @@
        </property>
        <property name="minimumSize">
         <size>
-         <width>130</width>
+         <width>160</width>
          <height>0</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>130</width>
+         <width>160</width>
          <height>16777215</height>
         </size>
        </property>
        <property name="toolTip">
-        <string>When was the subject born?</string>
+        <string>The subject's date of birth.</string>
        </property>
        <property name="whatsThis">
-        <string>The subject's date of birth. Required to calculate the subject's age so that (together with sex and ethnicity) the significance of facial metrics can be accurately determined.</string>
+        <string>Date of birth is needed to calculate age for evaluation against growth curves.</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -241,7 +247,7 @@
       <widget class="QLabel" name="label">
        <property name="minimumSize">
         <size>
-         <width>120</width>
+         <width>90</width>
          <height>0</height>
         </size>
        </property>
@@ -252,7 +258,7 @@
         </size>
        </property>
        <property name="text">
-        <string>Maternal Ethnicity</string>
+        <string>Ethnicity (M)</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -272,13 +278,13 @@
        </property>
        <property name="minimumSize">
         <size>
-         <width>130</width>
+         <width>160</width>
          <height>0</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>130</width>
+         <width>160</width>
          <height>16777215</height>
         </size>
        </property>
@@ -336,7 +342,7 @@
       <widget class="QLabel" name="label_5">
        <property name="minimumSize">
         <size>
-         <width>120</width>
+         <width>90</width>
          <height>0</height>
         </size>
        </property>
@@ -347,7 +353,7 @@
         </size>
        </property>
        <property name="text">
-        <string>Paternal Ethnicity</string>
+        <string>Ethnicity (P)</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -367,13 +373,13 @@
        </property>
        <property name="minimumSize">
         <size>
-         <width>130</width>
+         <width>160</width>
          <height>0</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>130</width>
+         <width>160</width>
          <height>16777215</height>
         </size>
        </property>
@@ -431,7 +437,7 @@
       <widget class="QLabel" name="label_2">
        <property name="minimumSize">
         <size>
-         <width>120</width>
+         <width>90</width>
          <height>0</height>
         </size>
        </property>
@@ -462,13 +468,13 @@
        </property>
        <property name="minimumSize">
         <size>
-         <width>130</width>
+         <width>160</width>
          <height>0</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>130</width>
+         <width>160</width>
          <height>16777215</height>
         </size>
        </property>
@@ -506,7 +512,7 @@
       <widget class="QComboBox" name="assessorComboBox">
        <property name="minimumSize">
         <size>
-         <width>200</width>
+         <width>110</width>
          <height>0</height>
         </size>
        </property>

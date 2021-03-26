@@ -27,7 +27,6 @@ using FaceTools::Vis::FV;
 using MS = FaceTools::ModelSelect;
 
 bool ActionSelect::s_showBoxes(true);
-bool ActionSelect::s_autoFocus(false);
 
 
 ActionSelect::ActionSelect() : FaceAction("ActionSelect"), _sfv(nullptr)
@@ -62,10 +61,11 @@ void ActionSelect::doAction( Event e)
         for ( const FV *sfv : _sfv->data()->fvs())
             lvis->setSelectedColour( sfv, true);
     }   // end if
+
     if ( s_showBoxes)
         _sfv->apply( &_bvis);
-    if ( s_autoFocus)
-        ActionOrientCamera::orient( _sfv, 1.0f);
+    else
+        _sfv->purge( &_bvis);
 }   // end doAction
 
 
@@ -85,6 +85,3 @@ void ActionSelect::purge( const FM *fm)
 // static
 void ActionSelect::setShowBoundingBoxes( bool v) { s_showBoxes = v;}
 
-
-// static
-void ActionSelect::setAutoFocus( bool v) { s_autoFocus = v;}

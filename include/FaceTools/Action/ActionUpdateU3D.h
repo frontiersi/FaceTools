@@ -29,7 +29,6 @@ public:
 
 protected:
     void purge( const FM*) override;
-    bool isAllowed( Event) override;
     bool doBeforeAction( Event) override;
     void doAction( Event) override;
     Event doAfterAction( Event) override;

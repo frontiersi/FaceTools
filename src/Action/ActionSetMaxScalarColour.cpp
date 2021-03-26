@@ -60,10 +60,9 @@ bool ActionSetMaxScalarColour::doBeforeAction( Event)
 void ActionSetMaxScalarColour::doAction( Event)
 {
     FV *fv = MS::selectedView();
-    ColourVisualisation *smapper = fv->activeColours();
-    assert(smapper);
-    smapper->setMaxColour( _curColour);
-    smapper->rebuildColourMapping();
+    ColourVisualisation *cv = fv->activeColours();
+    cv->setMaxColour( _curColour);
+    cv->rebuildColourMapping();
 }   // end doAction
 
 

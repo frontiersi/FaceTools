@@ -29,7 +29,6 @@ public:
     ActionSelect();
 
     static void setShowBoundingBoxes( bool);
-    static void setAutoFocus( bool);
 
 protected:
     bool doBeforeAction( Event) override;
@@ -39,9 +38,7 @@ protected:
 private:
     Vis::FV *_sfv;
     Vis::BoundingVisualisation _bvis;
-
     static bool s_showBoxes;
-    static bool s_autoFocus;
 };  // end class
 
 }}   // end namespace

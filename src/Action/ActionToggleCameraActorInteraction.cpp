@@ -19,7 +19,7 @@
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 using FaceTools::Action::ActionToggleCameraActorInteraction;
-using FaceTools::Interactor::ActorMoveNotifier;
+using FaceTools::Interactor::MovementNotifier;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::FaceModelViewer;
@@ -32,11 +32,15 @@ using MS = FaceTools::ModelSelect;
 ActionToggleCameraActorInteraction::ActionToggleCameraActorInteraction( const QString& dn, const QIcon& ico, const QKeySequence& ks)
     : FaceAction( dn, ico, ks)
 {
-    connect( &_moveNotifier, &ActorMoveNotifier::onActorStart,
+    connect( &_moveNotifier, &MovementNotifier::onActorStart,
             this, &ActionToggleCameraActorInteraction::_doOnActorStart);
-    connect( &_moveNotifier, &ActorMoveNotifier::onActorStop,
+    connect( &_moveNotifier, &MovementNotifier::onActorStop,
             this, &ActionToggleCameraActorInteraction::_doOnActorStop);
-    connect( &_moveNotifier, &ActorMoveNotifier::onCameraStop,
+    connect( &_moveNotifier, &MovementNotifier::onCameraStart,
+            this, &ActionToggleCameraActorInteraction::_doOnCameraMove);
+    connect( &_moveNotifier, &MovementNotifier::onCameraMove,
+            this, &ActionToggleCameraActorInteraction::_doOnCameraMove);
+    connect( &_moveNotifier, &MovementNotifier::onCameraStop,
             this, &ActionToggleCameraActorInteraction::_doOnCameraStop);
     setCheckable( true, false);
     addRefreshEvent( Event::AFFINE_CHANGE | Event::MESH_CHANGE);
@@ -99,6 +103,12 @@ void ActionToggleCameraActorInteraction::_doOnActorStop()
 {
     emit onEvent( Event::AFFINE_CHANGE);
 }   // end _doOnActorStop
+
+
+void ActionToggleCameraActorInteraction::_doOnCameraMove()
+{
+    emit onEvent( Event::CAMERA_CHANGE);
+}   // end _doOnCameraMove
 
 
 void ActionToggleCameraActorInteraction::_doOnCameraStop()

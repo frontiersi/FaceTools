@@ -36,6 +36,10 @@ using FaceTools::Vec3f;
 
 
 namespace {
+
+float toAngle( float y, float x) { return atan2f(y,x) * 180.0f/EIGEN_PI;}
+
+
 class CameraSyncher : public ViewerNotifier
 {
 public:
@@ -86,16 +90,18 @@ protected:
 
         _ivwr->refreshClippingPlanes(); // Do this for zoom
 
-        static const QString dmsg( "distance: %1 %2");
-        static const QString fmsg( "focus: %1 X, %2 Y, %3 Z");
-        static const QString pmsg( "direction: %1 X, %2 Y, %3 Z");
-        const QString m0 = dmsg.arg(cnow.distance()).arg(FaceTools::FM::LENGTH_UNITS);
+        static const QString dmsg( "Distance: %1 %2");
+        static const QString fmsg( "Focus: %1, %2, %3");
+        static const QString pmsg( "Orientation: %1°, %2°, %3°");
+        const QString m0 = dmsg.arg( cnow.distance(), -1, 'f', 0).arg(FaceTools::FM::LENGTH_UNITS);
         const Vec3f &fv = cnow.focus();
         const QString m1 = fmsg.arg( fv[0], -1, 'f', 2).arg( fv[1], -1, 'f', 2).arg( fv[2], -1, 'f', 2);
-        Vec3f pv = fv - cnow.pos();
-        pv.normalize();
-        const QString m2 = pmsg.arg( pv[0], -1, 'f', 2).arg( pv[1], -1, 'f', 2).arg( pv[2], -1, 'f', 2);
-        MS::showStatus(QString("Camera %1, %2, %3").arg(m0).arg(m1).arg(m2), 10000);
+        Vec3f dv = fv - cnow.pos();
+        dv.normalize(); // dv is camera direction vector
+        const QString m2 = pmsg.arg( toAngle(dv[1], dv[2]), -1, 'f', 0)     // About X
+                               .arg( toAngle(dv[2], dv[0]), -1, 'f', 0)     // About Y
+                               .arg( toAngle(dv[0], dv[1]), -1, 'f', 0);    // About Z
+        MS::showStatus(QString("[CAMERA]  %1  |  %2  |  %3").arg(m0).arg(m1).arg(m2), 10000);
     }   // end cameraMove
 
 private:
@@ -144,7 +150,6 @@ bool ActionSynchroniseCameras::isAllowed(Event) { return true;/*MS::isViewSelect
 
 bool ActionSynchroniseCameras::update( Event e)
 {
-    //if ( has( e, Event::CAMERA_CHANGE) && _camSync->isSynching())
     CameraSyncher *cs = static_cast<CameraSyncher*>(_camSync);
     if ( MS::isViewSelected())
         cs->update();
@@ -158,3 +163,4 @@ void ActionSynchroniseCameras::doAction( Event)
     cs->setSynching( isChecked());
     cs->update();
 }   // end doAction
+

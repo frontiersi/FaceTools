@@ -26,17 +26,10 @@ class FaceTools_EXPORT ReportManager
 {
 public:
     // Initialise PDF export with the locations of pdflatex and IDTFConverter.
-    // Also optionally set location of Inkscape exe for exporting SVGs into reports (otherwise PNGs used).
-    static bool init( const QString& pdflatex, const QString& idtfConverter, const QString& inkscape="");
+    static bool init( const QString& pdflatex, const QString& idtfConverter);
 
     // Returns whether reporting is available.
     static bool isAvailable();
-
-    static void setReportHeaderName( const QString& n) { _hname = n;}
-    static void setVersionString( const QString& v) { _version = v;}
-    static const QString& versionString() { return _version;}
-
-    static void setLogoPath( const QString& p) { _logopath = p;}
 
     // Load all report Lua scripts from the given directory.
     static int load( const QString&);
@@ -54,19 +47,7 @@ public:
     // Return reference to the report with given name or null if doesn't exist.
     static Report::Ptr report( const QString& nm) { return _reports.count(nm) > 0 ? _reports.at(nm) : nullptr;}
 
-    // (Over)write the views file inside the temporary directory for U3D model export.
-    static bool writeViewsFile( float distance, float fov, const QString &fname="views.vws");
-
-    // (Over)write the image file inside the temporary directory.
-    static bool writeImageFile( const cv::Mat&, const QString &fname="img.jpg");
-
 private:
-    static QTemporaryDir _tmpdir;
-    static QString _hname;
-    static QString _version;
-    static QString _logopath;
-    static QString _logofile;
-    static QString _inkscape;
     static QStringList _names;                                  // Report names
     static std::unordered_map<QString, Report::Ptr> _reports;   // Reports keyed by their names
 };  // end class

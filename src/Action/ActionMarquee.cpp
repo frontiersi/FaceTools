@@ -17,8 +17,8 @@
 
 #include <Action/ActionMarquee.h>
 #include <FaceModelViewer.h>
-#include <algorithm>
 #include <functional>
+#include <algorithm>
 using FaceTools::Action::ActionMarquee;
 using FaceTools::Action::CameraWorker;
 using FaceTools::Action::FaceAction;
@@ -29,12 +29,12 @@ using MS = FaceTools::ModelSelect;
 
 
 ActionMarquee::ActionMarquee( const QString& dn, const QIcon& ico)
-    : FaceAction( dn, ico)
+    : FaceAction( dn, ico), _running(false)
 {
     setCheckable(true, false);
     for ( FMV* fmv : MS::viewers())
         _workers.push_back( new CW( fmv));
-    addRefreshEvent( Event::CAMERA_CHANGE);
+    addTriggerEvent( Event::CAMERA_CHANGE);
 }   // end ctor
 
 
@@ -44,32 +44,38 @@ ActionMarquee::~ActionMarquee()
 }   // end dtor
 
 
-bool ActionMarquee::update( Event e)
-{
-    bool chk = isChecked();
-    if ( chk && has(e, Event::CAMERA_CHANGE))
-    {
-        _stopCameras();
-        chk = false;
-    }   // end if
-    return chk;
-}   // end update
-
-
 bool ActionMarquee::isAllowed( Event e) { return MS::isViewSelected();}
+
+
+bool ActionMarquee::update( Event) { return _running;}
 
 
 void ActionMarquee::doAction( Event e)
 {
-    if ( isChecked())
-        _startCameras();
-    else
+    if ( !isChecked() || triggers( e))
         _stopCameras();
+    else
+        _startCameras();
 }   // end doAction
 
-Event ActionMarquee::doAfterAction( Event) { return Event::CAMERA_CHANGE;}
+
+Event ActionMarquee::doAfterAction( Event)
+{
+    if ( _running)
+        MS::showStatus( "Marquee mode active (move the camera to stop)", -1);
+    return Event::NONE;
+}   // end doAfterAction
 
 
-void ActionMarquee::_startCameras() { std::for_each( std::begin(_workers), std::end(_workers), [](CW* cw){cw->start();});}
+void ActionMarquee::_startCameras()
+{
+    std::for_each( std::begin(_workers), std::end(_workers), [](CW* cw){cw->start();});
+    _running = true;
+}   // end _startCameras
 
-void ActionMarquee::_stopCameras() { std::for_each( std::begin(_workers), std::end(_workers), [](CW* cw){cw->stop();});}
+
+void ActionMarquee::_stopCameras()
+{
+    std::for_each( std::begin(_workers), std::end(_workers), [](CW* cw){cw->stop();});
+    _running = false;
+}   // end _stopCameras

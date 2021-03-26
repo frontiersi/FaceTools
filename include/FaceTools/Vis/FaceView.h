@@ -149,8 +149,6 @@ public:
     void setActiveCellVectors( const char*);
     void setActivePointVectors( const char*);
 
-    void refreshColourMap();
-
     // Set/get whether backface culling is applied.
     void setBackfaceCulling( bool);
     bool backfaceCulling() const;

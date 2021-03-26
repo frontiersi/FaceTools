@@ -27,6 +27,7 @@ namespace FaceTools { namespace Landmark {
 struct FaceTools_EXPORT SpecificLandmark
 {
     SpecificLandmark() : id(-1), lat(MID), prop(Vec3f::Ones()) {}
+    SpecificLandmark( int i, FaceSide l) : id(i), lat(l), prop(Vec3f::Ones()) {}
 
     // Set from a string e.g. "4Ren", "321Lex", "001Ren", "Rex", "sbal" etc returning true on success. 
     bool set( const QString&);

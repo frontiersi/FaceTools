@@ -81,7 +81,7 @@ bool ActionRemoveManifolds::doBeforeAction( Event)
 
     if ( numFaceRemove > 0)
     {
-        const QString msg = tr("%1 triangles from %2 manifolds will be removed. Do you want to continue?").arg(numFaceRemove).arg(numManRemove);
+        const QString msg = tr("%1 triangles from %2 manifolds will be removed. Continue?").arg(numFaceRemove).arg(numManRemove);
         const int rv = QMB::question( qobject_cast<QWidget*>(parent()),
                               tr("Remove Other Manifolds?"), QString("<p align='center'>%1</p>").arg(msg),
                               QMB::Yes | QMB::No, QMB::No);
@@ -103,12 +103,14 @@ void ActionRemoveManifolds::doAction( Event)
 {
     FM* fm = MS::selectedModel();
     fm->lockForWrite();
+    const Mat4f T = fm->transformMatrix();
     r3d::Copier copier( fm->mesh());
     const IntSet& fids = fm->manifolds()[_mid].faces();
     for ( int fid : fids)
         copier.add(fid);
     r3d::Mesh::Ptr mobj = copier.copiedMesh();
     fm->update( mobj, true, true);
+    fm->addTransformMatrix( T);
     fm->unlock();
 }   // end doAction
 

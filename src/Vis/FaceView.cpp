@@ -19,7 +19,6 @@
 #include <Vis/BaseVisualisation.h>
 #include <Vis/MetricVisualiser.h>
 #include <Vis/ColourVisualisation.h>
-#include <ModelSelect.h>
 #include <FaceModelCurvatureStore.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
@@ -35,7 +34,6 @@ using FaceTools::FM;
 using FaceTools::Vec3f;
 using BV = FaceTools::Vis::BaseVisualisation;
 using CV = FaceTools::Vis::ColourVisualisation;
-using MS = FaceTools::ModelSelect;
 
 
 // static definitions
@@ -43,21 +41,9 @@ bool FaceView::s_smoothLighting(false);
 bool FaceView::s_interpolateShading(false);
 const QColor FaceView::BASECOL(202, 188, 232);
 
-void FaceView::setSmoothLighting( bool v)
-{
-    s_smoothLighting = v;
-    MS::updateAllViews( []( FV* fv){ fv->reset();}, true);
-}   // end setSmoothLighting
-
-
 bool FaceView::smoothLighting() { return s_smoothLighting;}
-
-
-void FaceView::setInterpolatedShading( bool v)
-{
-    s_interpolateShading = v;
-    MS::updateAllViews( []( FV* fv){ fv->reset();}, true);
-}   // end setInterpolatedShading
+void FaceView::setSmoothLighting( bool v) { s_smoothLighting = v;}
+void FaceView::setInterpolatedShading( bool v) { s_interpolateShading = v;}
 
 
 bool FaceView::interpolatedShading() { return s_interpolateShading;}
@@ -65,7 +51,7 @@ bool FaceView::interpolatedShading() { return s_interpolateShading;}
 
 FaceView::FaceView( FM* fm, FMV* viewer)
     : _data(fm), _actor(nullptr), _texture(nullptr), _nrms(nullptr), _viewer(nullptr), _pviewer(nullptr),
-      _cv(nullptr), _baseCol(FaceView::BASECOL), _minAllowedOpacity(0.1f), _maxAllowedOpacity(1.0f)
+      _cv(nullptr), _baseCol(FaceView::BASECOL), _minAllowedOpacity(0.0f), _maxAllowedOpacity(1.0f)
 {
     assert(viewer);
     assert(fm);
@@ -390,8 +376,6 @@ void FaceView::setTextured( bool v)
 
 void FaceView::setActiveColours( CV* cv)
 {
-    _actor->GetMapper()->SetLookupTable(nullptr);
-
     if ( cv != _cv)
     {
         if ( _cv)
@@ -400,25 +384,8 @@ void FaceView::setActiveColours( CV* cv)
         if ( cv)
             cv->activate(this);
     }   // end if
-
-    if ( _cv)
-    {
-        vtkLookupTable *lut = const_cast<vtkLookupTable*>(_cv->lookupTable());
-        _actor->GetMapper()->SetLookupTable( lut);
-        refreshColourMap();
-    }   // end if
     _updateSurfaceProperties();
 }   // end setActiveColours
-
-
-void FaceView::refreshColourMap()
-{
-    if ( _cv)
-    {
-        _cv->refreshColourMap(this);
-        _actor->GetMapper()->SetScalarRange( _cv->minVisible(), _cv->maxVisible());
-    }   // end if
-}   // end refreshColourMap
 
 
 void FaceView::addCellsArray( vtkFloatArray *arr) { CV::addCellsArray(_actor, arr);}
@@ -453,6 +420,4 @@ void FaceView::_updateSurfaceProperties()
     _actor->GetMapper()->SetInterpolateScalarsBeforeMapping(false);
     if ( s_interpolateShading)
         _actor->GetMapper()->SetInterpolateScalarsBeforeMapping(true);
-
-    _actor->GetMapper()->SetScalarVisibility( _cv != nullptr);  // Not actually necessary
 }   // end _updateSurfaceProperties

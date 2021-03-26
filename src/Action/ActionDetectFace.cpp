@@ -26,6 +26,7 @@
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
+#include <QMessageBox>
 #include <cassert>
 using FaceTools::Action::ActionDetectFace;
 using FaceTools::Action::FaceAction;
@@ -37,7 +38,7 @@ using MS = FaceTools::ModelSelect;
 
 
 ActionDetectFace::ActionDetectFace( const QString& dn, const QIcon& icon)
-    : FaceAction(dn, icon), _cdialog(nullptr), _ev(Event::NONE)
+    : FaceAction(dn, icon), _cdialog(nullptr), _ev(Event::NONE), _success(false)
 {
     setAsync( true);
 }   // end ctor
@@ -81,23 +82,22 @@ bool ActionDetectFace::doBeforeAction( Event)
         storeUndo( this, _ev);
     }   // end if
 
+    _success = false;
     return goDetect;
 }   // end doBeforeAction
 
 
-void ActionDetectFace::doAction( Event)
-{
-    FM::WPtr fm = MS::selectedModelScopedWrite();
-    detect( *fm, _ulmks);
-}   // end doAction
-
-
 // public static
-void ActionDetectFace::detect( FM &fm, const IntSet &ulmks)
+bool ActionDetectFace::detect( FM &fm, const IntSet &ulmks, bool alignFirst)
 {
-    ActionAlignModel::align( fm);
+    if ( alignFirst)
+        ActionAlignModel::align( fm);
+
     fm.fixTransformMatrix();
-    r3d::Mesh::Ptr mask = MaskRegistration::registerMask( fm.mesh());
+
+    r3d::Mesh::Ptr mask = MaskRegistration::registerMask( fm.kdtree());
+    if ( !mask)
+        return false;
 
     fm.setMask( mask);
     fm.setMaskHash( MaskRegistration::maskHash());
@@ -109,17 +109,38 @@ void ActionDetectFace::detect( FM &fm, const IntSet &ulmks)
     const Mat4f ialign = align.inverse();
     fm.addTransformMatrix( ialign);
     fm.fixTransformMatrix();
+    return true;
 }   // end detect
+
+
+void ActionDetectFace::doAction( Event)
+{
+    FM::WPtr fm = MS::selectedModelScopedWrite();
+    _success = detect( *fm, _ulmks, true);
+}   // end doAction
 
 
 Event ActionDetectFace::doAfterAction( Event)
 {
-    ActionOrientCamera::orient( MS::selectedView(), 1);
     MS::clearStatus();
     MS::setInteractionMode( IMode::CAMERA_INTERACTION);
-    QString plusLmks;
-    if ( has( _ev, Event::LANDMARKS_CHANGE))
-        plusLmks = " and placed landmarks";
-    MS::showStatus( QString("Detected face%1.").arg(plusLmks), 5000);
-    return _ev | Event::CAMERA_CHANGE;
+    Event ev = Event::NONE;
+    if ( _success)
+    {
+        ActionOrientCamera::orient( MS::selectedView(), 1);
+        QString plusLmks;
+        if ( has( _ev, Event::LANDMARKS_CHANGE))
+            plusLmks = " and placed landmarks";
+        MS::showStatus( QString("Detected face%1.").arg(plusLmks), 5000);
+        ev = _ev | Event::CAMERA_CHANGE;
+    }   // end if
+    else
+    {
+        MS::showStatus( "Detection failed!", 10000);
+        static const QString msg = tr("Failed to detect the face!<br>Try removing non-face model parts first.");
+        QMessageBox::warning( static_cast<QWidget*>(parent()),
+                tr("Detection Failed!"), QString("<p align='center'>%1</p>").arg(msg));
+    }   // end else
+    _success = false;
+    return ev;
 }   // end doAfterAction

@@ -33,7 +33,7 @@ public:
 
     bool isAvailable( const FV*) const override;
 
-    float minAllowedOpacity() const override { return 0.1f;}
+    float minAllowedOpacity() const override { return 0.0f;}
     float maxAllowedOpacity() const override { return _maxOpacity;}
     void setMaxAllowedOpacity( float v);
 

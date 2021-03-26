@@ -123,8 +123,8 @@ public:
     // Call removeFaceView for ALL associated FaceViews of the given FaceModel.
     static void remove( const FM*);
 
-    // Provide a delegate that will be executed on all open views and then updateRender (if set true).
-    static void updateAllViews( const std::function<void(Vis::FV*)>&, bool updateRender=false);
+    // Call after making global changes - resets all model views.
+    static void resetAllViews();
 
     // Update rendering across all viewers.
     static void updateRender();

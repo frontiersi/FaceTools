@@ -74,7 +74,7 @@ bool ActionSmooth::doBeforeAction( Event)
     if ( MS::selectedModelScopedRead()->hasLandmarks())
     {
         _ev |= Event::LANDMARKS_CHANGE;
-        static const QString msg = tr("Smoothing will perturb landmarks positions. Are you sure you want to continue?");
+        static const QString msg = tr("Smoothing will perturb landmark positions.<br>Are you sure you want to continue?");
         doit = QMB::Yes == QMB::warning( static_cast<QWidget*>(parent()), tr("Landmarks Present!"),
                                 QString("<p align='center'>%1</p>").arg(msg), QMB::Yes | QMB::No, QMB::No);
     }   // end if

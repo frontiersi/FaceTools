@@ -39,6 +39,7 @@ protected:
 
 private:
     std::vector<CameraWorker*> _workers;
+    bool _running;
     void _startCameras();
     void _stopCameras();
 };  // end class

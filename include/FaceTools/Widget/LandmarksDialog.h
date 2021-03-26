@@ -36,7 +36,6 @@ public:
     void setShowAction( Action::FaceAction*);
     void setAlignAction( Action::FaceAction*);
     void setLabelsAction( Action::FaceAction*);
-    void setRestoreAction( Action::FaceAction*);
 
     void setMessage( const QString&);
     QString message() const;
@@ -44,7 +43,6 @@ public:
 signals:
     void onShowLandmarkLabels( bool);
     void onAlignLandmarks();
-    void onRestoreLandmarks();
 
 public slots:
     void show();

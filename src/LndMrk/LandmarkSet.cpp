@@ -24,7 +24,7 @@
 using FaceTools::Landmark::LandmarkSet;
 using FaceTools::Landmark::Landmark;
 using FaceTools::Landmark::LmkList;
-using FaceTools::Landmark::SpecificLandmark;
+using SLmk = FaceTools::Landmark::SpecificLandmark;
 using FaceTools::FaceSide;
 using FaceTools::Vec3f;
 using FaceTools::Mat4f;
@@ -106,7 +106,7 @@ bool LandmarkSet::has( int id, FaceSide lat) const
 }   // end has
 
 
-bool LandmarkSet::has( const SpecificLandmark& p) const { return has(p.id, p.lat);}
+bool LandmarkSet::has( const SLmk& p) const { return has(p.id, p.lat);}
 
 
 const LandmarkSet::LDMRKS& LandmarkSet::lateral( FaceSide lat) const
@@ -184,13 +184,13 @@ const Vec3f& LandmarkSet::pos( const QString& lmcode, FaceSide lat) const
 }   // end pos
 
 
-const Vec3f& LandmarkSet::pos( const SpecificLandmark& sl) const { return pos( sl.id, sl.lat);}
+const Vec3f& LandmarkSet::pos( const SLmk& sl) const { return pos( sl.id, sl.lat);}
 
 
 Vec3f LandmarkSet::toPoint( const LmkList &ll, const Mat4f& T, const Mat4f& iT) const
 {
     Vec3f v = Vec3f::Zero();
-    for ( const SpecificLandmark &slmk : ll)
+    for ( const SLmk &slmk : ll)
         v += slmk.prop.cwiseProduct( r3d::transform( iT, pos(slmk)));
     return r3d::transform( T, v);
 }   // end toPoint
@@ -322,6 +322,42 @@ float LandmarkSet::sqRadius() const
         sqDist = std::max( (p.second - mean).squaredNorm(), sqDist);
     return sqDist;
 }   // end sqRadius
+
+
+namespace {
+
+void nearestFromSet( FaceSide side, const std::unordered_map<int, Vec3f> &lmksSet,
+                     const SLmk &slmk, const Vec3f &slmkPos, float &sqDist, SLmk &nlmk)
+{
+    for ( const auto& p : lmksSet)
+    {
+        if ( p.first == slmk.id && slmk.lat == side)
+            continue;
+        const float sqd = (p.second - slmkPos).squaredNorm();
+        if ( sqd < sqDist)
+        {
+            sqDist = sqd;
+            nlmk.id = p.first;
+            nlmk.lat = side;
+        }   // end if
+    }   // end for
+}   // end nearestFromSet
+
+}   // end namespace
+
+
+SLmk LandmarkSet::nearest( const SLmk &slmk) const
+{
+    const Vec3f &lmkPos = pos(slmk);
+    float sqDist = FLT_MAX;
+    SLmk nlmk;
+    nearestFromSet( LEFT,  _lmksL, slmk, lmkPos, sqDist, nlmk);
+    nearestFromSet( MID,   _lmksM, slmk, lmkPos, sqDist, nlmk);
+    nearestFromSet( RIGHT, _lmksR, slmk, lmkPos, sqDist, nlmk);
+    return nlmk;
+}   // end nearest
+
+SLmk LandmarkSet::nearest( int id, FaceSide lat) const { return nearest( SLmk( id, lat));}
 
 
 void LandmarkSet::swapLaterals()

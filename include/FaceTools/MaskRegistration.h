@@ -19,7 +19,7 @@
 #define FACE_TOOLS_MASK_REGISTRATION_H
 
 #include "FaceTypes.h"
-#include <r3d/Mesh.h>
+#include <r3d/KDTree.h>
 #include <QReadWriteLock>
 
 namespace FaceTools {
@@ -46,6 +46,10 @@ public:
     // Returns the hash of the mask mesh.
     static size_t maskHash();
 
+    // Return the position of the given landmark on the given mask
+    // mesh according to its expected barycentric position.
+    static Vec3f maskLandmarkPosition( const r3d::Mesh&, int id, FaceSide);
+
     struct MaskData
     {
         MaskData();
@@ -63,6 +67,8 @@ public:
         std::unordered_map<int, int> oppVtxs;  // Map of laterally opposite vertex IDs
         IntSet medialVtxs;      // Medial (centreline) vertices
         IntSet q0, q1, q2, q3;  // Quadrant vertices (top left, top right, bottom right, bottom left)
+        Vec3f centre;   // Centre taken from just the medial vertices
+        float radius;   // Radius taken from just the medial vertices
     };  // end struct
 
     using MaskPtr = std::shared_ptr<const MaskData>;
@@ -71,30 +77,9 @@ public:
     // when all shared copies of the returned pointer die.
     static MaskPtr maskData();
 
-    // Algorithm parameters (defaults shown)
-    struct FaceTools_EXPORT Params
-    {
-        Params();
-        size_t k;               // 3
-        float flagThresh;       // 0.9f
-        bool eqPushPull;        // false
-        float kappa;            // 4.0f
-        bool useOrient;         // true
-        size_t numInlierIts;    // 10
-        size_t smoothK;         // 80
-        float sigmaSmooth;      // 3.0f
-        size_t numViscousStart; // 100
-        size_t numViscousEnd;   // 1
-        size_t numElasticStart; // 100
-        size_t numElasticEnd;   // 1
-        size_t numUpdateIts;    // 20 (higher for diminishing returns)
-    };  // end struct
-
-    static void setParams( const Params&);
-
-    // Register the currently set mask against the given face model and return it.
-    // The model must have first been brought into reasonable rigid alignment with the mask.
-    static r3d::Mesh::Ptr registerMask( const r3d::Mesh &targetMesh);
+    // Register the currently set mask against the given model and return it.
+    // The model must have first been brought into *reasonable* rigid alignment with the mask.
+    static r3d::Mesh::Ptr registerMask( const r3d::KDTree &target);
 
     // Given a deformed version of the loaded mask, run procrustes superimposition
     // on it and return its transform from the currently loaded mask.
@@ -103,7 +88,6 @@ public:
 private:
     static MaskData s_mask;
     static QReadWriteLock s_lock;
-    static Params s_params;
 };  // end class
 
 }   // end namespace

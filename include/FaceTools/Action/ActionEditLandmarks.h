@@ -28,13 +28,12 @@ class FaceTools_EXPORT ActionEditLandmarks : public FaceAction
 public:
     ActionEditLandmarks( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
 
-    QString toolTip() const override { return "Open the landmarks browser to manually reposition landmarks.";}
+    QString toolTip() const override { return "Open the landmarks browser to reposition landmarks.";}
     QWidget* widget() const override { return _dialog;}
 
     // Set these before registering with the FaceActionManager
     void setShowLandmarksAction( FaceAction *act) { _actShow = act;}
     void setAlignLandmarksAction( FaceAction *act) { _actAlign = act;}
-    void setRestoreLandmarksAction( FaceAction *act) { _actRestore = act;}
     void setShowLandmarkLabelsAction( FaceAction *act) { _actShowLabels = act;}
 
 signals:
@@ -46,6 +45,7 @@ protected:
     void postInit() override;
     bool update( Event) override;
     bool isAllowed( Event) override;
+    bool doBeforeAction( Event) override;
     void doAction( Event) override;
 
 private slots:
@@ -55,9 +55,10 @@ private slots:
 private:
     Widget::LandmarksDialog *_dialog;
     int _key;
+    Vec3f _initPos; // Initial position of landmark being dragged at start
+    Event _ev;
     FaceAction *_actShow;
     FaceAction *_actAlign;
-    FaceAction *_actRestore;
     FaceAction *_actShowLabels;
     void _closeDialog();
     void _openDialog();

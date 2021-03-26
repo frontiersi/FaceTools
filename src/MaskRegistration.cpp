@@ -24,31 +24,20 @@
 #include <QFileInfo>
 #include <QThread>
 #include <r3d/ProcrustesSuperimposition.h>
+#include <r3d/Bounds.h>
 #include <boost/filesystem/path.hpp>
 #include <boost/functional/hash.hpp>
 //#include <thread>
 using FaceTools::MaskRegistration;
-using FaceTools::Vis::FV;
+using FaceTools::FaceSide;
 using FMM = FaceTools::FileIO::FaceModelManager;
 
 
 MaskRegistration::MaskData MaskRegistration::s_mask;
 QReadWriteLock MaskRegistration::s_lock;
-MaskRegistration::Params MaskRegistration::s_params;
 
 
 MaskRegistration::MaskData::MaskData() : mask(nullptr) {}
-
-
-MaskRegistration::Params::Params()
-    : k(3), flagThresh(0.9f), eqPushPull(false),
-      kappa(4.0f), useOrient(true), numInlierIts(10),
-      smoothK(80), sigmaSmooth(3.0f),
-      numViscousStart(100), numViscousEnd(1),
-      numElasticStart(100), numElasticEnd(1),
-      numUpdateIts(20)
-{
-}   // end ctor
 
 
 namespace {
@@ -208,6 +197,10 @@ bool MaskRegistration::setMask( const QString &mpath)
                         binPointIndices( s_mask, p[1], ovidx, vidx);
                 }   // end for
 
+                // Get the centre and height from just the medial vertices
+                const r3d::Bounds bnds( fm->mesh(), Mat4f::Identity(), &s_mask.medialVtxs);
+                s_mask.centre = bnds.centre();
+                s_mask.radius = bnds.diagonal() / 2;
                 s_lock.unlock();
             }   // end if
             else
@@ -254,6 +247,19 @@ size_t MaskRegistration::maskHash()
 }   // end maskHash
 
 
+r3d::Vec3f MaskRegistration::maskLandmarkPosition( const r3d::Mesh &msk, int lmid, FaceSide lat)
+{
+    const MaskPtr mdata = maskData();
+    const std::unordered_map<int, std::pair<int, r3d::Vec3f> > *lmks = &mdata->lmksM; // MID default
+    if ( lat == LEFT)
+        lmks = &mdata->lmksL;
+    else if ( lat == RIGHT)
+        lmks = &mdata->lmksR;
+    const std::pair<int, r3d::Vec3f> &bcds = lmks->at(lmid);
+    return msk.fromBarycentric( bcds.first, bcds.second);
+}   // end maskLandmarkPosition
+
+
 std::shared_ptr<const MaskRegistration::MaskData> MaskRegistration::maskData()
 {
     s_lock.lockForRead();
@@ -261,54 +267,67 @@ std::shared_ptr<const MaskRegistration::MaskData> MaskRegistration::maskData()
 }   // end maskData
 
 
-void MaskRegistration::setParams( const MaskRegistration::Params &prms) { s_params = prms;}
-
-
-r3d::Mesh::Ptr MaskRegistration::registerMask( const r3d::Mesh &targetMesh)
+r3d::Mesh::Ptr MaskRegistration::registerMask( const r3d::KDTree &kdt)
 {
+    static const std::string ISTR = " FaceTools::Action::MaskRegistration::registerMask: ";
     assert( maskLoaded());
     if ( !maskLoaded())
     {
-        std::cerr << "[ERROR] FaceTools::Action::MaskRegistration::registerMask: Mask not loaded!" << std::endl;
+        std::cerr << "[ERROR]" << ISTR << "Mask not loaded!" << std::endl;
         return nullptr;
     }   // end if
 
-    // Clone the loaded mask
-    s_lock.lockForRead();
-    r3d::Mesh::Ptr mask = s_mask.mask->mesh().deepCopy();
-    s_lock.unlock();
+    const MaskPtr mdata = maskData();
+    rNonRigid::Mesh flt;
+    const r3d::Mesh &mask = mdata->mask->mesh();
+    flt.features = mask.toFeatures( true/*use transformed*/);
+    flt.topology = mask.toFaces();  // NB topology not needed for RigidRegistration
 
-    //std::cout << "Calculating affine alignment (rigid + scaling) of mask to target face..." << std::endl;
+    rNonRigid::Mesh tgt;
+    tgt.features = kdt.mesh().toFeatures( true/*use transformed*/);
 
-    rNonRigid::Mesh floating;
-    floating.features = mask->toFeatures( floating.topology, true/*use transformed*/);
-    floating.flags = rNonRigid::FlagVec::Ones( floating.features.rows());   // Use all vertices on the mask
+    // Start with a 70% size mask since this empirically works better at fitting the
+    // faces of babies and children without diminishing the ability to fit adult faces.
+    Mat4f T = Mat4f::Identity() * 0.7f;
+    T = rNonRigid::RigidRegistration( 20, 3, 0.9f, true, 4.0f, true, 10, true)( flt, tgt, T);
+    const float minScale = std::min( T(0,0), std::min(T(1,1), T(2,2)));
+    if ( minScale < 0.1f)
+    {
+        std::cerr << "[WARNING]" << ISTR << "Mask scaled to be too small!" << std::endl;
+        return nullptr;
+    }   // end if
 
-    rNonRigid::Mesh target;
-    target.features = targetMesh.toFeatures( target.topology/*unused*/, true/*use transformed*/);
-    target.flags = rNonRigid::FlagVec::Ones( target.features.rows());   // Use all vertices on the target
+#ifndef NDEBUG
+    // Create mask to check that scaling didn't doesn't reduce the mask size too much.
+    // If some vertex positions are too close after scaling, converting to r3d::Mesh
+    // merges those points which is why checking for a count mismatch works.
+    r3d::Mesh::Ptr tmask = r3d::Mesh::fromVertices( flt.features.leftCols(3));
+    assert( flt.features.rows() == (long)tmask->numVtxs());
+#endif
 
-    const Mat4f T1 = rNonRigid::RigidRegistration()( floating, target);
+    // For the non-rigid registration, use a target face having vertices only a
+    // little larger than the region covered by the rigidly registered mask.
+    const Vec3f centre = r3d::transform( T, mdata->centre);
+    const float radius = mdata->radius * T(1,1) * 1.15f;
+    std::vector<std::pair<size_t, float> > vpts;
+    kdt.findr( centre, radius*radius, vpts);
+    rNonRigid::Mesh tgt2( vpts.size());
+    int j = 0;
+    for ( const std::pair<size_t, float> &p : vpts)
+        tgt2.features.row(j++) = tgt.features.row(p.first);
 
-    //std::cout << "Adding rigid transform to mask and reobtaining features..." << std::endl;
-    mask->addTransformMatrix( T1);
-    floating.features = mask->toFeatures( floating.topology, true/*use transformed*/);
+    rNonRigid::NonRigidRegistration( 80, 3, 0.9f, true, 10.0f, true, 10, 50, 1.6f, 80, 1, 80, 1)( flt, tgt2);
 
-    //std::cout << "Calculating non-rigid registration of mask to target face..." << std::endl;
-    rNonRigid::NonRigidRegistration( s_params.k, s_params.flagThresh, s_params.eqPushPull,
-                                     s_params.kappa, s_params.useOrient, s_params.numInlierIts,
-                                     s_params.smoothK, s_params.sigmaSmooth,
-                                     s_params.numViscousStart, s_params.numViscousEnd,
-                                     s_params.numElasticStart, s_params.numElasticEnd,
-                                     s_params.numUpdateIts)( floating, target);
-    //rNonRigid::FastDeformRegistration( s_params.numUpdateIts)( floating, target);
+    r3d::Mesh::Ptr cmask = r3d::Mesh::fromVertices( flt.features.leftCols(3)); // Make the final mask
+    if ( flt.features.rows() != (long)cmask->numVtxs())
+    {
+        std::cerr << "[WARNING]" << ISTR << "Non-rigid registration merged vertices!" << std::endl;
+        std::cerr << "\t# features = " << flt.features.rows() << std::endl;
+        std::cerr << "\t# vertices = " << cmask->numVtxs() << std::endl;
+        return nullptr;
+    }   // end if
 
-    //std::cout << "Creating point cloud from registered vertices..." << std::endl;
-    // On return, the vertices of feats are in correspondence with the surface of the model.
-    // Make a new r3d::Mesh object from the surface registered points.
-    r3d::Mesh::Ptr cmask = r3d::Mesh::fromVertices( floating.features.leftCols(3));
-    //std::cout << "Setting mesh topology..." << std::endl;
-    cmask->setFaces( floating.topology);
+    cmask->setFaces( flt.topology);
     return cmask;
 }   // end registerMask
 

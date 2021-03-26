@@ -20,8 +20,7 @@
 
 #include <FaceTools/FaceTypes.h>
 #include <FaceTools/FaceModel.h>
-#include <QTemporaryDir>
-#include <QTextStream>
+#include <r3dio/LatexWriter.h>
 #include <sol.hpp>
 
 namespace FaceTools { namespace Report {
@@ -31,26 +30,31 @@ class FaceTools_EXPORT Report : public QObject
 public:
     using Ptr = std::shared_ptr<Report>;
     using CPtr = std::shared_ptr<const Report>;
-    static Ptr load( const QString& luascript, QTemporaryDir&);
+    static Ptr load( const QString& luascript);
 
-    explicit Report( QTemporaryDir&);
-    ~Report() override;
-
-    // Add a custom Lua function for report delegates.
-    void addCustomLuaFn( const QString&, const std::function<void()>&);
-    void addCustomLuaFn( const QString&, const std::function<void( const FM*)>&);
-
-    // Add some custom latex from within the generate function.
-    void addCustomLatex( const QString&);
-
-    void setHeaderName( const QString& n){ _headerName = n;}
-    void setInkscape( const QString& exe){ _inkscape = exe;}    // Inkscape exe (for SVG output)
+    static void setLogoPath( const QString&);
+    static void setHeaderAppName( const QString&);
+    static void setVersionString( const QString&);
+    static void setInkscape( const QString&);
+    static void setDefaultPageDims( const QSize&);  // Millimetres
 
     const QString& name() const { return _name;}
     const QString& title() const { return _title;}
+    bool isAvailable() const; // Returns true iff this report can be generated.
 
-    // Return true iff this report can be generated.
-    bool isAvailable() const;
+    // Add a custom Lua function for report delegates with luaName as the
+    // name of the function used within the Lua report itself and the function
+    // referring to a C++ delegate defined by the client. The addLatex function
+    // should be used from within C++ code to place the latex.
+    void addCustomLuaFn( const QString &luaName,
+            const std::function<void( const QRectF&)>&);
+    void addCustomLuaFn( const QString &luaName,
+            const std::function<void( const QRectF&, const FM*)>&);
+    void addLatex( const QRectF&, const QString&, bool centre);
+
+    // Sanitise the given string for Latex command characters and return
+    // a standard string suitable for writing to a standard stream object.
+    static std::string sanit( const QString&);
 
     // Set the content of the report by calling out to the corresponding
     // Lua delegate functions for this report. This must be called in the
@@ -63,49 +67,46 @@ public:
     // returned, the error message is retrieved using errorMsg().
     bool generate();
 
-    // Return the path to the generated PDF.
-    QString pdffile() const;
-
+    const QString pdffile() const { return _pdffile;} // Returns path to last generated PDF.
     inline const QString &errorMsg() const { return _errMsg;}
 
 private:
-    QTemporaryDir& _tmpdir;
-    QString _headerName;
-    QString _inkscape;
+    static QString s_logoPath;
+    static QString s_headerName;
+    static QString s_versionStr;
+    static QString s_inkscape;
+    static QSize s_pageDims;
+
     QString _name;
     QString _title;
     bool _twoModels;
+    QSize _pageDims;
     sol::state _lua;
     sol::function _isAvailable;
     sol::function _setContent;
-    QTextStream *_os;
+    r3dio::LatexWriter *_ltxw;
+    QString _pdffile;
     QString _errMsg;
     bool _validContent;
 
-    void _addLatexTestFigure( float wmm, float hmm);
-
-    void _addLatexFigure( const FM*, float widthMM, float heightMM, const std::string& caption);
-
+    void _addLatexScanInfo( const QRectF&, const FM*);
+    void _addLatexNotes( const QRectF&, const FM*);
+    bool _addLatexPhenotypicTraits( const QRectF&, const FM*, int, int);
+    void _addLatexFigure( const QRectF&, const FM*, const std::string&);
+    void _addLatexSelectedColourMapFigure( const QRectF&, const std::string&);
     // mid is the metric ID and d is the dimension of the metric.
     // Set footnotemark to something higher than zero to use footnote mark
     // notation for the chart data source instead of the whole source text.
-    void _addLatexGrowthCurvesChart( const FM*, int mid, size_t d=0, int footnotemark=0);
+    void _addLatexChart( const QRectF&, const FM*, int mid, size_t d=0, int footnotemark=0);
+    void _addLatexFootnoteSources( const QRectF&, const FM*, const sol::table&);
 
-    void _addLatexScanInfo( const FM*);
-    void _addLatexNotes( const FM*);
-    bool _addLatexPhenotypicTraits( const FM*, int, int);
-    int _getNumPhenotypicTraits( const FM*) const;
-
-    void _addLatexStartMinipage();
-    void _addLatexEndMinipage();
-    void _addLatexLineBreak();
-
-    QString _metricCurrentSource( const FM*, int) const;
-    std::unordered_map<int, int> _footnoteIndices( const FM*, const sol::table&) const;
-    void _addFootnoteSources( const FM*, const sol::table&);
-
-    bool _useSVG() const;
-    void _writeLatex( QTextStream&);
+    static bool _usingSVG();
+    r3dio::Box _pageBox( const QRectF&) const;
+    std::string _writeModelBGImage( const QRectF&, const FM*, const r3d::Mesh&);
+    std::string _writeModelBGImage( const QRectF&, const FM*);
+    bool _writeLatex();
+    Report();
+    ~Report() override;
     Report( const Report&) = delete;
     void operator=( const Report&) = delete;
 };  // end class

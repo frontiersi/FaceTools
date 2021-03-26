@@ -287,14 +287,13 @@ void ModelSelect::_forceUnlockSelect()
 }   // end _forceUnlockSelect
 
 
-void ModelSelect::updateAllViews( const std::function<void(FV*)>& fn, bool doUpdateRender)
+void ModelSelect::resetAllViews()
 {
     for ( FMV* fmv : me()->_viewers)
         for ( FV *fv : fmv->attached())
-            fn(fv);
-    if ( doUpdateRender)
-        updateRender();
-}   // end updateAllViews
+            fv->reset();
+    updateRender();
+}   // end resetAllViews
 
 
 void ModelSelect::updateRender()

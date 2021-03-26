@@ -44,7 +44,7 @@ void ActionSetOpacity::postInit()
     _opacitySpinBox->setValue(1.0);
     _opacitySpinBox->setDecimals(1);
     _opacitySpinBox->setSingleStep(0.1);
-    _opacitySpinBox->setRange( 0.1, 1.0);
+    _opacitySpinBox->setRange( 0.0, 1.0);
     _opacitySpinBox->setButtonSymbols(QAbstractSpinBox::PlusMinus);
     _opacitySpinBox->setCorrectionMode(QAbstractSpinBox::CorrectToNearestValue);
     connect( _opacitySpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &ActionSetOpacity::_doOnValueChanged);

@@ -74,12 +74,12 @@ void FaceActionWorker::run()    // thread function
 
 void FaceActionWorker::_doOnTimerInterval()
 {
-    static const int MAX_TIME_OUT = 60;  // seconds
+    static const int MAX_TIME_OUT = 120;  // seconds
     _tcount++;
     if ( _tcount == MAX_TIME_OUT)
     {
         requestInterruption();
-//        _status += " timed out!";
+        _status += " timed out!";
         _deleteTimer();
         _worker->endNow();
     }   // end if

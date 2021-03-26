@@ -93,6 +93,7 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionResizeModel.h"
     "${INCLUDE_ACTION_DIR}/ActionRestoreLandmarks.h"
     "${INCLUDE_ACTION_DIR}/ActionRestoreSingleLandmark.h"
+    "${INCLUDE_ACTION_DIR}/ActionRotateCamera.h"
     "${INCLUDE_ACTION_DIR}/ActionRotateModel.h"
     "${INCLUDE_ACTION_DIR}/ActionSaveAs.h"
     "${INCLUDE_ACTION_DIR}/ActionSave.h"
@@ -136,7 +137,6 @@ set( QOBJECTS
     "${INCLUDE_REPORT_DIR}/Report.h"
 
     "${INCLUDE_INT_DIR}/ActionClickHandler.h"
-    "${INCLUDE_INT_DIR}/ActorMoveNotifier.h"
     "${INCLUDE_INT_DIR}/ContextMenuHandler.h"
     "${INCLUDE_INT_DIR}/GizmoHandler.h"
     "${INCLUDE_INT_DIR}/LandmarksHandler.h"
@@ -326,6 +326,7 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/ActionResizeModel
     ${SRC_ACTION_DIR}/ActionRestoreLandmarks
     ${SRC_ACTION_DIR}/ActionRestoreSingleLandmark
+    ${SRC_ACTION_DIR}/ActionRotateCamera
     ${SRC_ACTION_DIR}/ActionRotateModel
     ${SRC_ACTION_DIR}/ActionSaveAs
     ${SRC_ACTION_DIR}/ActionSave
@@ -385,7 +386,6 @@ set( SRC_FILES
     ${SRC_FILEIO_DIR}/LoadFaceModelsHelper
 
     ${SRC_INT_DIR}/ActionClickHandler
-    ${SRC_INT_DIR}/ActorMoveNotifier
     ${SRC_INT_DIR}/ContextMenuHandler
     ${SRC_INT_DIR}/GizmoHandler
     ${SRC_INT_DIR}/LandmarksHandler

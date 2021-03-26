@@ -130,7 +130,6 @@ void LandmarksDialog::_doOnRefreshTable()
 
 void LandmarksDialog::setAlignAction( FaceAction *act) { _ui->alignButton->setDefaultAction( act->qaction());}
 void LandmarksDialog::setLabelsAction( FaceAction *act) { _ui->labelsButton->setDefaultAction( act->qaction());}
-void LandmarksDialog::setRestoreAction( FaceAction *act) { _ui->restoreButton->setDefaultAction( act->qaction());}
 
 
 void LandmarksDialog::setMessage( const QString &msg)

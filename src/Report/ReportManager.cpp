@@ -24,116 +24,31 @@
 #include <cassert>
 using FaceTools::Report::ReportManager;
 using FaceTools::Report::Report;
-using r3dio::PDFGenerator;
-using r3dio::U3DExporter;
 
 // Static definitions
-QTemporaryDir ReportManager::_tmpdir;
-QString ReportManager::_hname;
-QString ReportManager::_version;
-QString ReportManager::_logopath;
-QString ReportManager::_logofile;
-QString ReportManager::_inkscape;
 QStringList ReportManager::_names;
 std::unordered_map<QString, Report::Ptr> ReportManager::_reports;
 
 
 bool ReportManager::isAvailable()
 {
-    return U3DExporter::isAvailable() && PDFGenerator::isAvailable();
+    return r3dio::U3DExporter::isAvailable() && r3dio::PDFGenerator::isAvailable();
 }   // end isAvailable
 
 
-bool ReportManager::init( const QString& pdflatex, const QString& idtfConverter, const QString& inkscape)
+bool ReportManager::init( const QString& pdflatex, const QString& idtfConverter)
 {
-    U3DExporter::IDTFConverter = idtfConverter.toStdString();
-    PDFGenerator::pdflatex = pdflatex.toStdString();
+    r3dio::U3DExporter::IDTFConverter = idtfConverter.toStdString();
+    r3dio::PDFGenerator::pdflatex = pdflatex.toStdString();
     if ( !isAvailable())
         std::cerr << "'pdflatex' not set/found; report generation is disabled." << std::endl;
-
-    _inkscape = inkscape;
-    //_tmpdir.setAutoRemove(false);   // Uncomment for debug
-
-    // Write the Javascript file that hides the view axes
-    QFile hideAxesFile( _tmpdir.filePath("hideAxes.js"));
-    if ( hideAxesFile.exists())
-        hideAxesFile.remove();
-    hideAxesFile.open( QIODevice::ReadWrite | QIODevice::Text);
-    if ( !hideAxesFile.isOpen())
-    {
-        const std::string werr = "[WARNING] FaceTools::Report::ReportManager::init: ";
-        std::cerr << werr << "Unable to open 'hideAxes.js' for writing!" << std::endl;
-        return false;
-    }   // end if
-    QTextStream os( &hideAxesFile);
-    os << "scene.showOrientationAxes = false;" << Qt::endl;
-    hideAxesFile.close();
-
     return isAvailable();
 }   // end init
-
-
-bool ReportManager::writeImageFile( const cv::Mat &img, const QString &fname)
-{
-    const QString fpath = _tmpdir.filePath(fname);
-    if ( QFile::exists(fpath))
-        QFile::remove(fpath);
-    return cv::imwrite( fpath.toStdString(), img);
-}   // end writeImageFile
-
-
-bool ReportManager::writeViewsFile( float d, float fov, const QString &fname)
-{
-    // (Re)Create the views file in the temporary directory
-    QFile viewsfile( _tmpdir.filePath(fname));
-    if ( viewsfile.exists())
-        viewsfile.remove();
-
-    viewsfile.open( QIODevice::ReadWrite | QIODevice::Text);
-    if ( !viewsfile.isOpen())
-    {
-        const std::string werr = "[WARNING] FaceTools::Report::ReportManager::writeViewsFile: ";
-        std::cerr << werr << "Unable to open '" << viewsfile.fileName().toStdString() << "' for writing!" << std::endl;
-        return false;
-    }   // end if
-
-    QTextStream ots( &viewsfile);
-    ots << "VIEW=Front" << Qt::endl
-        << "  C2C=0 -1 0" << Qt::endl
-        << "  ROO=" << d << Qt::endl
-        << "  AAC=" << fov << Qt::endl
-        << "  LIGHTS=AmbientLight" << Qt::endl
-        << "END" << Qt::endl
-        << "VIEW=Right" << Qt::endl
-        << "  C2C=-1 0 0" << Qt::endl
-        << "  ROO=" << d << Qt::endl
-        << "  AAC=" << fov << Qt::endl
-        << "  LIGHTS=AmbientLight" << Qt::endl
-        << "END" << Qt::endl
-        << "VIEW=Left" << Qt::endl
-        << "  C2C=1 0 0" << Qt::endl
-        << "  ROO=" << d << Qt::endl
-        << "  AAC=" << fov << Qt::endl
-        << "  LIGHTS=AmbientLight" << Qt::endl
-        << "END" << Qt::endl;
-    viewsfile.close();
-    return true;
-}   // end writeViewsFile
-
 
 
 int ReportManager::load( const QString& sdir)
 {
     static const std::string err = "[ERROR] FaceTools::Report::ReportManager::load: ";
-
-    // Copy the logo into the report generation directory
-    _logofile = _tmpdir.filePath("logo.pdf");
-    if ( !QFile( _logopath).copy( _logofile))
-    {
-        std::cerr << err << "Unable to copy logo to report generation directory!" << std::endl;
-        return -1;
-    }   // end if
-
     _names.clear();
     _reports.clear();
 
@@ -157,13 +72,9 @@ int ReportManager::load( const QString& sdir)
 QString ReportManager::add( const QString& file)
 {
     static const std::string werr = "[WARNING] FaceTools::Report::ReportManager::add: ";
-    Report::Ptr rep = Report::load( file, _tmpdir);
+    Report::Ptr rep = Report::load( file);
     if ( !rep)
         return "";
-
-    rep->setHeaderName(_hname);
-    rep->setInkscape(_inkscape);
-
     // Check to see if the name exists already because plugins might be overriding
     if ( _reports.count(rep->name()) == 0)
     {
@@ -174,7 +85,6 @@ QString ReportManager::add( const QString& file)
     else
         std::cerr << werr << " Overwriting report " << rep->name().toStdString() << std::endl;
 #endif
-
     _reports[rep->name()] = rep;    // Possibly overwrites existing!
     return rep->name();
 }   // end add

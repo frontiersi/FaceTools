@@ -60,10 +60,9 @@ bool ActionSetMinScalarColour::doBeforeAction( Event)
 void ActionSetMinScalarColour::doAction( Event)
 {
     FV *fv = MS::selectedView();
-    ColourVisualisation* smapper = fv->activeColours();
-    assert(smapper);
-    smapper->setMinColour( _curColour);
-    smapper->rebuildColourMapping();
+    ColourVisualisation* cv = fv->activeColours();
+    cv->setMinColour( _curColour);
+    cv->rebuildColourMapping();
 }   // end doAction
 
 
