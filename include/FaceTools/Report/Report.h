@@ -42,15 +42,18 @@ public:
     const QString& title() const { return _title;}
     bool isAvailable() const; // Returns true iff this report can be generated.
 
-    // Add a custom Lua function for report delegates with luaName as the
-    // name of the function used within the Lua report itself and the function
-    // referring to a C++ delegate defined by the client. The addLatex function
-    // should be used from within C++ code to place the latex.
+    // Add a custom Lua function for report delegates with luaName as the name of the
+    // function used within the Lua report itself and the function referring to a C++
+    // delegate defined by the client. The addLatexHeader/Document functions should
+    // be used from within C++ code to place the latex.
     void addCustomLuaFn( const QString &luaName,
             const std::function<void( const QRectF&)>&);
     void addCustomLuaFn( const QString &luaName,
             const std::function<void( const QRectF&, const FM*)>&);
-    void addLatex( const QRectF&, const QString&, bool centre);
+    // Add the given Latex to the header of the document.
+    void addLatexHeader( const QString&);
+    // Add the given Latex at the given position in the document body.
+    void addLatexDocument( const QRectF&, const QString&, bool centre);
 
     // Sanitise the given string for Latex command characters and return
     // a standard string suitable for writing to a standard stream object.
@@ -94,6 +97,7 @@ private:
     bool _addLatexPhenotypicTraits( const QRectF&, const FM*, int, int);
     void _addLatexFigure( const QRectF&, const FM*, const std::string&);
     void _addLatexSelectedColourMapFigure( const QRectF&, const std::string&);
+    void _addLatexSelectedColourMapLegend( const QRectF&);
     // mid is the metric ID and d is the dimension of the metric.
     // Set footnotemark to something higher than zero to use footnote mark
     // notation for the chart data source instead of the whole source text.

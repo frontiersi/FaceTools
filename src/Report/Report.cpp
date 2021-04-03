@@ -191,6 +191,9 @@ Report::Report() : _ltxw(nullptr)
     _lua.set_function( "addSelectedColourMapFigure",
                        [this]( const QRectF &box, const std::string& caption)
                        { this->_addLatexSelectedColourMapFigure( box, caption);});
+    _lua.set_function( "addSelectedColourMapLegend",
+                       [this]( const QRectF &box)
+                       { this->_addLatexSelectedColourMapLegend( box);});
     _lua.set_function( "addChart",
                        [this]( const QRectF &box, const FM *fm, int mid, size_t d, int footnotemark)
                        { this->_addLatexChart( box, fm, mid, d, footnotemark);});
@@ -252,10 +255,16 @@ void Report::addCustomLuaFn( const QString& fnName,
 }   // end addCustomLuaFn
 
 
-void Report::addLatex( const QRectF &box, const QString &s, bool centre)
+void Report::addLatexHeader( const QString &s)
+{
+    _ltxw->addHeader( s.toStdString());
+}   // end addLatexHeader
+
+
+void Report::addLatexDocument( const QRectF &box, const QString &s, bool centre)
 {
     _ltxw->addRaw( _pageBox(box), s.toStdString(), centre);
-}   // end addLatex
+}   // end addLatexDocument
 
 
 Report::Ptr Report::load( const QString& fname)
@@ -382,12 +391,7 @@ bool Report::setContent()
     _errMsg = "";
     if ( _ltxw)
         delete _ltxw;
-    _ltxw = new LatexWriter;
-    if ( !_ltxw->open( _pageDims.width(), _pageDims.height()))
-    {
-        _errMsg = tr( "Failed to open report writing stream!");
-        return false;
-    }   // end if
+    _ltxw = new LatexWriter( _pageDims.width(), _pageDims.height());
     _validContent = _writeLatex();
     if ( !_validContent)
         _errMsg = tr( "Failed to set report contents!");
@@ -403,12 +407,15 @@ bool Report::generate()
         _errMsg = tr( "Must set report content before generating!");
         return false;
     }   // end if
-    std::string outpdf;
-    if ( !_ltxw->makePDF( outpdf))
+    const std::string outpdf = _ltxw->makePDF();
+    if ( outpdf.empty())
+    {
         _errMsg = tr("Failed to generate the report PDF!");
+        std::cerr << _errMsg.toStdString() << std::endl;
+    }   // end if
+    else
+        std::cerr << "Report complete at \"" << outpdf << "\"" << std::endl;
     _pdffile = QString::fromStdString(outpdf);
-    if ( !_pdffile.isEmpty())
-        std::cerr << "Report complete at \"" << _pdffile.toLocal8Bit().toStdString() << "\"" << std::endl;
     return _errMsg.isEmpty();
 }   // end generate
 
@@ -449,7 +456,6 @@ bool Report::_writeLatex()
        << "\\fancyhead[R]{\\raisebox{0mm}{\\includegraphics[width=45mm]{" << logopdf << "}} \\\\ \n"
        << "\\footnotesize " << sanit("Version " + s_versionStr) << "}\n";
 
-    ltxw.beginDocument();
     _validContent = true;
     try
     {
@@ -466,8 +472,7 @@ bool Report::_writeLatex()
         qWarning() << "Lua Error: " << e.what();
         _validContent = false;
     }   // end catch
-    ltxw.endDocument();
-    ltxw.close();
+
     return _validContent;
 }   // end _writeLatex
 
@@ -551,6 +556,43 @@ void Report::_addLatexSelectedColourMapFigure( const QRectF &box, const std::str
     const auto cam = Action::ActionOrientCamera::makeFrontCamera( *fm, 30, 0.8f);
     _ltxw->addMesh( _pageBox(box), u3dfile, cam, imgfile, caption);
 }   // end _addLatexSelectedColourMapFigure
+
+
+void Report::_addLatexSelectedColourMapLegend( const QRectF &box)
+{
+    const Vis::FV *fv = MS::selectedView();
+    const Vis::ColourVisualisation *cvis = fv->activeColours();
+    if ( !cvis)
+    {
+        _validContent = false;
+        return;
+    }   // end if
+
+    const std::vector<r3d::Colour> &cols = cvis->colours();
+    const size_t ncols = cols.size();
+    const float lmin = cvis->minVisible();
+    const float lmax = cvis->maxVisible();
+    const float ldelta = (lmax - lmin)/ncols;
+
+    // Legend is horizontal -TODO- make vertical legends
+    const float tcw = box.width() * float(ncols - 1) / ncols;     // Total width of the coloured area
+    const float cw = tcw / ncols;           // Width of a single coloured square in the legend
+    const float lh = box.height() * 0.4f;   // Height of a single label
+    const float ch = box.height() - lh;     // Height of a single coloured square in the legend
+    const float tcy = box.y() + box.height() - ch;  // Top edge of the coloured area
+    const float tcx = box.x() + 0.5f * (box.width() - tcw);  // Left edge of the coloured area
+    for ( size_t i = 0; i < ncols; ++i)
+        _ltxw->fillRectangle( _pageBox( QRectF( tcx + i*cw, tcy, cw, ch)), cols[i]);
+
+    // Add in the legend labels
+    for ( size_t i = 0; i < ncols + 1; ++i)
+    {
+        std::ostringstream tx;
+        tx << "\\small " << std::fixed << std::setprecision(2) << (lmin + i*ldelta);
+        const QRectF lbox( tcx + cw*(float(i) - 0.5f), box.y(), cw, lh);
+        _ltxw->addRaw( _pageBox( lbox), tx.str(), true);
+    }   // end for
+}   // end _addLatexSelectedColourMapLegend
 
 
 void Report::_addLatexChart( const QRectF &box, const FM *fm, int mid, size_t d, int fnm)

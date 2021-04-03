@@ -311,7 +311,7 @@ r3d::Mesh::Ptr MaskRegistration::registerMask( const r3d::KDTree &kdt)
     const float radius = mdata->radius * T(1,1) * 1.15f;
     std::vector<std::pair<size_t, float> > vpts;
     kdt.findr( centre, radius*radius, vpts);
-    rNonRigid::Mesh tgt2( vpts.size());
+    rNonRigid::Mesh tgt2( vpts.size(), tgt.features.cols());
     int j = 0;
     for ( const std::pair<size_t, float> &p : vpts)
         tgt2.features.row(j++) = tgt.features.row(p.first);

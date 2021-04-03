@@ -82,18 +82,18 @@ void updateLabelProperties( vtkTextProperty* tp)
 bool updateLegend( r3dvis::ScalarLegend &sleg, const FV *fv)
 {
     const FMV *fmv = fv->viewer();
-    const ColourVisualisation *svis = fv->activeColours();
+    const ColourVisualisation *cvis = fv->activeColours();
 
     bool isVis = false;
     // If svis is not null, it doesn't mean that it should remain so.
     // We check availability since the action that checks whether the
     // visualisation should still be applied may not have been called yet.
-    if ( svis && svis->isAvailable(fv))
+    if ( cvis && cvis->isAvailable(fv))
     {
         isVis = true;
 
         // Set the legend title and colours lookup table for the scalar legend.
-        sleg.setTitle( svis->label().toStdString());
+        sleg.setTitle( cvis->label().toStdString());
         const QColor bg = fmv->backgroundColour();
         const QColor fg = FaceTools::chooseContrasting( bg);
         updateTitleProperties( sleg.titleProperty());
@@ -101,8 +101,8 @@ bool updateLegend( r3dvis::ScalarLegend &sleg, const FV *fv)
         setTextColours( sleg.titleProperty(), bg, fg);
         setTextColours( sleg.labelProperty(), bg, fg);
 
-        sleg.setLookupTable( svis->lookupTable());
-        sleg.setNumLabels( std::min( int(svis->numColours()) + 1, 25));
+        sleg.setLookupTable( cvis->lookupTable());
+        sleg.setNumLabels( std::min( int(cvis->numColours()) + 1, 25));
     }   // end if
 
     return isVis;

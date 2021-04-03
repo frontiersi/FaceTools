@@ -156,7 +156,7 @@ rNonRigid::Mesh makeNRRTarget( const r3d::KDTree &kdt, const r3d::Vec3f &pos, fl
         const r3d::Vec3f &v = kdt.mesh().vtx(i);
     }   // end for
 
-    tgt.refreshNormals();
+    // Set the normals
     return tgt;
 }   // end makeNRRTarget
 
@@ -179,7 +179,7 @@ rNonRigid::Mesh makeNRRFloating( const r3d::KDTree &kdt, const r3d::Vec3f &pos, 
         flt.features.block<1,3>(i,0) += offset * (ld - (v-pos).norm()) / ld;
     }   // end for
 
-    flt.refreshNormals();
+    // Set the normals
     return flt;
 }   // end makeNRRFloating
 

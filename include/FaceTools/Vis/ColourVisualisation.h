@@ -53,6 +53,8 @@ public:
     void setMinColour( const QColor& c) { _cmapper.setMinColour(c);}
     void setMaxColour( const QColor& c) { _cmapper.setMaxColour(c);}
 
+    const std::vector<r3d::Colour> &colours() const { return _cmapper.colours();}
+
     // Return a caption for the value corresponding to the given point on the
     // model for this visualisation. Will be displayed next to the mouse cursor.
     virtual QString getCaption( const Vec3f&) const { return "";}
