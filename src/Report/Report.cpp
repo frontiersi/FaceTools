@@ -241,6 +241,16 @@ r3dio::Box Report::_pageBox( const QRectF &box) const
 }   // end _pageBox
 
 
+// Convert the point with values in [0,1] to actual
+// page position in millimetres for the LatexWriter.
+r3dio::Point Report::_pagePoint( const r3d::Vec2f &p) const
+{
+    const float pw = _pageDims.width(); 
+    const float ph = _pageDims.height();
+    return r3dio::Point( p[0] * pw, p[1] * ph);
+}   // end _pagePoint
+
+
 void Report::addCustomLuaFn( const QString& fnName,
         const std::function<void( const QRectF&)>& fn)
 {
@@ -570,27 +580,32 @@ void Report::_addLatexSelectedColourMapLegend( const QRectF &box)
 
     const std::vector<r3d::Colour> &cols = cvis->colours();
     const size_t ncols = cols.size();
-    const float lmin = cvis->minVisible();
-    const float lmax = cvis->maxVisible();
-    const float ldelta = (lmax - lmin)/ncols;
 
     // Legend is horizontal -TODO- make vertical legends
     const float tcw = box.width() * float(ncols - 1) / ncols;     // Total width of the coloured area
     const float cw = tcw / ncols;           // Width of a single coloured square in the legend
-    const float lh = box.height() * 0.4f;   // Height of a single label
-    const float ch = box.height() - lh;     // Height of a single coloured square in the legend
+    const float ch = box.height() * 0.6f;   // Height of a single coloured square in the legend
     const float tcy = box.y() + box.height() - ch;  // Top edge of the coloured area
     const float tcx = box.x() + 0.5f * (box.width() - tcw);  // Left edge of the coloured area
     for ( size_t i = 0; i < ncols; ++i)
         _ltxw->fillRectangle( _pageBox( QRectF( tcx + i*cw, tcy, cw, ch)), cols[i]);
 
     // Add in the legend labels
-    for ( size_t i = 0; i < ncols + 1; ++i)
+    const float lmin = cvis->minVisible();
+    const float lmax = cvis->maxVisible();
+    const size_t nlabels = std::min<size_t>( ncols, 9) + 1; // Number of labels (max 10)
+    const float lw = tcw / (nlabels-1);     // Width of a single label
+    const float lh = box.height() - ch;     // Height of a single label
+    const float ldelta = (lmax - lmin)/(nlabels-1);
+    for ( size_t i = 0; i < nlabels; ++i)
     {
         std::ostringstream tx;
-        tx << "\\small " << std::fixed << std::setprecision(2) << (lmin + i*ldelta);
-        const QRectF lbox( tcx + cw*(float(i) - 0.5f), box.y(), cw, lh);
+        tx << "\\scriptsize " << std::fixed << std::setprecision(2) << (lmin + i*ldelta);
+        const QRectF lbox( tcx + lw*(float(i) - 0.5f), box.y(), lw, lh);
         _ltxw->addRaw( _pageBox( lbox), tx.str(), true);
+        const r3d::Vec2f p( tcx + i*lw, box.y() + lh - 0.1f * box.height());
+        const r3d::Vec2f q( p[0], p[1] + 0.2f * box.height());
+        _ltxw->drawLine( _pagePoint(p), _pagePoint(q), r3d::Colour::black());
     }   // end for
 }   // end _addLatexSelectedColourMapLegend
 

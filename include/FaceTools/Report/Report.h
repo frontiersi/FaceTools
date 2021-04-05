@@ -106,6 +106,7 @@ private:
 
     static bool _usingSVG();
     r3dio::Box _pageBox( const QRectF&) const;
+    r3dio::Point _pagePoint( const Vec2f&) const;
     std::string _writeModelBGImage( const QRectF&, const FM*, const r3d::Mesh&);
     std::string _writeModelBGImage( const QRectF&, const FM*);
     bool _writeLatex();
