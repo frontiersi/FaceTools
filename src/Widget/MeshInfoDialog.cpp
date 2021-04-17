@@ -17,20 +17,21 @@
 
 #include <Widget/MeshInfoDialog.h>
 #include <ui_MeshInfoDialog.h>
+#include <Action/FaceAction.h>
+#include <ModelSelect.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 #include <QTools/QImageTools.h>
 #include <QPushButton>
 #include <QSpinBox>
-#include <cmath>
 #include <cassert>
 using FaceTools::Widget::MeshInfoDialog;
-using FaceTools::FM;
+using FaceTools::Action::FaceAction;
+using MS = FaceTools::ModelSelect;
 
 
 MeshInfoDialog::MeshInfoDialog( QWidget *parent) :
     QDialog(parent), _ui(new Ui::MeshInfoDialog),
-    _model(nullptr),
     _dialogRootTitle( parent->windowTitle() + " | Model Properties")
 {
     _ui->setupUi(this);
@@ -39,25 +40,32 @@ MeshInfoDialog::MeshInfoDialog( QWidget *parent) :
     connect( _ui->manifoldSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
                              this, &MeshInfoDialog::doOnManifoldIndexChanged);
     setFixedSize( geometry().width(), geometry().height());
-    reset();
+    refresh();
 }   // end ctor
 
 
-MeshInfoDialog::~MeshInfoDialog()
+MeshInfoDialog::~MeshInfoDialog() { delete _ui;}
+
+
+int MeshInfoDialog::selectedManifold() const
 {
-    delete _ui;
-}   // end dtor
+    return _ui->manifoldSpinBox->value();
+}   // end selectedManifold
 
 
-void MeshInfoDialog::set( const FM* fm)
+void MeshInfoDialog::setDiscardManifoldAction( FaceAction *act)
 {
-    _model = fm;
-    reset();
-}   // end set
+    _ui->discardManifoldButton->setDefaultAction( act->qaction());
+}   // end setDiscardManifoldAction
 
 
-// private
-void MeshInfoDialog::reset()
+void MeshInfoDialog::setRemoveManifoldsAction( FaceAction *act)
+{
+    _ui->removeManifoldsButton->setDefaultAction( act->qaction());
+}   // end setRemoveManifoldsAction
+
+
+void MeshInfoDialog::refresh()
 {
     setWindowTitle( _dialogRootTitle);
     _ui->modelPolygonsLabel->clear();
@@ -66,11 +74,12 @@ void MeshInfoDialog::reset()
 
     int nm = 0; // Number of manifolds
 
-    if ( _model)
+    const FM *fm = MS::selectedModel();
+    if ( fm)
     {
-        _model->lockForRead();
-        const r3d::Manifolds& manfs = _model->manifolds();
-        const r3d::Mesh& cmodel = _model->mesh();
+        fm->lockForRead();
+        const r3d::Manifolds& manfs = fm->manifolds();
+        const r3d::Mesh& cmodel = fm->mesh();
         nm = int(manfs.count());  // Number of manifolds
 
         //_ui->textureMappedLabel->setText( cmodel.materialIds().empty() ? "No Texture Mapping!" : "");
@@ -81,16 +90,15 @@ void MeshInfoDialog::reset()
         for ( int i = 0; i < nm; ++i)
             nb += manfs[i].boundaries().count();
         _ui->modelBoundariesLabel->setText( QString("%1").arg(nb));
-        _model->unlock();
+        fm->unlock();
     }   // end if
 
-    //_ui->maxManifoldsLabel->setText( QString("of %1").arg(nm));
-    _ui->manifoldSpinBox->setMaximum( nm);
     _ui->manifoldSpinBox->setMinimum( 1);
+    _ui->manifoldSpinBox->setMaximum( nm);
     _ui->manifoldSpinBox->setEnabled( nm > 1);
     _ui->manifoldSpinBox->setValue( 1);
     doOnManifoldIndexChanged(1);
-}   // end reset
+}   // end refresh
 
 
 void MeshInfoDialog::doOnManifoldIndexChanged( int i)
@@ -98,35 +106,29 @@ void MeshInfoDialog::doOnManifoldIndexChanged( int i)
     _ui->manifoldPolygonsLabel->clear();
     _ui->manifoldVerticesLabel->clear();
     _ui->manifoldBoundariesLabel->clear();
-
     _ui->manifoldXLabel->clear();
     _ui->manifoldYLabel->clear();
     _ui->manifoldZLabel->clear();
 
-    if ( _model)
-    {
-        _model->lockForRead();
-        const r3d::Manifolds& manfs = _model->manifolds();
-        assert( i > 0 && i <= int(manfs.count()));
-        const int realIdx = int(i-1);
+    const FM *fm = MS::selectedModel();
+    if ( !fm)
+        return;
 
-        const r3d::Manifold& manf = manfs[realIdx];
-        const size_t p = manf.faces().size();
-        const size_t v = manf.vertices().size();
-        const size_t b = manf.boundaries().count();
-        _ui->manifoldPolygonsLabel->setText( QString("%1").arg(p));
-        _ui->manifoldVerticesLabel->setText( QString("%1").arg(v));
-        _ui->manifoldBoundariesLabel->setText( QString("%1").arg(b));
+    fm->lockForRead();
+    const r3d::Manifolds& manfs = fm->manifolds();
+    assert( i > 0 && i <= int(manfs.count()));
+    const int realIdx = i - 1;
 
-        const r3d::Bounds& bnds = *_model->bounds().at(size_t(i));
-        const double x = bnds.xlen();
-        const double y = bnds.ylen();
-        const double z = bnds.zlen();
-        _ui->manifoldXLabel->setText( QString::number(x, 'f', 2));
-        _ui->manifoldYLabel->setText( QString::number(y, 'f', 2));
-        _ui->manifoldZLabel->setText( QString::number(z, 'f', 2));
-        _model->unlock();
+    const r3d::Manifold& manf = manfs[realIdx];
+    _ui->manifoldPolygonsLabel->setText( QString("%1").arg(manf.faces().size()));
+    _ui->manifoldVerticesLabel->setText( QString("%1").arg(manf.vertices().size()));
+    _ui->manifoldBoundariesLabel->setText( QString("%1").arg(manf.boundaries().count()));
 
-        emit selectedManifold(realIdx);
-    }   // end if
+    const r3d::Bounds& bnds = *fm->bounds().at(size_t(i));
+    _ui->manifoldXLabel->setText( QString::number( bnds.xlen(), 'f', 2));
+    _ui->manifoldYLabel->setText( QString::number( bnds.ylen(), 'f', 2));
+    _ui->manifoldZLabel->setText( QString::number( bnds.zlen(), 'f', 2));
+    fm->unlock();
+
+    emit onSelectedManifoldChanged(realIdx);
 }   // end doOnManifoldIndexChanged

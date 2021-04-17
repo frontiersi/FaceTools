@@ -128,7 +128,8 @@ void ActionEditLandmarks::doAction( Event e)
     {
         msg = tr("Click and drag landmarks into their confirmed positions in the main viewer");
         chk = true;
-        _key = MS::lockSelect();   // Prevent selecting a different view until close
+        if ( _key == 0)
+            _key = MS::lockSelect();   // Prevent selecting a different view until close
         QApplication::beep();
     }   // end if
     _dialog->setMessage(msg);

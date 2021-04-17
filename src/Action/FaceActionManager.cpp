@@ -39,14 +39,10 @@ using FaceTools::FM;
 
 namespace {
 
-void rebuildViews( const FM* fm)
-{
-    for ( FV* fv : fm->fvs())
-        fv->reset();
-}   // end rebuildViews
+void rebuildViews( FM* fm) { fm->rebuildViews();}
 
 
-void syncViews( const FM* fm)
+void syncViews( FM* fm)
 {
     vtkSmartPointer<vtkMatrix4x4> m = r3dvis::toVTK( fm->transformMatrix());
     for ( FV* fv : fm->fvs())
@@ -54,14 +50,14 @@ void syncViews( const FM* fm)
 }   // end syncViews
 
 
-void applyFnToModels( const Event &e, const FM* fm, const std::function<void( const FM*)> &fn)
+void applyFnToModels( const Event &e, FM* fm, const std::function<void( FM*)> &fn)
 {
     if ( !has( e, Event::ALL_VIEWS))
         fn( fm);
     else
     {
         const FaceTools::FVS& aset = MS::selectedView()->viewer()->attached();
-        for ( const FM* vm : aset.models())
+        for ( FM* vm : aset.models())
             fn( vm);
     }   // end else
 }   // end applyFnToModels
@@ -167,7 +163,7 @@ void FaceActionManager::raise( Event E)
 
 void FaceActionManager::_doRaise( Event E)
 {
-    const FM* fm = MS::selectedModel();
+    FM* fm = MS::selectedModel();
     assert( fm || FMM::numOpen() == 0);
     if ( E == Event::CANCEL)
         return;

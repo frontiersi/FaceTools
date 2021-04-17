@@ -144,7 +144,10 @@ void ActionImportMetaData::doAction( Event)
     _err = false;
     double fversion;
     if ( FileIO::importMetaData( *fm, tree, fversion))
+    {
         fm->moveToSurface();
+        fm->rebuildViews();
+    }   // end if
     else
     {
         _err = true;

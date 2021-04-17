@@ -186,12 +186,13 @@ QAbstractSeries* createMetricPoint( double age, double val, const QString& title
 {
     QScatterSeries *dpoints = new QScatterSeries;
     dpoints->setName( title);
-    if ( outBounds)
-        dpoints->setMarkerShape( QScatterSeries::MarkerShapeRectangle);
-    else
-        dpoints->setMarkerShape( QScatterSeries::MarkerShapeCircle);
+    //dpoints->setMarkerShape( QScatterSeries::MarkerShapeRectangle);
+    dpoints->setMarkerShape( QScatterSeries::MarkerShapeCircle);
     dpoints->setMarkerSize(10);
-    dpoints->setColor(c);
+    dpoints->setBorderColor(c);
+    dpoints->setColor(Qt::white);
+    if ( !outBounds)
+        dpoints->setColor(c);
     dpoints->append( age, val);
     return dpoints;
 }   // end createMetricPoint

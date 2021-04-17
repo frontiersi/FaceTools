@@ -17,6 +17,7 @@
 
 #include <FaceModel.h>
 #include <FaceTools.h>
+#include <Vis/FaceView.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::PathSet;
@@ -61,13 +62,12 @@ FaceModel::FaceModel()
 void FaceModel::update( r3d::Mesh::Ptr mesh, bool updateConnectivity, bool settleLandmarks, int maxManifolds)
 {
     assert( mesh);
-    assert( mesh != _mesh);
 
     if ( updateConnectivity)
     {
+        const size_t rverts = mesh->removeDisconnectedVertices();
         /*
         static const std::string imsg = "[INFO] FaceTools::FaceModel::update: ";
-        const size_t rverts = mesh->removeDisconnectedVertices();
         if ( rverts > 0)
             std::cerr << imsg << "Removed " << rverts << " disconnected vertices" << std::endl;
         */
@@ -179,6 +179,13 @@ void FaceModel::addTransformMatrix( const Mat4f& T)
 
 void FaceModel::addView( FV *fv) { _fvs.insert(fv);}
 void FaceModel::eraseView( FV* fv) { _fvs.erase(fv);}
+
+void FaceModel::rebuildViews()
+{
+    for ( FV *fv : _fvs)
+        fv->rebuild();
+}   // end rebuildViews
+
 
 void FaceModel::setMetaSaved( bool s) { _savedMeta = s;}
 void FaceModel::setModelSaved( bool s) { _savedModel = s;}

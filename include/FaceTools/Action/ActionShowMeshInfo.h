@@ -19,7 +19,9 @@
 #define FACE_TOOLS_ACTION_SHOW_MESH_INFO_H
 
 #include "ActionDiscardManifold.h"
+#include "ActionRemoveManifolds.h"
 #include <FaceTools/Widget/MeshInfoDialog.h>
+#include <FaceTools/Vis/OutlinesVisualisation.h>
 
 namespace FaceTools { namespace Action {
 
@@ -30,15 +32,26 @@ public:
 
     QString toolTip() const override { return "Show information about the selected 3D mesh.";}
 
+    void setDiscardManifoldAction( ActionDiscardManifold*);
+    void setRemoveManifoldsAction( ActionRemoveManifolds*);
+
 protected:
     void postInit() override;
     bool update( Event) override;
     bool isAllowed( Event) override;
     void doAction( Event) override;
     Event doAfterAction( Event) override;
+    void purge( const FM*) override;
+
+private slots:
+    void _doOnSelectedManifoldChanged( int);
+    void _doOnDialogClosed();
 
 private:
     Widget::MeshInfoDialog *_dialog;
+    ActionDiscardManifold *_dmact;
+    ActionRemoveManifolds *_rmact;
+    Vis::OutlinesVisualisation _vis;
 };  // end class
 
 }}   // end namespace

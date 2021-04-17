@@ -92,6 +92,7 @@ private:
     QString _errMsg;
     bool _validContent;
 
+    void _addLatexText( const QRectF&, const std::string&, bool);
     void _addLatexScanInfo( const QRectF&, const FM*);
     void _addLatexNotes( const QRectF&, const FM*);
     bool _addLatexPhenotypicTraits( const QRectF&, const FM*, int, int);

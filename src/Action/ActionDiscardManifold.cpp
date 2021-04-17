@@ -52,6 +52,13 @@ bool manifoldIdInRange( int mid)
 }   // end namespace
 
 
+void ActionDiscardManifold::setManifoldIndex( int mid)
+{
+    _mid = mid;
+    refresh( Event::USER);
+}   // end setManifoldIndex
+
+
 bool ActionDiscardManifold::isAllowed( Event)
 {
     const FV *fv = MS::selectedView();
@@ -105,12 +112,10 @@ void ActionDiscardManifold::doAction( Event)
     fm->lockForWrite();
     const Mat4f T = fm->transformMatrix();
 
-    r3d::Mesh::Ptr mobj = fm->mesh().deepCopy();
     const IntSet& polys = fm->manifolds()[_mid].faces();  // Faces to discard
+    r3d::Mesh::Ptr mobj = fm->mesh().deepCopy();
     for ( int f : polys)
         mobj->removeFace(f);
-
-    _mid = -1;
 
     // FM::update removes any unused vertices resulting from the removal of faces
     // and then ensures that the vertices are in sequential order.
@@ -122,6 +127,7 @@ void ActionDiscardManifold::doAction( Event)
 
 Event ActionDiscardManifold::doAfterAction( Event)
 {
+    _mid = -1;
     MS::showStatus( "Finished removing manifold.", 5000);
     return Event::MESH_CHANGE | Event::LANDMARKS_CHANGE;
 }   // end doAfterAction

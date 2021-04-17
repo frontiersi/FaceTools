@@ -57,7 +57,7 @@ bool U3DCache::isAvailable()
 }   // end isAvailable
 
 
-bool U3DCache::_exportU3D( const r3d::Mesh &mesh, const QString &savepath, const r3d::Colour &ems)
+bool U3DCache::_exportU3D( const r3d::Mesh &mesh, const QString &savepath, const rimg::Colour &ems)
 {
     std::string errmsg = "";
     r3dio::U3DExporter xptr( true/*delete on destroy*/, true/*media9*/, ems);
@@ -77,11 +77,11 @@ bool U3DCache::refresh( const FM &fm)
     fm.unlock();
     assert( mesh->hasSequentialVertexIds());
 
-    r3d::Colour ems = r3d::Colour::white();
+    rimg::Colour ems = rimg::Colour::white();
     if ( !mesh->hasMaterials())
     {
         const QColor bc = FV::BASECOL;
-        ems = r3d::Colour( bc.red(), bc.green(), bc.blue());
+        ems = rimg::Colour( bc.red(), bc.green(), bc.blue());
         /*
         // Add a flat texture since none present
         static const QImage timg(":/textures/BASE_BLUE");
@@ -125,7 +125,7 @@ r3d::Mesh::Ptr U3DCache::makeColourMappedU3D( const FV *fv, const QString &u3dfi
     fm->unlock();
     mesh->removeAllMaterials();
     r3dvis::mapActiveScalarsToMesh( fv->actor(), *mesh);
-    const r3d::Colour ems = r3d::Colour::white();
+    const rimg::Colour ems = rimg::Colour::white();
     if ( !_exportU3D( *mesh, u3dfile, ems))
         mesh = nullptr;
     return mesh;

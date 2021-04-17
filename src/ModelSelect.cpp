@@ -275,7 +275,7 @@ int ModelSelect::lockSelect()
 
 void ModelSelect::unlockSelect( int key)
 {
-    me()->_slocker.turnkey( key, true);
+    me()->_slocker.turnKey( key, true);
     _selectNotifier()->setLocked( me()->_slocker.isLocked());
 }   // end unlockSelect
 
@@ -291,7 +291,7 @@ void ModelSelect::resetAllViews()
 {
     for ( FMV* fmv : me()->_viewers)
         for ( FV *fv : fmv->attached())
-            fv->reset();
+            fv->rebuild();
     updateRender();
 }   // end resetAllViews
 

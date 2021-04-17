@@ -29,6 +29,8 @@ public:
 
     QString toolTip() const override { return "Discard the selected manifold (set of edge connected triangles) from the model.";}
 
+    void setManifoldIndex( int);
+
 protected:
     bool isAllowed( Event) override;
     bool doBeforeAction( Event) override;

@@ -20,7 +20,7 @@
 
 #include "FaceTypes.h"
 #include "FaceModel.h"
-#include <r3d/Colour.h>
+#include <rimg/Colour.h>
 #include <QTemporaryDir>
 #include <QReadWriteLock>
 
@@ -54,7 +54,7 @@ private:
     static QReadWriteLock _rwLock;
     static std::unordered_map<const FM*, QString> _cache;
 
-    static bool _exportU3D( const r3d::Mesh&, const QString&, const r3d::Colour &ems);
+    static bool _exportU3D( const r3d::Mesh&, const QString&, const rimg::Colour &ems);
     U3DCache(){}
     U3DCache( const U3DCache&) = delete;
     void operator=( const U3DCache&) = delete;

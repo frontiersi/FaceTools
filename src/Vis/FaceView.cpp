@@ -57,7 +57,7 @@ FaceView::FaceView( FM* fm, FMV* viewer)
     assert(fm);
     _data->addView(this);
     setViewer(viewer);
-    reset();
+    rebuild();
 }   // end ctor
 
 
@@ -145,7 +145,7 @@ void FaceView::setViewer( FMV* nviewer)
 }   // end setViewer
 
 
-void FaceView::reset()
+void FaceView::rebuild()
 {
     assert(_viewer);
 

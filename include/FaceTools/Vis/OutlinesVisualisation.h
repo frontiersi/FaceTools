@@ -26,19 +26,25 @@ namespace FaceTools { namespace Vis {
 class FaceTools_EXPORT OutlinesVisualisation : public BaseVisualisation
 {
 public:
+    OutlinesVisualisation();
+
     bool applyToAllInViewer() const override { return false;}
     bool applyToAllViewers() const override { return false;}
 
     void refresh( FV*) override;
     void purge( const FV*) override;
+    void purgeAll();
 
     void setVisible( FV*, bool) override;
     bool isVisible( const FV*) const override;
 
     void syncTransform( const FV*) override;
 
+    void setManifoldIndex( int);
+
 private:
     std::unordered_map<const FV*, std::vector<LoopView> > _views;
+    int _midx;
 };  // end class
 
 }}   // end namespace

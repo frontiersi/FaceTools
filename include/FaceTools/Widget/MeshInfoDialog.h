@@ -20,7 +20,6 @@
 
 #include <FaceTools/FaceTypes.h>
 #include <QDialog>
-#include <QValidator>
 
 namespace Ui { class MeshInfoDialog;}
 
@@ -32,20 +31,22 @@ public:
     explicit MeshInfoDialog( QWidget *parent=nullptr);
     ~MeshInfoDialog() override;
 
-    void set( const FM*);
-    const FM* get() const { return _model;}
+    void setDiscardManifoldAction( Action::FaceAction*);
+    void setRemoveManifoldsAction( Action::FaceAction*);
+
+    void refresh();
+
+    int selectedManifold() const;
 
 signals:
-    void selectedManifold( int);
+    void onSelectedManifoldChanged( int);
 
 private slots:
     void doOnManifoldIndexChanged( int);
 
 private:
     Ui::MeshInfoDialog *_ui;
-    const FM *_model;
     const QString _dialogRootTitle;
-    void reset();
 };  // end class
 
 }}   // end namespace

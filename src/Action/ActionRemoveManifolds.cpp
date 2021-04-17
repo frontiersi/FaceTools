@@ -50,6 +50,13 @@ bool manifoldIdInRange( int mid)
 }   // end namespace
 
 
+void ActionRemoveManifolds::setManifoldIndex(int mid)
+{
+    _mid = mid;
+    refresh( Event::USER);
+}   // end setManifoldIndex
+
+
 bool ActionRemoveManifolds::isAllowed( Event)
 {
     const FV* fv = MS::selectedView();
@@ -79,23 +86,23 @@ bool ActionRemoveManifolds::doBeforeAction( Event)
     const size_t numFaceRemove = manifoldIdInRange(_mid) ? size_t(fm->mesh().numFaces()) - fm->manifolds()[_mid].faces().size() : 0;
     fm->unlock();
 
+    bool goOk = false;
     if ( numFaceRemove > 0)
     {
         const QString msg = tr("%1 triangles from %2 manifolds will be removed. Continue?").arg(numFaceRemove).arg(numManRemove);
         const int rv = QMB::question( qobject_cast<QWidget*>(parent()),
                               tr("Remove Other Manifolds?"), QString("<p align='center'>%1</p>").arg(msg),
                               QMB::Yes | QMB::No, QMB::No);
-        if ( rv == QMB::No)
-            _mid = -1;
+        goOk = rv == QMB::Yes;
     }   // end if
 
-    if ( _mid >= 0)
+    if ( goOk)
     {
         MS::showStatus("Removing manifolds from selected model...");
         storeUndo(this, Event::MESH_CHANGE | Event::LANDMARKS_CHANGE);
     }   // end if
 
-    return _mid >= 0;
+    return goOk;
 }   // end doBeforeAction
 
 

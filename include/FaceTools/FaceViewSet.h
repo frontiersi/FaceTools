@@ -50,13 +50,11 @@ public:
     bool has( const Vis::FV*) const;    // Returns true if the given FaceView is present.
     bool has( const FM*) const;         // Returns true iff at least one FaceView with the given data is present.
     size_t size() const;                // How many FaceView instances.
-    size_t size( const FM*) const;      // Returns the number of FaceView instances that map to the given FaceModel.
     bool empty() const;                 // True iff empty.
     Vis::FV* first() const;             // Returns *_fvs.begin() or null if empty set.
 
+    FMVS viewers() const;
     const FMS& models() const;          // Return the set of models from this set of FaceViews.
-    FMVS viewers() const;               // Collect and return the viewers that this set's FaceViews are currently attached to.
-    void updateRenderers() const;       // Shortcut to call updateRender on the set of FMVs returned by dviewers.
 
     // Returns the FaceView that the prop belongs to or null if prop not associated with any FV in this set.
     // Currently does a linear lookup. TODO make hashable.

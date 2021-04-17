@@ -18,14 +18,19 @@
 #include <Vis/OutlinesVisualisation.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
-#include <rlib/Random.h>
+#include <rimg/Colour.h>
 using FaceTools::Vis::OutlinesVisualisation;
 using FaceTools::Vis::FV;
 
 
+OutlinesVisualisation::OutlinesVisualisation() : _midx(-1) {}
+
+
 bool OutlinesVisualisation::isVisible( const FV* fv) const
 {
-    return _views.count(fv) > 0 && _views.at(fv).at(0).isVisible();
+    return _views.count(fv) > 0
+        && !_views.at(fv).empty()
+        && _views.at(fv).at(0).isVisible();
 }   // end isVisible
 
 
@@ -37,23 +42,17 @@ void OutlinesVisualisation::syncTransform( const FV* fv)
 
 
 namespace {
-void getVertices( const std::list<int> &blist, const r3d::Mesh &mesh, std::vector<const r3d::Vec3f*> &vtxs)
+std::vector<const r3d::Vec3f*> getVertices( const std::list<int> &blist, const r3d::Mesh &mesh)
 {
-    vtxs.resize( blist.size());
-    int k = 0;
+    std::vector<const r3d::Vec3f*> vtxs;
     for ( int vidx : blist)
-        vtxs[k++] = &mesh.uvtx(vidx);
+        vtxs.push_back( &mesh.uvtx(vidx));
+    return vtxs;
 }   // end getVertices
-
-void getColour( rlib::Random &rng, double &r, double &g, double &b)
-{
-    r = 0.2 + 0.7 * rng.getRandom();
-    g = 0.2 + 0.7 * rng.getRandom();
-    b = 0.2 + 0.7 * rng.getRandom();
-}   // end getColour
 }   // end namespace
 
 
+/*
 void OutlinesVisualisation::refresh( FV *fv)
 {
     const FM *fm = fv->data();
@@ -68,7 +67,6 @@ void OutlinesVisualisation::refresh( FV *fv)
 
     rlib::Random rng( 5); // Randomize based on model
 
-    std::vector<const Vec3f*> vtxs;
     double r, g, b;
     int k = 0;
     for ( int i = 0; i < int(manifolds.count()); ++i)
@@ -77,17 +75,44 @@ void OutlinesVisualisation::refresh( FV *fv)
         const r3d::Boundaries& bnds = manifolds[i].boundaries();
         for ( int j = 0; j < int(bnds.count()); ++j)
         {
-            getVertices( bnds.boundary(j), mesh, vtxs);
             LoopView &lv = views[k++];
             lv.setColour( r, g, b, 0.99);
             lv.setLineWidth( 3.0);
-            lv.update( vtxs);
+            lv.update( getVertices( bnds.boundary(j), mesh));
         }   // end for
+    }   // end for
+}   // end refresh
+*/
+
+void OutlinesVisualisation::setManifoldIndex( int midx) { _midx = midx;}
+
+
+void OutlinesVisualisation::refresh( FV *fv)
+{
+    const FM *fm = fv->data();
+    const r3d::Mesh &mesh = fm->mesh();
+    const r3d::Manifolds &manifolds = fm->manifolds();
+    assert( _midx < int(manifolds.count()));
+    const r3d::Boundaries& bnds = manifolds[_midx].boundaries();
+
+    std::vector<LoopView>& views = _views[fv];
+    // Note here that bnds.count could be zero since the manifold may not have any boudaries!
+    views.resize(bnds.count());
+    for ( int i = 0; i < int(bnds.count()); ++i)
+    {
+        LoopView &lv = views[i];
+        lv.setLineWidth( 3.0);
+        const rimg::Colour col = rimg::Colour::random( rimg::Colour( 0.2, 0.2, 0.2), rimg::Colour( 0.9, 0.9, 0.9));
+        lv.setColour( col[0], col[1], col[2], 0.99);
+        lv.update( getVertices( bnds.boundary(i), mesh));
     }   // end for
 }   // end refresh
 
 
 void OutlinesVisualisation::purge( const FV* fv) { _views.erase(fv);}
+
+
+void OutlinesVisualisation::purgeAll() { _views.clear();}
 
 
 void OutlinesVisualisation::setVisible( FV* fv, bool v)

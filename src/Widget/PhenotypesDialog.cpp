@@ -40,7 +40,7 @@ enum ColIndex
 {
     ID_COL = 0,      // ID of phenotype
     NAME_COL = 1,    //
-    METRICS_COL = 2, // Names of associated metrics
+    METRICS_COL = 2, // Names of associated measurements
 };  // end enum
 }   // end namespace
 

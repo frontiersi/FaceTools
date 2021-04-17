@@ -16,37 +16,63 @@
  ************************************************************************/
 
 #include <Action/ActionShowMeshInfo.h>
-#include <FaceModel.h>
 using FaceTools::Action::ActionShowMeshInfo;
 using FaceTools::Action::ActionDiscardManifold;
+using FaceTools::Action::ActionRemoveManifolds;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::Widget::MeshInfoDialog;
-using FaceTools::FM;
 using MS = FaceTools::ModelSelect;
 
 
+
 ActionShowMeshInfo::ActionShowMeshInfo( const QString& dname, const QIcon& icon, const QKeySequence& ks)
-    : FaceAction( dname, icon, ks), _dialog(nullptr)
+    : FaceAction( dname, icon, ks), _dialog(nullptr), _dmact(nullptr), _rmact(nullptr)
 {
-    addRefreshEvent( Event::MESH_CHANGE);
+    addRefreshEvent( Event::MESH_CHANGE | Event::MODEL_SELECT);
 }   // end ctor
+
+
+void ActionShowMeshInfo::setDiscardManifoldAction( ActionDiscardManifold *a)
+{
+    _dmact = a;
+    if ( _dialog && _dmact)
+        _dialog->setDiscardManifoldAction( _dmact);
+}   // end setDiscardManifoldAction
+
+
+void ActionShowMeshInfo::setRemoveManifoldsAction( ActionRemoveManifolds *a)
+{
+    _rmact = a;
+    if ( _dialog && _rmact)
+        _dialog->setRemoveManifoldsAction( _rmact);
+}   // end setRemoveManifoldsAction
 
 
 void ActionShowMeshInfo::postInit()
 {
-    QWidget* p = static_cast<QWidget*>(parent());
-    _dialog = new MeshInfoDialog(p);
+    _dialog = new MeshInfoDialog( static_cast<QWidget*>(parent()));
+    connect( _dialog, &MeshInfoDialog::onSelectedManifoldChanged,
+             this, &ActionShowMeshInfo::_doOnSelectedManifoldChanged);
+    connect( _dialog, &MeshInfoDialog::finished,
+             this, &ActionShowMeshInfo::_doOnDialogClosed);
+    if ( _dmact)
+        _dialog->setDiscardManifoldAction( _dmact);
+    if ( _rmact)
+        _dialog->setRemoveManifoldsAction( _rmact);
 }   // end postInit
 
 
-bool ActionShowMeshInfo::update( Event e)
+bool ActionShowMeshInfo::update( Event)
 {
-    const FM* fm = MS::selectedModel();
-    if ( !fm)
-        _dialog->hide();
-    else
-        _dialog->set( fm);
+    if ( _dialog->isVisible())
+    {
+        if ( !MS::isViewSelected())
+            _dialog->hide();
+        else
+            _dialog->refresh();
+    }   // end if
+
     return _dialog->isVisible();
 }   // end update
 
@@ -56,14 +82,38 @@ bool ActionShowMeshInfo::isAllowed( Event) { return MS::isViewSelected();}
 
 void ActionShowMeshInfo::doAction( Event)
 {
-    _dialog->show();
-    _dialog->raise();
-    _dialog->activateWindow();
+    _dialog->setVisible( true);
 }   // end doAction
 
 
 Event ActionShowMeshInfo::doAfterAction( Event)
 {
-    MS::showStatus( "Showing Model Information", 5000);
+    if (_dialog->isVisible())
+        MS::showStatus( "Showing Model Information", 5000);
     return Event::NONE;
 }   // end doAfterAction
+
+
+void ActionShowMeshInfo::purge( const FM *fm)
+{
+    for ( Vis::FV *fv : fm->fvs())
+        fv->purge( &_vis);
+}   // end purge
+
+
+void ActionShowMeshInfo::_doOnSelectedManifoldChanged( int midx)
+{
+    Vis::FV *fv = MS::selectedView();
+    _vis.setManifoldIndex(midx);
+    _dmact->setManifoldIndex(midx);
+    _rmact->setManifoldIndex(midx);
+    fv->apply( &_vis);
+    fv->viewer()->updateRender();
+}   // end _doOnSelectedManifoldChanged
+
+
+void ActionShowMeshInfo::_doOnDialogClosed()
+{
+    _vis.purgeAll();
+    MS::updateRender();
+}   // end _doOnDialogClosed

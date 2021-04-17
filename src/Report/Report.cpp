@@ -178,6 +178,9 @@ Report::Report() : _ltxw(nullptr)
     boxType["h"] = sol::property( &QRectF::height, &QRectF::setHeight);
 
     // Standard content adding API
+    _lua.set_function( "addText",
+                       [this]( const QRectF &box, const std::string& v, bool centred)
+                       { this->_addLatexText( box, v, centred);});
     _lua.set_function( "addScanInfo",
                        [this]( const QRectF &box, const FM *fm){ this->_addLatexScanInfo( box, fm);});
     _lua.set_function( "addNotes",
@@ -578,7 +581,7 @@ void Report::_addLatexSelectedColourMapLegend( const QRectF &box)
         return;
     }   // end if
 
-    const std::vector<r3d::Colour> &cols = cvis->colours();
+    const std::vector<rimg::Colour> &cols = cvis->colours();
     const size_t ncols = cols.size();
 
     // Legend is horizontal -TODO- make vertical legends
@@ -605,7 +608,7 @@ void Report::_addLatexSelectedColourMapLegend( const QRectF &box)
         _ltxw->addRaw( _pageBox( lbox), tx.str(), true);
         const r3d::Vec2f p( tcx + i*lw, box.y() + lh - 0.1f * box.height());
         const r3d::Vec2f q( p[0], p[1] + 0.2f * box.height());
-        _ltxw->drawLine( _pagePoint(p), _pagePoint(q), r3d::Colour::black());
+        _ltxw->drawLine( _pagePoint(p), _pagePoint(q), rimg::Colour::black());
     }   // end for
 }   // end _addLatexSelectedColourMapLegend
 
@@ -664,6 +667,14 @@ void Report::_addLatexChart( const QRectF &box, const FM *fm, int mid, size_t d,
     oss << "\\end{figure}\n";
     _ltxw->addRaw( pgbox, oss.str(), true);
 }   // end _addLatexChart
+
+
+void Report::_addLatexText( const QRectF &box, const std::string &s, bool c)
+{
+    if ( !_validContent)
+        return;
+    _ltxw->addRaw( _pageBox(box), s, c);
+}   // end _addLatexText
 
 
 void Report::_addLatexScanInfo( const QRectF &box, const FM *fm)

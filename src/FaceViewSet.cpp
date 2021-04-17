@@ -165,7 +165,6 @@ bool FaceViewSet::erase( const FM* fm)
 
 bool FaceViewSet::has( const FV* fv) const { return _fvs.count(const_cast<FV*>(fv)) == 1;}
 bool FaceViewSet::has( const FM* fm) const { return _fmm.count(fm) == 1;}
-size_t FaceViewSet::size( const FM* fm) const { return has(fm) ? _fmm.at(fm).size() : 0;}
 size_t FaceViewSet::size() const { return _fvs.size();}
 bool FaceViewSet::empty() const { return _fvs.empty();}
 
@@ -190,13 +189,6 @@ FMVS FaceViewSet::viewers() const
     viewers.erase(nullptr);    // Ensure no null entries (though there shouldn't be any).
     return viewers;
 }   // end viewers
-
-
-void FaceViewSet::updateRenderers() const
-{
-    FMVS vwrs = viewers();
-    std::for_each( std::begin(vwrs), std::end(vwrs), [](FMV *v){ v->updateRender();});
-}   // end updateRenderers
 
 
 FV* FaceViewSet::find( const vtkProp* prop) const

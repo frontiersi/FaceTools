@@ -91,6 +91,7 @@ public:
      */
     bool isAligned() const;
 
+    r3d::Mesh::Ptr meshPtr() { return _mesh;}
     const r3d::Mesh& mesh() const { return *_mesh;}
     const r3d::KDTree& kdtree() const { return *_kdtree;}
     const r3d::Manifolds& manifolds() const { return *_manifolds;}
@@ -291,6 +292,9 @@ public:
     // The views associated with this model.
     const FVS& fvs() const { return _fvs;}
     FVS& fvs() { return _fvs;}
+
+    // Rebuild (sync) the views associated with this model.
+    void rebuildViews();
 
     // Returns true if any of the metadata are present.
     bool hasMetaData() const;

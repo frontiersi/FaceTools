@@ -27,7 +27,9 @@ class FaceTools_EXPORT ActionRemoveManifolds: public FaceAction
 public:
     ActionRemoveManifolds( const QString&, const QIcon&);
 
-    QString toolTip() const override { return "Remove all other manifolds (edge connected triangle sets) except the chosen manifold.";}
+    QString toolTip() const override { return "Remove all manifolds except the currently selected one.";}
+
+    void setManifoldIndex( int);
 
 protected:
     bool isAllowed( Event) override;

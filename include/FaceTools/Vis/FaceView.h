@@ -64,9 +64,8 @@ public:
 
     // Remove and purge all visualisations and rebuild the view models from data. For textured actors
     // only Meshes with a single material are accepted (for models having multiple materials, use
-    // Mesh::mergeMaterials beforehand). If the Mesh doesn't have any materials, a warning will
-    // be printed to stderr and only non-texture mapped visualisations will be available.
-    void reset();
+    // Mesh::mergeMaterials beforehand).
+    void rebuild();
 
     // Reset just the normals from generated FaceModelCurvature.
     void resetNormals();
