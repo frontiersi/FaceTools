@@ -163,7 +163,8 @@ bool Metric::inPlane( const FM *fm) const
     bool inp = _measureInPlane || fixed;
     if ( !fixed && fm && !SM::usingDefaultMetricStats( id()))
     {
-        SM::RPtr gd = SM::stats( id(), fm);
+        const int i = id();
+        SM::RPtr gd = SM::stats( i, fm);
         if ( gd)
             inp = gd->inPlane();
     }   // end if
@@ -198,6 +199,7 @@ bool Metric::_measure( FM *fm) const
     const int mid = id();
     bool cval = false;
     FaceAssessment::Ptr ass = fm->currentAssessment();
+    assert( ass);
     if ( isBilateral())
     {
         cval |= setIfMetricValueChanged( ass->metrics(RIGHT), _measure( fm, true, inp), mid);

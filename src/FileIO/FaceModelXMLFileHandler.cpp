@@ -155,16 +155,25 @@ bool FaceModelXMLFileHandler::write( const FM* fm, const QString& fname)
 
         // Export jpeg thumbnail of model.
         const cv::Mat img = Action::ActionUpdateThumbnail::thumbnail( fm);
-        cv::imwrite( tdir.filePath("thumb.jpg").toLocal8Bit().toStdString(), img);
+        if ( !img.empty() && !cv::imwrite( tdir.filePath("thumb.jpg").toLocal8Bit().toStdString(), img))
+        {
+            _err = "Unable to write thumbnail!";
+            return false;
+        }   // end if
 
         // Finally, zip up the contents of the directory into fname.
         if ( !JlCompress::compressDir( fname, tdir.path(), true/*recursively pack subdirs*/))
+        {
             _err = "Unable to compress saved data into archive format!";
+            return false;
+        }   // end if
     }   // end try
     catch ( const std::exception& e)
     {
         std::cerr << "[EXCEPTION] FaceTools::FileIO::FaceModelXMLFileHandler::write: Failed to write to " << fname.toStdString() << std::endl;
-        _err = e.what();
+        if ( _err.isEmpty())
+            _err = e.what();
+        std::cerr << _err.toStdString() << std::endl;
     }   // end catch
 
     return _err.isEmpty();

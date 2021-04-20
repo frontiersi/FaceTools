@@ -108,8 +108,21 @@ StatsManager::RPtr StatsManager::stats( int mid, const FM *fm)
 
     if ( !_lock.tryLockForRead())
         return nullptr;
+
     assert( _modelGDs.count(fm) > 0);
+    if ( _modelGDs.count(fm) == 0)
+    {
+        _lock.unlock();
+        return nullptr;
+    }   // end if
+
     assert( _modelGDs.at(fm).count(mid) > 0);
+    if ( _modelGDs.at(fm).count(mid) == 0)
+    {
+        _lock.unlock();
+        return nullptr;
+    }   // end if
+
     const GD *gd = _modelGDs.at(fm).at(mid);
     return RPtr( gd, []( const GD*){ _lock.unlock();});
 }   // end stats

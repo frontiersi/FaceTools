@@ -38,7 +38,14 @@ ActionUpdateMeasurements::ActionUpdateMeasurements() : FaceAction("Update Measur
 bool ActionUpdateMeasurements::updateMeasurement( FM *fm , int mid)
 {
     const MC *m = MM::cmetric(mid);
-    return m->_canMeasure( fm) && m->_measure(fm);
+    assert( m);
+    if ( m == nullptr)
+    {
+        std::cerr << "[ERROR] FaceTools::Action::ActionUpdateMeasurements::updateMeasurement: null metric from id " << mid << std::endl;
+        return false;
+    }   // end if
+    const bool canMeasure = m->_canMeasure( fm);
+    return canMeasure && m->_measure(fm);
 }   // end updateMeasurement
 
 

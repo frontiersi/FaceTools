@@ -215,9 +215,9 @@ void Chart::_addDataPoints( const FM* fm)
             const MetricValue& mvr = ass->cmetrics(RIGHT).metric( _mid);
             const float val = 0.5f * (mvl.value(_dim) + mvr.value(_dim));
 
-            this->addSeries( createMetricPoint( age, mvl.value(_dim), "Left", Qt::blue, isOutOfBounds));
-            this->addSeries( createMetricPoint( age, mvr.value(_dim), "Right", Qt::green, isOutOfBounds));
-            this->addSeries( createMetricPoint( age, val, "Mean", Qt::red, isOutOfBounds));
+            this->addSeries( createMetricPoint( age, val, "(R+L)/2", Qt::red, isOutOfBounds));
+            this->addSeries( createMetricPoint( age, mvr.value(_dim), "R side", Qt::green, isOutOfBounds));
+            this->addSeries( createMetricPoint( age, mvl.value(_dim), "L side", Qt::blue, isOutOfBounds));
 
             _ymin = std::min( mvl.value(_dim), mvr.value(_dim));
             _ymax = std::max( mvl.value(_dim), mvr.value(_dim));
