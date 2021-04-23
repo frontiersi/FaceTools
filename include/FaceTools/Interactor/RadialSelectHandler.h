@@ -36,11 +36,10 @@ public:
     Vis::BaseVisualisation &visualisation() { return _vis;}
     const Vis::BaseVisualisation &visualisation() const { return _vis;}
 
-    // Initialise the handler to work with the given view's model.
+    // Initialise the handler to work with the given view's model (set null to disable).
     void init( const FM*, const Vec3f& centre, float radius);
 
-    // Returns true iff the currently set data are associated with the given model.
-    bool isForModel( const FM*) const;
+    void reset( const FM*);
 
     float radius() const;
     Vec3f centre() const;   // Returns transformed point
@@ -61,6 +60,7 @@ private:
     bool doMouseWheelBackward() override;
 
     Vis::RadialSelectVisualisation _vis;
+    const FM *_fm;
     bool _onReticule;
     bool _moving;
     float _radiusChange;

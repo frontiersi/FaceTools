@@ -36,13 +36,15 @@ float ActionExtractFace::cropRadius() { return s_cropRadius;}
 ActionExtractFace::ActionExtractFace( const QString& dn, const QIcon& ico)
     : FaceAction(dn, ico), _ev(Event::NONE)
 {
+    // Required to change action name when activating radial select
+    addRefreshEvent( Event::VIEW_CHANGE);
     setAsync(true);
 }   // end ctor
 
 
 QString ActionExtractFace::toolTip() const
 {
-    return "Extract a demarcated region, or the automatically identified facial region.";
+    return "Extract a manually demarcated region, or the identified facial region.";
 }   // end toolTip
 
 
@@ -62,6 +64,15 @@ QString ActionExtractFace::whatsThis() const
 }   // end whatsThis
 
 
+bool ActionExtractFace::update( Event e)
+{
+    const RadialSelectHandler *h = MS::handler<RadialSelectHandler>();
+    const QString actName = h && h->isEnabled() ? "Extract Region" : "Extract Face";
+    setDisplayName( actName);
+    return true;
+}   // end update
+
+
 bool ActionExtractFace::isAllowed( Event) { return MS::isViewSelected();}
 
 
@@ -69,9 +80,9 @@ bool ActionExtractFace::doBeforeAction( Event)
 {
     const RadialSelectHandler *h = MS::handler<RadialSelectHandler>();
     if ( h->isEnabled())
-        MS::showStatus("Extracting radially bounded region...");
+        MS::showStatus("Extracting region...");
     else
-        MS::showStatus("Extracting facial region...");
+        MS::showStatus("Extracting face...");
     _ev = Event::MESH_CHANGE | Event::AFFINE_CHANGE;
     if ( MS::selectedModelScopedRead()->hasLandmarks())
         _ev |= Event::LANDMARKS_CHANGE;
@@ -147,9 +158,9 @@ void ActionExtractFace::doAction( Event)
     FM::WPtr fm = MS::selectedModelScopedWrite();
     r3d::Mesh::Ptr nmod;
 
-    const RadialSelectHandler *h = MS::handler<RadialSelectHandler>();
-    if ( h->isEnabled())
-        nmod = cropRegion( fm->mesh(), h->selectedFaces());
+    RadialSelectHandler *handler = MS::handler<RadialSelectHandler>();
+    if ( handler->isEnabled())
+        nmod = cropRegion( fm->mesh(), handler->selectedFaces());
     else
         nmod = extract( *fm);
 
@@ -168,6 +179,11 @@ Event ActionExtractFace::doAfterAction( Event)
         MS::showStatus("Model unchanged.", 5000);
     }   // end if
     else
-        MS::showStatus("Extracted facial region.", 5000);
+    {
+        RadialSelectHandler *handler = MS::handler<RadialSelectHandler>();
+        if ( handler)
+            handler->reset( MS::selectedModel());
+        MS::showStatus("Extracted region.", 5000);
+    }   // end else
     return _ev;
 }   // end doAfterAction

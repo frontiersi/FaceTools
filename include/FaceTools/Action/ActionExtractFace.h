@@ -39,6 +39,7 @@ public:
     static r3d::Mesh::Ptr extract( FM&);
 
 protected:
+    bool update( Event) override;
     bool isAllowed( Event) override;
     bool doBeforeAction( Event) override;
     void doAction( Event) override;

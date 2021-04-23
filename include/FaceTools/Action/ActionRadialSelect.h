@@ -30,8 +30,10 @@ public:
     QString toolTip() const override { return "Select a radially bounded region.";}
 
 protected:
+    bool update( Event) override;
     void doAction( Event) override;
     Event doAfterAction( Event) override;
+    void purge( const FM*) override;
 };  // end class
 
 }}   // end namespace

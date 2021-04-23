@@ -37,13 +37,26 @@ ActionRadialSelect::ActionRadialSelect( const QString& dn, const QIcon& ico)
 }   // end ctor
 
 
+bool ActionRadialSelect::update( Event e)
+{
+    const bool v = ActionVisualise::update(e);
+    RadialSelectHandler *handler = MS::handler<RadialSelectHandler>();
+    assert( handler);
+    handler->refresh();
+    return v;
+}   // end update
+
+
 void ActionRadialSelect::doAction( Event e)
 {
+    RadialSelectHandler *handler = MS::handler<RadialSelectHandler>();
+    assert( handler);
+
+    const FV* fv = MS::selectedView();
+    const FM* fm = fv->data();
+
     if ( isChecked())
     {
-        const FV* fv = MS::selectedView();
-        const FM* fm = fv->data();
-
         fm->lockForRead();
         // In the first case, select as the centre the point projected onto the surface my the
         // given 2D point (mouse coords). In the second instance, use pronasale if available,
@@ -54,7 +67,6 @@ void ActionRadialSelect::doAction( Event e)
         if ( !fv->projectToSurface( mpos, tpos) && lmks.has( LMAN::codeId(Landmark::PRN)))
             tpos = lmks.pos( Landmark::PRN);
 
-        RadialSelectHandler *handler = MS::handler<RadialSelectHandler>();
         float rad = handler->radius();
         if ( fm->hasLandmarks())
             rad = sqrtf(fm->currentLandmarks().sqRadius());
@@ -64,6 +76,8 @@ void ActionRadialSelect::doAction( Event e)
         fm->unlock();
         handler->init( fm, tpos, rad);
     }   // end isChecked
+    else
+        handler->reset( fm);
 
     ActionVisualise::doAction( e);
 }   // end doAction
@@ -76,3 +90,11 @@ Event ActionRadialSelect::doAfterAction( Event e)
         MS::showStatus( "Reposition by left-click and dragging the centre handle; change radius using the mouse wheel.");
     return ActionVisualise::doAfterAction( e);
 }   // end doAfterAction
+
+
+void ActionRadialSelect::purge( const FM *fm)
+{
+    RadialSelectHandler *handler = MS::handler<RadialSelectHandler>();
+    assert( handler);
+    handler->reset( fm);
+}   // end purge

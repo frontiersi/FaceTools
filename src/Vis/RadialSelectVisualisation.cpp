@@ -37,6 +37,8 @@ bool RadialSelectVisualisation::isAvailable( const FV *fv) const { return true;}
 
 void RadialSelectVisualisation::setVisible( FV* fv, bool v)
 {
+    if ( !v && _views.count(fv) == 0)
+        return;
     assert( _views.count(fv) > 0);
     _views.at(fv).setVisible( v, fv->viewer());
 }   // end setVisible

@@ -33,7 +33,7 @@ RadialSelectHandler::Ptr RadialSelectHandler::create() { return Ptr( new RadialS
 
 // private
 RadialSelectHandler::RadialSelectHandler()
-    : _onReticule(false), _moving(false), _radiusChange(0)
+    : _fm(nullptr), _onReticule(false), _moving(false), _radiusChange(0)
 {
     _vis.setHandler(this);
 }   // end ctor
@@ -43,22 +43,33 @@ RadialSelectHandler::RadialSelectHandler()
 void RadialSelectHandler::init( const FM *fm, const Vec3f &tpos, float r)
 {
     fm->lockForRead();
+    _fm = fm;
     _rsel = r3d::RegionSelector::create( fm->mesh());
     _update( tpos, r);
     fm->unlock();
+    refresh();
 }   // end init
 
 
-bool RadialSelectHandler::isForModel( const FM *fm) const
+void RadialSelectHandler::reset( const FM *fm)
 {
-    return _rsel && fm && &fm->mesh() == &_rsel->mesh();
-}   // end isForModel
+    if ( _fm != fm)
+        return;
+    _fm = nullptr;
+    _onReticule = false;
+    _moving = false;
+    _radiusChange = 0;
+    _fids.clear();
+    _bnds.reset();
+    _rsel = nullptr;
+    refresh();
+}   // end reset
 
 
 void RadialSelectHandler::refresh()
 {
     const FV *fv = MS::selectedView();
-    if ( !fv || !isForModel( fv->data()))
+    if ( !fv || fv->data() != _fm)
     {
         _fids.clear();
         _bnds.reset();
@@ -135,7 +146,7 @@ bool RadialSelectHandler::_testInProp( bool onRet)
     bool swallowed = false;
     const FV *fv = MS::selectedView();
     const vtkProp *p = this->prop();
-    if ( isForModel( fv->data()) && _vis.belongs( p, fv))
+    if (( fv->data() == _fm) && _vis.belongs( p, fv))
     {
         swallowed = true;
         _onReticule = onRet;

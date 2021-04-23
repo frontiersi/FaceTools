@@ -30,7 +30,8 @@ using QMB = QMessageBox;
 ActionSave::ActionSave( const QString& dn, const QIcon& ico, const QKeySequence& ks)
     : FaceAction( dn, ico, ks), _saveAs( nullptr)
 {
-    addRefreshEvent( Event::MODEL_SELECT | Event::MESH_CHANGE | Event::AFFINE_CHANGE
+    // Note need to refresh after SAVE since SaveAs will cause this event.
+    addRefreshEvent( Event::MODEL_SELECT | Event::MESH_CHANGE | Event::AFFINE_CHANGE | Event::SAVED_MODEL
                    | Event::LANDMARKS_CHANGE | Event::PATHS_CHANGE | Event::METADATA_CHANGE);
     setAsync(true);
 }   // end ctor
