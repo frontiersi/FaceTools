@@ -25,8 +25,8 @@ namespace FaceTools { namespace Metric {
 
 struct FaceTools_EXPORT DepthMeasure
 {
-    Vec3f measurePoint; // Point on line segment being where the measurement was taken from
-    Vec3f surfacePoint; // Point on the surface where the measurement was taken to
+    Vec3f p0; // Point on line segment being where the measurement was taken from
+    Vec3f p1; // Point on the surface where the measurement was taken to
 };  // end struct
 
 
@@ -37,7 +37,7 @@ public:
 
     QString category() const override { return "Depth";}
     QString units() const override { return FM::LENGTH_UNITS;}
-    QString typeRemarks() const override { return "Depth to the facial surface is measured either in a direction that is orthogonal to one of the facial planes and from a point defined according to the placement of the landmarks; or alternatively, orthogonally from a baseline defined between two landmarks and from one or more points along that line.";}
+    QString typeRemarks() const override { return "Depth is measured from a specific landmark (or weighted combination of landmarks) to either another standard point referenced by landmarks, or the facial surface itself. In-plane measurements are always taken at right angles to one of the standard facial planes.";}
     Vis::MetricVisualiser* visualiser() override { return &_vis;}
 
     bool fixedInPlane() const override { return false;}

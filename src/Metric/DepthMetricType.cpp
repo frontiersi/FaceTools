@@ -18,8 +18,6 @@
 #include <Metric/DepthMetricType.h>
 #include <r3d/DirectedSurfacePointFinder.h>
 using FaceTools::Metric::DepthMetricType;
-using FaceTools::Landmark::LandmarkSet;
-using FaceTools::Landmark::LmkList;
 using FaceTools::Vec3f;
 using FaceTools::FM;
 
@@ -27,45 +25,44 @@ using FaceTools::FM;
 DepthMetricType::DepthMetricType() { _vis.setMetric(this);}
 
 
-float DepthMetricType::update( size_t k, const FM *fm, const std::vector<Vec3f>& pts, Vec3f, Vec3f nv, bool, bool inPlane)
+float DepthMetricType::update( size_t k, const FM *fm, const std::vector<Vec3f>& pts,
+                               Vec3f, Vec3f nv, bool, bool inPlane)
 {
-    assert( pts.size() == 3 || pts.size() == 1);
-    Vec3f mp = pts.size() == 1 ? pts[0] : pts[2];    // Point to measure from
+    assert( pts.size() >= 1 && pts.size() < 4);
+    const Vec3f mp = pts[0];  // Point to measure from
+    Vec3f sp = mp;
 
-    // nv is always positive
-    Vec3f dvec; // Direction vector to take depth measurement in
-    if ( inPlane || pts.size() == 1)
-        dvec = -nv;
+    // nv will be 0,0,1 for Z (pointing toward camera)
+    Vec3f dvec = -nv; // Direction vector to take depth measurement in (defaults to in-plane)
+
+    if ( pts.size() == 2)
+    {
+        if ( inPlane) // projection along the given in-plane vector from the measuring point
+            sp = (pts[1] - mp).dot(dvec) * dvec + mp;
+        else
+            sp = pts[1];
+    }   // end if
     else
     {
-        const Vec3f lseg = pts[1] - pts[0]; // Metric defined line segment vector
-        const Vec3f rvec = lseg.cross(nv);  // Right facing vector
-        dvec = lseg.cross( rvec); // Direction to measure depth to surface in from measurement point
-        dvec.normalize();
+        if ( !inPlane && pts.size() == 3)
+        {
+            const Vec3f lseg = pts[2] - pts[1]; // Metric defined line segment vector
+            const Vec3f rvec = lseg.cross(nv);  // Right facing vector
+            dvec = lseg.cross( rvec); // Direction to measure depth to surface in from measurement point
+            dvec.normalize();
+        }   // end if
+
+        const int ifid = r3d::DirectedSurfacePointFinder( fm->kdtree()).find( mp, dvec, sp);
+        if ( ifid < 0)
+            sp = mp;
     }   // end else
 
     // Update cached values - note that all are stored untransformed for visualisation
     _depthInfo[fm].resize( std::max( _depthInfo[fm].size(), k+1));
     DepthMeasure &dm = _depthInfo[fm][k];
-    dm.measurePoint = mp;
-    dm.surfacePoint = mp;
-
-    float depth = 0.0f;
-    Vec3f sp;
-    const int ifid = r3d::DirectedSurfacePointFinder( fm->kdtree()).find( mp, dvec, sp);
-    if ( ifid >= 0)
-    {
-        const Vec3f toSurf = sp - mp;
-        depth = toSurf.norm();
-        if ( dvec.dot(toSurf) < 0)  // Depth may be measured negatively
-            depth = -depth;
-        dm.surfacePoint = sp;
-    }   // end if
-
     // Untransform for visualisation
-    const Mat4f &iT = fm->inverseTransformMatrix();
-    dm.measurePoint = r3d::transform( iT, dm.measurePoint);
-    dm.surfacePoint = r3d::transform( iT, dm.surfacePoint);
-
-    return depth;
+    const Mat4f iT = fm->inverseTransformMatrix();
+    dm.p0 = r3d::transform( iT, mp);
+    dm.p1 = r3d::transform( iT, sp);
+    return (sp - mp).norm();
 }   // end update

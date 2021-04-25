@@ -32,6 +32,6 @@ void DepthVisualiser::refresh( FV *fv)
     {
         const Metric::DepthMeasure &dm = dinfo.at(i);
         views[i].setColour( 0.1, 0.0, 0.7);
-        views[i].update( dm.measurePoint, dm.surfacePoint);
+        views[i].update( dm.p0, dm.p1);
     }   // end for
 }   // end refresh
