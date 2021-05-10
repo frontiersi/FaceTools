@@ -180,7 +180,10 @@ void FaceActionManager::_doRaise( Event E)
             if ( act != sact && act->purges( E) && !act->isWorking())
                 act->purge( fm);
         if ( has( E, Event::MESH_CHANGE))
+        {
+            MS::setInteractionMode( IMode::CAMERA_INTERACTION);
             applyFnToModels( E, fm, rebuildViews);   // Also resets view normals
+        }   // end if
         else if ( has( E, Event::AFFINE_CHANGE))
             applyFnToModels( E, fm, syncViews);
     }   // end if

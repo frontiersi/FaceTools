@@ -15,27 +15,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#include <Action/ActionAlignLandmarks.h>
+#include <Action/ActionMirrorLandmarks.h>
 #include <Interactor/LandmarksHandler.h>
 #include <LndMrk/LandmarksManager.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
 using FaceTools::Action::FaceAction;
-using FaceTools::Action::ActionAlignLandmarks;
+using FaceTools::Action::ActionMirrorLandmarks;
 using FaceTools::Action::Event;
 using FaceTools::FM;
 using MS = FaceTools::ModelSelect;
 using LMAN = FaceTools::Landmark::LandmarksManager;
 
 
-ActionAlignLandmarks::ActionAlignLandmarks( const QString& dn, const QIcon& ico)
+ActionMirrorLandmarks::ActionMirrorLandmarks( const QString& dn, const QIcon& ico)
     : FaceAction(dn, ico)
 {
     addRefreshEvent( Event::MASK_CHANGE | Event::LANDMARKS_CHANGE | Event::AFFINE_CHANGE);
 }   // end ctor
 
 
-QString ActionAlignLandmarks::toolTip() const
+QString ActionMirrorLandmarks::toolTip() const
 {
     QStringList txt;
     txt << "Centre medial landmarks and set right lateral landmarks to be a";
@@ -44,7 +44,7 @@ QString ActionAlignLandmarks::toolTip() const
 }   // end toolTip
 
 
-QString ActionAlignLandmarks::whatsThis() const
+QString ActionMirrorLandmarks::whatsThis() const
 {
     QStringList htxt;
     htxt << "Remap landmarks so that the medial landmarks are coincident with the YZ plane";
@@ -56,14 +56,14 @@ QString ActionAlignLandmarks::whatsThis() const
 }   // end whatsThis
 
 
-bool ActionAlignLandmarks::isAllowed( Event)
+bool ActionMirrorLandmarks::isAllowed( Event)
 {
     FM::RPtr fm = MS::selectedModelScopedRead();
     return fm && fm->hasLandmarks() && fm->isAligned();
 }   // end isAllowed
 
 
-bool ActionAlignLandmarks::doBeforeAction( Event)
+bool ActionMirrorLandmarks::doBeforeAction( Event)
 {
     // TODO Warn about only being applicable for symmetric faces
     storeUndo( this, Event::LANDMARKS_CHANGE | Event::METRICS_CHANGE);
@@ -123,7 +123,7 @@ void reflectLateralLandmarks( FM &fm)
 }   // end namespace
 
 
-void ActionAlignLandmarks::doAction( Event)
+void ActionMirrorLandmarks::doAction( Event)
 {
     FM::WPtr fm = MS::selectedModelScopedWrite();
     centreMedialLandmarks( *fm);
@@ -131,9 +131,9 @@ void ActionAlignLandmarks::doAction( Event)
 }   // end doAction
 
 
-Event ActionAlignLandmarks::doAfterAction( Event)
+Event ActionMirrorLandmarks::doAfterAction( Event)
 {
-    MS::showStatus("Made landmarks laterally symmetric.", 5000);
+    MS::showStatus("Mirrored landmarks through the medial plane.", 5000);
     return Event::LANDMARKS_CHANGE;
 }   // end doAfterAction
 

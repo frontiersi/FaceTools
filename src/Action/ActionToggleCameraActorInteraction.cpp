@@ -43,7 +43,7 @@ ActionToggleCameraActorInteraction::ActionToggleCameraActorInteraction( const QS
     connect( &_moveNotifier, &MovementNotifier::onCameraStop,
             this, &ActionToggleCameraActorInteraction::_doOnCameraStop);
     setCheckable( true, false);
-    addRefreshEvent( Event::AFFINE_CHANGE | Event::MESH_CHANGE);
+    addRefreshEvent( Event::AFFINE_CHANGE | Event::MESH_CHANGE | Event::SAVED_MODEL);
 }   // end ctor
 
 

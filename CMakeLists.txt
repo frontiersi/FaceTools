@@ -52,7 +52,6 @@ set( FORMS
 
 set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionAddPath.h"
-    "${INCLUDE_ACTION_DIR}/ActionAlignLandmarks.h"
     "${INCLUDE_ACTION_DIR}/ActionAlignModel.h"
     "${INCLUDE_ACTION_DIR}/ActionBackfaceCulling.h"
     "${INCLUDE_ACTION_DIR}/ActionCentreModel.h"
@@ -81,6 +80,7 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionMapDelta.h"
     "${INCLUDE_ACTION_DIR}/ActionMapSymmetry.h"
     "${INCLUDE_ACTION_DIR}/ActionMarquee.h"
+    "${INCLUDE_ACTION_DIR}/ActionMirrorLandmarks.h"
     "${INCLUDE_ACTION_DIR}/ActionMoveView.h"
     "${INCLUDE_ACTION_DIR}/ActionOrientCamera.h"
     "${INCLUDE_ACTION_DIR}/ActionRadialSelect.h"
@@ -285,7 +285,6 @@ set( SRC_FILES
     ${SRC_DIR}/${PROJECT_NAME}
 
     ${SRC_ACTION_DIR}/ActionAddPath
-    ${SRC_ACTION_DIR}/ActionAlignLandmarks
     ${SRC_ACTION_DIR}/ActionAlignModel
     ${SRC_ACTION_DIR}/ActionBackfaceCulling
     ${SRC_ACTION_DIR}/ActionCentreModel
@@ -314,6 +313,7 @@ set( SRC_FILES
     ${SRC_ACTION_DIR}/ActionMapDelta
     ${SRC_ACTION_DIR}/ActionMapSymmetry
     ${SRC_ACTION_DIR}/ActionMarquee
+    ${SRC_ACTION_DIR}/ActionMirrorLandmarks
     ${SRC_ACTION_DIR}/ActionMoveView
     ${SRC_ACTION_DIR}/ActionOrientCamera
     ${SRC_ACTION_DIR}/ActionRadialSelect

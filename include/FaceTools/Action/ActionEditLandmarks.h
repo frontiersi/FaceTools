@@ -33,12 +33,12 @@ public:
 
     // Set these before registering with the FaceActionManager
     void setShowLandmarksAction( FaceAction *act) { _actShow = act;}
-    void setAlignLandmarksAction( FaceAction *act) { _actAlign = act;}
+    void setMirrorLandmarksAction( FaceAction *act) { _actMirror = act;}
     void setShowLandmarkLabelsAction( FaceAction *act) { _actShowLabels = act;}
 
 signals:
     void onShowLandmarkLabels( bool);
-    void onAlignLandmarks();
+    void onMirrorLandmarks();
     void onRestoreLandmarks();
 
 protected:
@@ -58,7 +58,7 @@ private:
     Vec3f _initPos; // Initial position of landmark being dragged at start
     Event _ev;
     FaceAction *_actShow;
-    FaceAction *_actAlign;
+    FaceAction *_actMirror;
     FaceAction *_actShowLabels;
     void _closeDialog();
     void _openDialog();

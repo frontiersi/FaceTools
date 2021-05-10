@@ -477,6 +477,7 @@ QString FaceTools::FileIO::loadData( FM &fm, const QTemporaryDir &tdir, const QS
                 const r3d::Mat4f T = MaskRegistration::calcMaskAlignment( *mask);
                 fm.addTransformMatrix( T.inverse());
                 fm.fixTransformMatrix();
+                fm.addTransformMatrix( T);
             }   // end if
             else
             {

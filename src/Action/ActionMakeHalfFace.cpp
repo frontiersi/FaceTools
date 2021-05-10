@@ -108,8 +108,7 @@ bool ActionMakeHalfFace::doBeforeAction( Event)
     else
     {
         static const QString msg = tr("Facial landmarks are not present and so cannot be used to find the centreline. Slice through the YZ plane at X = 0 instead?");
-        QWidget* prnt = static_cast<QWidget*>(parent());
-        go = QMB::Yes == QMB::question( prnt, tr("Use Default Slicing Plane?"),
+        go = QMB::Yes == QMB::question( static_cast<QWidget*>(parent()), tr("Use Default Slicing Plane?"),
                 QString("<p align='center'>%1</p>").arg(msg), QMB::Yes | QMB::No, QMB::No);
     }   // end else
 
@@ -145,6 +144,7 @@ void ActionMakeHalfFace::doAction( Event)
     r3d::Mesh::Ptr half0 = r3d::Slicer( *mesh)( p, n);       // Copy of one half
     r3d::Mesh::Ptr half1 = half0->deepCopy();  // Copy of half for reflecting
     half1->invertNormals(); // Invert face normals indices on the other half before reflecting.
+
 
     // Reflect the copied half
     half1->setTransformMatrix(tmat);

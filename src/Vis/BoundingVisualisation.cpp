@@ -25,13 +25,14 @@ using FaceTools::Vis::FV;
 
 void BoundingVisualisation::refresh( FV* fv)
 {
-    static const Vec3f COL( 0.0f, 0.2f, 0.9f);  // Default colour (blue)
+    static const Vec3f ACOL( 0.0f, 0.1f, 0.9f);  // Aligned colour (blue)
+    static const Vec3f UCOL( 0.7f, 0.0f, 0.8f);  // Unaligned colour (purple)
     const FM *fm = fv->data();
+    const Vec3f &COL = fm->isAligned() ? ACOL : UCOL;
     BoundingView &bv = _views[fv];
+    bv.update( fm->bounds()[0]->cornersAs6f(), fm->isAligned() ? 1 : 3);
     bv.setColour( COL[0], COL[1], COL[2], 0.32f);
-    bv.setLineStipplingEnabled( !fm->isAligned());
-    bv.setLineWidth( 2.0f);
-    bv.update( fm->bounds()[0]->cornersAs6f());
+    bv.setLineWidth( fm->isAligned() ? 1.0f : 3.0f);
 }   // end refresh
 
 

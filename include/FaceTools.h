@@ -46,12 +46,7 @@ FaceTools_EXPORT float barycentricMapSrcToDst( const FM *src, Vec3f sv, const FM
 FaceTools_EXPORT Vec3f toTarget( const r3d::KDTree&, const Vec3f& s, const Vec3f& t);
 
 FaceTools_EXPORT bool findPath( const r3d::KDTree&, const Vec3f& p0, const Vec3f& p1, std::list<Vec3f>& pts);
-FaceTools_EXPORT bool findStraightPath( const r3d::KDTree&, const Vec3f& p0, const Vec3f& p1, std::list<Vec3f>& pts);
-FaceTools_EXPORT bool findCurveFollowingPath( const r3d::KDTree&, const Vec3f& p0, const Vec3f& p1, std::list<Vec3f>& pts);
-FaceTools_EXPORT bool findOrientedPath( const r3d::KDTree&, const Vec3f& p0, const Vec3f& p1, const Vec3f& u, std::list<Vec3f>&);
-
-// Find the hill or valley point between p0 and p1 along the straight contour between these points.
-FaceTools_EXPORT Vec3f findHighOrLowPoint( const r3d::KDTree&, const Vec3f&, const Vec3f&);
+FaceTools_EXPORT bool findSlicedPath( const r3d::KDTree&, const Vec3f& p0, const Vec3f& p1, const Vec3f& u, std::list<Vec3f>&);
 
 // Calculate cropping radius for a face as G times the distance from the face centre to the point halfway between the eyes.
 FaceTools_EXPORT float calcFaceCropRadius( const Vec3f& faceCentre, const Vec3f& leye, const Vec3f& reye, float G);

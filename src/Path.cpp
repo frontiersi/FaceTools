@@ -99,14 +99,14 @@ bool Path::update( const FM* fm)
                 _validPath = findPath( fm->kdtree(), v0, v1, _vtxs); // Previous
                 break;
             case CURVE_FOLLOWING_1:
-                _validPath = findCurveFollowingPath( fm->kdtree(), v0, v1, _vtxs);   // Experimental
+                //_validPath = findCurveFollowingPath( fm->kdtree(), v0, v1, _vtxs);   // Experimental
                 break;
             case STRAIGHT_CURVE:
-                _validPath = findStraightPath( fm->kdtree(), v0, v1, _vtxs);
+                //_validPath = findStraightPath( fm->kdtree(), v0, v1, _vtxs);
                 break;
             case ORIENTED_CURVE:    // Default
                 assert( u != Vec3f::Zero());
-                _validPath = findOrientedPath( fm->kdtree(), v0, v1, u, _vtxs);
+                _validPath = findSlicedPath( fm->kdtree(), v0, v1, u, _vtxs);
                 break;
         };  // end switch
     }   // end if

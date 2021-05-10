@@ -25,13 +25,17 @@ using FaceTools::ModelViewer;
 using FaceTools::Mat4f;
 
 
-vtkSmartPointer<vtkTexture> SimpleView::s_stippleTexture;   // static
-
-
 SimpleView::SimpleView() : _vwr(nullptr), _visible(false) {}
 
 
 SimpleView::~SimpleView() { setVisible(false, _vwr);}
+
+
+void SimpleView::reset()
+{ 
+    setVisible(false, _vwr);
+    _actors.clear();
+}   // end reset
 
 
 vtkActor* SimpleView::addActor( vtkPolyDataAlgorithm *src)
@@ -54,8 +58,6 @@ vtkProperty* SimpleView::initActor( vtkSmartPointer<vtkActor> actor)
     prop->SetDiffuse( 0.0);
     prop->SetSpecular( 0.0);
     prop->SetOpacity( 0.99);
-    setLineStipplingEnabled(true);  // Necessary
-    setLineStipplingEnabled(false); // Yes, this too
     return prop;
 }   // end initActor
 
@@ -82,10 +84,7 @@ void SimpleView::setActorColour( vtkActor *actor, double r, double g, double b, 
 void SimpleView::setLineWidth( double lw)
 {
     for ( vtkActor* actor : _actors)
-    {
-        vtkProperty* prop = actor->GetProperty();
-        prop->SetLineWidth( lw);
-    }   // end for
+        actor->GetProperty()->SetLineWidth( lw);
 }   // end setLineWidth
 
 
@@ -141,94 +140,3 @@ bool SimpleView::belongs( const vtkProp* prop) const
             return true;
     return false;
 }   // end belongs
-
-
-void SimpleView::setLineStipplingEnabled( bool enabled)
-{
-    if ( enabled)
-    {
-        for ( vtkSmartPointer<vtkActor> actor : _actors)
-        {
-            _setStippleTextureCoords( actor);
-            actor->SetTexture( _stippleTexture());
-        }   // end for
-    }   // end if
-    else
-    {
-        for ( vtkSmartPointer<vtkActor> actor : _actors)
-        {
-            r3dvis::getPolyData( actor)->GetPointData()->SetTCoords(nullptr);
-            actor->SetTexture( nullptr);
-        }   // end for
-    }   // end else
-}   // end setLineStipplingEnabled
-
-
-vtkSmartPointer<vtkTexture> SimpleView::_stippleTexture()
-{
-    if ( s_stippleTexture)
-        return s_stippleTexture;
-
-    static const int lineStipplePattern = 0xAAAAAAAA;
-    static const int lineStippleRepeat = 7;
-
-    // Create the image
-    vtkSmartPointer<vtkImageData> image = vtkSmartPointer<vtkImageData>::New();
-    const int dimension = 16 * lineStippleRepeat;
-    image->SetDimensions( dimension, 1, 1);
-    image->AllocateScalars( VTK_UNSIGNED_CHAR, 4);
-    image->SetExtent( 0, dimension - 1, 0, 0, 0, 0);
-    unsigned char *pixel = static_cast<unsigned char *>(image->GetScalarPointer());
-    const unsigned char ON = 255;
-    const unsigned char OFF = 0;
-    for ( int i = 0; i < 16; ++i)
-    {
-        const unsigned int mask = 1 << i;
-        const unsigned int bit = (lineStipplePattern & mask) >> i;
-        if ( static_cast<unsigned char>(bit) == 0)
-        {
-            for ( int j = 0; j < lineStippleRepeat; ++j)
-            {
-                *pixel       = ON;
-                *(pixel + 1) = ON;
-                *(pixel + 2) = ON;
-                *(pixel + 3) = OFF;
-                pixel += 4;
-            }   // end for
-        }   // end if
-        else
-        {
-            for ( int j = 0; j < lineStippleRepeat; ++j)
-            {
-                *pixel       = ON;
-                *(pixel + 1) = ON;
-                *(pixel + 2) = ON;
-                *(pixel + 3) = ON;
-                pixel += 4;
-            }   // end for
-        }   // end else
-    }   // end for
-
-    // Create the texture from the image
-    s_stippleTexture = vtkSmartPointer<vtkTexture>::New();
-    s_stippleTexture->SetInputData(image);
-    s_stippleTexture->InterpolateOff();
-    s_stippleTexture->RepeatOn();
-    return s_stippleTexture;
-}   // end _stippleTexture
-
-
-void SimpleView::_setStippleTextureCoords( vtkActor *actor)
-{
-    // Create texture coordinates for the given actor
-    vtkPolyData *polyData = r3dvis::getPolyData( actor);
-    vtkSmartPointer<vtkDoubleArray> tcoords = vtkSmartPointer<vtkDoubleArray>::New();
-    tcoords->SetNumberOfComponents(1);
-    tcoords->SetNumberOfTuples( polyData->GetNumberOfPoints());
-    for ( int i = 0; i < polyData->GetNumberOfPoints(); ++i)
-    {
-        const double value = 0.5 * i;
-        tcoords->SetTypedTuple( i, &value);
-    }   // end for
-    polyData->GetPointData()->SetTCoords(tcoords);
-}   // end _setStippleTextureCoords

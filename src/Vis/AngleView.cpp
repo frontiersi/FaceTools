@@ -22,10 +22,11 @@ using FaceTools::Vec3f;
 
 AngleView::AngleView() : SimpleView()
 {
-    addActor(_ray0);
-    addActor(_ray1);
-    addActor(_arc);
-    for ( vtkActor* actor : _actors)
+    std::vector<vtkActor*> acts(3);
+    acts[0] = addActor(_ray0);
+    acts[1] = addActor(_ray1);
+    acts[2] = addActor(_arc);
+    for ( vtkActor* actor : acts)
     {
         vtkProperty *prop = actor->GetProperty();
         prop->SetRepresentationToWireframe();
@@ -73,13 +74,3 @@ void AngleView::update( const Vec3f &fp1, const Vec3f &fp2, const Vec3f &fc, con
     _ray1->Update();
     _arc->Update();
 }   // end update
-
-
-void AngleView::setLineWidth( double lw)
-{
-    for ( vtkActor* actor : _actors)
-    {
-        vtkProperty *prop = actor->GetProperty();
-        prop->SetLineWidth( lw);
-    }   // end for
-}   // end setLineWidth

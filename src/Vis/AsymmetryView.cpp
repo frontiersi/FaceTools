@@ -72,13 +72,3 @@ void AsymmetryView::update( const Vec3f &fp, const Vec3f &fq, const Vec3f &fd)
     _transformPD->SetTransform( transform);
     _transformPD->Update();
 }   // end update
-
-
-void AsymmetryView::setLineWidth( double lw)
-{
-    for ( vtkActor *actor : _actors)
-    {
-        vtkProperty *prop = actor->GetProperty();
-        prop->SetLineWidth( lw);
-    }   // end for
-}   // end setLineWidth

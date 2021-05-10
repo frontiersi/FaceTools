@@ -15,23 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_BOUNDING_VIEW_H
-#define FACE_TOOLS_BOUNDING_VIEW_H
+#ifndef FACE_TOOLS_VIS_BOUNDING_VIEW_H
+#define FACE_TOOLS_VIS_BOUNDING_VIEW_H
 
 #include "SimpleView.h"
-#include <vtkCubeSource.h>
 
 namespace FaceTools { namespace Vis {
 
 class FaceTools_EXPORT BoundingView : public SimpleView
 {
 public:
-    BoundingView();
-
-    void update( const r3d::Vec6f&);
+    void update( const r3d::Vec6f&, int nDashesPerEdge=1);
 
 private:
-    vtkNew<vtkCubeSource> _cubeSource;
+    void _initActor( const vtkSmartPointer<vtkActor>&);
 };  // end class
 
 }}   // end namespaces

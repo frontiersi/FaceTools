@@ -27,12 +27,19 @@ class FaceTools_EXPORT ActionCentreModel : public FaceAction
 public:
     ActionCentreModel( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
 
-    QString toolTip() const override { return "Centre the selected model at coordinates (0,0,0).";}
+    QString toolTip() const override
+    {
+        return "Centre the model at the selected position or at the centre of its bounding box.";
+    }   // end toolTip
 
 protected:
     bool isAllowed( Event) override;
+    bool doBeforeAction( Event) override;
     void doAction( Event) override;
     Event doAfterAction( Event) override;
+
+private:
+    Vec3f _pos;
 };  // end class
 
 }}   // end namespace

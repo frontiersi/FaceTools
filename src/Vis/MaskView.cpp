@@ -34,13 +34,14 @@ MaskView::MaskView( const r3d::Mesh &mesh) : SimpleView()
     nrms->SetName("Normals");
     r3dvis::getPolyData(actor)->GetPointData()->SetNormals(nrms);
 
+    _maskActor = actor;
     initActor(actor);   // Stores it
 }   // end ctor
 
 
 void MaskView::refresh( const FV *fv)
 {
-    vtkProperty *prop = _actors[0]->GetProperty();
+    vtkProperty *prop = _maskActor->GetProperty();
     prop->SetBackfaceCulling(true);
     prop->SetAmbient( 0.0);
     prop->SetDiffuse( 1.0);

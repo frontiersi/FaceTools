@@ -25,8 +25,6 @@
 using FaceTools::Action::ActionEditLandmarks;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
-using FaceTools::Action::UndoState;
-using FaceTools::Vis::FV;
 using FaceTools::Widget::LandmarksDialog;
 using FaceTools::FaceSide;
 using MS = FaceTools::ModelSelect;
@@ -36,7 +34,7 @@ using LMAN = FaceTools::Landmark::LandmarksManager;
 ActionEditLandmarks::ActionEditLandmarks( const QString& dn, const QIcon& ico, const QKeySequence& ks)
     : FaceAction( dn, ico, ks),
       _dialog(nullptr), _key(0), _initPos(r3d::Vec3f::Zero()), _ev(Event::NONE),
-      _actShow(nullptr), _actAlign(nullptr), _actShowLabels(nullptr)
+      _actShow(nullptr), _actMirror(nullptr), _actShowLabels(nullptr)
 {
     setCheckable( true, false);
     addTriggerEvent( Event::MASK_CHANGE | Event::LANDMARKS_CHANGE);
@@ -48,12 +46,12 @@ ActionEditLandmarks::ActionEditLandmarks( const QString& dn, const QIcon& ico, c
 void ActionEditLandmarks::postInit()
 {
     assert(_actShow);
-    assert(_actAlign);
+    assert(_actMirror);
     assert(_actShowLabels);
 
     _dialog = new LandmarksDialog( static_cast<QWidget*>(parent()));
     _dialog->setShowAction( _actShow);
-    _dialog->setAlignAction( _actAlign);
+    _dialog->setMirrorAction( _actMirror);
     _dialog->setLabelsAction( _actShowLabels);
 
     connect( _dialog, &LandmarksDialog::finished, [this](){ this->setChecked(false);});

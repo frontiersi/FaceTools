@@ -21,9 +21,7 @@
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <r3d/Transformer.h>
-#include <r3d/IterativeSurfacePathFinder.h>
-#include <r3d/SurfaceGlobalPlanePathFinder.h>
-#include <r3d/SurfaceLocalPlanePathFinder.h>
+#include <r3d/SurfacePlanarPathFinder.h>
 #include <r3d/SurfacePointFinder.h>
 #include <r3d/SurfaceCurveFinder.h>
 #include <algorithm>
@@ -157,70 +155,16 @@ bool FaceTools::findPath( const KDTree& kdt, const Vec3f& p0, const Vec3f& p1, s
 }   // end findPath
 
 
-bool FaceTools::findStraightPath( const KDTree &kdt, const Vec3f& p0, const Vec3f& p1, std::list<Vec3f>& pts)
+bool FaceTools::findSlicedPath( const KDTree &kdt, const Vec3f& p0, const Vec3f& p1, const Vec3f &u, std::list<Vec3f>& pts)
 {
-    IterativeSurfacePathFinder pfinder( kdt);
-    if ( pfinder.findPath( p0, p1) > 0)
-    {
-        const std::vector<Vec3f>& lpath = pfinder.lastPath();
-        pts = std::list<Vec3f>( lpath.begin(), lpath.end());
-    }   // end if
-    return !pts.empty();
-}   // end findStraightPath
-
-
-bool FaceTools::findCurveFollowingPath( const KDTree &kdt, const Vec3f& p0, const Vec3f& p1, std::list<Vec3f>& pts)
-{
-    SurfaceLocalPlanePathFinder pfinder( kdt);
+    SurfacePlanarPathFinder pfinder( kdt, u);
     if ( pfinder.findPath( p0, p1) >= 0)
     {
         const std::vector<Vec3f>& lpath = pfinder.lastPath();
         pts = std::list<Vec3f>( lpath.begin(), lpath.end());
     }   // end if
     return !pts.empty();
-}   // end findCurveFollowingPath
-
-
-bool FaceTools::findOrientedPath( const KDTree &kdt, const Vec3f& p0, const Vec3f& p1, const Vec3f &u, std::list<Vec3f>& pts)
-{
-    SurfaceGlobalPlanePathFinder pfinder( kdt, u);
-    if ( pfinder.findPath( p0, p1) >= 0)
-    {
-        const std::vector<Vec3f>& lpath = pfinder.lastPath();
-        pts = std::list<Vec3f>( lpath.begin(), lpath.end());
-    }   // end if
-    return !pts.empty();
-}   // end findOrientedPath
-
-
-Vec3f FaceTools::findHighOrLowPoint( const KDTree& kdt, const Vec3f& p0, const Vec3f& p1)
-{
-    const Vec3f u = p1-p0;
-    const Vec3f r = u.cross(Vec3f(0,0,1));
-    Vec3f dv = r.cross(u);   // Normalise the direction vector for depth
-    dv.normalize();
-
-    std::list<Vec3f> pts;
-    const bool foundPath = findStraightPath( kdt, p0, p1, pts);
-    if ( !foundPath)
-        std::cerr << "[ERROR] FaceTools::findHighOrLowPoint: findStraightPath returned false!" << std::endl;
-
-    const Vec3f a = 0.5f * (p1 + p0);
-    float maxd = 0;
-    Vec3f dp = a;   // Absolute deepest point
-    for ( const Vec3f& p : pts)
-    {
-        const Vec3f pa = p - a;
-        const float d = fabsf(pa.dot(dv));  // Absolute deepest (i.e. hill or valley)
-        if ( d >= maxd)
-        {
-            maxd = d;
-            dp = p;
-        }   // end if
-    }   // end for
-
-    return dp;
-}   // end findHighOrLowPoint
+}   // end findSlicedPath
 
 
 /*

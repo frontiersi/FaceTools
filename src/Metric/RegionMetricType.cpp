@@ -69,6 +69,9 @@ float RegionMetricType::update( size_t k, const FM *fm, const std::vector<Vec3f>
         const int v1 = regMesh.addVertex( pts[3*i+1]);
         const int v2 = regMesh.addVertex( pts[3*i+2]);
         const int fid = regMesh.addFace( v0, v1, v2);
+        // If the face couldn't be added because the points are invalid for whatever reason, then we're done.
+        if ( fid < 0)
+            return 0.0f;
         area += regMesh.calcFaceArea( fid);
     }   // end for
 

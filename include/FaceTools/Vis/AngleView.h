@@ -31,8 +31,6 @@ public:
 
     void update( const Vec3f &p1, const Vec3f &p2, const Vec3f &centre, const Vec3f &normal, float degrees);
 
-    void setLineWidth( double);
-
 private:
     vtkNew<vtkLineSource> _ray0;
     vtkNew<vtkLineSource> _ray1;

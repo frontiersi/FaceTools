@@ -56,18 +56,13 @@ void FaceModelSymmetry::_makeVtxSymm( const FM *fm)
     const r3d::SurfacePointFinder maskPointFinder( mask);
     const std::unordered_map<int,int>& maskOppVtxs = MaskRegistration::maskData()->oppVtxs;
 
-    Vec3f m = Vec3f::Zero();
-    Vec3f u(1,0,0);
-    if ( fm->hasLandmarks())
-    {
-        const Mat4f T = fm->transformMatrix();
-        u = T.block<3,1>(0,0);
-        m = T.block<3,1>(0,3);
-    }   // end if
+    const Mat4f T = fm->transformMatrix();
+    Vec3f u = T.block<3,1>(0,0);
+    Vec3f m = T.block<3,1>(0,3);
 
     for ( int vidx : mesh.vtxIds())
     {
-        const Vec3f &p = mesh.uvtx(vidx);    // Original vertex on the model
+        const Vec3f &p = mesh.vtx(vidx);    // Original vertex on the model
 
         // Find pm as the position on the mask that vertex p is closest to and mt as the triangle it's within:
         Vec3f pm;
@@ -79,8 +74,8 @@ void FaceModelSymmetry::_makeVtxSymm( const FM *fm)
         if ( mt < 0)
         {
             assert( pvidx >= 0);
-            assert( pm == mask.uvtx(pvidx));
-            qm = mask.uvtx(maskOppVtxs.at(pvidx));
+            assert( pm == mask.vtx(pvidx));
+            qm = mask.vtx(maskOppVtxs.at(pvidx));
         }   // end if
         else
         {
@@ -98,7 +93,7 @@ void FaceModelSymmetry::_makeVtxSymm( const FM *fm)
             const int v0 = maskOppVtxs.at(fvidxs[0]);
             const int v1 = maskOppVtxs.at(fvidxs[1]);
             const int v2 = maskOppVtxs.at(fvidxs[2]);
-            qm = bm[0]*mask.uvtx(v0) + bm[1]*mask.uvtx(v1) + bm[2]*mask.uvtx(v2);
+            qm = bm[0]*mask.vtx(v0) + bm[1]*mask.vtx(v1) + bm[2]*mask.vtx(v2);
         }   // end else
 
         // Find pr as original point p reflected through the medial plane to its perfectly symmetric position:

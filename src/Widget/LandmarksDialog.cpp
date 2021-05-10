@@ -128,7 +128,7 @@ void LandmarksDialog::_doOnRefreshTable()
 }   // end _doOnRefreshTable
 
 
-void LandmarksDialog::setAlignAction( FaceAction *act) { _ui->alignButton->setDefaultAction( act->qaction());}
+void LandmarksDialog::setMirrorAction( FaceAction *act) { _ui->alignButton->setDefaultAction( act->qaction());}
 void LandmarksDialog::setLabelsAction( FaceAction *act) { _ui->labelsButton->setDefaultAction( act->qaction());}
 
 

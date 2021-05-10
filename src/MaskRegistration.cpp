@@ -160,11 +160,11 @@ bool MaskRegistration::setMask( const QString &mpath)
     QThread *thread = QThread::create(
         [abspath, meshfname, tdir, fm]()
         {
+            s_lock.lockForWrite();  // Setting lock here since need to wait for file op to finish
             QString unused;
             const QString err = FileIO::loadData( *fm, *tdir, meshfname, unused);
             if ( err.isEmpty())
             {
-                s_lock.lockForWrite();
                 s_mask.mask = fm;
                 s_mask.path = abspath;
                 s_mask.hash = createHash( fm->mesh());
@@ -201,7 +201,6 @@ bool MaskRegistration::setMask( const QString &mpath)
                 const r3d::Bounds bnds( fm->mesh(), Mat4f::Identity(), &s_mask.medialVtxs);
                 s_mask.centre = bnds.centre();
                 s_mask.radius = bnds.diagonal() / 2;
-                s_lock.unlock();
             }   // end if
             else
             {
@@ -209,6 +208,7 @@ bool MaskRegistration::setMask( const QString &mpath)
                 delete fm;
             }   // end else
             delete tdir;
+            s_lock.unlock();
         });
     QObject::connect( thread, &QThread::finished, [thread](){ thread->deleteLater();});
     thread->start();

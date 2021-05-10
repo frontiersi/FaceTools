@@ -35,8 +35,6 @@ public:
     void setLineColour( double r, double g, double b, double a=-1);
     void setArrowColour( double r, double g, double b, double a=-1);
 
-    void setLineWidth( double);
-
 private:
     vtkNew<vtkTransformPolyDataFilter> _transformPD;
     vtkNew<vtkArrowSource> _arrow;

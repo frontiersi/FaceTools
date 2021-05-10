@@ -28,6 +28,9 @@ public:
     explicit MaskView( const r3d::Mesh&);
 
     void refresh( const FV*);
+
+private:
+    vtkActor *_maskActor;
 };  // end class
 
 }}   // end namespaces

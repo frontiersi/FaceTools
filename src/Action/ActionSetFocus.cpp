@@ -23,7 +23,6 @@
 using FaceTools::Action::ActionSetFocus;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
-using FaceTools::Vis::FV;
 using MS = FaceTools::ModelSelect;
 
 
@@ -36,19 +35,17 @@ bool ActionSetFocus::isAllowed( Event) { return MS::isViewSelected();}
 
 bool ActionSetFocus::doBeforeAction( Event)
 {
-    const FV *fv = MS::selectedView();
+    const Vis::FV *fv = MS::selectedView();
     QPoint mp = primedMousePos();
     if ( mp.x() < 0)
         mp = fv->viewer()->mouseCoords();
+    // If point projects to surface, check if overlaps with landmarks
     const bool go = fv->projectToSurface( mp, _vproj);
-
-    // If projects to surface, check overlap with landmarks
     if ( go && MS::handler<Interactor::LandmarksHandler>()->visualisation().isVisible(fv))
     {
         const float srng = fv->viewer()->snapRange();
         _vproj = fv->data()->currentLandmarks().snapTo( _vproj, srng*srng);
     }   // end if
-
     return go;
 }   // end doBeforeAction
 

@@ -166,7 +166,7 @@ Vec3f snapToPathHandle( int hpid, const FaceTools::PathSet &paths, const Vec3f &
     float minSqDist = FLT_MAX;
     for ( int pid : paths.ids())
     {
-        if ( pid != hpid)
+        if ( pid != hpid)   // Don't allow handle snapping to the same path!
         {
             const FaceTools::Path &opath = paths.path(pid);
             checkCloser( minSqDist, nv, opath.handle0(), v, sqRange);
@@ -215,8 +215,15 @@ bool PathsHandler::_execLeftDrag()
         const Vec3f inv = v;
         v = snapToPathHandle( _handle->pathId(), fm->currentPaths(), v, sqRange);
         const Vis::BaseVisualisation *lmkVis = &MS::handler<LandmarksHandler>()->visualisation();
+        // If didn't snap to another path (inv == v), see if snap to a landmark
         if ( lmkVis->isVisible(fv) && inv == v)
+        {
             v = fm->currentLandmarks().snapTo( v, sqRange);
+            // If the snapped position is the same as the other handle, ignore
+            // otherwise the two handles will be perfectly coincident.
+            if ( v == path.handle( (hid+1)%2))
+                v = inv;
+        }   // end if
         path.setHandle( hid, v);    // Handle position (transformed)
 
         path.update( fm);

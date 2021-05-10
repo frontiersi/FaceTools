@@ -34,7 +34,7 @@ public:
     ~LandmarksDialog() override;
 
     void setShowAction( Action::FaceAction*);
-    void setAlignAction( Action::FaceAction*);
+    void setMirrorAction( Action::FaceAction*);
     void setLabelsAction( Action::FaceAction*);
 
     void setMessage( const QString&);
@@ -42,7 +42,7 @@ public:
 
 signals:
     void onShowLandmarkLabels( bool);
-    void onAlignLandmarks();
+    void onMirrorLandmarks();
 
 public slots:
     void show();

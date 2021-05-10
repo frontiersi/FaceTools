@@ -36,7 +36,7 @@ ActionMapSymmetry::ActionMapSymmetry() : FaceAction( "Map Symmetry")
 bool ActionMapSymmetry::doBeforeAction( Event)
 {
     FM::RPtr fm = MS::selectedModelScopedRead();
-    return fm && fm->maskHash() == MaskRegistration::maskData()->hash;
+    return fm && fm->hasMask() && fm->maskHash() == MaskRegistration::maskData()->hash;
 }   // end doBeforeAction
 
 

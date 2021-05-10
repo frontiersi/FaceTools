@@ -22,6 +22,7 @@
 #include <FaceModelCurvatureStore.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
+#include <FaceTools.h>
 #include <vtkPointData.h>
 #include <vtkProperty.h>
 #include <r3dvis/VtkTools.h>
@@ -246,10 +247,10 @@ bool FaceView::isPointOnFace( const QPoint& p) const
 }   // end isPointOnFace
 
 
-bool FaceView::projectToSurface( const QPoint& p, Vec3f& v) const
+bool FaceView::projectToSurface( const QPoint& p, Vec3f& pos) const
 {
     assert(_viewer);
-    return _viewer->calcSurfacePosition( _actor, p, v);
+    return _viewer->calcSurfacePosition( _actor, p, pos);
 }   // end projectToSurface
 
 

@@ -57,7 +57,6 @@ QString ActionAlignModel::whatsThis() const
 
 bool ActionAlignModel::isAllowed( Event)
 {
-    //FM::RPtr fm = MS::selectedModelScopedRead();
     const FM *fm = MS::selectedModel();
     const bool isInit = fm && Detect::FaceAlignmentFinder::isInit() && FMCS::rvals(*fm) != nullptr;
     // Enable if the model isn't already aligned, OR if the model is aligned but has no mask (and
@@ -161,10 +160,11 @@ void ActionAlignModel::alignUsingMaskLandmarksProcrustes( FM *fm)
 
 void ActionAlignModel::align( FM &fm)
 {
-    if ( fm.hasMask()) // If model has mask, then simply restore alignment defined by it.
+    if ( fm.hasMask())
     {
-        const Mat4f iT = fm.inverseTransformMatrix();
-        fm.addTransformMatrix( iT);
+        //const Mat4f T = fm.inverseTransformMatrix(); // If model has mask, then simply restore alignment defined by it.
+        const r3d::Mat4f T = MaskRegistration::calcMaskAlignment( fm.mask()).inverse();
+        fm.addTransformMatrix( T);
     }   // end if
     else
     {

@@ -19,7 +19,6 @@
 #include <MiscFunctions.h>
 #include <r3dvis/VtkTools.h>
 #include <r3dvis/VtkActorCreator.h>
-#include <r3dvis/PointPlacer.h>
 #include <QTools/QImageTools.h>
 #include <vtkMapper.h>
 #include <vtkProperty.h>
@@ -113,7 +112,7 @@ size_t ModelViewer::getWidth() const { return _qviewer->getWidth();}
 size_t ModelViewer::getHeight() const { return _qviewer->getHeight();}
 
 
-Vec3f ModelViewer::project( const QPoint &q) const { return _qviewer->pickWorldPosition(q);}
+Vec3f ModelViewer::project( const QPoint &q) const { return _qviewer->pickPosition(q);}
 QPoint ModelViewer::project( const Vec3f &v) const { return _qviewer->projectToDisplayPoint(v);}
 
 
@@ -140,11 +139,15 @@ bool ModelViewer::calcSurfacePosition( const vtkProp *prop, const QPoint& q, Vec
 
 bool ModelViewer::calcSurfacePosition( const vtkProp *prop, const cv::Point& p, Vec3f& worldPos) const
 {
+    return _qviewer->pickPosition( prop, p, worldPos);
+    /*
     if ( !prop)
         return false;
     r3dvis::PointPlacer::Ptr pplacer = r3dvis::PointPlacer::create( _qviewer->getRenderer());
     pplacer->set(prop);
-    return pplacer->calcSurfacePosition( p.x, p.y, &worldPos[0], r3dvis::TOP_LEFT_DISPLAY_ORIGIN);
+    const bool found = pplacer->calcSurfacePosition( p.x, p.y, &worldPos[0], r3dvis::TOP_LEFT_DISPLAY_ORIGIN);
+    return found;
+    */
 }   // end calcSurfacePosition
 
 
@@ -210,15 +213,13 @@ void ModelViewer::setParallelProjection( bool enable)
         CameraParams cp = camera();
         vtkCamera* cam = _qviewer->getRenderer()->GetActiveCamera();
         cam->SetParallelProjection( enable);
-
         if ( enable)
-            cam->SetParallelScale( cp.distance() * tan(cp.fovRads()/2));
+            cam->SetParallelScale( cp.distance() * tanf(cp.fovRads()/2));
         else
         {
             const float wh = float(cam->GetParallelScale());
             cp.setPositionFromFocus( wh / tanf(cp.fovRads()/2));
         }   // end else
-
         setCamera(cp);
     }   // end if
 }   // end setParallelProjection

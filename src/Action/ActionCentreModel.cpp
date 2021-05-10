@@ -20,8 +20,6 @@
 using FaceTools::Action::ActionCentreModel;
 using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
-using FaceTools::Vis::FV;
-using FaceTools::FM;
 using MS = FaceTools::ModelSelect;
 
 
@@ -33,28 +31,47 @@ ActionCentreModel::ActionCentreModel( const QString &dn, const QIcon& ico, const
 }   // end ctor
 
 
-bool ActionCentreModel::isAllowed( Event)
+bool ActionCentreModel::isAllowed( Event) { return MS::isViewSelected();}
+
+
+bool ActionCentreModel::doBeforeAction( Event e)
 {
-    FM::RPtr fm = MS::selectedModelScopedRead();
-    return fm && !fm->bounds()[0]->centre().isZero();
-}   // end isAllowed
+    const bool dothis = isAllowed( e);
+    if ( dothis)
+    {
+        storeUndo( this, Event::MESH_CHANGE | Event::AFFINE_CHANGE | Event::CAMERA_CHANGE);
+        // Get the position to centre at
+        const Vis::FV *fv = MS::selectedView();
+        _pos = -fv->data()->bounds()[0]->centre();
+        QPoint mp = primedMousePos();
+        if ( mp.x() >= 0)
+        {
+            Vec3f mpos;
+            if ( fv->projectToSurface( mp, mpos))
+                _pos = -mpos;
+        }   // end if
+    }   // end if
+    return dothis;
+}   // doBeforeAction
 
 
 void ActionCentreModel::doAction( Event)
 {
-    storeUndo(this, Event::AFFINE_CHANGE | Event::CAMERA_CHANGE);
     FM::WPtr fm = MS::selectedModelScopedWrite();
+    const Mat4f T = fm->transformMatrix();
     Mat4f cT = Mat4f::Identity();
-    cT.block<3,1>(0,3) = -fm->bounds()[0]->centre();
-    fm->addTransformMatrix( cT);
+    cT.block<3,1>(0,3) = _pos;
+    fm->addTransformMatrix( cT * fm->inverseTransformMatrix());
+    //fm->fixTransformMatrix();
+    fm->addTransformMatrix(T);
 }   // end doAction
 
 
 Event ActionCentreModel::doAfterAction( Event)
 {
-    MS::setInteractionMode( IMode::CAMERA_INTERACTION);
     ActionOrientCamera::orient( MS::selectedView(), 1);
-    MS::showStatus("Centred model.", 5000);
-    return Event::AFFINE_CHANGE | Event::CAMERA_CHANGE;
+    MS::showStatus("Set model centre.", 5000);
+    MS::setInteractionMode( IMode::CAMERA_INTERACTION);
+    return Event::MESH_CHANGE | Event::AFFINE_CHANGE | Event::CAMERA_CHANGE;
 }   // end doAfterAction
 

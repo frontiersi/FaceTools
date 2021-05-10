@@ -34,6 +34,9 @@ public:
     SimpleView();
     virtual ~SimpleView();
 
+    // Remove all actors from viewers and clear remove actors.
+    void reset();
+
     void setVisible( bool, ModelViewer*) override;
     bool isVisible() const override { return _visible;}
     bool belongs( const vtkProp*) const override;
@@ -41,8 +44,6 @@ public:
 
     virtual void setColour( double r, double g, double b, double a=-1);
     virtual void setLineWidth( double);
-
-    void setLineStipplingEnabled( bool);    // off by default
 
     const std::vector<vtkSmartPointer<vtkActor> >& actors() const { return _actors;}
 
@@ -53,15 +54,11 @@ protected:
     vtkProperty* initActor( vtkSmartPointer<vtkActor>);
     void pokeTransform( vtkActor*, const Mat4f&);
     virtual void pokeTransform( vtkActor*, const vtkMatrix4x4*);
-    std::vector<vtkSmartPointer<vtkActor> > _actors;
 
 private:
     ModelViewer *_vwr;
     bool _visible;
-    static vtkSmartPointer<vtkTexture> s_stippleTexture;
-
-    void _setStippleTextureCoords( vtkActor*);
-    vtkSmartPointer<vtkTexture> _stippleTexture();
+    std::vector<vtkSmartPointer<vtkActor> > _actors;
 };  // end class
 
 }}   // end namespaces

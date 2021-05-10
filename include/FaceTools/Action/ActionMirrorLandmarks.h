@@ -15,17 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_ALIGN_LANDMARKS_H
-#define FACE_TOOLS_ACTION_ALIGN_LANDMARKS_H
+#ifndef FACE_TOOLS_ACTION_MIRROR_LANDMARKS_H
+#define FACE_TOOLS_ACTION_MIRROR_LANDMARKS_H
 
 #include "FaceAction.h"
 
 namespace FaceTools { namespace Action {
 
-class FaceTools_EXPORT ActionAlignLandmarks : public FaceAction
+class FaceTools_EXPORT ActionMirrorLandmarks : public FaceAction
 { Q_OBJECT
 public:
-    ActionAlignLandmarks( const QString&, const QIcon&);
+    ActionMirrorLandmarks( const QString&, const QIcon&);
 
     QString toolTip() const override;
     QString whatsThis() const override;
