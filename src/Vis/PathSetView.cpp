@@ -19,6 +19,7 @@
 #include <FaceTools.h>
 #include <FaceModel.h>
 #include <vtkTextProperty.h>
+#include <vtkUnicodeString.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Vis::PathSetView;
@@ -34,7 +35,7 @@ PathSetView::PathSetView() : _viewer(nullptr)
     // The bottom right text.
     _caption->GetTextProperty()->SetJustificationToRight();
     _caption->GetTextProperty()->SetFontFamilyToCourier();
-    _caption->GetTextProperty()->SetFontSize(14);
+    _caption->GetTextProperty()->SetFontSize(13);
     _caption->GetTextProperty()->SetBackgroundOpacity(0.8);
     _caption->SetPickable( false);
     _caption->SetVisibility(false);
@@ -80,10 +81,10 @@ void PathSetView::_showPath( bool enable, int id)
 
 
 namespace {
-std::string appendValue( float v, const std::string &send="")
+std::wstring appendValue( float v, const std::wstring &send=L"")
 {
-    std::ostringstream oss;
-    oss << " " << std::setw(7) << std::fixed << std::setprecision(2) << v << " " << std::setw(4) << std::left << send;
+    std::wostringstream oss;
+    oss << " " << std::setw(7) << std::fixed << std::setprecision(2) << v << " " << std::setw(5) << std::left << send;
     return oss.str();
 }   // end appendValue
 }   // end namespace
@@ -91,32 +92,45 @@ std::string appendValue( float v, const std::string &send="")
 
 void PathSetView::setCaption( const Path& path, int xpos, int ypos, const Mat3f &iR)
 {
-    const std::string lnunits = FaceTools::FM::LENGTH_UNITS.toStdString();
+    const std::wstring lnunits = FaceTools::FM::LENGTH_UNITS.toStdWString();
     // Set the text contents for the label and the caption
-    std::ostringstream oss0, oss1, oss2, oss3, oss4, oss5, oss6, oss7, oss8, oss9;
+    std::wostringstream oss0, oss1, oss2, oss3, oss4, oss5, oss6, oss7, oss8, oss9, oss10, oss11, oss12;
     if ( !path.name().empty())
-        oss0 << std::left << std::setfill(' ') << std::setw(21) << path.name() << std::endl;
+    {
+        const std::wstring pname = QString( path.name().c_str()).toStdWString();
+        oss0 << std::right << std::setfill(L' ') << std::setw(21) << (pname + L"   \n");
+    }   // end if
 
     if (path.validPath())
     {
-        oss1 << "   Surface:" << appendValue( path.surfaceDistance(), lnunits);
-        oss3 << "\n   Ratio:" << appendValue( path.surface2EuclideanRatio());
+        oss1 <<   L"       Surface:" << appendValue( path.surfaceDistance(), lnunits);
+        oss3 << L"\n         Ratio:" << appendValue( path.surface2EuclideanRatio());
     }   // end if
     else
     {
-        oss1 << "   Surface:  Not Found  ";
-        oss3 << "\n   Ratio:     N/A     ";
+        oss1 <<   L"       Surface:     N/A      ";
+        oss3 << L"\n         Ratio:     N/A      ";
     }   // end else
 
+    static const std::wstring DEG( L"\u00b0");
+    static const std::wstring SQS( L"\u00b2");
+
     const Vec3f avec = iR * path.deltaVector();
-    oss2 << "\n  Direct:" << appendValue( path.euclideanDistance(), lnunits);
-    oss4 << "\n  X Size:" << appendValue( fabsf(avec[0]), lnunits);
-    oss5 << "\n  Y Size:" << appendValue( fabsf(avec[1]), lnunits);
-    oss6 << "\n  Z Size:" << appendValue( fabsf(avec[2]), lnunits);
-    oss7 << "\n   Depth:" << appendValue( path.depth(), lnunits);
-    oss8 << "\n   Angle:" << appendValue( path.angleAtDepth(), "°");
-    oss9 << "\n    Area:" << appendValue( path.crossSectionalArea(), lnunits + "²");
-    _caption->SetInput( (oss0.str() + oss1.str() + oss2.str() + oss3.str() + oss4.str() + oss5.str() + oss6.str() + oss7.str() + oss8.str() + oss9.str()).c_str());
+    oss2  << "\n        Direct:" << appendValue( path.euclideanDistance(), lnunits);
+    oss4  << "\n        X Size:" << appendValue( fabsf(avec[0]), lnunits);
+    oss5  << "\n        Y Size:" << appendValue( fabsf(avec[1]), lnunits);
+    oss6  << "\n        Z Size:" << appendValue( fabsf(avec[2]), lnunits);
+    oss7  << "\n         Depth:" << appendValue( path.depth(), lnunits);
+    oss8  << "\n         Angle:" << appendValue( path.angle(), DEG);
+    oss9  << "\n   Angle (Top):" << appendValue( path.angleTransverse(), DEG);
+    oss10 << "\n  Angle (Side):" << appendValue( path.angleSagittal(), DEG);
+    oss11 << "\n Angle (Front):" << appendValue( path.angleCoronal(), DEG);
+    oss12 << "\n          Area:" << appendValue( path.crossSectionalArea(), lnunits + SQS);
+    const std::wstring cap = oss0.str() + oss1.str() + oss2.str() + oss3.str() + oss4.str()
+                            + oss5.str() + oss6.str() + oss7.str() + oss8.str() + oss9.str()
+                            + oss10.str() + oss11.str() + oss12.str();
+    vtkUnicodeString u = vtkUnicodeString::from_utf16( (const vtkTypeUInt16*)cap.c_str());
+    _caption->SetInput( u.utf8_str());
     _caption->SetDisplayPosition( xpos, ypos);
 }   // end setCaption
 

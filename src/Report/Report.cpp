@@ -719,7 +719,7 @@ void Report::_addLatexNotes( const QRectF &box, const FM *fm)
 
     FaceAssessment::CPtr ass = fm->currentAssessment();
     std::ostringstream oss;
-    oss << "\\normalsize{\\textbf{" << sanit(tr("Assessment")) << ":} " << sanit(ass->assessor()) << "} \\\\" << std::endl;
+    oss << "\\normalsize{\\textbf{" << sanit(tr("Assessor")) << ":} " << sanit(ass->assessor()) << "} \\\\" << std::endl;
     oss << "\\small{" << sanit( ass->hasNotes() ? ass->notes() : tr("Nothing recorded.")) << "} \\\\" << std::endl;
     _ltxw->addRaw( _pageBox(box), oss.str());
 }   // end _addLatexNotes

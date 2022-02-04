@@ -61,7 +61,7 @@ bool U3DCache::_exportU3D( const r3d::Mesh &mesh, const QString &savepath, const
 {
     std::string errmsg = "";
     r3dio::U3DExporter xptr( true/*delete on destroy*/, true/*media9*/, ems);
-    if ( !xptr.save( mesh, savepath.toLocal8Bit().toStdString()))
+    if ( !xptr.save( mesh, savepath.toStdString()))
     {
         errmsg = "Unable to save to U3D format!";
         std::cerr << "[ERROR] FaceTools::U3DCache::_exportU3D: " << errmsg << std::endl;

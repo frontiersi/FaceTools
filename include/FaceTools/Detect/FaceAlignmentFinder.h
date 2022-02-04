@@ -31,23 +31,20 @@ public:
     FaceAlignmentFinder();
 
     /*********************************************************************************
-     * Detection uses the Viola and Jones HaarCascades detector to detect 2D features.
-     * Provide the initial detection range with d used to scale how closely the camera
+     * Uses Viola and Jones HaarCascades detector to detect 2D features.
+     * Provide initial detection range with d used to scale how closely the camera
      * is positioned to the face based on the detected distance between the eyes e
      * with the distance formula rng * e/d.
      *
-     * Provide the centre point of the model to focus on initially.
-     * Returns the matrix specifying how the model IS transformed from its "correct"
-     * detected orientation based on the detection of the eyes and the calculation of
-     * vertex position eigen vectors around the eyes to estimate facial orientation.
-     *
-     * This detected alignment is in addition to the model's current transform.
+     * Provide centre point of model to focus on initially.
+     * Returns matrix specifying how model is transformed from its correctly
+     * detected orientation based on detection of eyes and calculation of vertex
+     * position eigen vectors around the eyes to estimate orientation
+     * (detected alignment is additive with model's current transform).
      *
      * If the zero matrix is returned, call error() to return the error msg.
-     * Note that the transformation point is set as the midpoint between
-     * the detected eyes (which is almost certainly behind the surface of
-     * the face. Call eyesSquareRadius to return the square of the radius
-     * from this midpoint to either eye.
+     * Note that the transformation point is set as the midpoint between the
+     * detected eyes (which is almost certainly behind the surface of the face).
      *********************************************************************************/
     r3d::Mat4f find( const r3d::KDTree&, const Vec3f &focus, float rng, float d=0.30f);
 

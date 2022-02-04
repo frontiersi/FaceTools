@@ -17,8 +17,9 @@
 
 #include <Interactor/RadialSelectHandler.h>
 #include <Interactor/LandmarksHandler.h>
-#include <ModelSelect.h>
 #include <MiscFunctions.h>
+#include <ModelSelect.h>
+#include <r3d/SurfacePointFinder.h>
 #include <cassert>
 using FaceTools::Interactor::RadialSelectHandler;
 using FaceTools::Vis::RadialSelectVisualisation;
@@ -104,23 +105,12 @@ void RadialSelectHandler::_update( Vec3f tpos, float r)
 
     const Vis::BaseVisualisation *lmkVis = &MS::handler<LandmarksHandler>()->visualisation();
     if ( lmkVis->isVisible( fv))
-    {
-        const float snapDist = 0.015f * (fv->viewer()->camera().pos() - tpos).norm();
-        tpos = fm->currentLandmarks().snapTo( tpos, snapDist*snapDist);
-    }   // end if
+        tpos = fm->currentLandmarks().snapTo( tpos, powf( fv->viewer()->snapRange(), 2));
 
     // Find the vertex and face tpos is at on the mesh
-    const int sv = fm->findVertex(tpos);
+    int sv = fm->findVertex(tpos);
     int cfid = -1;
-    for ( int fid : mesh.faces(sv))
-    {
-        const Vec3f ppos = mesh.projectToFacePlane(fid, tpos);
-        if ( mesh.isVertexInsideFace( fid, ppos))
-        {
-            cfid = fid;
-            break;
-        }   // end if
-    }   // end for
+    r3d::SurfacePointFinder( mesh).find( tpos, sv, cfid, tpos);
     if ( cfid < 0)
         cfid = *mesh.faces(sv).begin();
 

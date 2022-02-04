@@ -85,6 +85,6 @@ void ActionSaveScreenshot::doAction( Event)
                 imgs.push_back( fmv->grabImage());
         }   // end for
         cv::Mat img = r3d::concatHorizontalMax( imgs);
-        cv::imwrite( fname.toLocal8Bit().toStdString(), img);
+        cv::imwrite( fname.toStdString(), img);
     }   // end if
 }   // end doAction

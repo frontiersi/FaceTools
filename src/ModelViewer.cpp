@@ -20,11 +20,6 @@
 #include <r3dvis/VtkTools.h>
 #include <r3dvis/VtkActorCreator.h>
 #include <QTools/QImageTools.h>
-#include <vtkMapper.h>
-#include <vtkProperty.h>
-#include <vtkSphereSource.h>
-#include <algorithm>
-#include <cassert>
 #include <QVBoxLayout>
 using FaceTools::ModelViewer;
 using r3d::CameraParams;
@@ -140,14 +135,6 @@ bool ModelViewer::calcSurfacePosition( const vtkProp *prop, const QPoint& q, Vec
 bool ModelViewer::calcSurfacePosition( const vtkProp *prop, const cv::Point& p, Vec3f& worldPos) const
 {
     return _qviewer->pickPosition( prop, p, worldPos);
-    /*
-    if ( !prop)
-        return false;
-    r3dvis::PointPlacer::Ptr pplacer = r3dvis::PointPlacer::create( _qviewer->getRenderer());
-    pplacer->set(prop);
-    const bool found = pplacer->calcSurfacePosition( p.x, p.y, &worldPos[0], r3dvis::TOP_LEFT_DISPLAY_ORIGIN);
-    return found;
-    */
 }   // end calcSurfacePosition
 
 

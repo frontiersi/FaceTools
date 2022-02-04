@@ -130,7 +130,7 @@ bool ActionExportMask::doBeforeAction( Event)
 void ActionExportMask::doAction( Event)
 {
     FM::RPtr fm = MS::selectedModelScopedRead();
-    _savedOkay = r3dio::saveMesh( fm->mask(), _filename.toLocal8Bit().toStdString());
+    _savedOkay = r3dio::saveMesh( fm->mask(), _filename.toStdString());
 }   // end doAction
 
 

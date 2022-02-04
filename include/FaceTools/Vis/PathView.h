@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -74,14 +74,10 @@ private:
     bool _isVisible;
     bool _hasSurface;
     int _id;
-    Handle *_h0, *_h1;
-    Handle *_g;     // Depth changing handle
+    Handle *_h0, *_h1, *_g; // Path handles (_g is depth)
     vtkSmartPointer<vtkActor> _sprop;   // Surface path
     vtkSmartPointer<vtkActor> _hprop;   // Direct line between handles
-    vtkSmartPointer<vtkActor> _jprop;   // Direct line between pseudo handles
-    vtkSmartPointer<vtkActor> _p0prop;  // Caliper "pincer" 0
-    vtkSmartPointer<vtkActor> _p1prop;  // Caliper "pincer" 1
-    vtkSmartPointer<vtkActor> _dprop;   // Depth (plump) line at deepest part
+    vtkSmartPointer<vtkActor> _dprop;   // Plumb line to surface from direct line
     AngleView _aview;
 
     void _addLineProps();

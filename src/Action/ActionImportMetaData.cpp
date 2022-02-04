@@ -67,9 +67,13 @@ QString ActionImportMetaData::_getFilePath( const FM &fm)
 {
     const auto &filter = _fdialog->selectedMimeTypeFilter();
     const QFileInfo fpath( FMM::filepath(fm));
+    _fdialog->setDirectory( fpath.absolutePath());
     QString fp = fpath.path() + "/" + fpath.baseName() + "." + _mimeDB.mimeTypeForName( filter).preferredSuffix();
     if ( QFile::exists( fp))
+    {
+        _fdialog->setDirectory( QFileInfo( fp).absolutePath());
         _fdialog->selectFile( fp);
+    }   // end if
 
     fp = "";
     if ( _fdialog->exec())
@@ -92,7 +96,7 @@ bool ActionImportMetaData::doBeforeAction( Event)
     if ( fm->hasMetaData())
     {
         const QString fname = QFileInfo( FMM::filepath(*fm)).fileName();
-        const QString msg = tr( ("Model \"" + fname.toLocal8Bit().toStdString() + "\" already has metadata! Overwrite all?").c_str());
+        const QString msg = tr( ("Model \"" + fname.toStdString() + "\" already has metadata! Overwrite all?").c_str());
         const bool doImport = QMB::Yes == QMB::question( prnt, tr("Overwrite Metadata?"),
                 QString("<p align='center'>%1</p>").arg(msg), QMB::Yes | QMB::No, QMB::No);
         if ( !doImport)
@@ -103,10 +107,10 @@ bool ActionImportMetaData::doBeforeAction( Event)
     if ( fp.isEmpty())
         return false;
 
-    _ifs.open( fp.toLocal8Bit().toStdString());
+    _ifs.open( fp.toStdString());
     if ( !_ifs.is_open())
     {
-        const QString msg = tr( ("Unable to open \'" + fp.toLocal8Bit().toStdString() + "' for reading!").c_str());
+        const QString msg = tr( ("Unable to open \'" + fp.toStdString() + "' for reading!").c_str());
         QMB::critical( prnt, tr("Import write error!"), QString("<p align='center'>%1</p>").arg(msg));
         return false;
     }   // end if

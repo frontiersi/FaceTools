@@ -212,7 +212,6 @@ FaceModelFileData::FaceModelFileData( const QString &fpath, const QString &asses
 
     // Set FM assessment to the req. assessor (for landmarks, paths, etc).
     FaceAssessment& ass = _setCurrentAssessment( assessorName);
-
     // Read in the measurements for the selected assessor.
     const PTree &fnode = ptree.get_child("faces").get_child("FaceModels").get_child("FaceModel");
     const PTree *assm = getAssessment( fnode, assessorName.toStdString());
@@ -441,7 +440,10 @@ void FaceModelFileData::_pathsToCSV( std::ostream &os) const
         os << std::fixed << std::setprecision(2) << path.euclideanDistance() << ","
            << std::fixed << std::setprecision(2) << path.surfaceDistance() << ","
            << std::fixed << std::setprecision(2) << path.depth() << ","
-           << std::fixed << std::setprecision(2) << path.angleAtDepth() << ","
+           << std::fixed << std::setprecision(2) << path.angle() << ","
+           << std::fixed << std::setprecision(2) << path.angleTransverse() << ","
+           << std::fixed << std::setprecision(2) << path.angleSagittal() << ","
+           << std::fixed << std::setprecision(2) << path.angleCoronal() << ","
            << std::fixed << std::setprecision(2) << path.crossSectionalArea() << std::endl;
     }   // end for
 }   // end _pathsToCSV

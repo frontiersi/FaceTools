@@ -77,8 +77,6 @@ bool SphereView::fixedScale() const { return _actor->fixedScale();}
 
 void SphereView::setCentre( const Vec3f& pos)
 {
-    //r3d::Vec3d dpos = pos.cast<double>();
-    //_source->SetCenter( &dpos[0]);
     _actor->setPosition( pos);
     _updateCaptionPosition();
 }   // end setCentre

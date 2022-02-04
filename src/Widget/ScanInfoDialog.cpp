@@ -191,7 +191,7 @@ ScanInfoDialog::ScanInfoDialog( QWidget *parent) :
     _ui->maternalEthnicityComboBox->setModel( emodel);
     _ui->paternalEthnicityComboBox->setModel( emodel);
 
-    _ui->sexComboBox->addItem( toLongSexString( UNKNOWN_SEX), UNKNOWN_SEX);    // Used for intersex
+    _ui->sexComboBox->addItem( toLongSexString( UNKNOWN_SEX), UNKNOWN_SEX);
     _ui->sexComboBox->addItem( toLongSexString( FEMALE_SEX), FEMALE_SEX);
     _ui->sexComboBox->addItem( toLongSexString( MALE_SEX), MALE_SEX);
 

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@ public:
     // The path being hovered over (if any).
     inline Vis::PathView::Handle* hoverPath() const { return _handle;}
 
-    void addPath( const Vec3f&);
+    void addPath( Vec3f&);
 
     // Returns true iff a path was in the middle of being dragged otherwise does nothing.
     bool endDragging();
@@ -47,10 +47,10 @@ public:
     int leavePath();    // Returns id of path that was left (_handle->pathId())
 
 signals:
-    void onStartedDrag( int pid, int hid) const;
-    void onFinishedDrag( int pid, int hid) const;
-    void onEnterHandle( int pid, int hid) const;
-    void onLeaveHandle( int pid, int hid) const;
+    void onStartedDrag( int pid, int hid);
+    void onFinishedDrag( int pid, int hid);
+    void onEnterHandle( int pid, int hid);
+    void onLeaveHandle( int pid, int hid);
 
 private:
     bool doEnterProp() override;
@@ -66,6 +66,7 @@ private:
     bool _dragging;
     bool _initPlacement;
 
+    void _snapHandle( const Vis::FV*, Vec3f&) const;
     bool _execLeftDrag();
     void _showPathInfo();
     void _updateCaption();

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -231,6 +231,11 @@ public:
      */
     int addPath( const Vec3f&);
 
+    /**
+     * Move in a whole path returning its ID (use std::move on the path argument).
+     */
+    int addPath( Path&&);
+
     void removePath( int pid);
     void renamePath( int pid, const QString&);
 
@@ -305,10 +310,6 @@ public:
 
     // Use the KD-tree to find the vertex index closest to the given (transformed) position.
     int findVertex( const Vec3f&) const;
-
-    // Translate the given point to the surface of this model. First finds the
-    // closest point on the surface using the internal kd-tree.
-    float toSurface( Vec3f&) const;
 
     void addView( Vis::FaceView*);
     void eraseView( Vis::FaceView*);

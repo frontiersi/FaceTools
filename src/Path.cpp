@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,10 +19,25 @@
 #include <r3d/Orientation.h>
 #include <FaceTools.h>
 #include <FaceModel.h>
-using FaceTools::Path;
-using FaceTools::FM;
 using FaceTools::Vec3f;
 using FaceTools::Mat4f;
+using FaceTools::Mat3f;
+using FaceTools::Path;
+using FaceTools::FM;
+
+namespace {
+
+float _calcAngle( const Vec3f &dh0, const Vec3f &dh1)
+{
+    float angle = NAN;
+    if ( !dh0.isZero() && !dh1.isZero())
+        angle = acosf( dh0.dot(dh1)/(dh0.norm() * dh1.norm())) * 180.0f/EIGEN_PI;
+    if ( std::isnan(angle))
+        angle = 180.0f;
+    return angle;
+}   // end _calcAngle
+
+}   // end namespace
 
 
 // static definition
@@ -33,18 +48,20 @@ void Path::setPathType( Path::PathType pt) { s_pathType = pt;}
 
 Path::Path()
     : _id(-1), _name(""), _validPath(false),
-    _elen(0), _slen(0), _area(0), _depth(0), _angle(0), _dhan(0.5f)
+      _elen(0), _slen(0), _area(0), _depth(0), _angle(0), _angleS(0), _angleT(0), _angleC(0)
 {
+    _name = QString("Unnamed_%1").arg(_id).toStdString();
     _vtxs.resize(2);
 }   // end ctor
 
 
 Path::Path( int i, const Vec3f& v)
     : _id(i), _name(""), _validPath(false),
-    _elen(0), _slen(0), _area(0), _depth(0), _angle(0), _dhan(0.5f)
+    _elen(0), _slen(0), _area(0), _depth(0), _angle(0), _angleS(0), _angleT(0), _angleC(0)
 {
+    _name = QString("Unnamed_%1").arg(_id).toStdString();
     _vtxs.resize(2);
-    _vtxs.front() = _vtxs.back() = v;
+    _vtxs.front() = _vtxs.back() = _dhan = v;
 }   // end ctor
 
 
@@ -59,27 +76,21 @@ Path Path::mapSrcToDst( const FM *sfm, const FM *dfm) const
     pth._orient = T.block<3,3>(0,0) * iT.block<3,3>(0,0) * _orient;
     pth._orient.normalize();
 
-    Vec3f h0, h1;
+    Vec3f h0, h1, hd;
     barycentricMapSrcToDst( sfm, handle0(), dfm, h0);
     barycentricMapSrcToDst( sfm, handle1(), dfm, h1);
+    barycentricMapSrcToDst( sfm, depthHandle(), dfm, hd);
     pth.setHandle0( h0);
     pth.setHandle1( h1);
+    pth.setDepthHandle( hd);
 
-    // We want the depth point to be the same too which means
-    // setting the // depth handle proportion indirectly ;D
-    Vec3f dmax;
-    barycentricMapSrcToDst( sfm, _dmax, dfm, dmax);
-    const Vec3f hline = h1 - h0;
-    const float mhl = hline.norm();
-    pth._dhan = (dmax - h0).dot(hline) / (mhl*mhl);
-
-    pth.update( dfm);
-    pth.updateMeasures();
+    pth.updatePath( dfm);
+    pth.updateMeasures( dfm->inverseTransformMatrix().block<3,3>(0,0));
     return pth;
 }   // end mapSrcToDst
 
 
-bool Path::update( const FM* fm)
+bool Path::updatePath( const FM* fm)
 {
     _validPath = false;
     Vec3f v0 = _vtxs.front();
@@ -120,14 +131,14 @@ bool Path::update( const FM* fm)
 
     assert(_vtxs.size() >= 2);
     return _validPath;
-}   // end update
+}   // end updatePath
 
 
-void Path::updateMeasures()
+void Path::updateMeasures( const Mat3f &iR)
 {
     const Vec3f& h0 = handle0();    // First point in path
     const Vec3f& h1 = handle1();    // Last point in path
-    const Vec3f hd = depthHandle();
+    const Vec3f& hd = depthHandle();
 
     _slen = 0.0f;
     _area = 0.0f;
@@ -138,9 +149,10 @@ void Path::updateMeasures()
     if ( _elen > 0.0f)
         u = u / _elen;  // Euclidean direction between end points
 
-    // Find two vectors va and vb where va = a-h0, and |va| < dh, and vb = b-h0, and |vb| >= dh,
+    // Find dhd as the projection magnitude of hd-h0 along h1-h0 but bounded by the endpoints.
+    const float dhd = std::min( std::max( 0.0f, u.dot(hd-h0)), _elen);
+    // Find two vectors va and vb where va = a-h0, and |va| < dhd, and vb = b-h0, and |vb| >= dhd,
     // and a and b are consecutive points in the surface path.
-    const float dh = (hd - h0).norm(); // Magnitude to the depth handle from handle 0
 
     float pd = 0.0f;
     float po = 0.0f;
@@ -153,7 +165,7 @@ void Path::updateMeasures()
 
         // && !b because it's possible (though unlikely) that the projection
         // will be shorter again after being longer (after b is set).
-        if ( d < dh && !b)
+        if ( d < dhd && !b)
             a = &v;
         else if ( !b)
             b = &v;
@@ -177,25 +189,14 @@ void Path::updateMeasures()
     if ( b != &h0)
         db = (*b - h0).dot(u);   // Projected distance of b along u
 
-    // dh is in [da,db] and vertices a and b are the endpoints of a single path segment.
+    // dhd is in [da,db] and vertices a and b are the endpoints of a single path segment.
     // Get the exact point along this segment where depth should be measured from.
-    _dmax = *a;
+    _dsurf = *a;
     if ( a != b)
-        _dmax += (*b-*a) * ((dh - da) / (db - da));
-    _depth = (hd - _dmax).norm();
-    _angle = 180.0f;
-
-    if ( _depth > 0.0f)
-    {
-        static const float DEG_CONST = 180.0f/EIGEN_PI;
-        const Vec3f dh0 = h0 - _dmax;
-        const Vec3f dh1 = h1 - _dmax;
-        const float denom = dh0.norm() * dh1.norm();
-        assert( denom > 0.0f);
-        _angle = acosf( dh0.dot(dh1)/denom) * DEG_CONST;
-        if ( std::isnan(_angle))
-            _angle = 180.0f;
-    }   // end if
+        _dsurf += (*b-*a) * ((dhd - da) / (db - da));
+    _dline = h0 + dhd * u;
+    _depth = (_dline - _dsurf).norm();
+    _calcAngles( iR);
 }   // end updateMeasures
 
 
@@ -203,7 +204,9 @@ void Path::transform( const Mat4f &t)
 {
     for ( Vec3f &v : _vtxs)
         v = r3d::transform( t, v);
-    _dmax = r3d::transform( t, _dmax);
+    _dhan = r3d::transform( t, _dhan);
+    _dsurf = r3d::transform( t, _dsurf);
+    _dline = r3d::transform( t, _dline);
     _orient = t.block<3,3>(0,0) * _orient;
     _orient.normalize();
 }   // end transform
@@ -211,8 +214,8 @@ void Path::transform( const Mat4f &t)
 
 void Path::setHandle0( const Vec3f& v) { _vtxs.front() = v;}
 void Path::setHandle1( const Vec3f& v) { _vtxs.back() = v;}
-void Path::setDepthHandle( float v) { _dhan = std::max( 0.0f, std::min( v, 1.0f));}
-Vec3f Path::depthHandle() const { return handle0() + _dhan * (handle1() - handle0());}
+void Path::setDepthHandle( const Vec3f& v) { _dhan = v;}
+
 void Path::setOrientation( const Vec3f& u)
 {
     _orient = u;
@@ -230,15 +233,19 @@ void Path::setHandle( int h, const Vec3f &v)
         case 1:
             setHandle1(v);
             break;
+        case 2:
+            setDepthHandle(v);
+            break;
         default:
-            setOrientation(v);
+            assert(false);
     }   // end switch
 }   // end setHandle
 
 
 const Vec3f& Path::handle( int h) const
 {
-    const Vec3f *v = nullptr;
+    assert( h >= 0 && h <= 2);
+    const Vec3f *v = &depthHandle();
     switch (h)
     {
         case 0:
@@ -247,8 +254,6 @@ const Vec3f& Path::handle( int h) const
         case 1:
             v = &handle1();
             break;
-        default:
-            v = &orientation();
     }   // end switch
     return *v;
 }   // end handle
@@ -267,7 +272,10 @@ void Path::write( PTree& pathsNode, bool withFullPath) const
     metrics.put("DirectDistance", euclideanDistance());
     metrics.put("SurfaceDistance", surfaceDistance());
     metrics.put("Depth", depth());
-    metrics.put("AngleAtDepth", angleAtDepth());
+    metrics.put("Angle", angle());
+    metrics.put("AngleS", angleSagittal());
+    metrics.put("AngleT", angleTransverse());
+    metrics.put("AngleC", angleCoronal());
     metrics.put("CrossSectionArea", crossSectionalArea());
 
     if ( withFullPath)
@@ -281,6 +289,21 @@ void Path::_writeFullPath( PTree& pnode) const
     for ( const Vec3f &v : pathVertices())
         r3d::addVertex( fullpath, v);
 }   // end _writeFullPath
+
+
+void Path::_calcAngles( const Mat3f &iR)
+{
+    const Vec3f& h0 = handle0();    // First point in path
+    const Vec3f& h1 = handle1();    // Last point in path
+    const Vec3f& hd = depthHandle();
+    // Apply the inverse rotation to get back vectors in standard position
+    const Vec3f dh0 = iR*(h0 - hd);
+    const Vec3f dh1 = iR*(h1 - hd);
+    _angle = _calcAngle( dh0, dh1); // Direct angle
+    _angleS = _calcAngle( Vec3f(  0.0f, dh0[1], dh0[2]), Vec3f(  0.0f, dh1[1], dh1[2]));   // Sagittal
+    _angleT = _calcAngle( Vec3f(dh0[0],   0.0f, dh0[2]), Vec3f(dh1[0],   0.0f, dh1[2]));   // Transverse
+    _angleC = _calcAngle( Vec3f(dh0[0], dh0[1],   0.0f), Vec3f(dh1[0], dh1[1],   0.0f));   // Coronal
+}   // end _calcAngles
 
 
 void Path::read( const PTree& pnode)
@@ -309,7 +332,7 @@ void Path::read( const PTree& pnode)
     Vec3f vd = (v0 + v1)/2;
     if ( pnode.count("VD") > 0)
         vd = r3d::getVertex( pnode.get_child("VD"));
-    setDepthHandle( (vd - v0).norm() / (v1 - v0).norm());
+    setDepthHandle( vd);
 
     Vec3f u(0,0,1);
     if ( pnode.count("Orient") > 0)
@@ -325,8 +348,16 @@ void Path::read( const PTree& pnode)
             _slen = mnode.get<float>("SurfaceDistance");
         if ( mnode.count("Depth") > 0)
             _depth = mnode.get<float>("Depth");
-        if ( mnode.count("AngleAtDepth") > 0)
+        if ( mnode.count("AngleAtDepth") > 0)   // Older versions
             _angle = mnode.get<float>("AngleAtDepth");
+        if ( mnode.count("Angle") > 0)          // New version (overwrites)
+            _angle = mnode.get<float>("Angle");
+        if ( mnode.count("AngleS") > 0)
+            _angleS = mnode.get<float>("AngleS");
+        if ( mnode.count("AngleT") > 0)
+            _angleT = mnode.get<float>("AngleT");
+        if ( mnode.count("AngleC") > 0)
+            _angleC = mnode.get<float>("AngleC");
         if ( mnode.count("CrossSectionArea") > 0)
             _area = mnode.get<float>("CrossSectionArea");
     }   // end if

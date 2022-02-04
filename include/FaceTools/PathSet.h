@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,6 +36,9 @@ public:
     // Create a new path with first handle at given position returning its ID.
     int addPath( const Vec3f&);
 
+    // Move in a new path setting a new ID (to prevent overwriting).
+    int addPath( Path&&);
+
     // Remove the path with given ID returning true on success.
     bool removePath( int pathId);
 
@@ -54,11 +57,13 @@ public:
     const IntSet& ids() const { return _ids;}
 
     // Set membership tests
-    bool empty() const { return count() == 0;}
-    size_t count() const { return _paths.size();}
-    bool has( int pathId) const { return _ids.count(pathId) > 0;}
+    inline bool empty() const { return size() == 0;}
+    inline size_t size() const { return _paths.size();}
+    inline bool has( int pathId) const { return _ids.count(pathId) > 0;}
 
-    void transform( const Mat4f&);
+    // Add T onto the paths, and use the total inverse rotation matrix
+    // (if given) to update measurements (specifically, angles).
+    void transform( const Mat4f &T, const Mat3f *iR=nullptr);
 
     void write( PTree&, bool withExtras) const;
     bool read( const PTree&);
@@ -67,7 +72,7 @@ private:
     int _sid;                               // Set's next path ID
     IntSet _ids;                            // The IDs themselves
     std::unordered_map<int, Path> _paths;   // IDs that map to paths
-    int _setPath( const Path&);
+    int _setPath( Path&&);
 };  // end class
 
 }   // end namespace

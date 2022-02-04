@@ -15,33 +15,35 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_EDIT_PATHS_H
-#define FACE_TOOLS_ACTION_EDIT_PATHS_H
+#ifndef FACE_TOOLS_FILE_IO_FACE_MODEL_DATABASE_H
+#define FACE_TOOLS_FILE_IO_FACE_MODEL_DATABASE_H
 
-#include "ActionVisualise.h"
+#include "FaceModelFileData.h"
+#include <QFileInfo>
+#include <QMutex>
 
-namespace FaceTools { namespace Action {
+namespace FaceTools { namespace FileIO {
 
-class FaceTools_EXPORT ActionEditPaths : public ActionVisualise
-{ Q_OBJECT
+class FaceTools_EXPORT FaceModelDatabase
+{
 public:
-    ActionEditPaths( const QString&, const QIcon&, const QKeySequence& ks=QKeySequence());
+    // Initialise the database by creating the initial connection and defining the schema.
+    // Not thread safe!
+    static bool init();
 
-    QString toolTip() const override { return "Display and edit user measurements.";}
+    // Clear all data and reset to empty. Thread safe.
+    static void reset();
 
-protected:
-    Event doAfterAction( Event) override;
-
-private slots:
-    void _doOnStartedDrag( int pid, int hid);
-    void _doOnFinishedDrag( int pid, int hid);
-    void _doOnEnterHandle( int pid, int hid);
-    void _doOnLeaveHandle( int pid, int hid);
+    // Refresh the given path for 3DF files. The path may be for a single file or
+    // a directory. If a directory, only the top level contents is parsed.
+    // Returns the number of 3DF files found or -1 if parsing failed for any
+    // of the files. This function blocks.
+    static int refresh( const QString &path);
 
 private:
-    FVS _tchanged;
-    void _setTempTransparency(bool);
-    void _changeTransparency(bool, Vis::FV*);
+    static bool _isInit;
+    static QMutex _lock;
+    static bool _addImage( const QFileInfo&);
 };  // end class
 
 }}   // end namespaces

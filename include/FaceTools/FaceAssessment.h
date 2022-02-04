@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,7 +49,8 @@ public:
     Landmark::LandmarkSet& landmarks() { return _landmarks;}
     bool hasLandmarks() const { return !_landmarks.empty();}
 
-    void transform( const Mat4f&);
+    // Add T onto the landmark and path sets, and provide the current inverse rotation matrix.
+    void transform( const Mat4f &T, const Mat3f &iR);
 
     // Resettle paths and landmarks so that they are incident with the given model's surface.
     void moveToSurface( const FM*);

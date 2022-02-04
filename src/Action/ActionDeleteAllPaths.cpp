@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,18 +38,17 @@ ActionDeleteAllPaths::ActionDeleteAllPaths( const QString& dn, const QIcon& ico)
 
 bool ActionDeleteAllPaths::isAllowed( Event)
 {
-    PathsHandler *h = MS::handler<PathsHandler>();
     const Vis::FV* fv = MS::selectedView();
     return fv && MS::interactionMode() != IMode::ACTOR_INTERACTION
-              && fv->data()->currentAssessment()->hasPaths()
-              && fv->isApplied( &h->visualisation());
+              && fv->data()->currentAssessment()->hasPaths();
+              //&& fv->isApplied( &h->visualisation());
 }   // end isAllowed
 
 
 bool ActionDeleteAllPaths::doBeforeAction( Event)
 {
-    static const QString tit = tr("Delete Calliper Measurements?");
-    static const QString msg = tr("Are you sure you want to remove all calliper measurements?");
+    static const QString tit = tr("Delete User Measurements?");
+    static const QString msg = tr("Are you sure you want to remove all user measurements?");
     return QMB::Yes == QMB::warning( static_cast<QWidget*>(parent()), tit,
             QString("<p align='center'>%1</p>").arg(msg), QMB::Yes | QMB::No, QMB::Yes);
 }   // end doBeforeAction
@@ -70,7 +69,7 @@ void ActionDeleteAllPaths::doAction( Event)
 
 Event ActionDeleteAllPaths::doAfterAction( Event)
 {
-    MS::showStatus( "All measurements deleted!", 5000);
+    MS::showStatus( "All user measurements deleted!", 5000);
     return Event::PATHS_CHANGE;
 }   // end doAfterAction
 

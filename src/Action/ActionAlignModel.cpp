@@ -162,7 +162,7 @@ void ActionAlignModel::align( FM &fm)
 {
     if ( fm.hasMask())
     {
-        //const Mat4f T = fm.inverseTransformMatrix(); // If model has mask, then simply restore alignment defined by it.
+        // If model has mask, then simply restore alignment defined by it.
         const r3d::Mat4f T = MaskRegistration::calcMaskAlignment( fm.mask()).inverse();
         fm.addTransformMatrix( T);
     }   // end if

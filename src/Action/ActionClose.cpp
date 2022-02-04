@@ -51,7 +51,7 @@ bool ActionClose::doBeforeAction( Event)
     else
     {
         const QString fname = QFileInfo( FMM::filepath(*fm)).fileName();
-        QString msg = tr( ("Model '" + fname.toLocal8Bit().toStdString() + "' is unsaved! Really close?").c_str());
+        QString msg = tr( ("Model '" + fname.toStdString() + "' is unsaved! Really close?").c_str());
         if ( fm->hasMetaData() && !inPreferredFormat)
             msg = tr("Not saved as 3DF; data will be lost! Really close?");
         doclose = QMB::Yes == QMB::warning( static_cast<QWidget*>(parent()),

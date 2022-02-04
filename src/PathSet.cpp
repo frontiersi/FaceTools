@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <PathSet.h>
+#include <FaceModel.h>
 #include <cassert>
 using FaceTools::PathSet;
 using FaceTools::Path;
@@ -33,13 +34,13 @@ void PathSet::update( const FM* fm)
 {
     for ( auto& p : _paths)
     {
-        p.second.update( fm);
-        p.second.updateMeasures();
+        p.second.updatePath( fm);
+        p.second.updateMeasures( fm->inverseTransformMatrix().block<3,3>(0,0));
     }   // end for
 }   // end update
 
 
-int PathSet::_setPath( const Path& path)
+int PathSet::_setPath( Path &&path)
 {
     _paths[path.id()] = path;
     _ids.insert(path.id());
@@ -47,7 +48,18 @@ int PathSet::_setPath( const Path& path)
 }   // end _setPath
 
 
-int PathSet::addPath( const Vec3f& v) { return _setPath( Path( _sid++, v));}   // end addPath
+int PathSet::addPath( const Vec3f& v)
+{
+    Path p = Path( _sid++, v);
+    return _setPath( std::move(p));
+}   // end addPath
+
+
+int PathSet::addPath( Path &&p)
+{
+    p.setId(_sid++);
+    return _setPath( std::move(p));
+}   // end addPath
 
 
 bool PathSet::removePath( int id)
@@ -94,12 +106,13 @@ const Path& PathSet::path( int pid) const
 QString PathSet::name( int pid) const { return QString::fromStdString( path(pid).name());}
 
 
-void PathSet::transform( const Mat4f& T)
+void PathSet::transform( const Mat4f &T, const Mat3f *iR)
 {
     for ( auto& p : _paths)
     {
         p.second.transform(T);
-        p.second.updateMeasures();
+        if ( iR)
+            p.second.updateMeasures( *iR);
     }   // end for
 }   // end transform
 
@@ -118,7 +131,7 @@ bool PathSet::read( const PTree& pathsNode)
         Path path;
         path.read( lvt.second);
         path.setId( _sid++);
-        _setPath(path);
+        _setPath( std::move(path));
     }   // end for
     return true;
 }   // end read

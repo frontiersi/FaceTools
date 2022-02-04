@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@ class FaceTools_EXPORT ActionDeleteAllPaths : public FaceAction
 public:
     ActionDeleteAllPaths( const QString&, const QIcon&);
 
-    QString toolTip() const override { return "Deletes all custom measurements from the selected model's current assessment.";}
+    QString toolTip() const override { return "Delete all user measurements from the selected model's current assessment.";}
 
 protected:
     bool isAllowed( Event) override;

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -85,9 +85,9 @@ bool FaceAssessment::setLandmarks( const LandmarkSet &lmks)
 }   // end setLandmarks
 
 
-void FaceAssessment::transform( const Mat4f &T)
+void FaceAssessment::transform( const Mat4f &T, const Mat3f &iR)
 {
-    _paths.transform(T);
+    _paths.transform(T, &iR);
     _landmarks.transform(T);
 }   // end transform
 

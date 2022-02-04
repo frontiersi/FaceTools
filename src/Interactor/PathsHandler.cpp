@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -90,8 +90,10 @@ bool PathsHandler::doLeaveProp()
 }   // end doLeaveProp
 
 
-void PathsHandler::addPath( const Vec3f &v)
+void PathsHandler::addPath( Vec3f &v)
 {
+    const FV *fv = MS::selectedView();
+    _snapHandle( fv, v);
     FM::WPtr fm = MS::selectedModelScopedWrite();
     const int pid = fm->addPath( v);
     _dragging = true;
@@ -139,17 +141,8 @@ bool PathsHandler::doLeftButtonDown()
 bool PathsHandler::doLeftButtonUp() { return endDragging();}
 
 
-// Needed only when initial placement happening
-bool PathsHandler::doMouseMove()
-{
-    bool swallowed = false;
-    if ( _initPlacement)
-        swallowed = doLeftDrag();
-    return swallowed;
-}   // end doMouseMove
-
-
 namespace {
+
 void checkCloser( float &minSqDist, Vec3f &nv, const Vec3f &vm, const Vec3f &v, float snapSqDist)
 {
     const float sqdist = (vm - v).squaredNorm();
@@ -159,6 +152,7 @@ void checkCloser( float &minSqDist, Vec3f &nv, const Vec3f &vm, const Vec3f &v, 
         nv = vm;
     }   // end if
 }   // end checkCloser
+
 
 Vec3f snapToPathHandle( int hpid, const FaceTools::PathSet &paths, const Vec3f &v, float sqRange)
 {
@@ -171,6 +165,7 @@ Vec3f snapToPathHandle( int hpid, const FaceTools::PathSet &paths, const Vec3f &
             const FaceTools::Path &opath = paths.path(pid);
             checkCloser( minSqDist, nv, opath.handle0(), v, sqRange);
             checkCloser( minSqDist, nv, opath.handle1(), v, sqRange);
+            checkCloser( minSqDist, nv, opath.depthHandle(), v, sqRange);
         }   // end if
     }   // end for
     return nv;
@@ -179,13 +174,69 @@ Vec3f snapToPathHandle( int hpid, const FaceTools::PathSet &paths, const Vec3f &
 }   // end namespace
 
 
+// Needed only when initial placement happening
+bool PathsHandler::doMouseMove()
+{
+    bool swallowed = false;
+    if ( _initPlacement)
+    {
+        assert(_handle);
+        swallowed = doLeftDrag();
+        // Also update position of depth handle to be midway between handle endpoints
+        const FV *fv = MS::selectedView();
+        FM::WPtr fm = MS::selectedModelScopedWrite();
+        const int pid = _handle->pathId();
+        Path& path = fm->currentPaths().path( pid);
+        Vec3f v = (path.handle0() + path.handle1())*0.5f;
+        const QPoint qp = fv->viewer()->project( v);
+        if ( !fv->projectToSurface( qp, v))
+            v = path.handle0();
+        path.setDepthHandle( v);
+
+        path.updateMeasures( fm->inverseTransformMatrix().block<3,3>(0,0));
+        fm->setMetaSaved( false);
+        _vis.updatePath( *fm, pid);
+        _showPathInfo();
+    }   // end if
+    return swallowed;
+}   // end doMouseMove
+
+
 bool PathsHandler::doLeftDrag()
 {
-    FM::WPtr fm = MS::selectedModelScopedWrite();
     const bool rv = _execLeftDrag();
     MS::updateRender(); // Ensure render update happens across viewers
     return rv;
 }   // end doLeftDrag
+
+
+void PathsHandler::_snapHandle( const FV *fv, Vec3f &v) const
+{
+    const FMV *fmv = fv->viewer();
+    const float sqRange = powf( std::min( 3.0f, fmv->snapRange()), 2);  // Snap range max is 3.0mm
+    const Vec3f inv = v;
+    const FM *fm = fv->data();
+    // Check if can snap to endpoint of another path. If don't snap and landmarks are visible, snap to one.
+    // Snap range scales with view distance for an apparently fixed distance no matter where camera is.
+    if ( _handle)
+        v = snapToPathHandle( _handle->pathId(), fm->currentPaths(), v, sqRange);
+
+    // If didn't snap to another path (inv == v), see if snap to a landmark
+    const Vis::BaseVisualisation *lmkVis = &MS::handler<LandmarksHandler>()->visualisation();
+    assert( lmkVis);
+    if ( lmkVis->isVisible(fv) && inv == v)
+    {
+        v = fm->currentLandmarks().snapTo( v, sqRange);
+        // Use unsnapped if the snapped position is the same as the other handles of the current path.
+        if ( _handle)
+        {   
+            const int hid = _handle->handleId();
+            const Path &path = fm->currentPaths().path( _handle->pathId());
+            if ( v == path.handle( (hid+1)%3) || v == path.handle( (hid+2)%3))
+                v = inv;
+        }   // end if
+    }   // end if
+}   // end _snapHandle
 
 
 bool PathsHandler::_execLeftDrag()
@@ -194,57 +245,34 @@ bool PathsHandler::_execLeftDrag()
         return false;
 
     const int hid = _handle->handleId();
+    const int pid = _handle->pathId();
     FV *fv = MS::selectedView();
     const FMV *fmv = fv->viewer();
-    const QPoint mc = fmv->mouseCoords();   // NB current cursor coords according to Qt - NOT the interaction coords from VTK!
     FM *fm = fv->data();
-    Path& path = fm->currentPaths().path( _handle->pathId());
+    Path& path = fm->currentPaths().path( pid);
 
-    if ( hid != 2)
+    Vec3f v; // Get the new handle position on the face
+    if ( !fv->projectToSurface( fmv->mouseCoords(), v))
+        v = path.handle( hid);
+
+    _snapHandle( fv, v);        // Snap to other path or landmark (if visible)
+
+    if ( hid != 2)  // Endpoints changed so redraw path using current camera vector
     {
-        // Calculate the orientation vector for the path
-        const r3d::CameraParams cp = fmv->camera();
-        path.setOrientation( cp.pos() - cp.focus());    // Will be normalized
-
-        Vec3f v; // Get the new endpoint handle position on the face
-        if ( !fv->projectToSurface( mc, v))
-            v = path.handle( hid);
-        // Check if can snap to endpoint of another path. If don't snap and landmarks are visible, snap to one.
-        // Snap range scales with view distance for an apparently fixed distance no matter where camera is.
-        const float sqRange = powf( fmv->snapRange(), 2);
-        const Vec3f inv = v;
-        v = snapToPathHandle( _handle->pathId(), fm->currentPaths(), v, sqRange);
-        const Vis::BaseVisualisation *lmkVis = &MS::handler<LandmarksHandler>()->visualisation();
-        // If didn't snap to another path (inv == v), see if snap to a landmark
-        if ( lmkVis->isVisible(fv) && inv == v)
-        {
-            v = fm->currentLandmarks().snapTo( v, sqRange);
-            // If the snapped position is the same as the other handle, ignore
-            // otherwise the two handles will be perfectly coincident.
-            if ( v == path.handle( (hid+1)%2))
-                v = inv;
-        }   // end if
         path.setHandle( hid, v);    // Handle position (transformed)
-
-        path.update( fm);
+        const r3d::CameraParams cp = fmv->camera();
+        path.setOrientation( cp.pos() - cp.focus());    // Orientation will be normalized
+        path.updatePath( fm);         // Update the surface path
     }   // end if
     else
     {
-        const QPoint h0 = fmv->project(path.handle0());
-        const QPoint h1 = fmv->project(path.handle1());
-
-        const Vec2f pathVec( h1.x() - h0.x(), h1.y() - h0.y());
-        const Vec2f dvec( mc.x() - h0.x(), mc.y() - h0.y());
-        const float pathMag = pathVec.norm();
-        float dprop = 0.0f;
-        if ( pathMag > 0.0f)
-            dprop = dvec.dot(pathVec)/(pathMag*pathMag);
-        path.setDepthHandle( dprop);    // Restricts to be in [0,1]
+        //std::cerr << "Depth handle " << v << std::endl;
+        path.setDepthHandle( v);
     }   // end else
 
-    path.updateMeasures();
+    path.updateMeasures( fm->inverseTransformMatrix().block<3,3>(0,0));
     fm->setMetaSaved( false);
-    _vis.updatePath( *fm, _handle->pathId());
+    _vis.updatePath( *fm, pid);
     _showPathInfo();
 
     return true;
@@ -265,24 +293,25 @@ void PathsHandler::_showPathInfo()
 
 
 namespace {
+
 QString makeHandleCaption( const Path &path, int hid)
 {
     QString handleCaption;
     if ( !path.name().empty())
         handleCaption = QString::fromStdString( path.name()) + "\n";
-    float val;
-    QString valType;
-    if ( hid <= 1)
+    const QString units = FaceTools::FaceModel::LENGTH_UNITS;
+
+    if ( hid <= 1)  // Caption endpoints
     {
-        val = path.euclideanDistance();
-        valType = "(Direct)";
+        handleCaption += QString(" %1 %2 (Direct)\n %3 %4 (Depth)")
+            .arg( path.euclideanDistance(), 6, 'f', 2).arg(units).arg( path.depth(), 6, 'f', 2).arg(units);
     }   // end if
     else
     {
-        val = path.depth();
-        valType = "(Depth)";
+        handleCaption += QString::fromWCharArray(L" %1 \u00b0\n %2 %3 (Depth)")
+            .arg( path.angle(), 6, 'f', 2).arg( path.depth(), 6, 'f', 2).arg(units);
     }   // end else
-    handleCaption += QString("%1 %2\n%3").arg( val, 4, 'f', 2).arg(FaceTools::FaceModel::LENGTH_UNITS).arg(valType);
+
     return handleCaption;
 }   // end makeHandleCaption
 }   // end namespace
@@ -329,3 +358,4 @@ int PathsHandler::leavePath()
     }   // end if
     return pid;
 }   // end leavePath
+

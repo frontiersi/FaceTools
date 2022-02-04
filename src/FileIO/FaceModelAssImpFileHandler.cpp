@@ -36,7 +36,7 @@ FM* FaceModelAssImpFileHandler::read( const QString& qfname)
 {
     _err = "";
     FM* fm = nullptr;
-    const std::string fname = qfname.toLocal8Bit().toStdString();
+    const std::string fname = qfname.toStdString();
     r3d::Mesh::Ptr model = _assimp->load(fname);
     if ( model)
     {

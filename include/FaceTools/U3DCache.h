@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,11 +53,7 @@ private:
     static QTemporaryDir _tmpdir;
     static QReadWriteLock _rwLock;
     static std::unordered_map<const FM*, QString> _cache;
-
     static bool _exportU3D( const r3d::Mesh&, const QString&, const rimg::Colour &ems);
-    U3DCache(){}
-    U3DCache( const U3DCache&) = delete;
-    void operator=( const U3DCache&) = delete;
 };  // end class
 
 }   // end namespace

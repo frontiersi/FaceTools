@@ -24,8 +24,8 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <cassert>
-using FaceTools::Action::FaceAction;
 using FaceTools::Action::ActionExportMetaData;
+using FaceTools::Action::FaceAction;
 using FaceTools::Action::Event;
 using FaceTools::FM;
 using FMM = FaceTools::FileIO::FaceModelManager;
@@ -85,6 +85,8 @@ QString ActionExportMetaData::_getFilePath( const FM &fm)
     QString fname;
     while ( fname.isEmpty())
     {
+        const QString cpath = QFileInfo(fp).absolutePath();
+        _fdialog->setDirectory( cpath);
         _fdialog->selectFile( fp);
         QStringList fnames;
         if ( _fdialog->exec())
@@ -125,10 +127,10 @@ bool ActionExportMetaData::doBeforeAction( Event)
     if ( fp.isEmpty())
         return false;
 
-    _ofs.open( fp.toLocal8Bit().toStdString());
+    _ofs.open( fp.toStdString());
     if ( !_ofs.is_open())
     {
-        const QString msg = tr( ("Cannot open \'" + fp.toLocal8Bit().toStdString() + "' for writing!").c_str());
+        const QString msg = tr( ("Cannot open \'" + fp.toStdString() + "' for writing!").c_str());
         QWidget* prnt = static_cast<QWidget*>(parent());
         QMB::critical( prnt, tr("Export Write Error!"), QString("<p align='center'>%1</p>").arg(msg));
         return false;

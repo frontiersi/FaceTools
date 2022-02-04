@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,8 +28,9 @@ using FaceTools::Path;
 
 
 PathView::PathView( int id)
-    : _viewer(nullptr), _isVisible(false), _hasSurface(false), _id(id), _h0(nullptr), _h1(nullptr),
-    _sprop(nullptr), _hprop(nullptr), _jprop(nullptr), _p0prop(nullptr), _p1prop(nullptr), _dprop(nullptr)
+    : _viewer(nullptr), _isVisible(false), _hasSurface(false),
+    _id(id), _h0(nullptr), _h1(nullptr), _g(nullptr),
+    _sprop(nullptr), _hprop(nullptr), _dprop(nullptr)
 {
     _h0 = new Handle( 0, _id, Vec3f::Zero(), 1.4);
     _h1 = new Handle( 1, _id, Vec3f::Zero(), 1.4);
@@ -90,9 +91,6 @@ void PathView::_removeLineProps()
 {
     _viewer->remove(_sprop);
     _viewer->remove(_hprop);
-    _viewer->remove(_jprop);
-    _viewer->remove(_p0prop);
-    _viewer->remove(_p1prop);
     _viewer->remove(_dprop);
     _aview.setVisible( false, _viewer);
 }   // end _removeLineProps
@@ -102,9 +100,6 @@ void PathView::_addLineProps()
 {
     _viewer->add(_sprop);
     _viewer->add(_hprop);
-    _viewer->add(_jprop);
-    _viewer->add(_p0prop);
-    _viewer->add(_p1prop);
     _viewer->add(_dprop);
     _aview.setVisible( _hasSurface, _viewer);
 }   // end _addLineProps
@@ -133,11 +128,12 @@ void PathView::update( const Path &path)
     const Vec3f &h0 = path.handle0();
     const Vec3f &h1 = path.handle1();
     const Vec3f &hd = path.depthHandle();
-    const Vec3f &dp = path.depthPoint();
+    const Vec3f &dp = path.depthSurfPoint();
+    const Vec3f &dl = path.depthLinePoint();
 
     _h0->_sv->setCentre( h0);
     _h1->_sv->setCentre( h1);
-    _g->_sv->setCentre( dp);
+    _g->_sv->setCentre( hd);
 
     if ( _sprop && _viewer)
         _removeLineProps();
@@ -149,38 +145,20 @@ void PathView::update( const Path &path)
     const std::list<Vec3f> hends = { h0, h1};
     _hprop = r3dvis::VtkActorCreator::generateLineActor( hends, false);
 
-    // Calculate positions of pseudo handles j0 and j1
-    const Vec3f v = dp - hd;    // Might be zero vector
-    const Vec3f j0 = h0 + v;
-    const Vec3f j1 = h1 + v;
-
-    // Create the direct line between the pseudo handles
-    const std::list<Vec3f> jends = { j0, j1};
-    _jprop = r3dvis::VtkActorCreator::generateLineActor( jends, false);
-
-    // Create the caliper pincer lines
-    const std::list<Vec3f> p0ends = { j0, h0};
-    _p0prop = r3dvis::VtkActorCreator::generateLineActor( p0ends, false);
-    const std::list<Vec3f> p1ends = { j1, h1};
-    _p1prop = r3dvis::VtkActorCreator::generateLineActor( p1ends, false);
-
     // Create the depth (plumb) line
-    const std::list<Vec3f> dends = { hd, dp};
+    const std::list<Vec3f> dends = { dp, dl};
     _dprop = r3dvis::VtkActorCreator::generateLineActor( dends, false);
 
     std::vector<double> scols = {0.0, 0.2, 0.8};
     std::vector<double> hcols = {0.8, 0.2, 0.0};
     std::vector<double> dcols = {0.5, 0.5, 0.5};
-    Vec3f h0g = h0 - dp;
-    Vec3f h1g = h1 - dp;
-    const bool zeroVecs = h0g.isZero() || h1g.isZero();
+    Vec3f h0d = h0 - hd;
+    Vec3f h1d = h1 - hd;
+    const bool zeroVecs = h0d.isZero() || h1d.isZero();
     if ( zeroVecs)
         scols = {0.8, 0.2, 0.0};
     setLineActorProperties( _sprop, scols, 5.0);
     setLineActorProperties( _hprop, hcols, 3.0);
-    setLineActorProperties( _jprop, hcols, 3.0);
-    setLineActorProperties( _p0prop,hcols, 4.0);
-    setLineActorProperties( _p1prop, hcols, 4.0);
     setLineActorProperties( _dprop, dcols, 3.0);
 
     // Update the angle view
@@ -194,12 +172,11 @@ void PathView::update( const Path &path)
     }   // end if
     else
     {
-        h0g.normalize();
-        h1g.normalize();
-        Vec3f nrm = h0g.cross(h1g);
+        h0d.normalize();
+        h1d.normalize();
+        Vec3f nrm = h0d.cross(h1d);
         nrm.normalize();
-        const float degs = acosf( h0g.dot(h1g)) * 180.0f/EIGEN_PI;
-        _aview.update( h0, h1, dp, nrm, degs);
+        _aview.update( h0, h1, hd, nrm, path.angle());  // hd was dp
         _aview.setColour( 0.0, 0.7, 0.2, 0.99);
         _h0->_sv->setPickable(true);
         _h1->_sv->setPickable(true);
@@ -239,9 +216,6 @@ void PathView::pokeTransform( const vtkMatrix4x4* vm)
     vtkMatrix4x4* cvm = const_cast<vtkMatrix4x4*>(vm);
     _sprop->PokeMatrix(cvm);
     _hprop->PokeMatrix(cvm);
-    _jprop->PokeMatrix(cvm);
-    _p0prop->PokeMatrix(cvm);
-    _p1prop->PokeMatrix(cvm);
     _dprop->PokeMatrix(cvm);
     _h0->_sv->pokeTransform(vm);
     _h1->_sv->pokeTransform(vm);

@@ -75,7 +75,7 @@ void LandmarkSetView::set( int lm, FaceSide lat, const Vec3f& pos)
     {
         SphereView *sv = new SphereView( pos, _lmrad, true/*pickable*/, true/*fixed scale*/);
         sv->setColour( CURR_COL[0], CURR_COL[1], CURR_COL[2], ALPHA);
-        sv->setResolution(21);
+        sv->setResolution(13);
         QString lmstr = LMAN::makeLandmarkString( lm, lat);
         // Put Inferius/Superius on line beneath to make it easier to see
         lmstr.replace(" Inferius", "\nInferius");

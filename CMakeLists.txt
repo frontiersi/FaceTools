@@ -58,6 +58,8 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/ActionChangeColourMappingRange.h"
     "${INCLUDE_ACTION_DIR}/ActionCloseAll.h"
     "${INCLUDE_ACTION_DIR}/ActionClose.h"
+    "${INCLUDE_ACTION_DIR}/ActionCopyAllPaths.h"
+    "${INCLUDE_ACTION_DIR}/ActionCopyPath.h"
     "${INCLUDE_ACTION_DIR}/ActionCopyView.h"
     "${INCLUDE_ACTION_DIR}/ActionDeleteAllPaths.h"
     "${INCLUDE_ACTION_DIR}/ActionDeletePath.h"
@@ -176,11 +178,11 @@ set( INCLUDE_FILES
     "${INCLUDE_DETECT_DIR}/FeaturesDetector.h"
 
     "${INCLUDE_FILEIO_DIR}/FaceModelAssImpFileHandlerFactory.h"
+    "${INCLUDE_FILEIO_DIR}/FaceModelDatabase.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelFileData.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelFileHandlerException.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelFileHandlerMap.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelManager.h"
-    "${INCLUDE_FILEIO_DIR}/LoadFaceModelsHelper.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelFileHandler.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelAssImpFileHandler.h"
     "${INCLUDE_FILEIO_DIR}/FaceModel3DSFileHandler.h"
@@ -189,6 +191,7 @@ set( INCLUDE_FILES
     "${INCLUDE_FILEIO_DIR}/FaceModelSTLFileHandler.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelU3DFileHandler.h"
     "${INCLUDE_FILEIO_DIR}/FaceModelXMLFileHandler.h"
+    "${INCLUDE_FILEIO_DIR}/LoadFaceModelsHelper.h"
 
     "${INCLUDE_INT_DIR}/MouseHandler.h"
     "${INCLUDE_INT_DIR}/ViewerNotifier.h"
@@ -282,219 +285,222 @@ set( INCLUDE_FILES
     )
 
 set( SRC_FILES
-    ${SRC_DIR}/${PROJECT_NAME}
+    "${SRC_DIR}/${PROJECT_NAME}.cpp"
 
-    ${SRC_ACTION_DIR}/ActionAddPath
-    ${SRC_ACTION_DIR}/ActionAlignModel
-    ${SRC_ACTION_DIR}/ActionBackfaceCulling
-    ${SRC_ACTION_DIR}/ActionCentreModel
-    ${SRC_ACTION_DIR}/ActionChangeColourMappingRange
-    ${SRC_ACTION_DIR}/ActionCloseAll
-    ${SRC_ACTION_DIR}/ActionClose
-    ${SRC_ACTION_DIR}/ActionCopyView
-    ${SRC_ACTION_DIR}/ActionDeleteAllPaths
-    ${SRC_ACTION_DIR}/ActionDeletePath
-    ${SRC_ACTION_DIR}/ActionDetectFace
-    ${SRC_ACTION_DIR}/ActionDiscardManifold
-    ${SRC_ACTION_DIR}/ActionEditLandmarks
-    ${SRC_ACTION_DIR}/ActionEditPaths
-    ${SRC_ACTION_DIR}/ActionExportMask
-    ${SRC_ACTION_DIR}/ActionExportMetaData
-    ${SRC_ACTION_DIR}/ActionExportPDF
-    ${SRC_ACTION_DIR}/ActionExtractFace
-    ${SRC_ACTION_DIR}/ActionFillHoles
-    ${SRC_ACTION_DIR}/ActionFixNormals
-    ${SRC_ACTION_DIR}/ActionGetFaceManifold
-    ${SRC_ACTION_DIR}/ActionImportMetaData
-    ${SRC_ACTION_DIR}/ActionInvertNormals
-    ${SRC_ACTION_DIR}/ActionLoad
-    ${SRC_ACTION_DIR}/ActionMakeHalfFace
-    ${SRC_ACTION_DIR}/ActionMapCurvature
-    ${SRC_ACTION_DIR}/ActionMapDelta
-    ${SRC_ACTION_DIR}/ActionMapSymmetry
-    ${SRC_ACTION_DIR}/ActionMarquee
-    ${SRC_ACTION_DIR}/ActionMirrorLandmarks
-    ${SRC_ACTION_DIR}/ActionMoveView
-    ${SRC_ACTION_DIR}/ActionOrientCamera
-    ${SRC_ACTION_DIR}/ActionRadialSelect
-    ${SRC_ACTION_DIR}/ActionRedo
-    ${SRC_ACTION_DIR}/ActionReflectModel
-    #${SRC_ACTION_DIR}/ActionRemesh
-    ${SRC_ACTION_DIR}/ActionRemoveManifolds
-    ${SRC_ACTION_DIR}/ActionRenamePath
-    ${SRC_ACTION_DIR}/ActionResetDetection
-    ${SRC_ACTION_DIR}/ActionResizeModel
-    ${SRC_ACTION_DIR}/ActionRestoreLandmarks
-    ${SRC_ACTION_DIR}/ActionRestoreSingleLandmark
-    ${SRC_ACTION_DIR}/ActionRotateCamera
-    ${SRC_ACTION_DIR}/ActionRotateModel
-    ${SRC_ACTION_DIR}/ActionSaveAs
-    ${SRC_ACTION_DIR}/ActionSave
-    ${SRC_ACTION_DIR}/ActionSaveScreenshot
-    ${SRC_ACTION_DIR}/ActionSelect
-    ${SRC_ACTION_DIR}/ActionSetFocus
-    ${SRC_ACTION_DIR}/ActionSetMaxScalarColour
-    ${SRC_ACTION_DIR}/ActionSetMinScalarColour
-    ${SRC_ACTION_DIR}/ActionSetNumScalarColours
-    ${SRC_ACTION_DIR}/ActionSetOpacity
-    ${SRC_ACTION_DIR}/ActionSetParallelProjection
-    ${SRC_ACTION_DIR}/ActionSetSurfaceColour
-    ${SRC_ACTION_DIR}/ActionShowMeshInfo
-    ${SRC_ACTION_DIR}/ActionShowMetrics
-    ${SRC_ACTION_DIR}/ActionShowPhenotypes
-    ${SRC_ACTION_DIR}/ActionShowScanInfo
-    ${SRC_ACTION_DIR}/ActionSlice
-    ${SRC_ACTION_DIR}/ActionSmooth
-    ${SRC_ACTION_DIR}/ActionSynchroniseCameras
-    ${SRC_ACTION_DIR}/ActionToggleAxes
-    ${SRC_ACTION_DIR}/ActionToggleCameraActorInteraction
-    ${SRC_ACTION_DIR}/ActionToggleMask
-    ${SRC_ACTION_DIR}/ActionToggleLegend
-    ${SRC_ACTION_DIR}/ActionToggleStereo
-    ${SRC_ACTION_DIR}/ActionUndo
-    ${SRC_ACTION_DIR}/ActionUpdateMeasurements
-    ${SRC_ACTION_DIR}/ActionUpdateStats
-    ${SRC_ACTION_DIR}/ActionUpdateThumbnail
-    ${SRC_ACTION_DIR}/ActionUpdateU3D
-    ${SRC_ACTION_DIR}/ActionVisualise
-    ${SRC_ACTION_DIR}/CameraWorker
-    ${SRC_ACTION_DIR}/FaceAction
-    ${SRC_ACTION_DIR}/FaceActionManager
-    ${SRC_ACTION_DIR}/FaceActionWorker
-    ${SRC_ACTION_DIR}/FaceModelState
-    ${SRC_ACTION_DIR}/UndoState
-    ${SRC_ACTION_DIR}/UndoStates
+    "${SRC_ACTION_DIR}/ActionAddPath.cpp"
+    "${SRC_ACTION_DIR}/ActionAlignModel.cpp"
+    "${SRC_ACTION_DIR}/ActionBackfaceCulling.cpp"
+    "${SRC_ACTION_DIR}/ActionCentreModel.cpp"
+    "${SRC_ACTION_DIR}/ActionChangeColourMappingRange.cpp"
+    "${SRC_ACTION_DIR}/ActionCloseAll.cpp"
+    "${SRC_ACTION_DIR}/ActionClose.cpp"
+    "${SRC_ACTION_DIR}/ActionCopyAllPaths.cpp"
+    "${SRC_ACTION_DIR}/ActionCopyPath.cpp"
+    "${SRC_ACTION_DIR}/ActionCopyView.cpp"
+    "${SRC_ACTION_DIR}/ActionDeleteAllPaths.cpp"
+    "${SRC_ACTION_DIR}/ActionDeletePath.cpp"
+    "${SRC_ACTION_DIR}/ActionDetectFace.cpp"
+    "${SRC_ACTION_DIR}/ActionDiscardManifold.cpp"
+    "${SRC_ACTION_DIR}/ActionEditLandmarks.cpp"
+    "${SRC_ACTION_DIR}/ActionEditPaths.cpp"
+    "${SRC_ACTION_DIR}/ActionExportMask.cpp"
+    "${SRC_ACTION_DIR}/ActionExportMetaData.cpp"
+    "${SRC_ACTION_DIR}/ActionExportPDF.cpp"
+    "${SRC_ACTION_DIR}/ActionExtractFace.cpp"
+    "${SRC_ACTION_DIR}/ActionFillHoles.cpp"
+    "${SRC_ACTION_DIR}/ActionFixNormals.cpp"
+    "${SRC_ACTION_DIR}/ActionGetFaceManifold.cpp"
+    "${SRC_ACTION_DIR}/ActionImportMetaData.cpp"
+    "${SRC_ACTION_DIR}/ActionInvertNormals.cpp"
+    "${SRC_ACTION_DIR}/ActionLoad.cpp"
+    "${SRC_ACTION_DIR}/ActionMakeHalfFace.cpp"
+    "${SRC_ACTION_DIR}/ActionMapCurvature.cpp"
+    "${SRC_ACTION_DIR}/ActionMapDelta.cpp"
+    "${SRC_ACTION_DIR}/ActionMapSymmetry.cpp"
+    "${SRC_ACTION_DIR}/ActionMarquee.cpp"
+    "${SRC_ACTION_DIR}/ActionMirrorLandmarks.cpp"
+    "${SRC_ACTION_DIR}/ActionMoveView.cpp"
+    "${SRC_ACTION_DIR}/ActionOrientCamera.cpp"
+    "${SRC_ACTION_DIR}/ActionRadialSelect.cpp"
+    "${SRC_ACTION_DIR}/ActionRedo.cpp"
+    "${SRC_ACTION_DIR}/ActionReflectModel.cpp"
+    #"${SRC_ACTION_DIR}/ActionRemesh.cpp"
+    "${SRC_ACTION_DIR}/ActionRemoveManifolds.cpp"
+    "${SRC_ACTION_DIR}/ActionRenamePath.cpp"
+    "${SRC_ACTION_DIR}/ActionResetDetection.cpp"
+    "${SRC_ACTION_DIR}/ActionResizeModel.cpp"
+    "${SRC_ACTION_DIR}/ActionRestoreLandmarks.cpp"
+    "${SRC_ACTION_DIR}/ActionRestoreSingleLandmark.cpp"
+    "${SRC_ACTION_DIR}/ActionRotateCamera.cpp"
+    "${SRC_ACTION_DIR}/ActionRotateModel.cpp"
+    "${SRC_ACTION_DIR}/ActionSaveAs.cpp"
+    "${SRC_ACTION_DIR}/ActionSave.cpp"
+    "${SRC_ACTION_DIR}/ActionSaveScreenshot.cpp"
+    "${SRC_ACTION_DIR}/ActionSelect.cpp"
+    "${SRC_ACTION_DIR}/ActionSetFocus.cpp"
+    "${SRC_ACTION_DIR}/ActionSetMaxScalarColour.cpp"
+    "${SRC_ACTION_DIR}/ActionSetMinScalarColour.cpp"
+    "${SRC_ACTION_DIR}/ActionSetNumScalarColours.cpp"
+    "${SRC_ACTION_DIR}/ActionSetOpacity.cpp"
+    "${SRC_ACTION_DIR}/ActionSetParallelProjection.cpp"
+    "${SRC_ACTION_DIR}/ActionSetSurfaceColour.cpp"
+    "${SRC_ACTION_DIR}/ActionShowMeshInfo.cpp"
+    "${SRC_ACTION_DIR}/ActionShowMetrics.cpp"
+    "${SRC_ACTION_DIR}/ActionShowPhenotypes.cpp"
+    "${SRC_ACTION_DIR}/ActionShowScanInfo.cpp"
+    "${SRC_ACTION_DIR}/ActionSlice.cpp"
+    "${SRC_ACTION_DIR}/ActionSmooth.cpp"
+    "${SRC_ACTION_DIR}/ActionSynchroniseCameras.cpp"
+    "${SRC_ACTION_DIR}/ActionToggleAxes.cpp"
+    "${SRC_ACTION_DIR}/ActionToggleCameraActorInteraction.cpp"
+    "${SRC_ACTION_DIR}/ActionToggleMask.cpp"
+    "${SRC_ACTION_DIR}/ActionToggleLegend.cpp"
+    "${SRC_ACTION_DIR}/ActionToggleStereo.cpp"
+    "${SRC_ACTION_DIR}/ActionUndo.cpp"
+    "${SRC_ACTION_DIR}/ActionUpdateMeasurements.cpp"
+    "${SRC_ACTION_DIR}/ActionUpdateStats.cpp"
+    "${SRC_ACTION_DIR}/ActionUpdateThumbnail.cpp"
+    "${SRC_ACTION_DIR}/ActionUpdateU3D.cpp"
+    "${SRC_ACTION_DIR}/ActionVisualise.cpp"
+    "${SRC_ACTION_DIR}/CameraWorker.cpp"
+    "${SRC_ACTION_DIR}/FaceAction.cpp"
+    "${SRC_ACTION_DIR}/FaceActionManager.cpp"
+    "${SRC_ACTION_DIR}/FaceActionWorker.cpp"
+    "${SRC_ACTION_DIR}/FaceModelState.cpp"
+    "${SRC_ACTION_DIR}/UndoState.cpp"
+    "${SRC_ACTION_DIR}/UndoStates.cpp"
 
-    ${SRC_DETECT_DIR}/FaceAlignmentFinder
-    ${SRC_DETECT_DIR}/FaceFinder2D
-    ${SRC_DETECT_DIR}/FeaturesDetector
+    "${SRC_DETECT_DIR}/FaceAlignmentFinder.cpp"
+    "${SRC_DETECT_DIR}/FaceFinder2D.cpp"
+    "${SRC_DETECT_DIR}/FeaturesDetector.cpp"
 
-    ${SRC_FILEIO_DIR}/AsyncModelLoader
-    ${SRC_FILEIO_DIR}/FaceModelAssImpFileHandler
-    ${SRC_FILEIO_DIR}/FaceModelAssImpFileHandlerFactory
-    ${SRC_FILEIO_DIR}/FaceModelFileData
-    ${SRC_FILEIO_DIR}/FaceModelFileHandler
-    ${SRC_FILEIO_DIR}/FaceModelFileHandlerException
-    ${SRC_FILEIO_DIR}/FaceModelFileHandlerMap
-    ${SRC_FILEIO_DIR}/FaceModelManager
-    ${SRC_FILEIO_DIR}/FaceModel3DSFileHandler
-    ${SRC_FILEIO_DIR}/FaceModelOBJFileHandler
-    ${SRC_FILEIO_DIR}/FaceModelPLYFileHandler
-    ${SRC_FILEIO_DIR}/FaceModelSTLFileHandler
-    ${SRC_FILEIO_DIR}/FaceModelXMLFileHandler
-    ${SRC_FILEIO_DIR}/FaceModelU3DFileHandler
-    ${SRC_FILEIO_DIR}/LoadFaceModelsHelper
+    "${SRC_FILEIO_DIR}/AsyncModelLoader.cpp"
+    "${SRC_FILEIO_DIR}/FaceModelAssImpFileHandler.cpp"
+    "${SRC_FILEIO_DIR}/FaceModelAssImpFileHandlerFactory.cpp"
+    "${SRC_FILEIO_DIR}/FaceModelDatabase.cpp"
+    "${SRC_FILEIO_DIR}/FaceModelFileData.cpp"
+    "${SRC_FILEIO_DIR}/FaceModelFileHandler.cpp"
+    "${SRC_FILEIO_DIR}/FaceModelFileHandlerException.cpp"
+    "${SRC_FILEIO_DIR}/FaceModelFileHandlerMap.cpp"
+    "${SRC_FILEIO_DIR}/FaceModelManager.cpp"
+    "${SRC_FILEIO_DIR}/FaceModel3DSFileHandler.cpp"
+    "${SRC_FILEIO_DIR}/FaceModelOBJFileHandler.cpp"
+    "${SRC_FILEIO_DIR}/FaceModelPLYFileHandler.cpp"
+    "${SRC_FILEIO_DIR}/FaceModelSTLFileHandler.cpp"
+    "${SRC_FILEIO_DIR}/FaceModelXMLFileHandler.cpp"
+    "${SRC_FILEIO_DIR}/FaceModelU3DFileHandler.cpp"
+    "${SRC_FILEIO_DIR}/LoadFaceModelsHelper.cpp"
 
-    ${SRC_INT_DIR}/ActionClickHandler
-    ${SRC_INT_DIR}/ContextMenuHandler
-    ${SRC_INT_DIR}/GizmoHandler
-    ${SRC_INT_DIR}/LandmarksHandler
-    ${SRC_INT_DIR}/MouseHandler
-    ${SRC_INT_DIR}/MovementNotifier
-    ${SRC_INT_DIR}/PathsHandler
-    ${SRC_INT_DIR}/RadialSelectHandler
-    ${SRC_INT_DIR}/SelectNotifier
-    ${SRC_INT_DIR}/SurfaceValueHandler
-    ${SRC_INT_DIR}/ViewerNotifier
+    "${SRC_INT_DIR}/ActionClickHandler.cpp"
+    "${SRC_INT_DIR}/ContextMenuHandler.cpp"
+    "${SRC_INT_DIR}/GizmoHandler.cpp"
+    "${SRC_INT_DIR}/LandmarksHandler.cpp"
+    "${SRC_INT_DIR}/MouseHandler.cpp"
+    "${SRC_INT_DIR}/MovementNotifier.cpp"
+    "${SRC_INT_DIR}/PathsHandler.cpp"
+    "${SRC_INT_DIR}/RadialSelectHandler.cpp"
+    "${SRC_INT_DIR}/SelectNotifier.cpp"
+    "${SRC_INT_DIR}/SurfaceValueHandler.cpp"
+    "${SRC_INT_DIR}/ViewerNotifier.cpp"
 
-    ${SRC_LNDMRK_DIR}/Landmark
-    ${SRC_LNDMRK_DIR}/LandmarkSet
-    ${SRC_LNDMRK_DIR}/LandmarksManager
+    "${SRC_LNDMRK_DIR}/Landmark.cpp"
+    "${SRC_LNDMRK_DIR}/LandmarkSet.cpp"
+    "${SRC_LNDMRK_DIR}/LandmarksManager.cpp"
 
-    ${SRC_METRIC_DIR}/AngleMetricType
-    ${SRC_METRIC_DIR}/AsymmetryMetricType
-    ${SRC_METRIC_DIR}/DepthMetricType
-    ${SRC_METRIC_DIR}/DistanceMetricType
-    ${SRC_METRIC_DIR}/Chart
-    ${SRC_METRIC_DIR}/Gene
-    ${SRC_METRIC_DIR}/GeneManager
-    ${SRC_METRIC_DIR}/GrowthData
-    ${SRC_METRIC_DIR}/GrowthDataRanker
-    ${SRC_METRIC_DIR}/MetricTypeRegistry
-    ${SRC_METRIC_DIR}/MetricManager
-    ${SRC_METRIC_DIR}/Metric
-    ${SRC_METRIC_DIR}/MetricSet
-    ${SRC_METRIC_DIR}/MetricType
-    ${SRC_METRIC_DIR}/MetricValue
-    ${SRC_METRIC_DIR}/Phenotype
-    ${SRC_METRIC_DIR}/PhenotypeManager
-    ${SRC_METRIC_DIR}/RegionMetricType
-    ${SRC_METRIC_DIR}/StatsManager
-    ${SRC_METRIC_DIR}/Syndrome
-    ${SRC_METRIC_DIR}/SyndromeManager
+    "${SRC_METRIC_DIR}/AngleMetricType.cpp"
+    "${SRC_METRIC_DIR}/AsymmetryMetricType.cpp"
+    "${SRC_METRIC_DIR}/DepthMetricType.cpp"
+    "${SRC_METRIC_DIR}/DistanceMetricType.cpp"
+    "${SRC_METRIC_DIR}/Chart.cpp"
+    "${SRC_METRIC_DIR}/Gene.cpp"
+    "${SRC_METRIC_DIR}/GeneManager.cpp"
+    "${SRC_METRIC_DIR}/GrowthData.cpp"
+    "${SRC_METRIC_DIR}/GrowthDataRanker.cpp"
+    "${SRC_METRIC_DIR}/MetricTypeRegistry.cpp"
+    "${SRC_METRIC_DIR}/MetricManager.cpp"
+    "${SRC_METRIC_DIR}/Metric.cpp"
+    "${SRC_METRIC_DIR}/MetricSet.cpp"
+    "${SRC_METRIC_DIR}/MetricType.cpp"
+    "${SRC_METRIC_DIR}/MetricValue.cpp"
+    "${SRC_METRIC_DIR}/Phenotype.cpp"
+    "${SRC_METRIC_DIR}/PhenotypeManager.cpp"
+    "${SRC_METRIC_DIR}/RegionMetricType.cpp"
+    "${SRC_METRIC_DIR}/StatsManager.cpp"
+    "${SRC_METRIC_DIR}/Syndrome.cpp"
+    "${SRC_METRIC_DIR}/SyndromeManager.cpp"
 
-    ${SRC_REPORT_DIR}/Report
-    ${SRC_REPORT_DIR}/ReportManager
+    "${SRC_REPORT_DIR}/Report.cpp"
+    "${SRC_REPORT_DIR}/ReportManager.cpp"
 
-    ${SRC_VIS_DIR}/AngleView
-    ${SRC_VIS_DIR}/AngleVisualiser
-    ${SRC_VIS_DIR}/AsymmetryView
-    ${SRC_VIS_DIR}/AsymmetryVisualiser
-    ${SRC_VIS_DIR}/BoundingView
-    ${SRC_VIS_DIR}/BoundingVisualisation
-    ${SRC_VIS_DIR}/ColourVisualisation
-    ${SRC_VIS_DIR}/DepthVisualiser
-    ${SRC_VIS_DIR}/DistanceVisualiser
-    ${SRC_VIS_DIR}/FaceView
-    ${SRC_VIS_DIR}/LabelsView
-    ${SRC_VIS_DIR}/LandmarkLabelsView
-    ${SRC_VIS_DIR}/LandmarkSetView
-    ${SRC_VIS_DIR}/LandmarksVisualisation
-    ${SRC_VIS_DIR}/LineView
-    ${SRC_VIS_DIR}/LineVisualiser
-    ${SRC_VIS_DIR}/LoopView
-    ${SRC_VIS_DIR}/LoopVisualiser
-    ${SRC_VIS_DIR}/MaskView
-    ${SRC_VIS_DIR}/MaskVisualisation
-    ${SRC_VIS_DIR}/MetricVisualiser
-    ${SRC_VIS_DIR}/OutlinesVisualisation
-    ${SRC_VIS_DIR}/PathView
-    ${SRC_VIS_DIR}/PathSetView
-    ${SRC_VIS_DIR}/PathSetVisualisation
-    ${SRC_VIS_DIR}/PlaneView
-    ${SRC_VIS_DIR}/PlaneVisualisation
-    ${SRC_VIS_DIR}/PointsView
-    ${SRC_VIS_DIR}/PolyLabelsView
-    ${SRC_VIS_DIR}/RadialSelectView
-    ${SRC_VIS_DIR}/RadialSelectVisualisation
-    ${SRC_VIS_DIR}/RegionVisualiser
-    ${SRC_VIS_DIR}/SimpleView
-    ${SRC_VIS_DIR}/SphereView
-    ${SRC_VIS_DIR}/VertexLabelsView
+    "${SRC_VIS_DIR}/AngleView.cpp"
+    "${SRC_VIS_DIR}/AngleVisualiser.cpp"
+    "${SRC_VIS_DIR}/AsymmetryView.cpp"
+    "${SRC_VIS_DIR}/AsymmetryVisualiser.cpp"
+    "${SRC_VIS_DIR}/BoundingView.cpp"
+    "${SRC_VIS_DIR}/BoundingVisualisation.cpp"
+    "${SRC_VIS_DIR}/ColourVisualisation.cpp"
+    "${SRC_VIS_DIR}/DepthVisualiser.cpp"
+    "${SRC_VIS_DIR}/DistanceVisualiser.cpp"
+    "${SRC_VIS_DIR}/FaceView.cpp"
+    "${SRC_VIS_DIR}/LabelsView.cpp"
+    "${SRC_VIS_DIR}/LandmarkLabelsView.cpp"
+    "${SRC_VIS_DIR}/LandmarkSetView.cpp"
+    "${SRC_VIS_DIR}/LandmarksVisualisation.cpp"
+    "${SRC_VIS_DIR}/LineView.cpp"
+    "${SRC_VIS_DIR}/LineVisualiser.cpp"
+    "${SRC_VIS_DIR}/LoopView.cpp"
+    "${SRC_VIS_DIR}/LoopVisualiser.cpp"
+    "${SRC_VIS_DIR}/MaskView.cpp"
+    "${SRC_VIS_DIR}/MaskVisualisation.cpp"
+    "${SRC_VIS_DIR}/MetricVisualiser.cpp"
+    "${SRC_VIS_DIR}/OutlinesVisualisation.cpp"
+    "${SRC_VIS_DIR}/PathView.cpp"
+    "${SRC_VIS_DIR}/PathSetView.cpp"
+    "${SRC_VIS_DIR}/PathSetVisualisation.cpp"
+    "${SRC_VIS_DIR}/PlaneView.cpp"
+    "${SRC_VIS_DIR}/PlaneVisualisation.cpp"
+    "${SRC_VIS_DIR}/PointsView.cpp"
+    "${SRC_VIS_DIR}/PolyLabelsView.cpp"
+    "${SRC_VIS_DIR}/RadialSelectView.cpp"
+    "${SRC_VIS_DIR}/RadialSelectVisualisation.cpp"
+    "${SRC_VIS_DIR}/RegionVisualiser.cpp"
+    "${SRC_VIS_DIR}/SimpleView.cpp"
+    "${SRC_VIS_DIR}/SphereView.cpp"
+    "${SRC_VIS_DIR}/VertexLabelsView.cpp"
 
-    ${SRC_WIDGET_DIR}/ChartDialog
-    ${SRC_WIDGET_DIR}/CheckAllTableHeader
-    ${SRC_WIDGET_DIR}/LandmarksCheckDialog
-    ${SRC_WIDGET_DIR}/IntTableWidgetItem
-    ${SRC_WIDGET_DIR}/LandmarksDialog
-    ${SRC_WIDGET_DIR}/MetricsDialog
-    ${SRC_WIDGET_DIR}/MeshInfoDialog
-    ${SRC_WIDGET_DIR}/PhenotypesDialog
-    ${SRC_WIDGET_DIR}/ReportChooserDialog
-    ${SRC_WIDGET_DIR}/ResizeDialog
-    ${SRC_WIDGET_DIR}/ScanInfoDialog
+    "${SRC_WIDGET_DIR}/ChartDialog.cpp"
+    "${SRC_WIDGET_DIR}/CheckAllTableHeader.cpp"
+    "${SRC_WIDGET_DIR}/LandmarksCheckDialog.cpp"
+    "${SRC_WIDGET_DIR}/IntTableWidgetItem.cpp"
+    "${SRC_WIDGET_DIR}/LandmarksDialog.cpp"
+    "${SRC_WIDGET_DIR}/MetricsDialog.cpp"
+    "${SRC_WIDGET_DIR}/MeshInfoDialog.cpp"
+    "${SRC_WIDGET_DIR}/PhenotypesDialog.cpp"
+    "${SRC_WIDGET_DIR}/ReportChooserDialog.cpp"
+    "${SRC_WIDGET_DIR}/ResizeDialog.cpp"
+    "${SRC_WIDGET_DIR}/ScanInfoDialog.cpp"
 
-    ${SRC_DIR}/Ethnicities
-    ${SRC_DIR}/FaceAssessment
-    ${SRC_DIR}/FaceModel
-    ${SRC_DIR}/FaceModelCurvature
-    ${SRC_DIR}/FaceModelCurvatureStore
-    ${SRC_DIR}/FaceModelDelta
-    ${SRC_DIR}/FaceModelDeltaStore
-    ${SRC_DIR}/FaceModelSymmetry
-    ${SRC_DIR}/FaceModelSymmetryStore
-    ${SRC_DIR}/FaceModelViewer
-    ${SRC_DIR}/FaceTypes
-    ${SRC_DIR}/FaceViewSet
-    ${SRC_DIR}/MaskRegistration
-    ${SRC_DIR}/MiscFunctions
-    ${SRC_DIR}/ModelSelect
-    ${SRC_DIR}/ModelViewer
-    ${SRC_DIR}/ModelViewerAnnotator
-    ${SRC_DIR}/MultiFaceModelViewer
-    ${SRC_DIR}/Path
-    ${SRC_DIR}/PathSet
-    ${SRC_DIR}/U3DCache
+    "${SRC_DIR}/Ethnicities.cpp"
+    "${SRC_DIR}/FaceAssessment.cpp"
+    "${SRC_DIR}/FaceModel.cpp"
+    "${SRC_DIR}/FaceModelCurvature.cpp"
+    "${SRC_DIR}/FaceModelCurvatureStore.cpp"
+    "${SRC_DIR}/FaceModelDelta.cpp"
+    "${SRC_DIR}/FaceModelDeltaStore.cpp"
+    "${SRC_DIR}/FaceModelSymmetry.cpp"
+    "${SRC_DIR}/FaceModelSymmetryStore.cpp"
+    "${SRC_DIR}/FaceModelViewer.cpp"
+    "${SRC_DIR}/FaceTypes.cpp"
+    "${SRC_DIR}/FaceViewSet.cpp"
+    "${SRC_DIR}/MaskRegistration.cpp"
+    "${SRC_DIR}/MiscFunctions.cpp"
+    "${SRC_DIR}/ModelSelect.cpp"
+    "${SRC_DIR}/ModelViewer.cpp"
+    "${SRC_DIR}/ModelViewerAnnotator.cpp"
+    "${SRC_DIR}/MultiFaceModelViewer.cpp"
+    "${SRC_DIR}/Path.cpp"
+    "${SRC_DIR}/PathSet.cpp"
+    "${SRC_DIR}/U3DCache.cpp"
     )
 
 set( RCC_FILE "FaceTools_res.qrc")
@@ -503,6 +509,7 @@ qt5_wrap_ui( FORM_HEADERS ${FORMS})
 qt5_wrap_cpp( QOBJECT_MOCS ${QOBJECTS})
 qt5_add_resources( RESOURCE_FILE "${RCC_FILE}")
 
+#cmake_policy( SET CMP0115 OLD)
 add_library( ${PROJECT_NAME} ${SRC_FILES} ${QOBJECT_MOCS} ${INCLUDE_FILES} ${FORM_HEADERS} ${FORMS} ${RESOURCE_FILE} ${RCC_FILE})
 include( "cmake/LinkLibs.cmake")
 

@@ -85,12 +85,9 @@ bool ActionLoad::doBeforeAction( Event)
     const bool doLoad = _loadHelper->filenames().size() > 0;
     if ( doLoad)
     {
-        QFileInfo finfo( _loadHelper->filenames().first());
+        const QFileInfo finfo( _loadHelper->filenames().first());
         _dialog->setDirectory( finfo.absolutePath()); // Set directory for next load
-        if ( _loadHelper->filenames().size() == 1)
-            MS::showStatus( QString("Loading %1 ...").arg(finfo.absoluteFilePath()));
-        else
-            MS::showStatus( "Loading models ...");
+        MS::showStatus( QString("Loading %1 ...").arg(finfo.absoluteFilePath()));
     }   // end if
     return doLoad;
 }   // end doBeforeAction

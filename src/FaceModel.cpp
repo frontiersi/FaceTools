@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 #include <Vis/FaceView.h>
 #include <algorithm>
 #include <cassert>
+using FaceTools::Path;
 using FaceTools::PathSet;
 using FaceTools::FaceModel;
 using FaceTools::Landmark::LandmarkSet;
@@ -165,10 +166,11 @@ void FaceModel::addTransformMatrix( const Mat4f& T)
 {
     assert( !T.isZero());
     _mesh->addTransformMatrix( T);
+    const Mat3f iR = inverseTransformMatrix().block<3,3>(0,0);  // Inverse rotation matrix for paths
     if ( _mask)
         _mask->addTransformMatrix( T);
     for ( auto& ass : _ass)
-        ass.get()->transform(T);
+        ass.get()->transform(T, iR);
     // Have to do it this way because the model may not yet have landmarks defined.
     for ( auto& b : _bnds)
         b->addTransformMatrix(T);
@@ -360,18 +362,6 @@ int FaceModel::faceManifoldId() const
     }   // end for
     return -1;
 }   // end faceManifoldId
-
-
-float FaceModel::toSurface( Vec3f& pos) const
-{
-    int notused;
-    Vec3f fv;
-    int vidx = _kdtree->find(pos);
-    const r3d::SurfacePointFinder spfinder( *_mesh);
-    float sdiff = spfinder.find( pos, vidx, notused, fv);
-    pos = fv;
-    return sdiff;
-}   // end toSurface
 
 
 void FaceModel::setMaskHash( size_t h)
@@ -570,6 +560,13 @@ int FaceModel::addPath( const Vec3f& pos)
     assert( _cass);
     setMetaSaved(false);
     return _cass->paths().addPath( pos);
+}   // end addPath
+
+
+int FaceModel::addPath( Path &&path)
+{
+    setMetaSaved(false);
+    return _cass->paths().addPath( std::move(path));
 }   // end addPath
 
 

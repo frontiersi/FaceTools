@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,6 +44,7 @@ public:
 
     Path();
     Path( const Path&) = default;
+    Path( Path&&) = default;
     Path& operator=( const Path&) = default;
     Path( int id, const Vec3f& v0);
 
@@ -58,21 +59,19 @@ public:
     void setName( const std::string &nm) { _name = nm;}
     inline const std::string& name() const { return _name;}
 
-    // Calls setHandle0, setHandle1, setOrientation based on hid.
+    // Calls setHandle0, setHandle1, setDepthHandle based on hid.
     void setHandle( int hid, const Vec3f&);
 
-    // Returns the position of the handle based on hid
-    // (0 == handle0, 1 == handle1, anything else == orientation)
+    // Returns position of path handles based on hid.
+    // (0 == handle0, 1 == handle1, 2 == depthHandle)
     const Vec3f& handle( int hid) const;
 
     void setHandle0( const Vec3f&);
     inline const Vec3f& handle0() const { return _vtxs.front();}
-
     void setHandle1( const Vec3f&);
     inline const Vec3f& handle1() const { return _vtxs.back();}
-
-    void setDepthHandle( float h);  // h \in [0.0f,1.0f]
-    Vec3f depthHandle() const;
+    void setDepthHandle( const Vec3f&);
+    inline const Vec3f& depthHandle() const { return _dhan;}
 
     // Return the difference vector between the path endpoints.
     Vec3f deltaVector() const { return handle1() - handle0();}
@@ -83,19 +82,24 @@ public:
     // Set path endpoints on the model surface and recalculate path and both path
     // lengths using the given model. If no path could be found, return false.
     // Remember to call updateMeasures after calling this function and setting the depth handle!
-    bool update( const FM*);
+    bool updatePath( const FM*);
 
-    // After calling update, or setting the depth handle, call this to update measurements.
-    void updateMeasures();
+    // After calling updatePath, or setting the depth handle, call this to update measurements.
+    // The inverse rotation matrix is required to ensure angles are projected into the facial
+    // planes irrespective of the model's current transform (rotation).
+    void updateMeasures( const Mat3f& inverseRotation);
 
     inline bool validPath() const { return _validPath;}
     inline float euclideanDistance() const { return _elen;}
     inline float surfaceDistance() const { return _slen;}
     inline float surface2EuclideanRatio() const { return _elen > 0.0f ? _slen / _elen : 1.0f;}
-
-    inline const Vec3f& depthPoint() const { return _dmax;}    // Point on surface at depth point
+    inline const Vec3f& depthSurfPoint() const { return _dsurf;} // Point on surface at depth point
+    inline const Vec3f& depthLinePoint() const { return _dline;} // Depth handle projected to line
     inline float crossSectionalArea() const { return _area;}
-    inline float angleAtDepth() const { return _angle;}  // Angle in degrees
+    inline float angle() const { return _angle;}            // Angle in degrees
+    inline float angleSagittal() const { return _angleS;}   // Angle in degrees
+    inline float angleTransverse() const { return _angleT;} // Angle in degrees
+    inline float angleCoronal() const { return _angleC;}    // Angle in degrees
     inline float depth() const { return _depth;}
 
     // Always at least of size 2.
@@ -105,13 +109,13 @@ public:
 
     void write( PTree&, bool withFullPath) const;
 
-    // After reading in, path vertices will need calculating via a call to update.
+    // After reading in, path vertices will need calculating via a call to updatePath.
     void read( const PTree&);
 
 private:
     static PathType s_pathType;
     int _id;
-    std::string _name;      // Name of this path (if given)
+    std::string _name;      // Name of this path
     bool _validPath;        // True if path lies on surface
     std::list<Vec3f> _vtxs; // The path vertices
     float _elen;            // Euclidean distance
@@ -119,10 +123,15 @@ private:
     float _area;            // Cross sectional area
     float _depth;           // Straight line magnitude from surface to depth handle
     float _angle;           // Angle in degrees
-    float _dhan;            // Depth handle position
-    Vec3f _dmax;            // Point on path orthogonal to handles line at depth handle position
+    float _angleS;          // Angle projected into sagittal
+    float _angleT;          // Angle projected into transverse
+    float _angleC;          // Angle projected into coronal (frontal)
+    Vec3f _dhan;            // Depth handle position
+    Vec3f _dsurf;           // Point on path orthogonal to handles line at depth handle position
+    Vec3f _dline;           // Depth handle projected along direct line between handles
     Vec3f _orient;          // View plane orientation of the path
     void _writeFullPath( PTree&) const;
+    void _calcAngles( const Mat3f&);
 };  // end class
 
 }   // end namespace

@@ -167,7 +167,7 @@ Event ActionSaveAs::doAfterAction( Event)
     }   // end if
     else
     {
-        QString msg = tr( ("Failed saving to '" + _filename.toLocal8Bit().toStdString() + "'!").c_str());
+        QString msg = tr( ("Failed saving to '" + _filename.toStdString() + "'!").c_str());
         MS::showStatus( msg, 10000);
         msg.append( "\n" + FMM::error());
         QMB::critical( static_cast<QWidget*>(parent()), tr("Failed to save file!"), msg);

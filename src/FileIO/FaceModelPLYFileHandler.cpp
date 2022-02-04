@@ -34,7 +34,7 @@ FM* FaceModelPLYFileHandler::read( const QString& qfname)
 {
     _err = "";
     FM* fm = nullptr;
-    r3d::Mesh::Ptr model = _importer.load(qfname.toLocal8Bit().toStdString());
+    r3d::Mesh::Ptr model = _importer.load(qfname.toStdString());
     if ( model)
     {
         fm = new FM(model);
@@ -49,7 +49,7 @@ FM* FaceModelPLYFileHandler::read( const QString& qfname)
 bool FaceModelPLYFileHandler::write( const FM* fm, const QString& qfname)
 {
     _err = "";
-    const std::string fname = qfname.toLocal8Bit().toStdString();
+    const std::string fname = qfname.toStdString();
     const r3d::Mesh& model = fm->mesh();
     if ( !_exporter.save( model, fname))
     {

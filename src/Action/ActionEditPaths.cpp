@@ -101,13 +101,13 @@ void ActionEditPaths::_doOnFinishedDrag( int, int)
 
 void ActionEditPaths::_doOnEnterHandle( int, int hid)
 {
-    if ( hid == 2)
-        _setTempTransparency( true);
+    //if ( hid == 2)
+    _setTempTransparency( true);
 }   // end _doOnEnterHandle
 
 
 void ActionEditPaths::_doOnLeaveHandle( int, int hid)
 {
-    if ( hid == 2 && !MS::handler<PathsHandler>()->isDragging())
-        _setTempTransparency( false);
+    //if ( hid == 2 && !MS::handler<PathsHandler>()->isDragging())
+    _setTempTransparency( false);
 }   // end _doOnLeaveHandle

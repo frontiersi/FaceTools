@@ -125,7 +125,7 @@ bool FaceModelXMLFileHandler::write( const FM* fm, const QString& fname)
         }   // end if
 
         std::ofstream ofs;
-        ofs.open( tdir.filePath( "meta.xml").toLocal8Bit().toStdString());
+        ofs.open( tdir.filePath( "meta.xml").toStdString());
         if ( !ofs.is_open())
         {
             _err = "Cannot open output file stream for writing metadata!";
@@ -140,14 +140,14 @@ bool FaceModelXMLFileHandler::write( const FM* fm, const QString& fname)
         ofs.close();
 
         // Write out the model geometry itself into .obj format.
-        if ( !r3dio::saveAsOBJ( fm->mesh(), tdir.filePath( "mesh.obj").toLocal8Bit().toStdString(), false/*as jpeg*/))
+        if ( !r3dio::saveAsOBJ( fm->mesh(), tdir.filePath( "mesh.obj").toStdString(), false/*as jpeg*/))
         {
             _err = "Failed to write mesh!";
             return false;
         }   // end if
 
         // Write out the mask if set
-        if ( fm->hasMask() && !r3dio::saveAsPLY( fm->mask(), tdir.filePath( "mask.ply").toLocal8Bit().toStdString()))
+        if ( fm->hasMask() && !r3dio::saveAsPLY( fm->mask(), tdir.filePath( "mask.ply").toStdString()))
         {
             _err = "Failed to write mask!";
             return false;
@@ -155,7 +155,7 @@ bool FaceModelXMLFileHandler::write( const FM* fm, const QString& fname)
 
         // Export jpeg thumbnail of model.
         const cv::Mat img = Action::ActionUpdateThumbnail::thumbnail( fm);
-        if ( !img.empty() && !cv::imwrite( tdir.filePath("thumb.jpg").toLocal8Bit().toStdString(), img))
+        if ( !img.empty() && !cv::imwrite( tdir.filePath("thumb.jpg").toStdString(), img))
         {
             _err = "Unable to write thumbnail!";
             return false;
@@ -426,7 +426,7 @@ QString FaceTools::FileIO::readMeta( const QString &fname, QTemporaryDir &tdir, 
             return "Cannot find metadata in archive!";
 
         std::ifstream ifs;
-        ifs.open( xmlfile.toLocal8Bit().toStdString());
+        ifs.open( xmlfile.toStdString());
         if ( !ifs.is_open())
             return "Cannot open metadata file for reading!";
 
@@ -455,7 +455,7 @@ QString FaceTools::FileIO::loadData( FM &fm, const QTemporaryDir &tdir, const QS
     try
     {
         // Raw model - no post process undertaken!
-        r3d::Mesh::Ptr mesh = r3dio::loadMesh( tdir.filePath( meshfname).toLocal8Bit().toStdString());
+        r3d::Mesh::Ptr mesh = r3dio::loadMesh( tdir.filePath( meshfname).toStdString());
         if ( mesh)
         {
             fm.update( mesh, true, false/*don't resettle landmarks (or update paths) just read in*/);
@@ -468,7 +468,7 @@ QString FaceTools::FileIO::loadData( FM &fm, const QTemporaryDir &tdir, const QS
         // Also load the mask if present
         if ( !maskfname.isEmpty())
         {
-            r3d::Mesh::Ptr mask = r3dio::loadMesh( tdir.filePath( maskfname).toLocal8Bit().toStdString());
+            r3d::Mesh::Ptr mask = r3dio::loadMesh( tdir.filePath( maskfname).toStdString());
             if ( mask)
             {
                 fm.setMask( mask);

@@ -15,37 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ************************************************************************/
 
-#ifndef FACE_TOOLS_ACTION_RENAME_PATH_H
-#define FACE_TOOLS_ACTION_RENAME_PATH_H
+#ifndef FACE_TOOLS_ACTION_COPY_PATH_H
+#define FACE_TOOLS_ACTION_COPY_PATH_H
 
 #include "FaceAction.h"
-#include <QInputDialog>
 
 namespace FaceTools { namespace Action {
 
-class FaceTools_EXPORT ActionRenamePath : public FaceAction
+class FaceTools_EXPORT ActionCopyPath : public FaceAction
 { Q_OBJECT
 public:
-    ActionRenamePath( const QString&, const QIcon&, const QKeySequence &ks=QKeySequence());
+    ActionCopyPath( const QString&, const QIcon&);
 
-    QString toolTip() const override { return "(Re)name the selected user measurement.";}
-
-    void setMaxLabelChars( int v) { _maxLabelChars = v;}
+    QString toolTip() const override;
+    QString whatsThis() const override;
 
 protected:
-    void postInit() override;
     bool isAllowed( Event) override;
-    bool doBeforeAction( Event) override;
     void doAction( Event) override;
     Event doAfterAction( Event) override;
-
-private slots:
-    void _doOnTextValueChanged( const QString&);
-
-private:
-    QInputDialog *_dialog;
-    int _maxLabelChars;
-    QString _label;
 };  // end class
 
 }}   // end namespace

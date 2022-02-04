@@ -249,8 +249,9 @@ endif()
 
 
 if(WITH_ASSIMP)     # AssImp
-    set( ASSIMP_DIR "${LIB_PRE_REQS}/AssImp/lib/cmake/assimp-5.0" CACHE PATH "Location of assimp-config.cmake")
-    find_package( ASSIMP REQUIRED)
+    set( ASSIMP_DIR "${LIB_PRE_REQS}/AssImp/lib/cmake/assimp-5.1" CACHE PATH "Location of assimp-config.cmake")
+    find_package( assimp REQUIRED)
+    #find_package( ASSIMP REQUIRED)
     include_directories( ${ASSIMP_INCLUDE_DIRS})
     link_directories( ${ASSIMP_LIBRARY_DIRS})
     #[[
@@ -345,8 +346,9 @@ endif()
 
 
 if(WITH_VTK)    # VTK
-    set( VTK_BASE "${LIB_PRE_REQS}/VTK-9.0.1")
-    set( VTK_DIR "${VTK_BASE}/lib/cmake/vtk-9.0" CACHE PATH "Location of VTKConfig.cmake")
+    set( VTK_VERSION "9.1")
+    set( VTK_BASE "${LIB_PRE_REQS}/VTK-${VTK_VERSION}.0")
+    set( VTK_DIR "${VTK_BASE}/lib/cmake/vtk-${VTK_VERSION}" CACHE PATH "Location of VTKConfig.cmake")
 
     if(UNIX)
         set( VTK_LIBRARY_DIR "${VTK_DIR}/../.." CACHE PATH "Location of VTK shared libraries")
@@ -354,7 +356,7 @@ if(WITH_VTK)    # VTK
         set( VTK_BIN "${VTK_DIR}/../../../bin" CACHE PATH "Location of VTK shared libraries")
     endif()
 
-    find_package( VTK 9.0 REQUIRED)
+    find_package( VTK ${VTK_VERSION} REQUIRED)
     set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${VTK_LIBRARY_DIR})
     message( STATUS "VTK:               ${VTK_DIR}")
 endif()
@@ -365,7 +367,7 @@ if(WITH_QT)     # Qt5
     if(NOT IS_DIRECTORY ${Qt5_DIR})
         message( FATAL_ERROR "Can't find Qt5! Set environment variable QT5 to the location of the library!")
     endif()
-    get_filename_component( QT_INSTALLER_FRAMEWORK "$ENV{QT5}/../../Tools/QtInstallerFramework/3.2/bin" REALPATH)
+    get_filename_component( QT_INSTALLER_FRAMEWORK "$ENV{QT5}/../../Tools/QtInstallerFramework/4.2/bin" REALPATH)
     set( QT_INF_BINARY_CREATOR "${QT_INSTALLER_FRAMEWORK}/binarycreator${CMAKE_EXECUTABLE_SUFFIX}")
     set( QT_INF_REPO_GEN "${QT_INSTALLER_FRAMEWORK}/repogen${CMAKE_EXECUTABLE_SUFFIX}")
 
@@ -464,4 +466,3 @@ if(WITH_CPD) # Coherent Point Drift
     include_directories( ${Cpd_INCLUDE_DIRS})
     message( STATUS "Cpd:               ${Cpd_DIR}")
 endif()
-
