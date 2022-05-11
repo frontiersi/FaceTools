@@ -264,7 +264,7 @@ void FaceActionManager::_doRaise( Event E)
             act->refresh( _acted.at(act));
         }   // end for
     }   // end if
-    
+
     _lvl--;
     if ( _lvl == 0)
     {

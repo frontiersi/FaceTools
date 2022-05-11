@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
 #include <FaceTools.h>
 #include <FaceModel.h>
 #include <vtkTextProperty.h>
-#include <vtkUnicodeString.h>
 #include <algorithm>
 #include <cassert>
 using FaceTools::Vis::PathSetView;
@@ -81,56 +80,77 @@ void PathSetView::_showPath( bool enable, int id)
 
 
 namespace {
-std::wstring appendValue( float v, const std::wstring &send=L"")
+QString appendValue( const QString &title, float v, const QString &send="")
 {
-    std::wostringstream oss;
-    oss << " " << std::setw(7) << std::fixed << std::setprecision(2) << v << " " << std::setw(5) << std::left << send;
-    return oss.str();
+    QString txt;
+    QTextStream out(&txt);
+    out << "\n";
+    out.setFieldWidth(15);
+    out.setFieldAlignment(QTextStream::AlignRight);
+    out << title;
+    out.setFieldWidth(0);
+    out << ": ";
+    out.setFieldWidth(7);
+    if ( !std::isnan(v))
+    {
+        out.setRealNumberNotation(QTextStream::FixedNotation);
+        out.setRealNumberPrecision(2);
+        out << v;
+        out.setFieldWidth(0);
+        out << " ";
+        out.setFieldAlignment(QTextStream::AlignLeft);
+        out.setFieldWidth(3);
+        out << send;
+    }   // end if
+    else
+    {
+        out.setFieldAlignment(QTextStream::AlignCenter);
+        out << "  N/A      ";
+    }   // end else
+    out.setFieldAlignment(QTextStream::AlignRight);
+    return txt;
 }   // end appendValue
 }   // end namespace
 
 
 void PathSetView::setCaption( const Path& path, int xpos, int ypos, const Mat3f &iR)
 {
-    const std::wstring lnunits = FaceTools::FM::LENGTH_UNITS.toStdWString();
-    // Set the text contents for the label and the caption
-    std::wostringstream oss0, oss1, oss2, oss3, oss4, oss5, oss6, oss7, oss8, oss9, oss10, oss11, oss12;
-    if ( !path.name().empty())
-    {
-        const std::wstring pname = QString( path.name().c_str()).toStdWString();
-        oss0 << std::right << std::setfill(L' ') << std::setw(21) << (pname + L"   \n");
-    }   // end if
+    QString txt;
+    QTextStream out(&txt);
+    out.setFieldAlignment(QTextStream::AlignRight);
+    out.setFieldWidth(21);
+    out << path.name();
+    out.setFieldWidth(0);
+    out << "  ";
 
+    const QString lnunits = FaceTools::FM::LENGTH_UNITS;
+
+    float surfDst = NAN;
+    float sdRatio = NAN;
     if (path.validPath())
     {
-        oss1 <<   L"       Surface:" << appendValue( path.surfaceDistance(), lnunits);
-        oss3 << L"\n         Ratio:" << appendValue( path.surface2EuclideanRatio());
+        surfDst = path.surfaceDistance();
+        sdRatio = path.surface2EuclideanRatio();
     }   // end if
-    else
-    {
-        oss1 <<   L"       Surface:     N/A      ";
-        oss3 << L"\n         Ratio:     N/A      ";
-    }   // end else
 
-    static const std::wstring DEG( L"\u00b0");
-    static const std::wstring SQS( L"\u00b2");
+    out << appendValue( "Surface", surfDst, lnunits);
+    out << appendValue(   "Ratio", sdRatio);
+
+    static const QString DEG = QString::fromWCharArray( L"\u00b0");
+    static const QString SQS = QString::fromWCharArray( L"\u00b2");
 
     const Vec3f avec = iR * path.deltaVector();
-    oss2  << "\n        Direct:" << appendValue( path.euclideanDistance(), lnunits);
-    oss4  << "\n        X Size:" << appendValue( fabsf(avec[0]), lnunits);
-    oss5  << "\n        Y Size:" << appendValue( fabsf(avec[1]), lnunits);
-    oss6  << "\n        Z Size:" << appendValue( fabsf(avec[2]), lnunits);
-    oss7  << "\n         Depth:" << appendValue( path.depth(), lnunits);
-    oss8  << "\n         Angle:" << appendValue( path.angle(), DEG);
-    oss9  << "\n   Angle (Top):" << appendValue( path.angleTransverse(), DEG);
-    oss10 << "\n  Angle (Side):" << appendValue( path.angleSagittal(), DEG);
-    oss11 << "\n Angle (Front):" << appendValue( path.angleCoronal(), DEG);
-    oss12 << "\n          Area:" << appendValue( path.crossSectionalArea(), lnunits + SQS);
-    const std::wstring cap = oss0.str() + oss1.str() + oss2.str() + oss3.str() + oss4.str()
-                            + oss5.str() + oss6.str() + oss7.str() + oss8.str() + oss9.str()
-                            + oss10.str() + oss11.str() + oss12.str();
-    vtkUnicodeString u = vtkUnicodeString::from_utf16( (const vtkTypeUInt16*)cap.c_str());
-    _caption->SetInput( u.utf8_str());
+    out << appendValue( "Direct", path.euclideanDistance(), lnunits);
+    out << appendValue( "X Size", fabsf(avec[0]), lnunits);
+    out << appendValue( "Y Size", fabsf(avec[1]), lnunits);
+    out << appendValue( "Z Size", fabsf(avec[2]), lnunits);
+    out << appendValue( "Depth", path.depth(), lnunits);
+    out << appendValue( "Angle", path.angle(), DEG);
+    out << appendValue( "Angle (Top)", path.angleTransverse(), DEG);
+    out << appendValue( "Angle (Side)", path.angleSagittal(), DEG);
+    out << appendValue( "Angle (Front)", path.angleCoronal(), DEG);
+    out << appendValue( "Area", path.crossSectionalArea(), lnunits + SQS);
+    _caption->SetInput( txt.toStdString().c_str());
     _caption->SetDisplayPosition( xpos, ypos);
 }   // end setCaption
 

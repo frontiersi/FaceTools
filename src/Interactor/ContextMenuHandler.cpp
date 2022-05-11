@@ -76,8 +76,8 @@ bool ContextMenuHandler::doRightButtonUp()
     const QPoint mpos = MS::selectedViewer()->mouseCoords();
     const int tnow = QTime::currentTime().msecsSinceStartOfDay();
 
-    // Use double-click interval for acceptable right button down time
-    if (( tnow - _rDownTime) < QApplication::doubleClickInterval() && (mpos == _mDownPos))
+    // Fifth of a second for acceptable right button down time
+    if (( tnow - _rDownTime) < 200 && (mpos == _mDownPos))
     {
         swallowed = true;
         bool foundEnabledAction = false;

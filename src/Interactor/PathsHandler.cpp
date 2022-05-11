@@ -297,21 +297,15 @@ namespace {
 QString makeHandleCaption( const Path &path, int hid)
 {
     QString handleCaption;
-    if ( !path.name().empty())
-        handleCaption = QString::fromStdString( path.name()) + "\n";
+    QTextStream out( &handleCaption);
+    if ( !path.name().isEmpty())
+        out << path.name() << "\n";
     const QString units = FaceTools::FaceModel::LENGTH_UNITS;
-
-    if ( hid <= 1)  // Caption endpoints
-    {
-        handleCaption += QString(" %1 %2 (Direct)\n %3 %4 (Depth)")
-            .arg( path.euclideanDistance(), 6, 'f', 2).arg(units).arg( path.depth(), 6, 'f', 2).arg(units);
-    }   // end if
-    else
-    {
-        handleCaption += QString::fromWCharArray(L" %1 \u00b0\n %2 %3 (Depth)")
-            .arg( path.angle(), 6, 'f', 2).arg( path.depth(), 6, 'f', 2).arg(units);
-    }   // end else
-
+    if ( hid <= 1)  // Endpoints
+        out << QString(" %1 %2 (Direct)").arg( path.euclideanDistance(), 6, 'f', 2).arg(units);
+    else            // Orange handle
+        out << QString::fromWCharArray(L" %1 \u00b0").arg( path.angle(), 6, 'f', 2);
+    out << QString("\n %2 %3 (Depth)").arg( path.depth(), 6, 'f', 2).arg(units);
     return handleCaption;
 }   // end makeHandleCaption
 }   // end namespace

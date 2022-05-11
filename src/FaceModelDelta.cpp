@@ -83,16 +83,17 @@ FaceModelDelta::FaceModelDelta( const FM *fmt, const FM *fms) : _tgt(fmt), _src(
 
     // Make the source mask scalars array (contains negative values!)
     _sclsArr = VSM( [this](int vid, size_t)
-            { return _maskVtxVals.at(vid).scalars[2];}, 1).makeArrayNoTx( *_asmsk, "FaceModelDelta_Scalars");
+                    { return _maskVtxVals.at(vid).scalars[2];}, 1).makeArrayNoTx( *_asmsk, "FaceModelDelta_Scalars");
 
     // Make the scalar arrays
     const r3d::Mesh &mesh = _tgt->mesh();
     _perpArr = VSM( [this](int vid, size_t)
-                   { return _targVtxVals.at(vid)[0];}, 1).makeArray( mesh, "FaceModelDelta_Perpendicular");
+                    { return _targVtxVals.at(vid)[0];}, 1).makeArray( mesh, "FaceModelDelta_Perpendicular");
+
     _angdArr = VSM( [this](int vid, size_t)
-                   { return _targVtxVals.at(vid)[1];}, 1).makeArray( mesh, "FaceModelDelta_Angular");
+                    { return _targVtxVals.at(vid)[1];}, 1).makeArray( mesh, "FaceModelDelta_Angular");
     _smagArr = VSM( [this](int vid, size_t)
-                   { return _targVtxVals.at(vid)[2];}, 1).makeArray( mesh, "FaceModelDelta_SignedMag");
+                    { return _targVtxVals.at(vid)[2];}, 1).makeArray( mesh, "FaceModelDelta_SignedMag");
 }   // end ctor
 
 
@@ -138,6 +139,7 @@ void FaceModelDelta::_calcTargetMeshVtxVals()
         {
             assert( pvidx >= 0);
             assert( pm == mask.uvtx(pvidx));
+            assert( _maskVtxVals.count(pvidx) > 0);
             _targVtxVals[vidx] = _maskVtxVals.at(pvidx).scalars;
         }   // end if
         else
@@ -146,6 +148,9 @@ void FaceModelDelta::_calcTargetMeshVtxVals()
             // Find the barycentric values
             const Vec3f bm = mask.toBarycentric( fid, pm);
             const int *fvidxs = mask.fvidxs(fid);
+            assert( _maskVtxVals.count(fvidxs[0]) > 0);
+            assert( _maskVtxVals.count(fvidxs[1]) > 0);
+            assert( _maskVtxVals.count(fvidxs[2]) > 0);
             _targVtxVals[vidx] = bm[0]*_maskVtxVals.at(fvidxs[0]).scalars
                                + bm[1]*_maskVtxVals.at(fvidxs[1]).scalars
                                + bm[2]*_maskVtxVals.at(fvidxs[2]).scalars;

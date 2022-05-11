@@ -80,7 +80,7 @@ void PathSet::reset()
 }   // end reset
 
 
-bool PathSet::renamePath( int id, const std::string& nm)
+bool PathSet::renamePath( int id, const QString& nm)
 {
     if ( _ids.count(id) == 0)
         return false;
@@ -103,7 +103,7 @@ const Path& PathSet::path( int pid) const
 }   // end path
 
 
-QString PathSet::name( int pid) const { return QString::fromStdString( path(pid).name());}
+const QString& PathSet::name( int pid) const { return path(pid).name();}
 
 
 void PathSet::transform( const Mat4f &T, const Mat3f *iR)

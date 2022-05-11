@@ -197,9 +197,8 @@ FaceModelFileData::FaceModelFileData( const FM &fm)
 FaceModelFileData::FaceModelFileData( const QString &fpath, const QString &assessorName)
     : _fm( &_ifm)
 {
-    QTemporaryDir tdir;
     PTree ptree;
-    _err = readMeta( fpath, tdir, ptree);
+    _err = readMeta( fpath, ptree); // FaceModelXMLFileHandler.h
     double fversion = 0.0;
     if ( !_err.isEmpty() || !importMetaData( _ifm, ptree, fversion))
         return;

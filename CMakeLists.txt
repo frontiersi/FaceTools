@@ -133,6 +133,7 @@ set( QOBJECTS
     "${INCLUDE_ACTION_DIR}/UndoStates.h"
 
     "${INCLUDE_FILEIO_DIR}/AsyncModelLoader.h"
+    "${INCLUDE_FILEIO_DIR}/BulkMetadataReader.h"
 
     "${INCLUDE_METRIC_DIR}/Chart.h"
 
@@ -375,6 +376,7 @@ set( SRC_FILES
     "${SRC_DETECT_DIR}/FeaturesDetector.cpp"
 
     "${SRC_FILEIO_DIR}/AsyncModelLoader.cpp"
+    "${SRC_FILEIO_DIR}/BulkMetadataReader.cpp"
     "${SRC_FILEIO_DIR}/FaceModelAssImpFileHandler.cpp"
     "${SRC_FILEIO_DIR}/FaceModelAssImpFileHandlerFactory.cpp"
     "${SRC_FILEIO_DIR}/FaceModelDatabase.cpp"

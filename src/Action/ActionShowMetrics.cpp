@@ -174,6 +174,7 @@ void ActionShowMetrics::_doOnMatchHPOs()
 {
     _doRefreshAllMetricsVisibility();
     _updateCurrentMetricDisplayedInfo();
+    emit onEvent( Event::STATS_CHANGE);
     MS::updateRender();
 }   // end _doOnMatchHPOs
 

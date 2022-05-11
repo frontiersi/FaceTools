@@ -68,9 +68,9 @@ if(WITH_QTOOLS)
     find_package( QTools REQUIRED)
     include_directories( ${QTools_INCLUDE_DIRS})
     link_directories( ${QTools_LIBRARY_DIR})
-    set(WITH_QT TRUE)
     set(WITH_R3DVIS TRUE)
     set(WITH_QUAZIP TRUE)
+    set(WITH_QT TRUE)
 
     message( STATUS "QTools:            ${QTools_LIBRARIES}")
     set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${QTools_LIBRARY_DIR})
@@ -93,6 +93,19 @@ if(WITH_QTOOLS)
         message( FATAL_ERROR "Can't find ${updateTool}!")
     endif()
     message( STATUS "updateTool:        ${updateToolPath}")
+endif()
+
+
+if(WITH_R3DVIS)
+    set( r3dvis_DIR "${LIB_PRE_REQS}/r3dvis/${_cmake_dir}" CACHE PATH "Location of r3dvisConfig.cmake")
+    find_package( r3dvis REQUIRED)
+    include_directories( ${r3dvis_INCLUDE_DIRS})
+    link_directories( ${r3dvis_LIBRARY_DIR})
+    set(WITH_RIMG TRUE)
+    set(WITH_R3D TRUE)
+    set(WITH_VTK TRUE)
+    message( STATUS "r3dvis:            ${r3dvis_LIBRARIES}")
+    set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${r3dvis_LIBRARY_DIR})
 endif()
 
 
@@ -144,31 +157,6 @@ if(WITH_RIMG)
 endif()
 
 
-if(WITH_RNONRIGID)
-    set( rNonRigid_DIR "${LIB_PRE_REQS}/rNonRigid/${_cmake_dir}" CACHE PATH "Location of rNonRigidConfig.cmake")
-    find_package( rNonRigid REQUIRED)
-    include_directories( ${rNonRigid_INCLUDE_DIRS})
-    link_directories( ${rNonRigid_LIBRARY_DIR})
-    set(WITH_EIGEN TRUE)
-    set(WITH_NANOFLANN TRUE)
-    message( STATUS "rNonRigid:         ${rNonRigid_LIBRARIES}")
-    set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${rNonRigid_LIBRARY_DIR})
-endif()
-
-
-if(WITH_R3DVIS)
-    set( r3dvis_DIR "${LIB_PRE_REQS}/r3dvis/${_cmake_dir}" CACHE PATH "Location of r3dvisConfig.cmake")
-    find_package( r3dvis REQUIRED)
-    include_directories( ${r3dvis_INCLUDE_DIRS})
-    link_directories( ${r3dvis_LIBRARY_DIR})
-    set(WITH_RIMG TRUE)
-    set(WITH_R3D TRUE)
-    set(WITH_VTK TRUE)
-    message( STATUS "r3dvis:            ${r3dvis_LIBRARIES}")
-    set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${r3dvis_LIBRARY_DIR})
-endif()
-
-
 # r3dio::U3DExporter requires IDTFConverter
 if(WITH_IDTF_CONVERTER)
     set( idtfconv_exe "$ENV{IDTF_CONVERTER_EXE}")   # Set location of IDTFConverter from env var if set
@@ -216,6 +204,18 @@ if(WITH_RLIB)
 endif()
 
 
+if(WITH_RNONRIGID)
+    set( rNonRigid_DIR "${LIB_PRE_REQS}/rNonRigid/${_cmake_dir}" CACHE PATH "Location of rNonRigidConfig.cmake")
+    find_package( rNonRigid REQUIRED)
+    include_directories( ${rNonRigid_INCLUDE_DIRS})
+    link_directories( ${rNonRigid_LIBRARY_DIR})
+    set(WITH_EIGEN TRUE)
+    set(WITH_NANOFLANN TRUE)
+    message( STATUS "rNonRigid:         ${rNonRigid_LIBRARIES}")
+    set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${rNonRigid_LIBRARY_DIR})
+endif()
+
+
 if(WITH_EIGEN) # Eigen3
     set( Eigen3_DIR "${LIB_PRE_REQS}/eigen3/share/eigen3/cmake" CACHE PATH "Location of Eigen3Config.cmake")
     find_package( Eigen3 REQUIRED)
@@ -235,16 +235,20 @@ endif()
 
 
 if(WITH_QUAZIP)     # QuaZIP
+    #[[
     set(QuaZip_DIR "${LIB_PRE_REQS}/quazip/cmake" CACHE PATH "Location of QuaZip (Qt/C++ wrapper for Minizip)")
     find_package( QuaZip REQUIRED)
     include_directories( ${QuaZip_INCLUDE_DIRS})
     link_directories( ${QuaZip_LIBRARY_DIR})
-    set(WITH_QT TRUE)
+    message( STATUS "QuaZip:            ${QuaZip_LIBRARIES}")
+    set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${QuaZip_LIBRARY_DIR})
     if (WIN32)
         set(WITH_ZLIB TRUE)
     endif()
-    message( STATUS "QuaZip:            ${QuaZip_LIBRARIES}")
-    set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${QuaZip_LIBRARY_DIR})
+    #]]
+    set( QuaZip-Qt5_DIR "${LIB_PRE_REQS}/quazip-1.3/lib/cmake/QuaZip-Qt5-1.3" CACHE PATH "Location of QuaZip (Qt/C++ wrapper for Minizip)")
+    find_package( QuaZip-Qt5 REQUIRED)
+    set(WITH_QT TRUE)
 endif()
 
 
@@ -264,6 +268,7 @@ if(WITH_ASSIMP)     # AssImp
 endif()
 
 
+#[[
 # Link to separately compiled zlib on Windows.
 if(WITH_ZLIB)
     set( ZLIB_DIR "${LIB_PRE_REQS}/zlib" CACHE PATH "Location of zlib")
@@ -279,6 +284,7 @@ if(WITH_ZLIB)
     message( STATUS "Zlib:              ${ZLIB_LIBRARIES}")
     #set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${ZLIB_LIBRARY_DIR})
 endif()
+#]]
 
 
 if(WITH_LUA)
@@ -367,7 +373,8 @@ if(WITH_QT)     # Qt5
     if(NOT IS_DIRECTORY ${Qt5_DIR})
         message( FATAL_ERROR "Can't find Qt5! Set environment variable QT5 to the location of the library!")
     endif()
-    get_filename_component( QT_INSTALLER_FRAMEWORK "$ENV{QT5}/../../Tools/QtInstallerFramework/4.2/bin" REALPATH)
+    get_filename_component( Qt5_TOOLS "$ENV{QT5}/../../Tools" REALPATH)
+    set( QT_INSTALLER_FRAMEWORK "${Qt5_TOOLS}/QtInstallerFramework/4.2/bin")
     set( QT_INF_BINARY_CREATOR "${QT_INSTALLER_FRAMEWORK}/binarycreator${CMAKE_EXECUTABLE_SUFFIX}")
     set( QT_INF_REPO_GEN "${QT_INSTALLER_FRAMEWORK}/repogen${CMAKE_EXECUTABLE_SUFFIX}")
 
@@ -384,6 +391,22 @@ if(WITH_QT)     # Qt5
     set( CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH} ${QT_LIB_DIR})
 
     message( STATUS "Qt5:               ${Qt5_DIR}")
+
+    # Define the location of the Qt Tools version of OpenSSL.
+    set( QT_SSL_LIB_DIR "${Qt5_TOOLS}/OpenSSL/binary/lib")
+    set( OPENSSL_LIB_CRYPTO "${QT_SSL_LIB_DIR}/libcrypto.so.1.1")
+    set( OPENSSL_LIB_SSL "${QT_SSL_LIB_DIR}/libssl.so.1.1")
+    if(WIN32)
+        set( QT_SSL_LIB_DIR "${Qt5_TOOLS}/OpenSSL/Win_x64/bin")
+        set( OPENSSL_LIB_CRYPTO "${QT_SSL_LIB_DIR}/libcrypto-1_1-x64.dll")
+        set( OPENSSL_LIB_SSL "${QT_SSL_LIB_DIR}/libssl-1_1-x64.dll")
+    endif()
+
+    if ( EXISTS "${OPENSSL_LIB_CRYPTO}" AND EXISTS "${OPENSSL_LIB_SSL}")
+        message( STATUS "Qt5 OpenSSL:       ${QT_SSL_LIB_DIR}")
+    else()
+        message( FATAL_ERROR "Ensure you have installed the Qt provided version of the OpenSSL binaries!")
+    endif()
 endif()
 
 

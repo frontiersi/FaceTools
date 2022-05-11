@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -497,12 +497,15 @@ std::string Report::_writeModelBGImage( const QRectF &box, const FM *fm, const r
     // Background image for model until user enables 3D content to replace this.
     const float RES = 72.0f/25.4f;  // Pixels per mm
     const QSize bimSz( box.width() * pw * RES, box.height() * ph * RES);
-    const cv::Mat img = Action::ActionUpdateThumbnail::generateImage( fm, mesh, bimSz, 30, 0.8f);
+    const QImage img = Action::ActionUpdateThumbnail::generateImage( fm, mesh, bimSz, 30, 0.8f);
     BFS::path imgFile = BFS::unique_path( "%%%%-%%%%-%%%%-%%%%.jpg");
     const BFS::path workDir = _ltxw->workingDirectory();
     // Save the image into the working directory
-    if ( !cv::imwrite( (workDir/imgFile).string(), img))
+    if ( !img.save( QString::fromStdString( (workDir/imgFile).string())))
+    {
+        std::cerr << "[ERROR] FaceTools::Report::_writeModelBGImage: Unable to save image!" << std::endl;
         imgFile = "";
+    }   // end if
     return imgFile.string();
 }   // end _writeModelBGImage
 
@@ -700,11 +703,11 @@ void Report::_addLatexScanInfo( const QRectF &box, const FM *fm)
     // Source and Study reference
     const std::string src = sanit(fm->source().isEmpty() ? "N/A" : fm->source());
     const std::string studyId = sanit(fm->studyId().isEmpty() ? "N/A" : fm->studyId());
-    oss << "\\textbf{Source:} " << src << "\\hspace{2mm}\\textbf{Study Ref:} " << studyId << " \\\\" << std::endl;
+    oss << "\\textbf{Source:} " << src << "\\hspace{2mm}\\textbf{Study:} " << studyId << " \\\\" << std::endl;
     // Subject and Image reference
     const std::string subRef = sanit(fm->subjectId().isEmpty() ? "N/A" : fm->subjectId());
     const std::string imgRef = sanit(fm->imageId().isEmpty() ? "N/A" : fm->imageId());
-    oss << "\\textbf{Subject Ref:} " << subRef << "\\hspace{2mm}\\textbf{Image Ref:} " << imgRef << " \\\\" << std::endl;
+    oss << "\\textbf{Subject:} " << subRef << "\\hspace{2mm}\\textbf{Image Ref:} " << imgRef << " \\\\" << std::endl;
     oss << "\\textbf{Image Date:} " << cdate << " \\\\" << std::endl;
     oss << "\\textbf{Birth Date:} " << dob << "\\hspace{2mm} \\textbf{Age:} " << sage << " \\\\" << std::endl;
     oss << "\\textbf{Sex:} " << sexs << "\\hspace{2mm} \\textbf{Ethnicity:} " << eths << std::endl;

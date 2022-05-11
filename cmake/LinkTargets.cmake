@@ -10,12 +10,12 @@ if(WITH_QTOOLS)
     target_link_libraries( ${PROJECT_NAME} ${QTools_LIBRARIES})
 endif()
 
-if(WITH_RPASCALVOC)
-    target_link_libraries( ${PROJECT_NAME} ${rPascalVOC_LIBRARIES})
+if(WITH_QT)
+    target_link_libraries( ${PROJECT_NAME} ${QT_LIBRARIES})
 endif()
 
-if(WITH_RLEARNING)
-    target_link_libraries( ${PROJECT_NAME} ${rLearning_LIBRARIES})
+if(WITH_QUAZIP)
+    target_link_libraries( ${PROJECT_NAME} QuaZip::QuaZip)
 endif()
 
 if(WITH_R3DVIS)
@@ -46,29 +46,27 @@ if(WITH_ASSIMP)
     target_link_libraries( ${PROJECT_NAME} ${ASSIMP_LIBRARIES})
 endif()
 
-if(WITH_NANOFLANN)
-    target_link_libraries( ${PROJECT_NAME} nanoflann::nanoflann)
-endif()
-
-if(WITH_TINYXML)
-    target_link_libraries( ${PROJECT_NAME} ${tinyxml_LIBRARY})
-endif()
-
-if(WITH_BOOST)
-    target_link_libraries( ${PROJECT_NAME} ${Boost_LIBRARIES})
+if(WITH_VTK)
+    target_link_libraries( ${PROJECT_NAME} ${VTK_LIBRARIES})
 endif()
 
 if(WITH_OPENCV)
     target_link_libraries( ${PROJECT_NAME} ${OpenCV_LIBS})
 endif()
 
-if(WITH_VTK)
-    target_link_libraries( ${PROJECT_NAME} ${VTK_LIBRARIES})
+if(WITH_NANOFLANN)
+    target_link_libraries( ${PROJECT_NAME} nanoflann::nanoflann)
 endif()
 
-if(WITH_QT)
-    target_link_libraries( ${PROJECT_NAME} ${QT_LIBRARIES})
+if(WITH_BOOST)
+    target_link_libraries( ${PROJECT_NAME} ${Boost_LIBRARIES})
 endif()
+
+#[[
+if(WITH_ZLIB)
+    target_link_libraries( ${PROJECT_NAME} ${ZLIB_LIBRARIES})
+endif()
+#]]
 
 if(WITH_CGAL)
     target_link_libraries( ${PROJECT_NAME} ${CGAL_LIBRARIES})
@@ -78,14 +76,18 @@ if(WITH_DLIB)
     target_link_libraries( ${PROJECT_NAME} ${dlib_LIBRARIES})
 endif()
 
-if(WITH_QUAZIP)
-    target_link_libraries( ${PROJECT_NAME} ${QuaZip_LIBRARIES})
-endif()
-
-if(WITH_ZLIB)
-    target_link_libraries( ${PROJECT_NAME} ${ZLIB_LIBRARIES})
-endif()
-
 if(WITH_LUA)
     target_link_libraries( ${PROJECT_NAME} ${LUA_LIBRARIES})
+endif()
+
+if(WITH_RPASCALVOC)
+    target_link_libraries( ${PROJECT_NAME} ${rPascalVOC_LIBRARIES})
+endif()
+
+if(WITH_RLEARNING)
+    target_link_libraries( ${PROJECT_NAME} ${rLearning_LIBRARIES})
+endif()
+
+if(WITH_TINYXML)
+    target_link_libraries( ${PROJECT_NAME} ${tinyxml_LIBRARY})
 endif()

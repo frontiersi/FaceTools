@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,9 +29,11 @@ using FaceTools::Vis::FV;
 using FaceTools::FM;
 using MS = FaceTools::ModelSelect;
 
+#define _MAX_LABEL_CHARS 255
+
 
 ActionRenamePath::ActionRenamePath( const QString& dn, const QIcon& ico, const QKeySequence &ks)
-    : FaceAction(dn, ico, ks), _dialog(nullptr), _maxLabelChars(19)
+    : FaceAction(dn, ico, ks), _dialog(nullptr)
 {
     const PathsHandler *h = MS::handler<PathsHandler>();
     connect( h, &PathsHandler::onEnterHandle, [this](){ this->refresh();});
@@ -53,10 +55,10 @@ void ActionRenamePath::postInit()
 
 void ActionRenamePath::_doOnTextValueChanged( const QString &txt)
 {
-    if ( txt.size() > _maxLabelChars)
+    if ( txt.size() > _MAX_LABEL_CHARS)
     {
         QSignalBlocker blocker(_dialog);
-        _dialog->setTextValue( txt.left(_maxLabelChars));
+        _dialog->setTextValue( txt.left(_MAX_LABEL_CHARS));
     }   // end if
 }   // end _doOnTextValueChanged
 

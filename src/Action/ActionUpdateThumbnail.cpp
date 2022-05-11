@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 #include <Vis/FaceView.h>
 #include <FaceModel.h>
 #include <r3dvis/OffscreenMeshViewer.h>
+#include <QTools/QImageTools.h>
 #include <vtkPointData.h>
 #include <vtkProperty.h>
 using FaceTools::Action::ActionUpdateThumbnail;
@@ -29,19 +30,20 @@ using FaceTools::Action::Event;
 using FaceTools::FM;
 using MS = FaceTools::ModelSelect;
 
+/*
 // static definitions
 std::unordered_map<const FM*, cv::Mat_<cv::Vec3b> > ActionUpdateThumbnail::_thumbs;
 QReadWriteLock ActionUpdateThumbnail::_rwlock;
+*/
 
 
-ActionUpdateThumbnail::ActionUpdateThumbnail( int w, int h)
-    : FaceAction("Thumbnail Updater"), _vsz( w,h)
+ActionUpdateThumbnail::ActionUpdateThumbnail( int w, int h) : FaceAction("Thumbnail Updater"), _vsz( w,h)
 {
     addTriggerEvent( Event::MESH_CHANGE | Event::LOADED_MODEL);
     setAsync(true);
 }   // end ctor
 
-
+/*
 // static
 cv::Mat ActionUpdateThumbnail::thumbnail( const FM *fm)
 {
@@ -56,17 +58,18 @@ cv::Mat ActionUpdateThumbnail::thumbnail( const FM *fm)
     }   // end if
     return img;
 }   // end thumbnail
+*/
 
 
 // static
-cv::Mat ActionUpdateThumbnail::generateImage( const FM *fm, const QSize &sz, float fov, float dscale)
+QImage ActionUpdateThumbnail::generateImage( const FM *fm, const QSize &sz, float fov, float dscale)
 {
     return generateImage( fm, fm->mesh(), sz, fov, dscale);
 }   // end generateImage
 
 
 // static
-cv::Mat ActionUpdateThumbnail::generateImage( const FM *fm, const r3d::Mesh &mesh,
+QImage ActionUpdateThumbnail::generateImage( const FM *fm, const r3d::Mesh &mesh,
                                                 const QSize &sz, float fov, float dscale)
 {
     // This function used to be an instance member function (now static). The note
@@ -92,9 +95,8 @@ cv::Mat ActionUpdateThumbnail::generateImage( const FM *fm, const r3d::Mesh &mes
     }   // end if
 
     omv.setCamera( ActionOrientCamera::makeFrontCamera( *fm, fov, dscale));
-    //std::cerr << " SNAP ENTER" << std::endl;
-    return omv.snapshot(); // Breaks in separate thread if omv not constructed every time
-    //std::cerr << " SNAP EXIT" << std::endl;
+	const cv::Mat img = omv.snapshot(); // Breaks in separate thread if omv not constructed every time
+	return QTools::copyOpenCV2QImage( img);
 }   // end generateImage
 
 
@@ -109,24 +111,29 @@ bool ActionUpdateThumbnail::doBeforeAction( Event e) { return isAllowed(e);}
 
 void ActionUpdateThumbnail::doAction( Event e)
 {
-    FM::RPtr fm = MS::selectedModelScopedRead();
-    cv::Mat img = generateImage( fm.get(), _vsz, 30, 0.8f);
+    FM::WPtr fm = MS::selectedModelScopedWrite();
+    const QImage img = generateImage( fm.get(), _vsz, 30, 0.8f);
+	fm->setThumbnail( QPixmap::fromImage(img));
+	/*
     _rwlock.lockForWrite();
     _thumbs[fm.get()] = img;
     _rwlock.unlock();
+	*/
 }   // end doAction
 
 
 Event ActionUpdateThumbnail::doAfterAction( Event)
 {
-    emit updated();
+    FM::RPtr fm = MS::selectedModelScopedRead();
+    emit updated( fm.get());
     return Event::NONE;
 }   // end doAfterAction
 
-
+/*
 void ActionUpdateThumbnail::purge( const FM *fm)
 {
     _rwlock.lockForWrite();
     _thumbs.erase(fm);
     _rwlock.unlock();
 }   // end purge
+*/

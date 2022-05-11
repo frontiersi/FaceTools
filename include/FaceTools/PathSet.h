@@ -45,14 +45,14 @@ public:
     void reset();
 
     // Rename the path with given ID returning true on success.
-    bool renamePath( int pathId, const std::string&);
+    bool renamePath( int pathId, const QString&);
 
     // Return the path with given ID.
     const Path& path( int pathId) const;
 
     Path& path( int pathId);
 
-    QString name( int pathId) const;
+    const QString& name( int pathId) const;
 
     const IntSet& ids() const { return _ids;}
 

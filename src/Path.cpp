@@ -50,7 +50,7 @@ Path::Path()
     : _id(-1), _name(""), _validPath(false),
       _elen(0), _slen(0), _area(0), _depth(0), _angle(0), _angleS(0), _angleT(0), _angleC(0)
 {
-    _name = QString("Unnamed_%1").arg(_id).toStdString();
+    setName("");
     _vtxs.resize(2);
 }   // end ctor
 
@@ -59,7 +59,7 @@ Path::Path( int i, const Vec3f& v)
     : _id(i), _name(""), _validPath(false),
     _elen(0), _slen(0), _area(0), _depth(0), _angle(0), _angleS(0), _angleT(0), _angleC(0)
 {
-    _name = QString("Unnamed_%1").arg(_id).toStdString();
+    setName("");
     _vtxs.resize(2);
     _vtxs.front() = _vtxs.back() = _dhan = v;
 }   // end ctor
@@ -212,6 +212,12 @@ void Path::transform( const Mat4f &t)
 }   // end transform
 
 
+void Path::setName( const QString &nm)
+{
+    _name = nm.isEmpty() ? QString("Unnamed_%1").arg(_id) : nm;
+}   // end setName
+
+
 void Path::setHandle0( const Vec3f& v) { _vtxs.front() = v;}
 void Path::setHandle1( const Vec3f& v) { _vtxs.back() = v;}
 void Path::setDepthHandle( const Vec3f& v) { _dhan = v;}
@@ -262,7 +268,7 @@ const Vec3f& Path::handle( int h) const
 void Path::write( PTree& pathsNode, bool withFullPath) const
 {
     PTree& pnode = pathsNode.add("Path","");
-    pnode.put( "Name", name());
+    pnode.put( "Name", name().toStdString());
     r3d::putNamedVertex( pnode, "V0", handle0());
     r3d::putNamedVertex( pnode, "V1", handle1());
     r3d::putNamedVertex( pnode, "VD", depthHandle());
@@ -313,7 +319,7 @@ void Path::read( const PTree& pnode)
         nm = pnode.get<std::string>( "Name");
     else if ( pnode.count("<xmlattr>.name") > 0)
         nm = pnode.get<std::string>( "<xmlattr>.name");
-    setName( nm);
+    setName( QString::fromStdString(nm));
 
     Vec3f v0 = Vec3f::Zero();
     if ( pnode.count("v0") > 0)

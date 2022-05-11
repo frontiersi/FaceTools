@@ -18,9 +18,15 @@
 #ifndef FACE_TOOLS_FILE_IO_FACE_MODEL_DATABASE_H
 #define FACE_TOOLS_FILE_IO_FACE_MODEL_DATABASE_H
 
-#include "FaceModelFileData.h"
-#include <QFileInfo>
-#include <QMutex>
+#include "FaceTools/FaceModel.h"
+#include <QPixmap>
+#include <QRegExp>
+#include <QtSql>
+#include <QDir>
+
+/**
+ * NB: All paths provided must be absolute!
+ */
 
 namespace FaceTools { namespace FileIO {
 
@@ -28,22 +34,48 @@ class FaceTools_EXPORT FaceModelDatabase
 {
 public:
     // Initialise the database by creating the initial connection and defining the schema.
-    // Not thread safe!
     static bool init();
 
-    // Clear all data and reset to empty. Thread safe.
-    static void reset();
+    // Clear all tables.
+    static void clear();
 
-    // Refresh the given path for 3DF files. The path may be for a single file or
-    // a directory. If a directory, only the top level contents is parsed.
-    // Returns the number of 3DF files found or -1 if parsing failed for any
-    // of the files. This function blocks.
-    static int refresh( const QString &path);
+    // Return the thumbnail of the given image in the DB or an empty pixmap if nothing found.
+    static QPixmap imageThumbnail( const QString &imagePath);
+
+    // Update the database from the given model, ensuring the filepath in the images
+    // table is updated to be fpath instead of oldpath (if given) otherwise the existing
+    // path is assumed (the image is already in the DB in that case). The paths must be 3DF files.
+    // If the image is not in the database, it is added. If the subject ID is empty or contains
+    // the placeholder text, the subject ID is replaced (regardless of whether subjectMetaAuth
+    // is true or not).
+    // If subjectMetaAuth is true then the model's subject data is treated as authoritative.
+    // If false, the subject meta data is updated on the model from the database upon return
+    // and the meta saved flag is set false.
+    // Returns true iff the image remains in the database upon return.
+    static bool refreshImage( FM&, QString fpath="", const QString &oldpath="", bool subjectMetaAuth=false);
+
+    // Returns the number of images in the database of the same subject.
+    static size_t numImages( const QString &subjectId);
+
+    // Returns true iff the given metadata matches the given subject ID and the subject ID was found.
+    // Prints error message if multiple rows with the same subject ID found.
+    static bool isSubjectMetaMatched( const QString &subjectId, int8_t sex, const QDate &dob, int meth, int peth);
+
+    // Returns the subject's information for the given ID returning true iff the subject was found.
+    // If the subject was not found, all of the out parameters will be unchanged.
+    static bool subjectMeta( const QString &subjectId, int8_t &sex, QDate &dob, int &meth, int &peth); 
+
+    static QSqlRelationalTableModel* createModel();
+
+    // Constant subject identifier prefix when no subject identifier present.
+    static const QString NO_SUBJECT_STRING;
+    static const QRegExp NO_SUBJECT_REGEXP;
 
 private:
     static bool _isInit;
-    static QMutex _lock;
-    static bool _addImage( const QFileInfo&);
+    static int _imageId;
+    static int _sbjctId;
+    static void _refreshImage( const QString&, FM&, bool);
 };  // end class
 
 }}   // end namespaces

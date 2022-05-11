@@ -131,17 +131,17 @@ int Ethnicities::load( const QString& fname)
     for ( size_t i = 0; i < size_t(nrecs); ++i)
     {
         const rlib::StringVec& recs = lines[i];
-        int code = QString(recs[0].c_str()).toInt(&ok);
+        const int code = QString(recs[0].c_str()).toInt(&ok);
 
         if ( !ok || code < 0)
         {
-            std::cerr << "[WARNING] FaceTools::Ethnicities::load: Skipping invalid code!" << std::endl;
+            std::cerr << "[WARNING] FaceTools::Ethnicities::load: Skipping invalid code!\n";
             continue;
         }   // end if
 
         if ( _names.count(code) > 0)
         {
-            std::cerr << "[WARNING] FaceTools::Ethnicities::load: Skipping duplicate code!" << std::endl;
+            std::cerr << "[WARNING] FaceTools::Ethnicities::load: Skipping duplicate code!\n";
             continue;
         }   // end if
 
@@ -149,7 +149,7 @@ int Ethnicities::load( const QString& fname)
         const QString lname = name.toLower();
         if ( _lnames.count(lname) > 0)
         {
-            std::cerr << "[WARNING] FaceTools::Ethnicities::load: Skipping duplicate name!" << std::endl;
+            std::cerr << "[WARNING] FaceTools::Ethnicities::load: Skipping duplicate name!\n";
             continue;
         }   // end if
 
@@ -167,37 +167,31 @@ int Ethnicities::load( const QString& fname)
                     const int ccode = QString(recs[2+i].c_str()).toInt(&ok);
                     if ( !ok)
                     {
-                        std::cerr << "[WARNING] FaceTools::Ethnicities::load: Skipping invalid mixed code child!" << std::endl;
+                        std::cerr << "[WARNING] FaceTools::Ethnicities::load: Skipping invalid mixed code child!\n";
                         continue;
                     }   // end if
 
                     if ( _names.count(ccode) == 0)
                     {
-                        std::cerr << "[WARNING] FaceTools::Ethnicities::load: Mixed child code not yet defined in file!" << std::endl;
+                        std::cerr << "[WARNING] FaceTools::Ethnicities::load: Mixed child code not yet defined in file!\n";
                         continue;
                     }   // end if
 
-                    if ( isMixed(ccode))
+                    _stashCode( code, ccode);
+                    for ( int ncc : childCodes(ccode))
                     {
-                        std::cerr << "[WARNING] FaceTools::Ethnicities::load: Child codes of mixed codes cannot themselves be mixed!" << std::endl;
-                        continue;
-                    }   // end if
-
-                    _groups[code].insert(ccode);
-                    _rgroups[ccode].insert(code);
+                        _stashCode( code, ncc);
+                        for ( int cc : childCodes( ncc))
+                            _stashCode( code, cc);
+                    }   // end for
                 }   // end for
             }   // end if
             else
             {
-                const int bcode = broadCode(code);
                 const int ncode = narrowCode(code);
-                _groups[bcode].insert(ncode);
-                _rgroups[ncode].insert(bcode);
-                if ( !isNarrow(code))
-                {
-                    _groups[ncode].insert(code);
-                    _rgroups[code].insert(ncode);
-                }   // end if
+                _stashCode( broadCode(code), ncode);
+                if ( !isNarrow(code))   // Child code
+                    _stashCode( ncode, code);
             }   // end else
         }   // end if
 
@@ -207,6 +201,13 @@ int Ethnicities::load( const QString& fname)
     _codes.sort();
     return lrecs;
 }   // end load
+
+
+void Ethnicities::_stashCode( int parent, int child)
+{
+    _groups[parent].insert(child);
+    _rgroups[child].insert(parent);
+}   // end _stashCode
 
 
 QString Ethnicities::_makeMixedName( const IntSet& ethSet)
@@ -237,10 +238,7 @@ int Ethnicities::makeMixedCode( const IntSet &eset)
     _names[emix] = nm;
     _lnames[lnm] = emix;
     for ( int e : eset)
-    {
-        _groups[emix].insert(e);
-        _rgroups[e].insert(emix);
-    }   // end for
+        _stashCode( emix, e);
 
     return emix;
 }   // end makeMixedCode
@@ -382,3 +380,94 @@ int Ethnicities::_belongs( int pc, int cc, bool allBelong)
 
     return rval;
 }   // end _belongs
+
+
+
+void Ethnicities::resetComboBox( QComboBox* cb, int ecode)
+{
+    static const IntSet EMPTY_INT_SET;
+
+    std::list<int> path;  // Will be path from root to leaf (ecode)
+    path.push_front(ecode);
+
+    // Progressively work backwards to the broadest category setting the discovered path:
+    const IntSet* pcodes = &Ethnicities::parentCodes(ecode);
+    while ( !pcodes->empty())
+    {
+        // Find the non-mixed parent.
+        int nmp = 0;
+        for ( int pcode : *pcodes)
+        {
+            // There's only 1 non-mixed parent per ethnic code
+            if ( !Ethnicities::isMixed(pcode))
+            {
+                nmp = pcode;
+                break;
+            }   // end if
+        }   // end for
+
+        pcodes = &EMPTY_INT_SET;
+        if ( nmp > 0)
+        {
+            path.push_front( nmp);
+            // Will return empty when the code at the front is of the "broad" category.
+            pcodes = &Ethnicities::parentCodes( nmp);
+        }   // end if
+    }   // end while
+
+    QModelIndex midx = QModelIndex();
+    cb->setRootModelIndex( midx);   // Initialise to root
+    int rowIdx = 0;
+
+    if ( ecode != 0)
+    {
+        for ( int ec : path)
+        {
+            const QString &ename = Ethnicities::name(ec);
+            rowIdx = cb->findData( ename, Qt::DisplayRole);
+            if ( ec != ecode)
+            {
+                midx = cb->model()->index( rowIdx, 0, midx);
+                cb->setRootModelIndex(midx);
+            }   // end if
+        }   // end for
+    }   // end if
+
+    cb->setCurrentIndex( rowIdx);
+}   // end resetComboBox
+
+
+QTools::TreeModel* Ethnicities::createComboBoxModel()
+{
+    QTools::TreeModel *emodel = new QTools::TreeModel;
+    QTools::TreeItem *root = emodel->setNewRoot({"Cultural and Ethnic Group"});
+    root->appendChild( new QTools::TreeItem( {"Not stated"}));
+
+    QTools::TreeItem *cbroad = nullptr; // Current broad node
+    QTools::TreeItem *cnrrow = nullptr; // Current narrow node
+
+    for ( int ethn : Ethnicities::codes())
+    {
+        if ( ethn <= 0)
+            continue;
+
+        const QString ename = Ethnicities::name(ethn);
+
+        if ( Ethnicities::isMixed( ethn))
+            root->appendChild( new QTools::TreeItem( {ename}));
+        else if ( Ethnicities::isBroad(ethn))    // 1000, 2000, 3000 etc
+            cbroad = new QTools::TreeItem( {ename}, root);
+        else if ( Ethnicities::isNarrow(ethn))  // 1100, 1200, 1300 etc
+        {
+            assert( cbroad != nullptr);
+            cnrrow = new QTools::TreeItem( {ename}, cbroad);
+        }   // end else if
+        else
+        {
+            assert( cnrrow != nullptr);
+            cnrrow->appendChild( new QTools::TreeItem( {ename}));
+        }   // end else
+    }   // end for
+
+    return emodel;
+}   // end createComboBoxModel

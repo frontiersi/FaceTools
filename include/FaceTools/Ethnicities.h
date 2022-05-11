@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,8 @@
 #define FACE_TOOLS_ETHNICITIES_H
 
 #include "FaceTypes.h"
+#include <QTools/TreeModel.h>
+#include <QComboBox>
 #include <QMap>
 
 namespace FaceTools {
@@ -127,6 +129,17 @@ public:
      */
     static int makeMixedCode( const IntSet&);
 
+    /**
+     * Create a tree model for combo boxes etc that contains the hierarchy of ethnicities.
+     */
+    static QTools::TreeModel* createComboBoxModel();
+
+    /**
+     * Reset the provided combo box (with QTools::TreeModel) with the
+     * correct sub-hierarchy layout of ethnicities given root ethnicity code.
+     */
+    static void resetComboBox( QComboBox*, int rootCode=0);
+
 private:
     static std::list<int> _codes;                    // All numerically ascending codes (not temporaries).
     static std::unordered_map<int, QString> _names;  // Four digit codes to all names.
@@ -140,6 +153,8 @@ private:
     static int _findSharedParent( int&, int, bool);
 
     static int _belongs( int, int, bool);
+
+    static void _stashCode( int, int);
 };  // end class
 
 }  // end namespace

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
  ************************************************************************/
 
 #include <Action/ActionSave.h>
+#include <FileIO/FaceModelDatabase.h>
 #include <FileIO/FaceModelManager.h>
 #include <QMessageBox>
 #include <cassert>
@@ -33,7 +34,7 @@ ActionSave::ActionSave( const QString& dn, const QIcon& ico, const QKeySequence&
     // Note need to refresh after SAVE since SaveAs will cause this event.
     addRefreshEvent( Event::MODEL_SELECT | Event::MESH_CHANGE | Event::AFFINE_CHANGE | Event::SAVED_MODEL
                    | Event::LANDMARKS_CHANGE | Event::PATHS_CHANGE | Event::METADATA_CHANGE);
-    setAsync(true);
+    //setAsync(true);   // Don't allow this to be asynchronous (cause of database thread for FMM::write).
 }   // end ctor
 
 
@@ -90,8 +91,8 @@ Event ActionSave::doAfterAction( Event)
 {
     if ( _fails.empty())
     {
-        FM::RPtr fm = MS::selectedModelScopedRead();
-        UndoStates::clear(fm.get());
+        FM *fm = MS::selectedModel();
+        UndoStates::clear(fm);
         MS::setInteractionMode( IMode::CAMERA_INTERACTION);
         const QString fpath = FMM::filepath( *fm);
         MS::showStatus( QString("Saved to '%1'").arg(fpath), 5000);

@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,8 +66,8 @@ public:
     // Get the nature of the error if read returns null or write returns false.
     static const QString& error() { return _err;}
 
-    // Return the filepath for the model.
-    static const QString& filepath( const FM&);
+    // Return the absolute filepath for the model or an empty string if not loaded.
+    static QString filepath( const FM&);
 
     // Return the open model for the given filepath or null if not open.
     static FM* model( const QString&);
@@ -79,9 +79,9 @@ public:
     // Close given model and release memory (client must check if saved!).
     static void close( const FM&);
 
-    // Returns the number of models currently open.
-    static size_t numOpen() { return _mdata.size();}
-    static size_t loadLimit() { return _loadLimit;}  // Load limit not enforced by FaceModelManager (clients must do this)
+    static size_t numOpen() { return _mpaths.size();} // Returns the number of models currently open.
+    static size_t loadLimit() { return _loadLimit;}   // Load limit not enforced by FaceModelManager (clients must do this)
+    static bool loadLimitReached() { return numOpen() == loadLimit();}
 
     // Get the complete set of models currently open.
     static const FMS& opened() { return _models;}
@@ -92,7 +92,7 @@ private:
     static size_t _loadLimit;
     static FaceModelFileHandlerMap _fhmap;
     static FMS _models;
-    static std::unordered_map<FM*, QString> _mdata;
+    static std::unordered_map<FM*, QString> _mpaths;
     static std::unordered_map<QString, FM*> _mfiles;    // Lookup models by current filepath
     static QString _err;
     static void _setModelFilepath( const FM&, const QString&);

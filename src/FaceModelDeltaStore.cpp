@@ -30,7 +30,7 @@ QReadWriteLock FaceModelDeltaStore::_lock;
 
 bool FaceModelDeltaStore::_has( const FM *tgt, const FM *src)
 {
-    return _t2s.count(tgt) > 0 && _t2s.at(tgt).count(src) > 0;
+    return (_t2s.count(tgt) > 0) && (_t2s.at(tgt).count(src) > 0);
 }   // end _has
 
 

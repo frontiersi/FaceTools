@@ -70,7 +70,7 @@ void FaceModel::update( r3d::Mesh::Ptr mesh, bool updateConnectivity, bool settl
         /*
         static const std::string imsg = "[INFO] FaceTools::FaceModel::update: ";
         if ( rverts > 0)
-            std::cerr << imsg << "Removed " << rverts << " disconnected vertices" << std::endl;
+            std::cerr << imsg << "Removed " << rverts << " disconnected vertices\n";
         */
 
         // Ensure that vertices are in sequential order.
@@ -86,7 +86,7 @@ void FaceModel::update( r3d::Mesh::Ptr mesh, bool updateConnectivity, bool settl
         r3d::Manifolds::Ptr manf = r3d::Manifolds::create( *mesh);
         if ( int(manf->count()) > maxManifolds)
         {
-            //std::cerr << imsg << "Reducing from " << manf->count() << " to " << maxManifolds << " manifolds..." << std::endl;
+            //std::cerr << imsg << "Reducing from " << manf->count() << " to " << maxManifolds << " manifolds...\n";
             mesh = manf->reduceManifolds( maxManifolds);
             manf = r3d::Manifolds::create( *mesh);
         }   // end if
@@ -96,7 +96,7 @@ void FaceModel::update( r3d::Mesh::Ptr mesh, bool updateConnectivity, bool settl
         {
             manf->at(i).boundaries();  // Causes boundary edges to be calculated
             //const auto& bnds = manf->at(i).boundaries();  // Causes boundary edges to be calculated
-            //std::cerr << " - Manifold " << i << " has " << bnds.count() << " boundary edges" << std::endl;
+            //std::cerr << " - Manifold " << i << " has " << bnds.count() << " boundary edges\n";
         }   // end for
         _manifolds = manf;
     }   // end updateConnectivity
@@ -189,10 +189,6 @@ void FaceModel::rebuildViews()
 }   // end rebuildViews
 
 
-void FaceModel::setMetaSaved( bool s) { _savedMeta = s;}
-void FaceModel::setModelSaved( bool s) { _savedModel = s;}
-
-
 Vec3f FaceModel::centreFront() const
 {
     assert(!_bnds.empty());
@@ -225,126 +221,36 @@ FaceModel::WPtr FaceModel::scopedWriteLock()
 }   // end scopedWriteLock
 
 
-void FaceModel::setSource( const QString& s)
-{
-    if ( _source != s)
-    {
-        _source = s;
-        setMetaSaved(false);
-    }   // end if
-}   // end setSource
-
-
-void FaceModel::setStudyId( const QString& s)
-{
-    if ( _studyId != s)
-    {
-        _studyId = s;
-        setMetaSaved(false);
-    }   // end if
-}   // end setStudyId
-
-
-void FaceModel::setSubjectId( const QString& s)
-{
-    if ( _subjectId != s)
-    {
-        _subjectId = s;
-        setMetaSaved(false);
-    }   // end if
-}   // end setSubjectId
-
-
-void FaceModel::setImageId( const QString& s)
-{
-    if ( _imageId != s)
-    {
-        _imageId = s;
-        setMetaSaved(false);
-    }   // end if
-}   // end setImageId
-
-
-void FaceModel::setDateOfBirth( const QDate& d)
-{
-    if ( _dob != d)
-    {
-        _dob = d;
-        setMetaSaved(false);
-    }   // end if
-}   // end setDateOfBirth
-
-
+/*
 bool FaceModel::isSubjectMatch( const FM *fm) const
 {
     return subjectId() == fm->subjectId()
         && dateOfBirth() == fm->dateOfBirth()
         && maskHash() == fm->maskHash();
 }   // end isSubjectMatch
-
-
-void FaceModel::setMaternalEthnicity( int t)
-{
-    if ( _methnicity != t)
-    {
-        _methnicity = t;
-        setMetaSaved(false);
-    }   // end if
-}   // end setMaternalEthnicity
-
-
-void FaceModel::setPaternalEthnicity( int t)
-{
-    if ( _pethnicity != t)
-    {
-        _pethnicity = t;
-        setMetaSaved(false);
-    }   // end if
-}   // end setPaternalEthnicity
-
-
-void FaceModel::setCaptureDate( const QDate& d)
-{
-    if ( _cdate != d)
-    {
-        _cdate = d;
-        setMetaSaved(false);
-    }   // end if
-}   // end setCaptureDate
-
-
-void FaceModel::setSex( int8_t s)
-{
-    if ( _sex != s)
-    {
-        _sex = s;
-        setMetaSaved(false);
-    }   // end if
-}   // end setSex
+*/
 
 
 bool FaceModel::hasMetaData() const
 {
-    bool assContent = false;
-    for ( const auto& a : _ass)
-    {
-        if (a->hasContent())
-        {
-            assContent = true;
-            break;
-        }   // end if
-    }   // end for
-
-    return assContent
+    const bool mainMeta = !_imageId.isEmpty()
+        || _cdate != QDate::currentDate()
         || !_source.isEmpty()
         || !_studyId.isEmpty()
         || !_subjectId.isEmpty()
-        || !_imageId.isEmpty()
         || _dob != QDate::currentDate()
         || _sex != FaceTools::UNKNOWN_SEX
         || _methnicity != 0
-        || _pethnicity != 0
-        || _cdate != QDate::currentDate();
+        || _pethnicity != 0;
+
+    if ( mainMeta)
+        return true;
+
+    // Check if landmarks or paths present
+    for ( const auto& a : _ass)
+        if (a->hasContent())
+            return true;
+    return false;
 }   // end hasMetaData
 
 
@@ -581,7 +487,7 @@ void FaceModel::removePath( int pid)
 void FaceModel::renamePath( int pid, const QString &nm)
 {
     assert( _cass);
-    if ( _cass->paths().renamePath( pid, nm.toStdString()))
+    if ( _cass->paths().renamePath( pid, nm))
         setMetaSaved(false);
 }   // end renamePath
 

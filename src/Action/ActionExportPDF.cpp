@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,20 +21,18 @@
 #include <FileIO/FaceModelManager.h>
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
-
 #include <QDesktopServices>
 #include <QTemporaryDir>
 #include <QMessageBox>
 #include <QFile>
-
 #include <fstream>
 #include <cassert>
+#include <r3dio/LatexWriter.h>
 using FaceTools::Action::ActionExportPDF;
 using FaceTools::Action::Event;
 using FaceTools::Report::ReportManager;
 using FaceTools::Widget::ReportChooserDialog;
 using FaceTools::U3DCache;
-using FaceTools::Vis::FV;
 using FaceTools::FM;
 using FMM = FaceTools::FileIO::FaceModelManager;
 using MS = FaceTools::ModelSelect;
@@ -42,6 +40,7 @@ using QMB = QMessageBox;
 
 // static members
 bool ActionExportPDF::_openOnSave(false);
+bool ActionExportPDF::_allowExport(false);
 
 
 // public
@@ -58,6 +57,14 @@ void ActionExportPDF::postInit()
     QWidget *prnt = static_cast<QWidget*>(parent());
     _dialog = new ReportChooserDialog( prnt);
     _fileDialog = createSaveDialog( prnt);
+    _allowExport = r3dio::LatexWriter::testGeneratePDF();
+    if ( !_allowExport)
+    {
+        static const QString msg = tr("Unable to generate a test PDF on this system: PDF reporting is disabled!");
+        std::cerr << msg.toStdString() << std::endl;
+        QMB::warning( static_cast<QWidget*>(parent()), tr("PDF Report Generation Problem!"),
+                      QString("<p align='center'>%1</p>").arg(msg));
+    }   // end if
 }   // end postInit
 
 
@@ -78,6 +85,9 @@ QFileDialog* ActionExportPDF::createSaveDialog( QWidget *prnt)
 
 bool ActionExportPDF::isAvailable()
 {
+    if ( !_allowExport)
+        return false;
+
     if ( !ReportManager::isAvailable() || !U3DCache::isAvailable())
         return false;
 

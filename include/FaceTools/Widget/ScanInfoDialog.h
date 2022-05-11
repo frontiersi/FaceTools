@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ public:
     ~ScanInfoDialog() override;
 
     QSize thumbDims() const;
-    void setThumbnail( const cv::Mat_<cv::Vec3b>);
+    void setThumbnail( const QPixmap&);
 
     bool isApplyEnabled() const;
 
@@ -74,6 +74,8 @@ private:
     QTools::EventSignaller _focusOutSignaller;
     bool _isDifferentToCurrent() const;
     void _checkEnableApply();
+    void _resetSubjectData();
+    void _resetImageData();
 };  // end class
 
 }}   // end namespace

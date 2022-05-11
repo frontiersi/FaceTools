@@ -36,69 +36,45 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="0,0,0,1">
      <item>
-      <widget class="QLabel" name="label_4">
+      <widget class="QLabel" name="label_11">
        <property name="minimumSize">
         <size>
          <width>90</width>
          <height>0</height>
         </size>
        </property>
-       <property name="maximumSize">
-        <size>
-         <width>16777215</width>
-         <height>16777215</height>
-        </size>
-       </property>
        <property name="text">
-        <string>Image Date</string>
+        <string>Subject</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
        </property>
        <property name="buddy">
-        <cstring>captureDateEdit</cstring>
+        <cstring>subjectIdLineEdit</cstring>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QDateEdit" name="captureDateEdit">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
+      <widget class="QLineEdit" name="subjectIdLineEdit">
        <property name="minimumSize">
         <size>
          <width>160</width>
          <height>0</height>
         </size>
        </property>
-       <property name="maximumSize">
-        <size>
-         <width>160</width>
-         <height>16777215</height>
-        </size>
-       </property>
        <property name="toolTip">
-        <string>The date when the image was taken.</string>
+        <string>Subject identifier.</string>
        </property>
        <property name="whatsThis">
-        <string>The image capture date is used with the subject's date of birth to calculate their age.</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Subject identifier or reference code (may be left blank).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
        </property>
-       <property name="displayFormat">
-        <string>dd MMM yyyy</string>
-       </property>
-       <property name="calendarPopup">
-        <bool>true</bool>
-       </property>
       </widget>
      </item>
      <item>
-      <widget class="QLabel" name="label_6">
+      <widget class="QLabel" name="label_10">
        <property name="minimumSize">
         <size>
          <width>100</width>
@@ -106,18 +82,18 @@
         </size>
        </property>
        <property name="text">
-        <string>Image Source</string>
+        <string>Image Ref</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
        </property>
        <property name="buddy">
-        <cstring>sourceLineEdit</cstring>
+        <cstring>imageIdLineEdit</cstring>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="sourceLineEdit">
+      <widget class="QLineEdit" name="imageIdLineEdit">
        <property name="minimumSize">
         <size>
          <width>200</width>
@@ -125,10 +101,10 @@
         </size>
        </property>
        <property name="toolTip">
-        <string>Provenance of this image.</string>
+        <string>Image identifier or reference code.</string>
        </property>
        <property name="whatsThis">
-        <string>The imaging group / individual / location / hardware system that captured this image. In other words, any information that can help someone to identify where this image came from.</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Image identifier or reference code (may be left blank).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -149,12 +125,12 @@
        </property>
        <property name="maximumSize">
         <size>
-         <width>16777215</width>
+         <width>90</width>
          <height>16777215</height>
         </size>
        </property>
        <property name="text">
-        <string>Birth Date</string>
+        <string>Birthdate</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -188,7 +164,7 @@
         <string>The subject's date of birth.</string>
        </property>
        <property name="whatsThis">
-        <string>Date of birth is needed to calculate age for evaluation against growth curves.</string>
+        <string>Birthdate (together with the image capture date) is used to calculate the subject's age for evaluation against growth curves.</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -202,40 +178,64 @@
       </widget>
      </item>
      <item>
-      <widget class="QLabel" name="label_11">
+      <widget class="QLabel" name="label_4">
        <property name="minimumSize">
         <size>
          <width>100</width>
          <height>0</height>
         </size>
        </property>
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>16777215</height>
+        </size>
+       </property>
        <property name="text">
-        <string>Subject Ref</string>
+        <string>Image Date</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
        </property>
        <property name="buddy">
-        <cstring>subjectIdLineEdit</cstring>
+        <cstring>captureDateEdit</cstring>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="subjectIdLineEdit">
+      <widget class="QDateEdit" name="captureDateEdit">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="minimumSize">
         <size>
          <width>200</width>
          <height>0</height>
         </size>
        </property>
+       <property name="maximumSize">
+        <size>
+         <width>160</width>
+         <height>16777215</height>
+        </size>
+       </property>
        <property name="toolTip">
-        <string>Study or reference code.</string>
+        <string>The date of image capture.</string>
        </property>
        <property name="whatsThis">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Any relevent subject reference  - may be left blank.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        <string>The image capture date is used with the subject's date of birth to calculate their age.</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
+       </property>
+       <property name="displayFormat">
+        <string>dd MMM yyyy</string>
+       </property>
+       <property name="calendarPopup">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
@@ -297,7 +297,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QLabel" name="label_10">
+      <widget class="QLabel" name="label_6">
        <property name="minimumSize">
         <size>
          <width>100</width>
@@ -305,18 +305,18 @@
         </size>
        </property>
        <property name="text">
-        <string>Image Ref</string>
+        <string>Source</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
        </property>
        <property name="buddy">
-        <cstring>imageIdLineEdit</cstring>
+        <cstring>sourceLineEdit</cstring>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="imageIdLineEdit">
+      <widget class="QLineEdit" name="sourceLineEdit">
        <property name="minimumSize">
         <size>
          <width>200</width>
@@ -324,10 +324,10 @@
         </size>
        </property>
        <property name="toolTip">
-        <string>Study or reference code.</string>
+        <string>Where this image was taken, or the system that produced the image.</string>
        </property>
        <property name="whatsThis">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Any relevent image reference  - may be left blank.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        <string>The imaging group / individual / location / hardware system that captured this image. In other words, any information that can help someone to identify where this image came from.</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -400,7 +400,7 @@
         </size>
        </property>
        <property name="text">
-        <string>Study Ref</string>
+        <string>Study</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -419,10 +419,10 @@
         </size>
        </property>
        <property name="toolTip">
-        <string>Study or reference code.</string>
+        <string>Study/cohort identifier or reference code.</string>
        </property>
        <property name="whatsThis">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Any relevent study reference  - may be left blank.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Study identifier or reference code (may be left blank).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -721,14 +721,14 @@ can be input here and will be saved out into the 3DF file format.</string>
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>captureDateEdit</tabstop>
+  <tabstop>subjectIdLineEdit</tabstop>
   <tabstop>dobDateEdit</tabstop>
   <tabstop>maternalEthnicityComboBox</tabstop>
   <tabstop>paternalEthnicityComboBox</tabstop>
   <tabstop>sexComboBox</tabstop>
-  <tabstop>sourceLineEdit</tabstop>
-  <tabstop>subjectIdLineEdit</tabstop>
   <tabstop>imageIdLineEdit</tabstop>
+  <tabstop>captureDateEdit</tabstop>
+  <tabstop>sourceLineEdit</tabstop>
   <tabstop>studyIdLineEdit</tabstop>
   <tabstop>assessorComboBox</tabstop>
   <tabstop>addAssessmentButton</tabstop>

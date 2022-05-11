@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 
 #include <Action/ActionSaveAs.h>
 #include <FileIO/FaceModelManager.h>
+#include <FileIO/FaceModelDatabase.h>
 #include <QFileInfo>
 #include <QMessageBox>
 #include <cassert>
@@ -32,7 +33,7 @@ using QMB = QMessageBox;
 ActionSaveAs::ActionSaveAs( const QString& dn, const QIcon& ico, const QKeySequence& ks)
     : FaceAction( dn, ico, ks), _fdialog(nullptr)
 {
-    setAsync(true);
+    //setAsync(true);   // Must be synchronous for DB update
 }   // end ctor
 
 
@@ -70,6 +71,7 @@ bool ActionSaveAs::doBeforeAction( Event)
     _fdialog->setDirectory( filepath.canonicalPath()); // Default save directory is last save location for model
     _fdialog->selectFile( filename);
 
+    bool is3DF = false;
     QWidget* prnt = static_cast<QWidget*>(parent());
     while ( _filename.isEmpty())
     {
@@ -99,8 +101,10 @@ bool ActionSaveAs::doBeforeAction( Event)
             continue;
         }   // end if
 
+        is3DF = FMM::isPreferredFileFormat(_filename);
+
         // Warn if model has meta-data or texture and the selected file type cannot save those things.
-        const bool mayLoseMetaData = fm->hasMetaData() && !FMM::isPreferredFileFormat( _filename);
+        const bool mayLoseMetaData = fm->hasMetaData() && !is3DF;
         const bool mayLoseTexture = fm->hasTexture() && !FMM::canSaveTextures( _filename);
         if ( mayLoseMetaData || mayLoseTexture)
         {
@@ -129,6 +133,12 @@ bool ActionSaveAs::doBeforeAction( Event)
                 _filename = "";
         }   // end if
     }   // end while
+
+    if ( !_filename.isEmpty() && fm->subjectId().isEmpty() && is3DF)
+    {
+        const static QString msg = tr("This image has no subject identifier set so will not appear in the database.");
+        QMB::warning( prnt, tr("Subject Identifier Unset!"), QString("<p align='center'>%1</p>").arg(msg));
+    }   // end if
 
     if ( !_filename.isEmpty())
         MS::showStatus( QString( "Saving to '%1'...").arg(_filename), 0, true);
@@ -161,7 +171,8 @@ Event ActionSaveAs::doAfterAction( Event)
 {
     if ( has( _egrp, Event::SAVED_MODEL))
     {
-        UndoStates::clear( MS::selectedModel());
+        FM *fm = MS::selectedModel();
+        UndoStates::clear( fm);
         MS::setInteractionMode( IMode::CAMERA_INTERACTION);
         MS::showStatus( QString("Saved to '%1'").arg(_filename), 5000);
     }   // end if

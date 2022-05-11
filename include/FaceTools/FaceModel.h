@@ -21,6 +21,7 @@
 #include "FaceAssessment.h"
 #include "FaceViewSet.h"
 #include <QReadWriteLock>
+#include <QPixmap>
 #include <QDate>
 #include <r3d.h>
 
@@ -199,14 +200,10 @@ public:
      */
     const Vec3f &landmarkPosition( int, FaceSide) const;
 
-    /**
-     * Swap the landmark laterals for ALL assessments.
-     */
+    // Swap the landmark laterals for ALL assessments.
     void swapLandmarkLaterals();
 
-    /**
-     * Make landmarks and paths update their positions to be incident with the surface. Makes metadata unsaved.
-     */
+    // Make landmarks and paths update their positions to be incident with the surface. Makes metadata unsaved.
     void moveToSurface();
 
     /**
@@ -215,84 +212,59 @@ public:
      */
     Landmark::LandmarkSet makeMeanLandmarksSet() const;
 
-    /**
-     * Convenience function to return paths from the current assessment.
-     */
+    // Convenience function to return paths from the current assessment.
     const PathSet& currentPaths() const;
     PathSet &currentPaths();
 
-    /**
-     * Returns true if the current assessment has paths.
-     */
+    // Returns true if the current assessment has paths.
     bool hasPaths() const;
 
-    /**
-     * Add a path with its initial (transformed) position and both handles are set to.
-     */
+    // Add a path with its initial (transformed) position and both handles are set to.
     int addPath( const Vec3f&);
 
-    /**
-     * Move in a whole path returning its ID (use std::move on the path argument).
-     */
+    // Move in a whole path returning its ID (use std::move on the path argument).
     int addPath( Path&&);
 
     void removePath( int pid);
     void renamePath( int pid, const QString&);
 
-    // Set/get source of data.
-    void setSource( const QString&);
-    const QString& source() const { return _source;}
-
-    // Set/get study ID
-    void setStudyId( const QString&);
-    const QString& studyId() const { return _studyId;}
-
-    // Set/get subject ID
-    void setSubjectId( const QString&);
-    const QString& subjectId() const { return _subjectId;}
-
-    // Set/get image ID
-    void setImageId( const QString&);
+    /*** IMAGE METADATA ***/
+    void setImageId( const QString &s) { _imageId = s;}
     const QString& imageId() const { return _imageId;}
-
-    // Get age of individual at date of image capture.
-    float age() const { return float( dateOfBirth().daysTo( captureDate())) / 365.25f;}
-
-    // Set/get DoB of individual.
-    void setDateOfBirth( const QDate&);
-    const QDate& dateOfBirth() const { return _dob;}
-
-    // Set/get sex of individual.
-    void setSex( int8_t);
-    int8_t sex() const { return _sex;}
-
-    // Returns true iff this model is a subject match for the given model.
-    // A subject match requires only the following three fields to match:
-    // subjectId(), dateOfBirth(), maskHash().
-    bool isSubjectMatch( const FM*) const;
-
-    /**
-     * Set/get ethnicity of individual's mother.
-     */
-    void setMaternalEthnicity( int);
-    int maternalEthnicity() const { return _methnicity;}
-
-    /**
-     * Set/get ethnicity of individual's father.
-     */
-    void setPaternalEthnicity( int);
-    int paternalEthnicity() const { return _pethnicity;}
-
-    // Set/get capture date of image.
-    void setCaptureDate( const QDate&);
+    void setCaptureDate( const QDate &d) { _cdate = d;}
     const QDate& captureDate() const { return _cdate;}
+    void setSource( const QString &s) { _source = s;}
+    const QString& source() const { return _source;}
+    void setStudyId( const QString &s) { _studyId = s;}
+    const QString& studyId() const { return _studyId;}
+    /**********************/
+
+    /*** SUBJECT METADATA ***/
+    void setSubjectId( const QString &s) { _subjectId = s;}
+    const QString& subjectId() const { return _subjectId;}
+    void setDateOfBirth( const QDate &d) { _dob = d;}
+    const QDate& dateOfBirth() const { return _dob;}
+    float age() const { return float( dateOfBirth().daysTo( captureDate())) / 365.25f;}
+    void setSex( int8_t s) { _sex = s;}
+    int8_t sex() const { return _sex;}
+    void setMaternalEthnicity( int e) { _methnicity = e;}
+    int maternalEthnicity() const { return _methnicity;}
+    void setPaternalEthnicity( int e) { _pethnicity = e;}
+    int paternalEthnicity() const { return _pethnicity;}
+    /************************/
+
+    // Returns true if *any* of the metadata are present.
+    bool hasMetaData() const;
 
     // Set/get if this model/metadata needs saving.
-    void setModelSaved( bool);
-    void setMetaSaved( bool);
-    bool isMetaSaved() const { return _savedMeta;}
+    void setModelSaved( bool s) { _savedModel = s;}
     bool isModelSaved() const { return _savedModel;}
+    void setMetaSaved( bool s) { _savedMeta = s;}
+    bool isMetaSaved() const { return _savedMeta;}
     bool isSaved() const { return isMetaSaved() && isModelSaved();}
+
+    void setThumbnail( const QPixmap &pmap) { _thumb = pmap;}
+    const QPixmap &thumbnail() const { return _thumb;}
 
     // The views associated with this model.
     const FVS& fvs() const { return _fvs;}
@@ -300,9 +272,6 @@ public:
 
     // Rebuild (sync) the views associated with this model.
     void rebuildViews();
-
-    // Returns true if any of the metadata are present.
-    bool hasMetaData() const;
 
     // Find and return point on surface closest to the given point
     // (which may not be on the surface). This is a transformed point.
@@ -330,6 +299,8 @@ private:
     int _methnicity;    // Subject's maternal ethnicity
     int _pethnicity;    // Subject's paternal ethnicity
     QDate _cdate;       // Date of image capture
+
+    QPixmap _thumb;     // Thumbnail image
 
     r3d::Mesh::Ptr _mesh;
     r3d::Manifolds::Ptr _manifolds;

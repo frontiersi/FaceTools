@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,8 @@
 #define FACE_TOOLS_FILE_IO_FACE_MODEL_XML_FILE_HANDLER_H
 
 #include "FaceModelFileHandler.h"
-#include <QTemporaryDir>
+#include <QPixmap>
+#include <QDir>
 
 namespace FaceTools { namespace FileIO {
 
@@ -51,9 +52,19 @@ private:
 };  // end class
 
 
-// Read meta data from a 3DF file into the given property tree.
+// Reads just metadata from a 3DF file into the given property tree.
+// Thumbnail image also read in if thumb pixmap isn't null.
+// Note that this function doesn't extract the entire archive - just the meta.xml and thumb.jpg files
+// into the given unzip directory (a temporary directory is used if left empty).
 // Returns a non-empty string on error which contains the nature of the error.
-FaceTools_EXPORT QString readMeta( const QString &fname, QTemporaryDir &extractDir, PTree &tree);
+FaceTools_EXPORT QString readMeta( const QString &fname, PTree&, QPixmap *thumb=nullptr, QString unzipDir="");
+
+// Unzips the whole archive (3DF) given by fname into the given directory.
+// On return, all of the files (including model data) can be read from the directory.
+FaceTools_EXPORT QString unzipArchive( const QString &fname, const QString &unzipDir, PTree&, QPixmap *thumb=nullptr);
+
+// Load the mesh data into the given FaceModel. Returns an empty string on success.
+FaceTools_EXPORT QString loadData( FM&, const QString &unzipDir, const QString &meshfname, const QString &maskfname);
 
 // Import metadata from a property tree for the given model, setting file
 // version and the mesh and mask filenames and returning true iff successful.
@@ -61,9 +72,6 @@ FaceTools_EXPORT bool importMetaData( FM&, const PTree&, double &fversion, QStri
 
 // Same as above but without worrying about returing the mesh or mask filepaths in the out parameter.
 FaceTools_EXPORT bool importMetaData( FM&, const PTree&, double &fversion);
-
-// Load the mesh data into the given FaceModel. Returns an empty string on success.
-FaceTools_EXPORT QString loadData( FM&, const QTemporaryDir&, const QString &meshfname, const QString &maskfname);
 
 // Export metadata about the given model into a property tree ready for writing.
 // Note that because the data are being written out into a property tree, different

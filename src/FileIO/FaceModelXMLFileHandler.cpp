@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  ************************************************************************/
 
 #include <FileIO/FaceModelXMLFileHandler.h>
-#include <Action/ActionUpdateThumbnail.h>
+#include <FileIO/FaceModelDatabase.h>
 #include <Metric/PhenotypeManager.h>
 #include <MaskRegistration.h>
 #include <FaceTools.h>
@@ -25,11 +25,13 @@
 #include <MiscFunctions.h>
 #include <r3dio/IOHelpers.h>
 #include <QTemporaryDir>
-#include <quazip5/JlCompress.h>
+#include <QFile>
+#include <quazip/JlCompress.h>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/algorithm/string.hpp>
 #include <sstream>
 #include <ctime>
+using FMD = FaceTools::FileIO::FaceModelDatabase;
 using FaceTools::FileIO::FaceModelXMLFileHandler;
 using FaceTools::Metric::PhenotypeManager;
 using FaceTools::Metric::Phenotype;
@@ -42,7 +44,11 @@ void FaceTools::FileIO::exportMetaData( const FM &fm, bool withExtras, PTree& tn
 
     rnode.put( "Source", fm.source().toStdString());
     rnode.put( "StudyId", fm.studyId().toStdString());
-    rnode.put( "SubjectId", fm.subjectId().toStdString());
+    // If the subject ID matches the database placeholder, set to empty.
+    // This doesn't guarantee that the database placeholder text for the
+    // subject ID won't be used (since 3DFs could be created outside of
+    // Cliniface), but it keeps things clean at least.
+    rnode.put( "SubjectId", (FMD::NO_SUBJECT_REGEXP.exactMatch(fm.subjectId()) ? "" : fm.subjectId()).toStdString());
     rnode.put( "ImageId", fm.imageId().toStdString());
     rnode.put( "DateOfBirth", fm.dateOfBirth().toString().toStdString());
     rnode.put( "Sex", FaceTools::toSexString(fm.sex()).toStdString());
@@ -117,56 +123,46 @@ bool FaceModelXMLFileHandler::write( const FM* fm, const QString& fname)
 
     try
     {
-        QTemporaryDir tdir( QDir::tempPath() + "/" + QFileInfo( fname).baseName());
+        QTemporaryDir tdir( QDir::temp().filePath( QFileInfo( fname).baseName()));
         if ( !tdir.isValid())
-        {
             _err = "Unable to create temporary directory for writing to!";
-            return false;
-        }   // end if
 
         std::ofstream ofs;
-        ofs.open( tdir.filePath( "meta.xml").toStdString());
-        if ( !ofs.is_open())
+        if ( _err.isEmpty())
         {
-            _err = "Cannot open output file stream for writing metadata!";
-            return false;
+            ofs.open( tdir.filePath( "meta.xml").toStdString());
+            if ( !ofs.is_open())
+                _err = "Cannot open output file stream for writing metadata!";
         }   // end if
 
         // Export metadata
-        PTree tree;
-        PTree& rnode = exportXMLHeader( tree);
-        exportMetaData( *fm, false/*no extra data*/, rnode);
-        boost::property_tree::write_xml( ofs, tree);
-        ofs.close();
-
-        // Write out the model geometry itself into .obj format.
-        if ( !r3dio::saveAsOBJ( fm->mesh(), tdir.filePath( "mesh.obj").toStdString(), false/*as jpeg*/))
+        if ( _err.isEmpty())
         {
-            _err = "Failed to write mesh!";
-            return false;
+            PTree tree;
+            PTree& rnode = exportXMLHeader( tree);
+            exportMetaData( *fm, false/*no extra data*/, rnode);
+            boost::property_tree::write_xml( ofs, tree);
+            ofs.close();
+            // Write out the model geometry itself into .obj format.
+            if ( !r3dio::saveAsOBJ( fm->mesh(), tdir.filePath( "mesh.obj").toStdString(), false/*as jpeg*/))
+                _err = "Failed to write mesh!";
         }   // end if
 
         // Write out the mask if set
-        if ( fm->hasMask() && !r3dio::saveAsPLY( fm->mask(), tdir.filePath( "mask.ply").toStdString()))
-        {
+        if ( _err.isEmpty() && fm->hasMask() && !r3dio::saveAsPLY( fm->mask(), tdir.filePath( "mask.ply").toStdString()))
             _err = "Failed to write mask!";
-            return false;
-        }   // end if
 
-        // Export jpeg thumbnail of model.
-        const cv::Mat img = Action::ActionUpdateThumbnail::thumbnail( fm);
-        if ( !img.empty() && !cv::imwrite( tdir.filePath("thumb.jpg").toStdString(), img))
+        // Export current thumbnail of model in jpeg format.
+        if ( _err.isEmpty())
         {
-            _err = "Unable to write thumbnail!";
-            return false;
+            const QImage img = fm->thumbnail().toImage();
+            if ( !img.isNull() && !img.save( tdir.filePath("thumb.jpg"), "JPEG"))
+                _err = "Unable to write thumbnail!";
         }   // end if
 
         // Finally, zip up the contents of the directory into fname.
-        if ( !JlCompress::compressDir( fname, tdir.path(), true/*recursively pack subdirs*/))
-        {
+        if ( _err.isEmpty() && !JlCompress::compressDir( fname, tdir.path(), true/*recursively pack subdirs*/))
             _err = "Unable to compress saved data into archive format!";
-            return false;
-        }   // end if
     }   // end try
     catch ( const std::exception& e)
     {
@@ -400,62 +396,160 @@ bool FaceTools::FileIO::importMetaData( FM &fm, const PTree& tree, double &fvers
         std::cerr << "[WARNING]" << msghd << "Higher version " << fvers << " of cannot be read into version " << VERSION << " library!" << std::endl;
 
     importModelRecord( fm, *fnode, meshfname, maskfname);
+    fm.setMetaSaved(true);
     return true;
 }   // end importMetaData
 
 
-QString FaceTools::FileIO::readMeta( const QString &fname, QTemporaryDir &tdir, PTree &tree)
-{
-    QString err;
+namespace {
 
+bool __readMetaIntoPropertyTree( const QString &fpath, PTree &tree)
+{
+    std::ifstream ifs;
+    ifs.open( fpath.toStdString());
+    if ( !ifs.is_open())
+        return false;
+    boost::property_tree::read_xml( ifs, tree);
+    return true;
+}   // end __readMetaIntoPropertyTree
+
+// Get the meta.xml and thumb.jpg filenames from the archive. In earlier 3DF versions, these
+// filenames had basenames the same as the 3DF file so try these if meta.xml and thumb.jpg aren't found.
+bool __getFileNamesFromArchive( const QString &basename, const QStringList &fnames, QString &metaXML, QString &thumbJPG, bool pdeets=false)
+{
+    if ( pdeets)
+    {
+        std::cerr << "Files in archive with basename " << basename.toStdString() << ":\n";
+        for ( const QString &fn : fnames)
+            std::cerr << fn.toStdString() << std::endl;
+    }   // end if
+    if ( fnames.isEmpty())
+        return false;
+    if ( fnames.contains( "meta.xml"))
+        metaXML = "meta.xml";
+    else if ( fnames.contains( basename + ".xml"))
+        metaXML = basename + ".xml";
+    else
+        return false;
+    if ( fnames.contains( "thumb.jpg"))
+        thumbJPG = "thumb.jpg";
+    else if ( fnames.contains( basename + ".jpg"))
+        thumbJPG = basename + ".jpg";
+    return true;
+}   // end __getFileNamesFromArchive
+
+}   // end namespace
+
+
+QString FaceTools::FileIO::readMeta( const QString &fname, PTree &tree, QPixmap *thumb, QString tdir)
+{
+    QuaZip archive( fname);
+    QString err;
     try
     {
-        if ( !tdir.isValid())
-            return "Unable to open temporary directory for reading from!";
+        QTemporaryDir qtdir;    // A temporary directory if not provided by the caller
+        if ( tdir.isEmpty())
+            tdir = qtdir.path();
+        const QDir dir(tdir);
 
-        QStringList fnames = JlCompress::extractDir( fname, tdir.path());
-        if ( fnames.isEmpty())
-            return "Unable to extract files from archive!";
+        QString metaFileName, imgFileName;
 
-        QStringList xmlList = QDir( tdir.path()).entryList( {"*.xml"});
-        QString xmlfile;
-        if ( xmlList.size() == 1)
-            xmlfile = tdir.filePath( xmlList.first());
+        if ( !dir.exists())
+            err = "Directory to unzip archive to does not exist!";
+        else if ( !archive.open( QuaZip::Mode::mdUnzip))
+            err = QString( "Unable to open archive file (Error Code = %1)!").arg(archive.getZipError());
+        else if ( !__getFileNamesFromArchive( QFileInfo( fname).baseName(), archive.getFileNameList(), metaFileName, imgFileName))
+            err = QString( "Unable to get metadata filename from archive (Error Code = %1)!").arg(archive.getZipError());
+        else
+        {
+            const QString metaFilePath = dir.filePath(metaFileName);
+            if ( !JlCompress::extractFile( &archive, QFileInfo(metaFilePath).fileName(), metaFilePath))
+                err = "Unable to extract metadata file from archive!";
+            if ( err.isEmpty() && !__readMetaIntoPropertyTree( metaFilePath, tree))
+                err = "Cannot open metadata file for reading!";
+        }   // end else
 
-        if ( xmlfile.isEmpty() || !QFileInfo(xmlfile).isFile())
-            return "Cannot find metadata in archive!";
-
-        std::ifstream ifs;
-        ifs.open( xmlfile.toStdString());
-        if ( !ifs.is_open())
-            return "Cannot open metadata file for reading!";
-
-        boost::property_tree::read_xml( ifs, tree);
+        if ( err.isEmpty() && thumb)
+        {
+            QString imgFilePath = dir.filePath(imgFileName);
+            if ( JlCompress::extractFile( &archive, QFileInfo(imgFilePath).fileName(), imgFilePath))
+                if ( !thumb->load( imgFilePath))
+                    std::cerr << "[ERR] FaceTools::FileIO::readMeta: Failed to load JPEG! Is the plugin present?\n";
+            // PNG so should be fine if JPEG plugin not working for whatever reason
+            if ( thumb->isNull() && !thumb->load( ":/images/NO_THUMB"))
+                std::cerr << "[ERR] FaceTools::FileIO::readMeta: Unable to load placeholder PNG!\n";
+        }   // end if
     }   // end try
-    catch ( const boost::property_tree::ptree_bad_path&)
-    {
+    catch ( const boost::property_tree::ptree_bad_path&) {
         err = "XML bad path error encountered reading in stream data!";
     }   // end catch
-    catch ( const boost::property_tree::xml_parser_error&)
-    {
+    catch ( const boost::property_tree::xml_parser_error&) {
         err = "XML parse error encountered reading in stream data!";
     }   // end catch
-    catch ( const std::exception&)
-    {
+    catch ( const std::exception&) {
         err = "Unable to read in stream data!";
     }   // end catch
-
+    archive.close();
     return err;
 }   // end readMeta
 
 
-QString FaceTools::FileIO::loadData( FM &fm, const QTemporaryDir &tdir, const QString &meshfname, const QString &maskfname)
+QString FaceTools::FileIO::unzipArchive( const QString &fname, const QString &tdir, PTree &tree, QPixmap *thumb)
+{
+    QuaZip archive( fname);
+    QString err;
+    try
+    {
+        QStringList fnames;
+        const QDir dir(tdir);
+        if ( !dir.exists())
+            err = "Directory to unzip archive to does not exist!";
+        else
+        {
+            const QStringList fpaths = JlCompress::extractDir( archive, tdir);
+            if ( fpaths.isEmpty())
+                err = "Unable to extract files from archive!";
+            else
+            {
+                for ( const QString &fpath : fpaths)
+                    fnames << QFileInfo(fpath).fileName();
+            }   // end else
+        }   // end else
+
+        if ( !fnames.isEmpty())
+        {
+            QString metaFileName, imgFileName;
+            if ( !__getFileNamesFromArchive( QFileInfo( fname).baseName(), fnames, metaFileName, imgFileName))
+                err = "Unable to get metadata filename from archive!";
+            else if ( !__readMetaIntoPropertyTree( dir.filePath( metaFileName), tree))
+                err = "Cannot open metadata file for reading!";
+            else if ( thumb)
+                if ( !thumb->load( dir.filePath( imgFileName)))  // May not be present so can fail
+                    if ( !thumb->load( ":/images/NO_THUMB"))
+                        std::cerr << "[ERR] FaceTools::FileIO::unzipArchive: Unable to load placeholder PNG!\n";
+        }   // end if
+    }   // end try
+    catch ( const boost::property_tree::ptree_bad_path&) {
+        err = "XML bad path error encountered reading in stream data!";
+    }   // end catch
+    catch ( const boost::property_tree::xml_parser_error&) {
+        err = "XML parse error encountered reading in stream data!";
+    }   // end catch
+    catch ( const std::exception&) {
+        err = "Unable to read in stream data!";
+    }   // end catch
+    archive.close();
+    return err;
+}   // end unzipArchive
+
+
+QString FaceTools::FileIO::loadData( FM &fm, const QString &tdir, const QString &meshfname, const QString &maskfname)
 {
     QString err;
     try
     {
         // Raw model - no post process undertaken!
-        r3d::Mesh::Ptr mesh = r3dio::loadMesh( tdir.filePath( meshfname).toStdString());
+        r3d::Mesh::Ptr mesh = r3dio::loadMesh( QDir(tdir).filePath( meshfname).toStdString());
         if ( mesh)
         {
             fm.update( mesh, true, false/*don't resettle landmarks (or update paths) just read in*/);
@@ -468,7 +562,7 @@ QString FaceTools::FileIO::loadData( FM &fm, const QTemporaryDir &tdir, const QS
         // Also load the mask if present
         if ( !maskfname.isEmpty())
         {
-            r3d::Mesh::Ptr mask = r3dio::loadMesh( tdir.filePath( maskfname).toStdString());
+            r3d::Mesh::Ptr mask = r3dio::loadMesh( QDir(tdir).filePath( maskfname).toStdString());
             if ( mask)
             {
                 fm.setMask( mask);
@@ -509,9 +603,11 @@ FM* FaceModelXMLFileHandler::read( const QString& fname)
 
     FM *fm = new FM;
     PTree tree;
-    _err = readMeta( fname, tdir, tree);
+    QPixmap thumb;
+    _err = unzipArchive( fname, tdir.path(), tree, &thumb);
     if ( _err.isEmpty())
     {
+        fm->setThumbnail( thumb);
         _fversion = 0.0;
         QString meshfname, maskfname;
         if ( !importMetaData( *fm, tree, _fversion, meshfname, maskfname))
@@ -521,7 +617,7 @@ FM* FaceModelXMLFileHandler::read( const QString& fname)
             if ( _fversion > XML_VERSION.toDouble())
                 _err = QObject::tr("File version is more recent than this library allows!");
             else
-                _err = loadData( *fm, tdir, meshfname, maskfname);
+                _err = loadData( *fm, tdir.path(), meshfname, maskfname);
         }   // end else
     }   // end if
 

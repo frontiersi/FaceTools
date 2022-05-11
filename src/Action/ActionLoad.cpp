@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,15 +18,16 @@
 #include <Action/ActionLoad.h>
 #include <Action/ActionOrientCamera.h>
 #include <Action/ActionRestoreLandmarks.h>
+#include <FileIO/FaceModelDatabase.h>
 #include <FileIO/FaceModelManager.h>
-#include <QFileInfo>
 #include <QMessageBox>
+#include <QFileInfo>
 using FaceTools::Action::ActionLoad;
 using FaceTools::Action::Event;
 using FaceTools::Action::FaceAction;
 using FaceTools::FileIO::LoadFaceModelsHelper;
 using FaceTools::Vis::FV;
-using FaceTools::FVS;
+using FMD = FaceTools::FileIO::FaceModelDatabase;
 using FMM = FaceTools::FileIO::FaceModelManager;
 using MS = FaceTools::ModelSelect;
 using QMB = QMessageBox;
@@ -35,9 +36,7 @@ using QMB = QMessageBox;
 ActionLoad::ActionLoad( const QString& dn, const QIcon& ico, const QKeySequence& ks)
     : FaceAction( dn, ico, ks), _loadHelper(nullptr), _dialog(nullptr)
 {
-#ifdef NDEBUG
     setAsync(true);
-#endif
 }   // end ctor
 
 
@@ -59,7 +58,7 @@ void ActionLoad::postInit()
 }   // end postInit
 
 
-bool ActionLoad::isAllowed( Event) { return FMM::numOpen() < FMM::loadLimit();}
+bool ActionLoad::isAllowed( Event) { return !FMM::loadLimitReached();}
 
 
 // public
@@ -79,6 +78,7 @@ bool ActionLoad::load( const QString& fname)
 
 bool ActionLoad::doBeforeAction( Event)
 {
+    // Set filename to load from the dialog if the file isn't already set
     if ( _loadHelper->filenames().empty() && _dialog->exec())
         _loadHelper->setFilteredFilenames( _dialog->selectedFiles());
 
@@ -87,16 +87,15 @@ bool ActionLoad::doBeforeAction( Event)
     {
         const QFileInfo finfo( _loadHelper->filenames().first());
         _dialog->setDirectory( finfo.absolutePath()); // Set directory for next load
-        MS::showStatus( QString("Loading %1 ...").arg(finfo.absoluteFilePath()));
+        const QString loadText = QString("Loading %1 ...").arg(finfo.absoluteFilePath());
+        MS::showStatus( loadText);
+        std::cerr << loadText.toStdString() << std::endl;
     }   // end if
     return doLoad;
 }   // end doBeforeAction
 
 
-void ActionLoad::doAction( Event)
-{
-    _loadHelper->loadModels();
-}   // end doAction
+void ActionLoad::doAction( Event) { _loadHelper->loadModels();}
 
 
 Event ActionLoad::doAfterAction( Event)
@@ -108,11 +107,24 @@ Event ActionLoad::doAfterAction( Event)
     Event e = Event::NONE;
     if ( fm)
     {
+        QString msg;
         // Restore any missing landmarks and warn user of this.
         if ( fm->hasLandmarks() && ActionRestoreLandmarks::restoreMissingLandmarks( *fm))
         {
-            static const QString msg = tr("Some more recently added landmarks were automatically set.<br>Ensure all landmark positions are correct before continuing.");
-            QMB::information( static_cast<QWidget*>(parent()), tr("Some Landmarks Automatically Set"),
+            msg = tr("Some new landmarks were added.<br>Confirm their positions and save before continuing.");
+            QMB::information( static_cast<QWidget*>(parent()), tr("New Landmarks Added"),
+                              QString("<p align='center'>%1</p>").arg(msg));
+        }   // end if
+
+        const QString fpath = FMM::filepath( *fm);
+        FMD::refreshImage( *fm, fpath); // setMetaSaved may be false after this
+
+        // If subject metadata are not saved (and it wasn't because of new landmarks),
+        // it's because the database updated info from a different model.
+        if ( msg.isEmpty() && !fm->isMetaSaved())
+        {
+            msg = tr("This subject's details were updated from the database.<br>Confirm and save before continuing.");
+            QMB::information( static_cast<QWidget*>(parent()), tr("Subject Details Updated"),
                               QString("<p align='center'>%1</p>").arg(msg));
         }   // end if
 

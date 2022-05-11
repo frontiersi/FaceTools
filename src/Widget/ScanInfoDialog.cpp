@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * Cliniface is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,13 +18,12 @@
 #include <Widget/ScanInfoDialog.h>
 #include <ui_ScanInfoDialog.h>
 #include <Metric/PhenotypeManager.h>
+#include <FileIO/FaceModelDatabase.h>
 #include <FileIO/FaceModelManager.h>
 #include <ModelSelect.h>
 #include <Ethnicities.h>
 #include <FaceModel.h>
 #include <FaceTools.h>
-#include <QTools/TreeModel.h>
-#include <QTools/QImageTools.h>
 #include <QTreeWidget>
 #include <QPushButton>
 #include <QSignalBlocker>
@@ -36,6 +35,7 @@ using FaceTools::Widget::ScanInfoDialog;
 using FaceTools::Ethnicities;
 using FaceTools::FM;
 using FMM = FaceTools::FileIO::FaceModelManager;
+using FMD = FaceTools::FileIO::FaceModelDatabase;
 using MS = FaceTools::ModelSelect;
 using QMB = QMessageBox;
 
@@ -47,100 +47,6 @@ class EthnicityValidator : public QValidator
     QValidator::State validate( QString&, int&) const override { return QValidator::Invalid;}
 };  // end EthnicityValidator
 */
-
-namespace {
-
-void _setEthnicityComboBox( QComboBox* cb, int ecode=0)
-{
-    static const IntSet EMPTY_INT_SET;
-
-    std::list<int> path;  // Will be path from root to leaf (ecode)
-    path.push_front(ecode);
-
-    // Progressively work backwards to the broadest category setting the discovered path:
-    const IntSet* pcodes = &Ethnicities::parentCodes(ecode);
-    while ( !pcodes->empty())
-    {
-        // Find the non-mixed parent.
-        int nmp = 0;
-        for ( int pcode : *pcodes)
-        {
-            // There's only 1 non-mixed parent per ethnic code
-            if ( !Ethnicities::isMixed(pcode))
-            {
-                nmp = pcode;
-                break;
-            }   // end if
-        }   // end for
-
-        pcodes = &EMPTY_INT_SET;
-        if ( nmp > 0)
-        {
-            path.push_front( nmp);
-            // Will return empty when the code at the front is of the "broad" category.
-            pcodes = &Ethnicities::parentCodes( nmp);
-        }   // end if
-    }   // end while
-
-    QModelIndex midx = QModelIndex();
-    cb->setRootModelIndex( midx);   // Initialise to root
-    int rowIdx = 0;
-
-    if ( ecode != 0)
-    {
-        for ( int ec : path)
-        {
-            const QString &ename = Ethnicities::name(ec);
-            rowIdx = cb->findData( ename, Qt::DisplayRole);
-            if ( ec != ecode)
-            {
-                midx = cb->model()->index( rowIdx, 0, midx);
-                cb->setRootModelIndex(midx);
-            }   // end if
-        }   // end for
-    }   // end if
-
-    cb->setCurrentIndex( rowIdx);
-}   // end _setEthnicityComboBox
-
-
-QTools::TreeModel* createEthnicityComboBoxModel()
-{
-    QTools::TreeModel *emodel = new QTools::TreeModel;
-    QTools::TreeItem *root = emodel->setNewRoot({"Cultural and Ethnic Group"});
-    root->appendChild( new QTools::TreeItem( {"Not stated"}));
-
-    QTools::TreeItem *cbroad = nullptr; // Current broad node
-    QTools::TreeItem *cnrrow = nullptr; // Current narrow node
-
-    for ( int ethn : Ethnicities::codes())
-    {
-        if ( ethn <= 0)
-            continue;
-
-        const QString ename = Ethnicities::name(ethn);
-
-        if ( Ethnicities::isMixed( ethn))
-            root->appendChild( new QTools::TreeItem( {ename}));
-        else if ( Ethnicities::isBroad(ethn))    // 1000, 2000, 3000 etc
-            cbroad = new QTools::TreeItem( {ename}, root);
-        else if ( Ethnicities::isNarrow(ethn))  // 1100, 1200, 1300 etc
-        {
-            assert( cbroad != nullptr);
-            cnrrow = new QTools::TreeItem( {ename}, cbroad);
-        }   // end else if
-        else
-        {
-            assert( cnrrow != nullptr);
-            cnrrow->appendChild( new QTools::TreeItem( {ename}));
-        }   // end else
-    }   // end for
-
-    return emodel;
-}   // end createEthnicityComboBoxModel
-
-}   // end namespace
-
 
 ScanInfoDialog::ScanInfoDialog( QWidget *parent) :
     QDialog(parent), _ui(new Ui::ScanInfoDialog),
@@ -187,7 +93,7 @@ ScanInfoDialog::ScanInfoDialog( QWidget *parent) :
     connect( _ui->removeAssessmentButton, &QToolButton::clicked, this, &ScanInfoDialog::_doOnDeleteAssessment);
     connect( _ui->copyLandmarksButton, &QToolButton::clicked, this, &ScanInfoDialog::_doOnCopyLandmarks);
 
-    QTools::TreeModel* emodel = createEthnicityComboBoxModel();
+    QTools::TreeModel* emodel = Ethnicities::createComboBoxModel();
     _ui->maternalEthnicityComboBox->setModel( emodel);
     _ui->paternalEthnicityComboBox->setModel( emodel);
 
@@ -209,75 +115,82 @@ ScanInfoDialog::~ScanInfoDialog()
 }   // end dtor
 
 
-void ScanInfoDialog::refresh()
+void ScanInfoDialog::_resetSubjectData()
 {
-    setWindowTitle( _dialogRootTitle);
-
-    { // start signal blocking scope
-    QSignalBlocker b0( _ui->captureDateEdit);
+    QSignalBlocker b0( _ui->subjectIdLineEdit);
     QSignalBlocker b1( _ui->dobDateEdit);
     QSignalBlocker b2( _ui->sexComboBox);
-    QSignalBlocker b5( _ui->sourceLineEdit);
-    QSignalBlocker b6( _ui->studyIdLineEdit);
-    QSignalBlocker b7( _ui->subjectIdLineEdit);
-    QSignalBlocker b8( _ui->imageIdLineEdit);
-    QSignalBlocker b9( _ui->assessorComboBox);
-    QSignalBlocker b10( _ui->maternalEthnicityComboBox);
-    QSignalBlocker b11( _ui->paternalEthnicityComboBox);
+    QSignalBlocker b3( _ui->maternalEthnicityComboBox);
+    QSignalBlocker b4( _ui->paternalEthnicityComboBox);
 
-    _ui->dobDateEdit->setDate( QDate::currentDate());
-    _ui->sexComboBox->setCurrentIndex( _ui->sexComboBox->findData( UNKNOWN_SEX));
-
-    _setEthnicityComboBox( _ui->maternalEthnicityComboBox);
-    _setEthnicityComboBox( _ui->paternalEthnicityComboBox);
-
-    _ui->captureDateEdit->setDate( QDate::currentDate());
-    _ui->sourceLineEdit->clear();
-    _ui->studyIdLineEdit->clear();
-    _ui->subjectIdLineEdit->clear();
-    _ui->imageIdLineEdit->clear();
-    _ui->assessorComboBox->clear();
-
-    FM::RPtr fm = MS::selectedModelScopedRead();
+    const FM *fm = MS::selectedModel();
     if (fm)
     {
-        const QString fpath = FMM::filepath(*fm);
-        setWindowTitle( _dialogRootTitle + " | " + fpath);
-
+        _ui->subjectIdLineEdit->setText( fm->subjectId());
         _ui->dobDateEdit->setDate( fm->dateOfBirth());
         _ui->sexComboBox->setCurrentIndex( _ui->sexComboBox->findData( fm->sex()));
+        Ethnicities::resetComboBox( _ui->maternalEthnicityComboBox, fm->maternalEthnicity());
+        Ethnicities::resetComboBox( _ui->paternalEthnicityComboBox, fm->paternalEthnicity());
+    }   // end if
+    else
+    {
+        _ui->subjectIdLineEdit->clear();
+        _ui->dobDateEdit->setDate( QDate::currentDate());
+        _ui->sexComboBox->setCurrentIndex( _ui->sexComboBox->findData( UNKNOWN_SEX));
+        Ethnicities::resetComboBox( _ui->maternalEthnicityComboBox);
+        Ethnicities::resetComboBox( _ui->paternalEthnicityComboBox);
+    }   // end else
+}   // end _resetSubjectData
 
-        _setEthnicityComboBox( _ui->maternalEthnicityComboBox, fm->maternalEthnicity());
-        _setEthnicityComboBox( _ui->paternalEthnicityComboBox, fm->paternalEthnicity());
 
+void ScanInfoDialog::_resetImageData()
+{
+    QSignalBlocker b0( _ui->captureDateEdit);
+    QSignalBlocker b1( _ui->sourceLineEdit);
+    QSignalBlocker b2( _ui->studyIdLineEdit);
+    QSignalBlocker b3( _ui->imageIdLineEdit);
+    QSignalBlocker b4( _ui->assessorComboBox);
+
+    const FM *fm = MS::selectedModel();
+    if (fm)
+    {
         _ui->captureDateEdit->setDate( fm->captureDate());
         _ui->sourceLineEdit->setText( fm->source());
         _ui->studyIdLineEdit->setText( fm->studyId());
-        _ui->subjectIdLineEdit->setText( fm->subjectId());
         _ui->imageIdLineEdit->setText( fm->imageId());
-
         for ( int ai : fm->assessmentIds())
         {
             FaceAssessment::CPtr ass = fm->assessment(ai);
-            const QString aname = ass->assessor();
-            _ui->assessorComboBox->addItem( aname, ai);
+            _ui->assessorComboBox->addItem( ass->assessor(), ai);
         }   // end for
     }   // end if
+    else
+    {
+        _ui->captureDateEdit->setDate( QDate::currentDate());
+        _ui->sourceLineEdit->clear();
+        _ui->studyIdLineEdit->clear();
+        _ui->imageIdLineEdit->clear();
+        _ui->assessorComboBox->clear();
+    }   // end else
+}   // end _resetImageData
 
+
+void ScanInfoDialog::refresh()
+{
+    QString winTitle = _dialogRootTitle;
+    const FM *fm = MS::selectedModel();
+    if (fm)
+        winTitle = _dialogRootTitle + " | " + FMM::filepath(*fm);
+    setWindowTitle( winTitle);
+    _resetSubjectData();
+    _resetImageData();
     _ui->buttonBox->button(QDialogButtonBox::Apply)->setEnabled( false);
     _ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled( fm != nullptr);
-    }   // end signal blocking scope
-
     refreshAssessment();
 }   // end refresh
 
 
-void ScanInfoDialog::setThumbnail( const cv::Mat_<cv::Vec3b> img)
-{
-    QImage qimg = QTools::copyOpenCV2QImage( img);
-    _ui->imageLabel->setPixmap( QPixmap::fromImage(qimg));
-}   // end setThumbnail
-
+void ScanInfoDialog::setThumbnail( const QPixmap &pmap) { _ui->imageLabel->setPixmap( pmap);}
 
 QSize ScanInfoDialog::thumbDims() const { return _ui->imageLabel->size();}
 
@@ -287,56 +200,148 @@ void ScanInfoDialog::_apply()
     FM *fm = MS::selectedModel();
     assert( fm);
 
+    bool subjectDataChanged = false;
     fm->lockForWrite();
-    if ( _ui->dobDateEdit->date() <= QDate::currentDate())
-        fm->setDateOfBirth( _ui->dobDateEdit->date());
 
-    const int methn = Ethnicities::code( _ui->maternalEthnicityComboBox->currentText());
-    if ( methn != fm->maternalEthnicity())
-        fm->setMaternalEthnicity(methn);
+    /**** SUBJECT DETAILS ****/
+    QDate dob = _ui->dobDateEdit->date();
+    if ( dob != fm->dateOfBirth())
+        subjectDataChanged = true;
 
-    const int pethn = Ethnicities::code( _ui->paternalEthnicityComboBox->currentText());
-    if ( pethn != fm->paternalEthnicity())
-        fm->setPaternalEthnicity(pethn);
-
-    const int8_t sex = static_cast<int8_t>(_ui->sexComboBox->currentData().toInt());
+    int8_t sex = static_cast<int8_t>(_ui->sexComboBox->currentData().toInt());
     if ( sex != fm->sex())
-        fm->setSex( sex);
+        subjectDataChanged = true;
 
+    int meth = Ethnicities::code( _ui->maternalEthnicityComboBox->currentText());
+    if ( meth != fm->maternalEthnicity())
+        subjectDataChanged = true;
+
+    int peth = Ethnicities::code( _ui->paternalEthnicityComboBox->currentText());
+    if ( peth != fm->paternalEthnicity())
+        subjectDataChanged = true;
+
+    QString nsid = _ui->subjectIdLineEdit->text().trimmed();    // Get the subject ID (may not be saved on image)
+    const bool isUnknownSubject = FMD::NO_SUBJECT_REGEXP.exactMatch(nsid);
+    // If an invalid subject identifier is set, reset the subject data.
+    if ( (nsid.isEmpty() || isUnknownSubject) && subjectDataChanged)
+    {
+        static const QString msg = tr("A valid and non-empty identifier must be set to change the subject's details!");
+        QMB::warning( this, tr("Invalid Subject Identifer!"), QString("<p align='center'>%1</p>").arg(msg));
+        _resetSubjectData();
+        subjectDataChanged = false;
+        nsid = fm->subjectId();
+    }   // end if
+    else if ( nsid != fm->subjectId())
+    {
+        // If the new subject ID matches an existing subject, ask the user if they want to use the same data
+        // as already exists in the database for the subject, otherwise reset the subject identifier.
+        int8_t nsex;
+        QDate ndob;
+        int nmeth, npeth;
+        if ( FMD::subjectMeta( nsid, nsex, ndob, nmeth, npeth) && ( nsex != sex || ndob != dob || nmeth != meth || npeth != peth))
+        {
+            static const QString msg = tr("<p>This subject already exists with different details!</p><p>Use the existing subject's details instead (YES)?<br>Or set a different subject identifier (NO)?</p>");
+            if ( QMB::information( this, tr("Use Existing Subject Details?"), msg, QMB::Yes | QMB::No, QMB::Yes) == QMB::Yes)
+            {
+                sex = nsex;
+                dob = ndob;
+                meth = nmeth;
+                peth = npeth;
+            }   // end if
+            else
+            {
+                QSignalBlocker b0( _ui->subjectIdLineEdit);
+                _ui->subjectIdLineEdit->setText( fm->subjectId());
+                _ui->subjectIdLineEdit->setFocus();
+                nsid = fm->subjectId();
+            }   // end else
+        }   // end if
+    }   // end else if
+
+    if ( nsid != fm->subjectId())
+        subjectDataChanged = true;
+
+    // Check for mismatching subject details
+    if ( subjectDataChanged)
+    {
+        bool confirmUpdate = true;
+        // If at least one other image has the same subject ID but different metadata.
+        // Warn that applying this change will update all other images with the same subject in the database.
+        const size_t numImgs = FMD::numImages(nsid);    // Num images using this subject identifier
+        if ( (numImgs > 1 && nsid == fm->subjectId()) && !FMD::isSubjectMetaMatched( nsid, sex, dob, meth, peth))
+        {
+            static const QString msg = tr("<p>Multiple images with the same subject identifier have mismatching subject details! Applying these changes will update <em>all images of this subject</em> in the database to use these details. To fix the changes you must load then save each affected 3DF file.</p><p align='center'>Apply the changes to all %1 images?</p>").arg(numImgs);
+            confirmUpdate = QMB::warning( this, tr("Update Subject Everywhere?!"),
+                                          QString("<p>%1</p>").arg(msg), QMB::Yes | QMB::No, QMB::No) == QMB::Yes;
+        }   // end if
+
+        if ( confirmUpdate)
+        {
+            fm->setSubjectId( nsid);
+            fm->setSex( sex);
+            fm->setPaternalEthnicity(peth);
+            fm->setMaternalEthnicity(meth);
+            fm->setDateOfBirth( dob);
+
+            // If the other loaded image has the same subject identifier, make all the same changes
+            FM *ofm = MS::nonSelectedModel();
+            if ( ofm && ofm->subjectId() == nsid)
+            {
+                ofm->setSubjectId( nsid);
+                ofm->setSex( sex);
+                ofm->setPaternalEthnicity(peth);
+                ofm->setMaternalEthnicity(meth);
+                ofm->setDateOfBirth( dob);
+                ofm->setMetaSaved(false);
+            }   // end if
+        }   // end if
+        else
+        {
+            _resetSubjectData();
+            subjectDataChanged = false;
+        }   // end else
+    }   // end if
+    /*************************/
+
+    bool dataChanged = subjectDataChanged;
+
+    /**** IMAGE DETAILS ****/
     const QDate date = _ui->captureDateEdit->date();
     if ( date != fm->captureDate())
-        fm->setCaptureDate(date);
-
+        dataChanged = true;
     const QString src = _ui->sourceLineEdit->text();
     if ( fm->source() != src)
-        fm->setSource( src);
-
+        dataChanged = true;
     const QString sid = _ui->studyIdLineEdit->text();
     if ( fm->studyId() != sid)
-        fm->setStudyId( sid);
-
-    const QString jid = _ui->subjectIdLineEdit->text();
-    if ( fm->subjectId() != jid)
-        fm->setSubjectId( jid);
-
+        dataChanged = true;
     const QString iid = _ui->imageIdLineEdit->text();
     if ( fm->imageId() != iid)
-        fm->setImageId (iid);
+        dataChanged = true;
+    /*************************/
 
+    /**** ASSESSMENT DETAILS ****/
     const int aid = _ui->assessorComboBox->currentData().toInt();
-
     const QString ass = _ui->assessorComboBox->currentText().trimmed();
     if ( fm->assessment(aid)->assessor() != ass)    // Change name of assessor?
     {
-        fm->assessment(aid)->setAssessor( ass);
-        fm->setMetaSaved(false);
         _ui->assessorComboBox->setItemText( _ui->assessorComboBox->findData(aid), ass);
+        dataChanged = true;
     }   // end if
-
     const QString rem = _ui->notesTextEdit->toPlainText();
     if ( fm->assessment(aid)->notes() != rem)   // Change assessment notes?
+        dataChanged = true;
+    /****************************/
+
+    if ( dataChanged)
     {
-        fm->assessment(aid)->setNotes( rem);
+        fm->setCaptureDate(date);
+        fm->setSource( src);
+        fm->setStudyId( sid);
+        fm->setImageId( iid);
+        fm->assessment( aid)->setAssessor( ass);
+        fm->assessment( aid)->setNotes( rem);
+        FMD::refreshImage( *fm, "", "", subjectDataChanged);
         fm->setMetaSaved(false);
     }   // end if
 
@@ -606,9 +611,9 @@ void ScanInfoDialog::_doOnDeleteAssessment()
     // Warn about deletion if the assessment has notes, paths, or landmarks defined.
     if ( ass->hasLandmarks() || ass->hasPaths() || ass->hasNotes())
     {
-        static const QString msg = tr("Are you sure you want to erase this assessment's landmarks, calliper measurements, and notes? This action cannot be undone!");
-        dodel = QMB::Yes == QMB::warning( this, tr("Delete Assessment?"),
-                QString("<p align='center'>%1</p>").arg(msg), QMB::Yes | QMB::No, QMB::No);
+        static const QString msg = tr("Really erase this assessment's landmarks, calliper measurements, and notes? This can't be undone!");
+        dodel = QMB::warning( this, tr("Delete Assessment?"),
+                QString("<p align='center'>%1</p>").arg(msg), QMB::Yes | QMB::No, QMB::No) == QMB::Yes;
     }   // end if
     fm->unlock();
 
@@ -655,8 +660,8 @@ void ScanInfoDialog::_doOnCopyLandmarks()
     if ( dowarn)
     {
         static const QString msg = tr("Are you sure you want to overwrite the landmarks of other assessments? This action cannot be undone!");
-        docopy = QMB::Yes == QMB::warning( this, tr("Overwrite Landmarks?"),
-                                QString("<p align='center'>%1</p>").arg(msg), QMB::Yes | QMB::No, QMB::No);
+        docopy = QMB::warning( this, tr("Overwrite Landmarks?"),
+                      QString("<p align='center'>%1</p>").arg(msg), QMB::Yes | QMB::No, QMB::No) == QMB::Yes;
     }   // end if
 
     fm->unlock();

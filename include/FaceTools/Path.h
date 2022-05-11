@@ -56,8 +56,8 @@ public:
     void setId( int id) { _id = id;}
     inline int id() const { return _id;}
 
-    void setName( const std::string &nm) { _name = nm;}
-    inline const std::string& name() const { return _name;}
+    void setName( const QString&);
+    inline const QString& name() const { return _name;}
 
     // Calls setHandle0, setHandle1, setDepthHandle based on hid.
     void setHandle( int hid, const Vec3f&);
@@ -115,7 +115,7 @@ public:
 private:
     static PathType s_pathType;
     int _id;
-    std::string _name;      // Name of this path
+    QString _name;          // Name of this path
     bool _validPath;        // True if path lies on surface
     std::list<Vec3f> _vtxs; // The path vertices
     float _elen;            // Euclidean distance

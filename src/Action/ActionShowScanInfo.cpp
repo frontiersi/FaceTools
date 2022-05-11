@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@ using MS = FaceTools::ModelSelect;
 
 
 ActionShowScanInfo::ActionShowScanInfo( const QString& dname, const QIcon& icon, const QKeySequence& ks)
-    : FaceAction( dname, icon, ks), _tupdater(nullptr), _dialog(nullptr)
+    : FaceAction( dname, icon, ks), _dialog(nullptr)
 {
     setCheckable( true, false);
     addRefreshEvent( Event::METRICS_CHANGE | Event::MODEL_SELECT);
@@ -47,9 +47,8 @@ void ActionShowScanInfo::postInit()
 
 void ActionShowScanInfo::setThumbnailUpdater( ActionUpdateThumbnail* act)
 {
-    _tupdater = act;
-    _tupdater->setThumbnailSize( _dialog->thumbDims());
-    connect( act, &ActionUpdateThumbnail::updated, [=](){ _dialog->setThumbnail( act->thumbnail());});
+    act->setThumbnailSize( _dialog->thumbDims());
+    connect( act, &ActionUpdateThumbnail::updated, [=]( const FM* fm){ _dialog->setThumbnail( fm->thumbnail());});
 }   // end setThumbnailUpdater
 
 
@@ -61,7 +60,7 @@ bool ActionShowScanInfo::update( Event e)
     else if ( has( e, Event::MODEL_SELECT))
     {
         _dialog->refresh();
-        _dialog->setThumbnail( _tupdater->thumbnail());
+        _dialog->setThumbnail( fm->thumbnail());
     }   // end else if
     else if ( has( e, Event::METRICS_CHANGE))
         _dialog->refreshAssessment();

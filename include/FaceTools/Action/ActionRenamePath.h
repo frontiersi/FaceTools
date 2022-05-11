@@ -30,8 +30,6 @@ public:
 
     QString toolTip() const override { return "(Re)name the selected user measurement.";}
 
-    void setMaxLabelChars( int v) { _maxLabelChars = v;}
-
 protected:
     void postInit() override;
     bool isAllowed( Event) override;
@@ -44,7 +42,6 @@ private slots:
 
 private:
     QInputDialog *_dialog;
-    int _maxLabelChars;
     QString _label;
 };  // end class
 

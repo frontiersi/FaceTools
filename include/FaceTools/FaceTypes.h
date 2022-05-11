@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -135,13 +135,13 @@ enum struct Event : uint32_t
     SURFACE_DATA_CHANGE =     0x80, // Change to some surface mapped data.
     LANDMARKS_CHANGE =       0x100, // Change to landmark(s).
     METRICS_CHANGE =         0x200, // Change to measurements.
-    STATS_CHANGE =           0x400, // Change of the current measurements statistics.
+    STATS_CHANGE =           0x400, // Change of subject demographic or measurement statistics.
     PATHS_CHANGE =           0x800, // Change to drawn paths.
     VIEW_CHANGE =           0x1000, // Changes to views of the data (visualisations etc) - NOT CAMERA.
     VIEWER_CHANGE =         0x2000, // Changed viewer (or the viewer's state) in which view is shown.
     CAMERA_CHANGE =         0x4000, // Changes to camera parameters within a viewer.
     ACTOR_MOVE =            0x8000, // Change to the position of a visualisation actor through interaction.
-    METADATA_CHANGE =      0x10000, // Metadata change
+    METADATA_CHANGE =      0x10000, // Metadata change (also raise STATS_CHANGE for demographic changes).
     RESTORE_CHANGE =       0x20000, // Emitted after restoring any undo.
     ALL_VIEWS =            0x40000, // Specify that the event relates to all models in the selected viewer.
     ALL_VIEWERS =          0x80000, // Specify that all viewers partake in the event.

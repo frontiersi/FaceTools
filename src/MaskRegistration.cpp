@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 #include <FaceModelViewer.h>
 #include <FaceModel.h>
 #include <rNonRigid.h>
+#include <QTemporaryDir>
 #include <QFileInfo>
 #include <QThread>
 #include <r3d/ProcrustesSuperimposition.h>
@@ -118,7 +119,6 @@ void MaskRegistration::unsetMask()
 }   // end unsetMask
 
 
-
 bool MaskRegistration::setMask( const QString &mpath)
 {
     const QString abspath = QFileInfo( mpath).absoluteFilePath();
@@ -133,7 +133,8 @@ bool MaskRegistration::setMask( const QString &mpath)
     // Load meta data - fail if no landmarks present.
     PTree ptree;
     QTemporaryDir *tdir = new QTemporaryDir;
-    FileIO::readMeta( mpath, *tdir, ptree);
+    tdir->setAutoRemove(false);
+    FileIO::unzipArchive( mpath, tdir->path(), ptree);
 
     FM *fm = new FM;
     double fversion;
@@ -144,6 +145,8 @@ bool MaskRegistration::setMask( const QString &mpath)
         std::cerr << "[WARNING] FaceTools::MaskRegistration::setMask: Invalid metadata!" << std::endl;
 #endif
         delete fm;
+        tdir->remove();
+        delete tdir;
         return false;
     }   // end if
 
@@ -153,6 +156,8 @@ bool MaskRegistration::setMask( const QString &mpath)
         std::cerr << "[WARNING] FaceTools::MaskRegistration::setMask: No landmarks in mask!" << std::endl;
 #endif
         delete fm;
+        tdir->remove();
+        delete tdir;
         return false;
     }   // end if
 
@@ -162,7 +167,7 @@ bool MaskRegistration::setMask( const QString &mpath)
         {
             s_lock.lockForWrite();  // Setting lock here since need to wait for file op to finish
             QString unused;
-            const QString err = FileIO::loadData( *fm, *tdir, meshfname, unused);
+            const QString err = FileIO::loadData( *fm, tdir->path(), meshfname, unused);
             if ( err.isEmpty())
             {
                 s_mask.mask = fm;
@@ -207,6 +212,7 @@ bool MaskRegistration::setMask( const QString &mpath)
                 std::cerr << "Failed to load mask data!" << std::endl;
                 delete fm;
             }   // end else
+            tdir->remove();
             delete tdir;
             s_lock.unlock();
         });

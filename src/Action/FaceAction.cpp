@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -55,6 +55,10 @@ void FaceAction::_pinit()
     _debugName = "\"" + _dname.replace( "\n", " ").remove('&').toStdString() + "\"";
     _mpos = QPoint(-1,-1);
     _isFinalised = false;
+    _PRINT_STAGE = false;
+#ifndef NDEBUG
+    _PRINT_STAGE = true;    // Stages are printed for debug builds (also single-threaded only)
+#endif
 }   // end _pinit
 
 
@@ -88,9 +92,6 @@ void FaceAction::setChecked( bool b) { _action.setChecked(b);}
 
 void FaceAction::refresh( Event e)
 {
-#ifndef NDEBUG
-        //std::cerr << "  Refresh: " << debugName() << std::endl;
-#endif
     const bool chk = update( e);
     if ( _action.isCheckable() && _action.isChecked() != chk)
     {
@@ -134,7 +135,14 @@ bool FaceAction::refreshes( Event e) const { return any( _revents, e);}
 
 
 // protected
-void FaceAction::setAsync( bool async) { _doasync = async;}
+void FaceAction::setAsync( bool async)
+{
+#ifdef NDEBUG
+    _doasync = async;
+#else
+    _doasync = false;   // DEBUG builds are always single threaded (default)
+#endif
+}   // end setAsync
 
 
 void FaceAction::_init( QWidget* parent) // Called by FaceActionManager after constructor finished
@@ -157,12 +165,7 @@ void FaceAction::_init( QWidget* parent) // Called by FaceActionManager after co
         _action.setWhatsThis( whatsthis);
 
     if ( widget())
-    {
-#ifndef NDEBUG
-        //std::cerr << debugName() << " initialising widget" << std::endl;
-#endif
         widget()->setToolTip( tooltip);
-    }   // end if
 
     const QIcon* ic = icon();
     if ( ic)
@@ -194,15 +197,13 @@ bool FaceAction::execute( Event e)
 
     _action.setEnabled(false);
 
-#ifndef NDEBUG
-    std::cerr << _dbgPrfx << " Starting " << debugName();
-#endif
+    if (_PRINT_STAGE)
+        std::cerr << _dbgPrfx << " Starting " << debugName();
 
     if ( !doBeforeAction(e))  // Always in the GUI thread
     {
-#ifndef NDEBUG
-        std::cerr << " CANCELLED!" << std::endl;
-#endif
+        if (_PRINT_STAGE)
+            std::cerr << " CANCELLED!" << std::endl;
         refresh( e);
         emit onEvent( Event::CANCEL);
         return false;
@@ -210,17 +211,10 @@ bool FaceAction::execute( Event e)
 
     _isWorking = true;
 
-#ifdef NDEBUG
-    static const bool ALLOW_ASYNC = true;
-#else
-    static const bool ALLOW_ASYNC = false;
-#endif
-
-    if ( ALLOW_ASYNC && isAsync())
+    if ( isAsync())
     {
-#ifndef NDEBUG
-        std::cerr << " <<<NEW THREAD>>>" << std::endl;
-#endif
+        if (_PRINT_STAGE)
+            std::cerr << " <<<NEW THREAD>>>" << std::endl;
         if ( e == Event::USER)
             _key = MS::lockSelect();
         FaceActionWorker *worker = new FaceActionWorker( this, e);
@@ -230,9 +224,8 @@ bool FaceAction::execute( Event e)
     }   // end else
     else
     {
-#ifndef NDEBUG
-        std::cerr << std::endl;
-#endif
+        if (_PRINT_STAGE)
+            std::cerr << std::endl;
         doAction(e);  // Blocks
         _endExecute(e);
     }   // end else

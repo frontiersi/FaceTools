@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -278,6 +278,7 @@ private:
     Event _revents; // Refresh events
     QPoint _mpos;   // The primed mouse position
     bool _isFinalised;
+    bool _PRINT_STAGE;
     std::string _dbgPrfx;
 
     void _pinit();

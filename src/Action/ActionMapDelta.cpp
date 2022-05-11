@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
 #include <FaceModel.h>
 using FaceTools::Action::ActionMapDelta;
 using FaceTools::Action::Event;
-using FaceTools::Vis::FV;
 using FaceTools::FM;
 using MS = FaceTools::ModelSelect;
 using FMDS = FaceTools::FaceModelDeltaStore;
@@ -30,34 +29,31 @@ ActionMapDelta::ActionMapDelta() : FaceAction( "Map Delta")
 {
     addTriggerEvent( Event::MESH_CHANGE | Event::MASK_CHANGE | Event::VIEWER_CHANGE);
     addPurgeEvent( Event::MESH_CHANGE | Event::MASK_CHANGE);
-    setAsync(true);
+    //setAsync(true);   // BUG if allowed to be asynchronous (exception std::out_of_range with _Map_base::at probably in FMDS).
 }   // end ctor
 
 
 bool ActionMapDelta::doBeforeAction( Event e)
 {
-    FM::RPtr tgtfm = MS::selectedModelScopedRead();
-    if ( !tgtfm || !tgtfm->hasMask())
-        return false;
-
-    FM::RPtr srcfm = MS::otherModelScopedRead();
-    if ( !srcfm || !srcfm->hasMask())
+    const FM *tgtfm = MS::selectedModel();
+    const FM *srcfm = MS::nonSelectedModel();
+    if ( !tgtfm || !tgtfm->hasMask() || !srcfm || !srcfm->hasMask())
         return false;
 
     // Mask hashes on both models must match
     if ( srcfm->maskHash() != tgtfm->maskHash())
         return false;
 
-    return !FMDS::has( tgtfm.get(), srcfm.get());
+    return !FMDS::has( tgtfm, srcfm);
 }   // end doBeforeAction
 
 
 void ActionMapDelta::doAction( Event e)
 {
-    FM::RPtr tgt = MS::selectedModelScopedRead();
-    FM::RPtr src = MS::otherModelScopedRead();
-    FMDS::add( tgt.get(), src.get());
-    FMDS::add( src.get(), tgt.get());
+    const FM *tgt = MS::selectedModel();
+    const FM *src = MS::nonSelectedModel();
+    FMDS::add( tgt, src);
+    FMDS::add( src, tgt);
 }   // end doAction
 
 

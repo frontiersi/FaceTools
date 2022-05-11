@@ -45,5 +45,8 @@
     <file alias="HOT_PINK">res/imgs/hotpink0.png</file>
     <file alias="BASE_BLUE">res/imgs/baseblue0.png</file>
 </qresource>
+<qresource prefix="/images">
+    <file alias="NO_THUMB">res/imgs/nothumb.png</file>
+</qresource>
 </RCC>
 
