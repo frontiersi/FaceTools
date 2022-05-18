@@ -51,11 +51,23 @@ public:
     // If subjectMetaAuth is true then the model's subject data is treated as authoritative.
     // If false, the subject meta data is updated on the model from the database upon return
     // and the meta saved flag is set false.
-    // Returns true iff the image remains in the database upon return.
+    // Returns true iff a new image was added to the database.
     static bool refreshImage( FM&, QString fpath="", const QString &oldpath="", bool subjectMetaAuth=false);
 
-    // Returns the number of images in the database of the same subject.
+    // Returns the total number of images in the database.
+    static size_t numImages();
+
+    // Returns the total number of subjects in the database.
+    static size_t numSubjects();
+
+    // Returns the number of images in the database of the given subject.
     static size_t numImages( const QString &subjectId);
+
+    // On return, sets out params with the oldest and the newest dates of birth from all subjects.
+    static void minMaxBirthDates( QDate &min, QDate &max);
+
+    // On return, sets out params with the oldest and the newest image dates from all images.
+    static void minMaxImageDates( QDate &min, QDate &max);
 
     // Returns true iff the given metadata matches the given subject ID and the subject ID was found.
     // Prints error message if multiple rows with the same subject ID found.
@@ -75,7 +87,7 @@ private:
     static bool _isInit;
     static int _imageId;
     static int _sbjctId;
-    static void _refreshImage( const QString&, FM&, bool);
+    static bool _refreshImage( const QString&, FM&, bool);
 };  // end class
 
 }}   // end namespaces

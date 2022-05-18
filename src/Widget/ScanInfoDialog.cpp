@@ -115,9 +115,19 @@ ScanInfoDialog::~ScanInfoDialog()
 }   // end dtor
 
 
-void ScanInfoDialog::_resetSubjectData()
+QString ScanInfoDialog::_resetSubjectIdentifier()
 {
-    QSignalBlocker b0( _ui->subjectIdLineEdit);
+    const FM *fm = MS::selectedModel();
+    const QString sid = fm ? fm->subjectId() : "";
+    QSignalBlocker blocker( _ui->subjectIdLineEdit);
+    _ui->subjectIdLineEdit->setText( sid);
+    return sid;
+}   // end _resetSubjectIdentifier
+
+
+QString ScanInfoDialog::_resetSubjectData()
+{
+    const QString sid = _resetSubjectIdentifier();
     QSignalBlocker b1( _ui->dobDateEdit);
     QSignalBlocker b2( _ui->sexComboBox);
     QSignalBlocker b3( _ui->maternalEthnicityComboBox);
@@ -126,7 +136,6 @@ void ScanInfoDialog::_resetSubjectData()
     const FM *fm = MS::selectedModel();
     if (fm)
     {
-        _ui->subjectIdLineEdit->setText( fm->subjectId());
         _ui->dobDateEdit->setDate( fm->dateOfBirth());
         _ui->sexComboBox->setCurrentIndex( _ui->sexComboBox->findData( fm->sex()));
         Ethnicities::resetComboBox( _ui->maternalEthnicityComboBox, fm->maternalEthnicity());
@@ -134,12 +143,13 @@ void ScanInfoDialog::_resetSubjectData()
     }   // end if
     else
     {
-        _ui->subjectIdLineEdit->clear();
         _ui->dobDateEdit->setDate( QDate::currentDate());
         _ui->sexComboBox->setCurrentIndex( _ui->sexComboBox->findData( UNKNOWN_SEX));
         Ethnicities::resetComboBox( _ui->maternalEthnicityComboBox);
         Ethnicities::resetComboBox( _ui->paternalEthnicityComboBox);
     }   // end else
+
+    return sid;
 }   // end _resetSubjectData
 
 
@@ -221,15 +231,20 @@ void ScanInfoDialog::_apply()
         subjectDataChanged = true;
 
     QString nsid = _ui->subjectIdLineEdit->text().trimmed();    // Get the subject ID (may not be saved on image)
+    if ( nsid.isEmpty())    // New empty identifiers not allowed!
+        nsid = _resetSubjectIdentifier();
+
     const bool isUnknownSubject = FMD::NO_SUBJECT_REGEXP.exactMatch(nsid);
     // If an invalid subject identifier is set, reset the subject data.
-    if ( (nsid.isEmpty() || isUnknownSubject) && subjectDataChanged)
+    if ( isUnknownSubject)
     {
-        static const QString msg = tr("A valid and non-empty identifier must be set to change the subject's details!");
-        QMB::warning( this, tr("Invalid Subject Identifer!"), QString("<p align='center'>%1</p>").arg(msg));
-        _resetSubjectData();
-        subjectDataChanged = false;
-        nsid = fm->subjectId();
+        if ( subjectDataChanged)
+        {
+            static const QString msg = tr("A valid identifier must be set to change the subject's details!");
+            QMB::warning( this, tr("Invalid Subject Identifer!"), QString("<p align='center'>%1</p>").arg(msg));
+            subjectDataChanged = false;
+        }   // end if
+        nsid = _resetSubjectData();
     }   // end if
     else if ( nsid != fm->subjectId())
     {

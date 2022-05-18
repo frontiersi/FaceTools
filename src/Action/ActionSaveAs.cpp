@@ -44,7 +44,6 @@ void ActionSaveAs::postInit()
     _fdialog->setFileMode( QFileDialog::AnyFile);
     _fdialog->setViewMode( QFileDialog::Detail);
     _fdialog->setAcceptMode( QFileDialog::AcceptSave);
-    //_fdialog->setOption( QFileDialog::DontUseNativeDialog);
 }   // end postInit
 
 
@@ -134,12 +133,6 @@ bool ActionSaveAs::doBeforeAction( Event)
         }   // end if
     }   // end while
 
-    if ( !_filename.isEmpty() && fm->subjectId().isEmpty() && is3DF)
-    {
-        const static QString msg = tr("This image has no subject identifier set so will not appear in the database.");
-        QMB::warning( prnt, tr("Subject Identifier Unset!"), QString("<p align='center'>%1</p>").arg(msg));
-    }   // end if
-
     if ( !_filename.isEmpty())
         MS::showStatus( QString( "Saving to '%1'...").arg(_filename), 0, true);
 
@@ -151,7 +144,7 @@ void ActionSaveAs::doAction( Event)
 {
     _egrp = Event::NONE;
     assert( !_filename.isEmpty());
-    FM::WPtr fm = MS::selectedModelScopedWrite();
+    FM *fm = MS::selectedModel();
     if ( !fm->hasMask())
     {
         _egrp |= Event::MESH_CHANGE | Event::AFFINE_CHANGE;

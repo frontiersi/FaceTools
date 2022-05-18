@@ -179,13 +179,12 @@ void MultiFaceModelViewer::_doOnViewerChanged( int idx, const FV *fv)
 }   // end _doOnViewerChanged
 
 
-// public slot
-void MultiFaceModelViewer::doOnUpdateModelLists()
+void MultiFaceModelViewer::updateModelLists()
 {
     const FM *fm = MS::selectedModel();
     if ( fm)
         _updateModelLists(fm);
-}   // end doOnUpdateModelLists
+}   // end updateModelLists
 
 
 void MultiFaceModelViewer::_updateModelLists( const FM *fm)

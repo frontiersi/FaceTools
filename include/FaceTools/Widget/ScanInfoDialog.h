@@ -74,7 +74,8 @@ private:
     QTools::EventSignaller _focusOutSignaller;
     bool _isDifferentToCurrent() const;
     void _checkEnableApply();
-    void _resetSubjectData();
+    QString _resetSubjectIdentifier();
+    QString _resetSubjectData();
     void _resetImageData();
 };  // end class
 

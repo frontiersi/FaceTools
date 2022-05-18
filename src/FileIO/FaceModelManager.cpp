@@ -195,7 +195,6 @@ void FaceModelManager::close( const FM &cfm)
     FM* fm = const_cast<FM*>(&cfm);
     assert(_models.count(fm) > 0);
     const QString fpath = _mpaths.at(fm);
-    //FMD::setOpenFlag( fpath, false);
     _mfiles.erase(fpath);
     _mpaths.erase(fm);
     _models.erase(fm);

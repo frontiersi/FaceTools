@@ -117,7 +117,8 @@ Event ActionLoad::doAfterAction( Event)
         }   // end if
 
         const QString fpath = FMM::filepath( *fm);
-        FMD::refreshImage( *fm, fpath); // setMetaSaved may be false after this
+        if ( FMM::isPreferredFileFormat( fpath))
+            FMD::refreshImage( *fm, fpath); // setMetaSaved may be false after this
 
         // If subject metadata are not saved (and it wasn't because of new landmarks),
         // it's because the database updated info from a different model.

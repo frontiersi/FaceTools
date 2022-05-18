@@ -30,7 +30,7 @@ ActionShowScanInfo::ActionShowScanInfo( const QString& dname, const QIcon& icon,
     : FaceAction( dname, icon, ks), _dialog(nullptr)
 {
     setCheckable( true, false);
-    addRefreshEvent( Event::METRICS_CHANGE | Event::MODEL_SELECT);
+    addRefreshEvent( Event::METRICS_CHANGE | Event::MODEL_SELECT | Event::SAVED_MODEL);
     addTriggerEvent( Event::MASK_CHANGE);
 }   // end ctor
 
@@ -57,13 +57,16 @@ bool ActionShowScanInfo::update( Event e)
     const FM *fm = MS::selectedModel();
     if ( !fm)
         _dialog->hide();
-    else if ( has( e, Event::MODEL_SELECT))
+    else
     {
-        _dialog->refresh();
-        _dialog->setThumbnail( fm->thumbnail());
-    }   // end else if
-    else if ( has( e, Event::METRICS_CHANGE))
-        _dialog->refreshAssessment();
+        if ( has( e, Event::METRICS_CHANGE))
+            _dialog->refreshAssessment();
+        else
+        {
+            _dialog->refresh();
+            _dialog->setThumbnail( fm->thumbnail());
+        }   // end else if
+    }   // end else
     return _dialog->isVisible();
 }   // end update
 

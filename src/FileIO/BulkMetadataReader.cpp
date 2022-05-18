@@ -32,7 +32,7 @@ BulkMetadataReader::BulkMetadataReader( const QFileInfoList &files, bool withThu
 namespace {
 QString readMetaData( const QString &fpath, FM &fm, bool withThumbs)
 {
-    std::cerr << "Reading metadata from: " << fpath.toStdString() << std::endl;
+    //std::cerr << "Reading metadata from: " << fpath.toStdString() << std::endl;
     PTree ptree;
     QPixmap *thumb = withThumbs ? new QPixmap : nullptr;
     QString err = FaceTools::FileIO::readMeta( fpath, ptree, thumb); // FaceModelXMLFileHandler.h
