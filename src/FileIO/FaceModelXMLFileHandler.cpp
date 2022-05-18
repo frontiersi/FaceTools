@@ -413,28 +413,30 @@ bool __readMetaIntoPropertyTree( const QString &fpath, PTree &tree)
     return true;
 }   // end __readMetaIntoPropertyTree
 
-// Get the meta.xml and thumb.jpg filenames from the archive. In earlier 3DF versions, these
-// filenames had basenames the same as the 3DF file so try these if meta.xml and thumb.jpg aren't found.
-bool __getFileNamesFromArchive( const QString &basename, const QStringList &fnames, QString &metaXML, QString &thumbJPG, bool pdeets=false)
+
+QString __findEntryWithSuffix( const QStringList &fnames, const QString &suffix)
 {
-    if ( pdeets)
-    {
-        std::cerr << "Files in archive with basename " << basename.toStdString() << ":\n";
-        for ( const QString &fn : fnames)
-            std::cerr << fn.toStdString() << std::endl;
-    }   // end if
+    for ( const QString &fname : fnames)
+        if ( fname.endsWith( suffix, Qt::CaseInsensitive))
+            return fname;
+    return "";
+}   // end __findEntryWithSuffix
+
+
+// Get the meta.xml and thumb.jpg filenames from the archive. In earlier 3DF versions, these
+// filenames were different and must be searched for based on appropriate suffix.
+bool __getFileNamesFromArchive( const QStringList &fnames, QString &metaXML, QString &thumbJPG)
+{
     if ( fnames.isEmpty())
         return false;
-    if ( fnames.contains( "meta.xml"))
-        metaXML = "meta.xml";
-    else if ( fnames.contains( basename + ".xml"))
-        metaXML = basename + ".xml";
-    else
+
+    metaXML = __findEntryWithSuffix( fnames, ".xml");
+    if ( metaXML.isEmpty())
         return false;
     if ( fnames.contains( "thumb.jpg"))
         thumbJPG = "thumb.jpg";
-    else if ( fnames.contains( basename + ".jpg"))
-        thumbJPG = basename + ".jpg";
+    else
+        thumbJPG = __findEntryWithSuffix( fnames, ".jpg");
     return true;
 }   // end __getFileNamesFromArchive
 
@@ -457,16 +459,16 @@ QString FaceTools::FileIO::readMeta( const QString &fname, PTree &tree, QPixmap 
         if ( !dir.exists())
             err = "Directory to unzip archive to does not exist!";
         else if ( !archive.open( QuaZip::Mode::mdUnzip))
-            err = QString( "Unable to open archive file (Error Code = %1)!").arg(archive.getZipError());
-        else if ( !__getFileNamesFromArchive( QFileInfo( fname).baseName(), archive.getFileNameList(), metaFileName, imgFileName))
-            err = QString( "Unable to get metadata filename from archive (Error Code = %1)!").arg(archive.getZipError());
+            err = QString( "Unable to open archive file \"%1\" (Error Code = %2)!").arg( fname).arg(archive.getZipError());
+        else if ( !__getFileNamesFromArchive( archive.getFileNameList(), metaFileName, imgFileName))
+            err = QString( "Unable to get metadata filename from archive \"%1\" (Error Code = %2)!").arg( fname).arg(archive.getZipError());
         else
         {
             const QString metaFilePath = dir.filePath(metaFileName);
             if ( !JlCompress::extractFile( &archive, QFileInfo(metaFilePath).fileName(), metaFilePath))
-                err = "Unable to extract metadata file from archive!";
+                err = QString("Unable to extract metadata file from archive \"%1\"!").arg( fname);
             if ( err.isEmpty() && !__readMetaIntoPropertyTree( metaFilePath, tree))
-                err = "Cannot open metadata file for reading!";
+                err = QString("Cannot open metadata file for reading from archive \"%1\"!").arg( fname);
         }   // end else
 
         if ( err.isEmpty() && thumb)
@@ -519,7 +521,7 @@ QString FaceTools::FileIO::unzipArchive( const QString &fname, const QString &td
         if ( !fnames.isEmpty())
         {
             QString metaFileName, imgFileName;
-            if ( !__getFileNamesFromArchive( QFileInfo( fname).baseName(), fnames, metaFileName, imgFileName))
+            if ( !__getFileNamesFromArchive( fnames, metaFileName, imgFileName))
                 err = "Unable to get metadata filename from archive!";
             else if ( !__readMetaIntoPropertyTree( dir.filePath( metaFileName), tree))
                 err = "Cannot open metadata file for reading!";

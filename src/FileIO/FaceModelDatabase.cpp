@@ -281,11 +281,11 @@ QPixmap FaceModelDatabase::imageThumbnail( const QString &abspath)
 size_t FaceModelDatabase::numImages( const QString &subjectId)
 {
     size_t nimgs = 0;
-    QSqlQuery q( QString( "SELECT COUNT(*) FROM images INNER JOIN images.subject = subjects.id WHERE subjects.identifier = '%1'").arg(subjectId));
-    if ( !q.isActive())
-        std::cerr << "[ERR] FaceTools::FileIO::FaceModelDatabase::numImages: Image count error!\n";
-    else if ( q.next())
+    QSqlQuery q( QString( "SELECT COUNT(*) FROM images INNER JOIN subjects ON subjects.id = images.subject WHERE subjects.identifier = '%1'").arg(subjectId));
+    if ( q.next())
         nimgs = q.value(0).toInt();
+    else
+        std::cerr << "[ERR] FaceTools::FileIO::FaceModelDatabase::numImages: Image count error!\n";
     return nimgs;
 }   // end numImages
 
