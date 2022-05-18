@@ -24,8 +24,6 @@ using FaceTools::FM;
 BulkMetadataReader::BulkMetadataReader( const QFileInfoList &files, bool withThumbs)
     : _files(files), _withThumbs(withThumbs)
 {
-    //std::cerr << "Bulk metadata read in \"" << _tdir.path().toStdString() << "\"\n";
-    //_tdir.setAutoRemove(false);
 }   // end ctor
 
 
@@ -53,6 +51,9 @@ QString readMetaData( const QString &fpath, FM &fm, bool withThumbs)
 
 QList<FM*> BulkMetadataReader::loadModels() const
 {
+    int i = 0;
+    const int nfiles = _files.size();
+    const float pfact = 100.0f / nfiles;
     QList<FM*> data;
     for ( const QFileInfo &pth : _files)
     {
@@ -65,6 +66,7 @@ QList<FM*> BulkMetadataReader::loadModels() const
             std::cerr << err.toStdString() << std::endl;
         }   // end if
         data.append(fm);
+        emit onPercentProgress( ++i * pfact);
     }   // end for
     return data;
 }   // end loadModels

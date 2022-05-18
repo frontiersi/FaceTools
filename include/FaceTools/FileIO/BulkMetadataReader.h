@@ -43,6 +43,9 @@ signals:
     // it is null. Models should be deleted after caller is finished with them.
     void onLoadedModels( QFileInfoList, QList<FaceTools::FM*>);
 
+    // Emitted after reading metadata from each file to indicate progress complete.
+    void onPercentProgress( float) const;
+
 protected:
     void run() override;
 
