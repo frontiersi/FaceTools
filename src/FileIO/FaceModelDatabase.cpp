@@ -27,8 +27,8 @@ using FMM = FaceTools::FileIO::FaceModelManager;
 const QString FaceTools::FileIO::FaceModelDatabase::NO_SUBJECT_STRING("_UNKNOWN_%1");
 const QRegExp FaceTools::FileIO::FaceModelDatabase::NO_SUBJECT_REGEXP("_UNKNOWN.*$");
 bool FaceTools::FileIO::FaceModelDatabase::_isInit(false);
-int FaceTools::FileIO::FaceModelDatabase::_imageId(0);
-int FaceTools::FileIO::FaceModelDatabase::_sbjctId(0);
+int FaceTools::FileIO::FaceModelDatabase::_imageId(1);
+int FaceTools::FileIO::FaceModelDatabase::_sbjctId(1);
 
 namespace {
 
@@ -80,7 +80,6 @@ size_t _numImagesWithSubjectKey( int sid)
 
 
 bool _removeSubject( int sid) { return QSqlQuery().exec(QString("DELETE FROM subjects WHERE id = %1").arg(sid));}
-bool _removeImage( int iid) { return QSqlQuery().exec(QString("DELETE FROM images WHERE id = %1").arg(iid));}
 
 
 const auto IMAGES_SQL = QLatin1String(R"(
@@ -163,6 +162,19 @@ void _updateSubject( int sid, FM &fm, bool subjectMetaAuth)
     }   // end else
 }   // end _updateSubject
 
+
+int _maxImageId()
+{
+    QSqlQuery q( "SELECT MAX(id) FROM images");
+    return q.next() ? q.value(0).toInt() : 0;
+}   // end _maxImageId
+
+int _maxSubjectId()
+{
+    QSqlQuery q( "SELECT MAX(id) FROM subjects");
+    return q.next() ? q.value(0).toInt() : 0;
+}   // end _maxSubjectId
+
 }   // end namespace
 
 
@@ -207,7 +219,7 @@ bool FaceModelDatabase::_refreshImage( const QString &absFilePath, FM &fm, bool 
         if ( !okay)
             std::cerr << "[ERR] FaceTools::FileIO::FaceModelDatabase::refreshImage: INSERT subject failed!\n";
     }   // end if
-    else if ( !isUnknownSubject) // Update subject in DB (subjectMetaAuth=true), or in model from DB (subjectMetaAuth=false) if valid subject identifier
+    else if ( !isUnknownSubject) // Update DB from model (subjectMetaAuth=true), or model from DB (subjectMetaAuth=false)
         _updateSubject( sid, fm, subjectMetaAuth);
 
     // Write the thumbnail as a byte array for binary large object (BLOB)
@@ -266,6 +278,16 @@ bool FaceModelDatabase::_refreshImage( const QString &absFilePath, FM &fm, bool 
 
     return newImage;
 }   // end _refreshImage
+
+
+bool FaceModelDatabase::removeImage( const QString &fpath)
+{
+    const int csid = _subjectKeyFromImagePath( fpath); // Existing subject key in database
+    const bool okay = QSqlQuery().exec(QString("DELETE FROM images WHERE filepath = '%1'").arg(fpath));
+    if ( okay && _numImagesWithSubjectKey( csid) == 0)
+        _removeSubject(csid);
+    return okay;
+}   // end removeImage
 
 
 QPixmap FaceModelDatabase::imageThumbnail( const QString &abspath)
@@ -354,7 +376,7 @@ bool FaceModelDatabase::isSubjectMetaMatched( const QString &subjectId, int8_t s
 }   // end isSubjectMetaMatched
 
 
-bool FaceModelDatabase::init()
+bool FaceModelDatabase::init( const QString &dbname)
 {
     if ( _isInit)
         return true;
@@ -367,20 +389,26 @@ bool FaceModelDatabase::init()
     }   // end if
 
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
-    db.setDatabaseName(":memory:");
+    db.setDatabaseName( dbname);
     if (!db.open())
     {
         std::cerr << errBase.arg("Unable to open database connection!").toStdString();
         return false;
     }   // end if
 
-    QSqlQuery q; // Create the schema
-    if ( !q.exec( IMAGES_SQL) || !q.exec( SUBJECTS_SQL))
+    if ( db.tables().isEmpty())
     {
-        std::cerr << errBase.arg(q.lastError().text()).toStdString();
-        return false;
+        std::cerr << "Creating image database schema\n";
+        QSqlQuery q; // Create the schema
+        if ( !q.exec( IMAGES_SQL) || !q.exec( SUBJECTS_SQL))
+        {
+            std::cerr << errBase.arg(q.lastError().text()).toStdString();
+            return false;
+        }   // end if
     }   // end if
 
+    _sbjctId = _maxSubjectId() + 1;
+    _imageId = _maxImageId() + 1;
     _isInit = true;
     return _isInit;
 }   // end init
@@ -447,8 +475,8 @@ void FaceModelDatabase::clear()
     QSqlQuery q;
     q.exec("DELETE FROM subjects");
     q.exec("DELETE FROM images");
-    _sbjctId = 0;
-    _imageId = 0;
+    _sbjctId = 1;
+    _imageId = 1;
 }   // end clear
 
 

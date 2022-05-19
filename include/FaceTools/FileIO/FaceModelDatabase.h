@@ -33,8 +33,10 @@ namespace FaceTools { namespace FileIO {
 class FaceTools_EXPORT FaceModelDatabase
 {
 public:
-    // Initialise the database by creating the initial connection and defining the schema.
-    static bool init();
+    // Initialise the database by creating the initial connection and defining the schema
+    // if the database isn't already present. Pass the file location of the database to
+    // load an existing one, or leave as default to create an in memory database.
+    static bool init( const QString &dbname = ":memory:");
 
     // Clear all tables.
     static void clear();
@@ -53,6 +55,9 @@ public:
     // and the meta saved flag is set false.
     // Returns true iff a new image was added to the database.
     static bool refreshImage( FM&, QString fpath="", const QString &oldpath="", bool subjectMetaAuth=false);
+
+    // Remove the given image returning true on success.
+    static bool removeImage( const QString &fpath);
 
     // Returns the total number of images in the database.
     static size_t numImages();
