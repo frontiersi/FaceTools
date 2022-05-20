@@ -35,9 +35,6 @@ public:
      */
     BulkMetadataReader( const QFileInfoList&, bool withThumbs=false);
 
-    // Run in calling thread. Returns models with matching number of entries to input QFileInfoList.
-    QList<FaceTools::FM*> loadModels() const;
-
 signals:
     // Upon emitting, the lists have the same length. If a model failed to load,
     // it is null. Models should be deleted after caller is finished with them.
@@ -46,13 +43,21 @@ signals:
     // Emitted after reading metadata from each file to indicate progress complete.
     void onPercentProgress( float) const;
 
+    void onCancelled(); // Emitted directly after cancelling the operation.
+
+public slots:
+    void cancel();
+
 protected:
     void run() override;
 
 private:
     const QFileInfoList _files;
     const bool _withThumbs;
+    bool _docancel;
     QTemporaryDir _tdir;
+    // Returns models with matching number of entries to input QFileInfoList.
+    QList<FaceTools::FM*> _loadModels() const;
 };  // end class
 
 }}   // end namespaces

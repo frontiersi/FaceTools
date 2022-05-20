@@ -22,7 +22,7 @@ using FaceTools::FileIO::BulkMetadataReader;
 using FaceTools::FM;
 
 BulkMetadataReader::BulkMetadataReader( const QFileInfoList &files, bool withThumbs)
-    : _files(files), _withThumbs(withThumbs)
+    : _files(files), _withThumbs(withThumbs), _docancel( false)
 {
 }   // end ctor
 
@@ -49,7 +49,7 @@ QString readMetaData( const QString &fpath, FM &fm, bool withThumbs)
 }   // end namespace
 
 
-QList<FM*> BulkMetadataReader::loadModels() const
+QList<FM*> BulkMetadataReader::_loadModels() const
 {
     int i = 0;
     const int nfiles = _files.size();
@@ -67,13 +67,24 @@ QList<FM*> BulkMetadataReader::loadModels() const
         }   // end if
         data.append(fm);
         emit onPercentProgress( ++i * pfact);
+        if ( _docancel)
+            break;
     }   // end for
     return data;
-}   // end loadModels
+}   // end _loadModels
 
 
 void BulkMetadataReader::run()
 {
-    QList<FM*> data = loadModels();
-    emit onLoadedModels( _files, data);
+    QList<FM*> data = _loadModels();
+    if ( !_docancel)
+        emit onLoadedModels( _files, data);
+    else
+    {
+        emit onCancelled();
+        _docancel = false;
+    }   // end else
 }   // end run
+
+
+void BulkMetadataReader::cancel() { _docancel = true;}
