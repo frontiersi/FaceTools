@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,7 +45,6 @@ protected:
     void postInit() override;
     bool update( Event) override;
     bool isAllowed( Event) override;
-    bool doBeforeAction( Event) override;
     void doAction( Event) override;
 
 private slots:

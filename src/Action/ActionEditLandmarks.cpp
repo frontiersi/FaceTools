@@ -1,5 +1,5 @@
 /************************************************************************
- * Copyright (C) 2021 SIS Research Ltd & Richard Palmer
+ * Copyright (C) 2022 SIS Research Ltd & Richard Palmer
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@ ActionEditLandmarks::ActionEditLandmarks( const QString& dn, const QIcon& ico, c
       _actShow(nullptr), _actMirror(nullptr), _actShowLabels(nullptr)
 {
     setCheckable( true, false);
-    addTriggerEvent( Event::MASK_CHANGE | Event::LANDMARKS_CHANGE);
+    addTriggerEvent( Event::MASK_CHANGE | Event::LOADED_MODEL);
     // Allow the dialog to close on turning off landmarks visibility.
     addRefreshEvent( Event::VIEW_CHANGE);
 }   // end ctor
@@ -104,33 +104,31 @@ void ActionEditLandmarks::_openDialog()
 }   // end _openDialog
 
 
-bool ActionEditLandmarks::doBeforeAction( Event)
-{
-    /*
-    // Check if triggered by event emitted by the _doOnFinishedDrag handler and ignore if so.
-    const bool triggeredExternally = _ev == Event::NONE;
-    _ev = Event::NONE;
-    return triggeredExternally;
-    */
-    return true;
-}   // end doBeforeAction
-
-
 void ActionEditLandmarks::doAction( Event e)
 {
     const FM *fm = MS::selectedModel();
     bool chk = fm && isChecked() && !has( e, Event::CLOSED_MODEL);
 
+    // If the mask has changed or the landmarks were set to be changed immediately after load
+    // then we need to ask the user to confirm the placement of the landmarks.
     QString msg;
-    if ( has( e, Event::MASK_CHANGE) && fm->hasLandmarks())
+    if ( fm->hasLandmarks())
     {
-        msg = tr("Click and drag landmarks into their confirmed positions in the main viewer");
+        if ( has( e, Event::MASK_CHANGE))   // AM placement
+            msg = tr("Please confirm the automatically placed landmark positions.");
+        else if ( has( e, Event::LOADED_MODEL | Event::LANDMARKS_CHANGE)) 
+            msg = tr("Please confirm the positions of the newly added landmarks.");
+    }   // end if
+    _dialog->setMessage( msg);
+
+    // Event triggers opening of the dialog
+    if ( !msg.isEmpty())
+    {
         chk = true;
         if ( _key == 0)
             _key = MS::lockSelect();   // Prevent selecting a different view until close
         QApplication::beep();
     }   // end if
-    _dialog->setMessage(msg);
 
     if ( !chk)
         _closeDialog();

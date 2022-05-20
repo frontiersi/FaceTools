@@ -111,6 +111,7 @@ Event ActionLoad::doAfterAction( Event)
         // Restore any missing landmarks and warn user of this.
         if ( fm->hasLandmarks() && ActionRestoreLandmarks::restoreMissingLandmarks( *fm))
         {
+            e = Event::LANDMARKS_CHANGE;
             msg = tr("Some new landmarks were added.<br>Confirm their positions and save before continuing.");
             QMB::information( static_cast<QWidget*>(parent()), tr("New Landmarks Added"),
                               QString("<p align='center'>%1</p>").arg(msg));
@@ -149,7 +150,7 @@ Event ActionLoad::doAfterAction( Event)
         ActionOrientCamera::orient( fv, 1);
 
         MS::showStatus( "Finished loading.", 5000);
-        e = Event::LOADED_MODEL | Event::MESH_CHANGE | Event::MODEL_SELECT;
+        e |= Event::LOADED_MODEL | Event::MESH_CHANGE | Event::MODEL_SELECT;
     }   // end if
     else
     {
