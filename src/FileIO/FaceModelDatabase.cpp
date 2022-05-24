@@ -282,18 +282,19 @@ bool FaceModelDatabase::_refreshImage( const QString &absFilePath, FM &fm, bool 
 
 bool FaceModelDatabase::removeImage( const QString &fpath)
 {
-    const int csid = _subjectKeyFromImagePath( fpath); // Existing subject key in database
-    const bool okay = QSqlQuery().exec(QString("DELETE FROM images WHERE filepath = '%1'").arg(fpath));
+    const QString apath = QFileInfo(fpath).absoluteFilePath();
+    const int csid = _subjectKeyFromImagePath( apath); // Existing subject key in database
+    const bool okay = QSqlQuery().exec(QString("DELETE FROM images WHERE filepath = '%1'").arg(apath));
     if ( okay && _numImagesWithSubjectKey( csid) == 0)
         _removeSubject(csid);
     return okay;
 }   // end removeImage
 
 
-QPixmap FaceModelDatabase::imageThumbnail( const QString &abspath)
+QPixmap FaceModelDatabase::imageThumbnail( const QString &fpath)
 {
     QPixmap pmap;
-    QSqlQuery q( QString("SELECT thumbnail FROM images WHERE filepath = '%1'").arg( abspath));
+    QSqlQuery q( QString("SELECT thumbnail FROM images WHERE filepath = '%1'").arg( QFileInfo(fpath).absoluteFilePath()));
     if ( q.next())
         pmap.loadFromData( q.value(0).toByteArray());
     return pmap;

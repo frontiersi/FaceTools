@@ -24,10 +24,6 @@
 #include <QtSql>
 #include <QDir>
 
-/**
- * NB: All paths provided must be absolute!
- */
-
 namespace FaceTools { namespace FileIO {
 
 class FaceTools_EXPORT FaceModelDatabase
